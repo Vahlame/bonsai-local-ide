@@ -1,0 +1,174 @@
+Corpus de calibracion para el sesgo de media de la cache K (scripts\optimizar.ps1 -Sesgo).
+Mezcla a proposito prosa en espanol e ingles, codigo en varios lenguajes, datos estructurados,
+matematicas y registros de error: la K tiene que verse tal como la va a ver el modelo en uso real.
+
+== Prosa en espanol ==
+La memoria de un ordenador se organiza en niveles. Los registros del procesador son los mas rapidos y los mas escasos; despues vienen las caches, la memoria principal y, por ultimo, el almacenamiento permanente. Cada nivel intercambia capacidad por velocidad, y el trabajo de un buen programa consiste en mantener cerca de la CPU los datos que va a necesitar enseguida. Cuando una aplicacion recorre una matriz por filas en lugar de por columnas, la diferencia de rendimiento puede ser de un orden de magnitud, aunque el numero de operaciones sea exactamente el mismo.
+
+El invierno llego temprano ese ano a la sierra. Las primeras nevadas cubrieron los caminos de herradura y los pastores bajaron el ganado antes de lo previsto. En el pueblo, la panaderia abria a las seis de la manana y el olor a pan recien hecho se mezclaba con el humo de las chimeneas. Marta cruzaba la plaza con el abrigo abotonado hasta el cuello, pensando en la carta que habia recibido la vispera y que todavia no se atrevia a contestar.
+
+Segun el contrato, el arrendatario se compromete a abonar la renta mensual dentro de los cinco primeros dias de cada mes, mediante transferencia bancaria a la cuenta indicada por el arrendador. El retraso superior a quince dias facultara al arrendador para exigir el pago de los intereses de demora legalmente establecidos, sin perjuicio de las demas acciones que le correspondan.
+
+== English prose ==
+A hash table maps keys to values by computing an index from the key. Collisions, where two keys land in the same slot, are resolved either by chaining entries in a linked list or by probing for the next free slot. With a good hash function and a load factor kept below about seventy percent, lookups, insertions and deletions take constant time on average, which is why hash tables sit underneath most dictionaries, caches and symbol tables.
+
+The committee reviewed the proposal on Tuesday and concluded that, while the technical approach was sound, the cost estimates were optimistic. It asked the team to resubmit with a phased plan, clearer milestones and an explicit list of risks, together with a description of how each one would be monitored.
+
+Preheat the oven to 200 degrees. Mix two cups of flour with a teaspoon of baking powder and a pinch of salt. In a separate bowl, whisk three eggs with half a cup of sugar until pale, then add the melted butter and a splash of milk. Fold the dry ingredients in gently, pour the batter into a greased tin and bake for thirty-five minutes, until a skewer comes out clean.
+
+== Python ==
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+
+
+@dataclass
+class Pedido:
+    id: int
+    cliente: str
+    lineas: list[tuple[str, int, float]] = field(default_factory=list)
+
+    def total(self) -> float:
+        return round(sum(cantidad * precio for _, cantidad, precio in self.lineas), 2)
+
+
+def cargar(ruta: Path) -> list[Pedido]:
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
+    return [Pedido(p["id"], p["cliente"], [tuple(l) for l in p["lineas"]]) for p in datos]
+
+
+def resumen(pedidos: list[Pedido]) -> dict[str, float]:
+    por_cliente: dict[str, float] = {}
+    for pedido in pedidos:
+        por_cliente[pedido.cliente] = por_cliente.get(pedido.cliente, 0.0) + pedido.total()
+    return dict(sorted(por_cliente.items(), key=lambda kv: kv[1], reverse=True))
+
+
+if __name__ == "__main__":
+    for cliente, total in resumen(cargar(Path("pedidos.json"))).items():
+        print(f"{cliente:<20} {total:>10.2f}")
+
+== JavaScript ==
+export async function descargar(url, { reintentos = 3, esperaMs = 500 } = {}) {
+  for (let intento = 1; intento <= reintentos; intento += 1) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      if (intento === reintentos) throw err;
+      await new Promise((resolve) => setTimeout(resolve, esperaMs * intento));
+    }
+  }
+}
+
+const cache = new Map();
+export function memoizar(fn) {
+  return (...args) => {
+    const clave = JSON.stringify(args);
+    if (!cache.has(clave)) cache.set(clave, fn(...args));
+    return cache.get(clave);
+  };
+}
+
+== PowerShell ==
+param([string]$Carpeta = ".", [int]$Dias = 7)
+$limite = (Get-Date).AddDays(-$Dias)
+Get-ChildItem -Path $Carpeta -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -lt $limite } |
+    Sort-Object Length -Descending |
+    Select-Object -First 10 Name, @{n="MB";e={[math]::Round($_.Length / 1MB, 1)}}, LastWriteTime |
+    Format-Table -AutoSize
+
+== SQL ==
+SELECT c.nombre, COUNT(p.id) AS pedidos, SUM(l.cantidad * l.precio) AS total
+FROM clientes c
+JOIN pedidos p ON p.cliente_id = c.id
+JOIN lineas l ON l.pedido_id = p.id
+WHERE p.fecha >= DATE '2026-01-01' AND p.estado <> 'cancelado'
+GROUP BY c.nombre
+HAVING SUM(l.cantidad * l.precio) > 1000
+ORDER BY total DESC
+LIMIT 20;
+
+CREATE INDEX idx_pedidos_cliente_fecha ON pedidos (cliente_id, fecha DESC);
+
+== C ==
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct nodo { int valor; struct nodo *sig; } nodo;
+
+nodo *invertir(nodo *cabeza) {
+    nodo *prev = NULL;
+    while (cabeza) {
+        nodo *sig = cabeza->sig;
+        cabeza->sig = prev;
+        prev = cabeza;
+        cabeza = sig;
+    }
+    return prev;
+}
+
+== HTML y CSS ==
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Tarjeta</title>
+<style>
+  .tarjeta { display: grid; gap: 12px; padding: 16px; border-radius: 12px; background: #111827; color: #f9fafb; }
+  .tarjeta h2 { margin: 0; font: 600 1.25rem/1.2 system-ui, sans-serif; }
+  @media (max-width: 600px) { .tarjeta { padding: 12px; } }
+</style></head>
+<body><section class="tarjeta"><h2>Resumen</h2><p>Tres tareas pendientes.</p></section></body>
+</html>
+
+== JSON, YAML y CSV ==
+{"servidor": {"host": "127.0.0.1", "puerto": 8080, "tls": false}, "modelos": [{"id": "bonsai", "contexto": 65536, "kv": "q4_0"}], "limites": {"peticiones_por_minuto": 60, "tokens_maximos": 16384}}
+
+servicios:
+  web:
+    imagen: nginx:1.27
+    puertos: ["8080:80"]
+    entorno:
+      MODO: produccion
+  base:
+    imagen: postgres:16
+    volumenes: ["datos:/var/lib/postgresql/data"]
+
+fecha,producto,unidades,precio
+2026-03-01,teclado,12,24.90
+2026-03-01,raton,30,9.50
+2026-03-02,monitor,4,189.00
+2026-03-02,cable hdmi,55,3.20
+
+== Shell y registros ==
+$ git log --oneline --since="2 weeks ago" | head -5
+a1b2c3d fix: evita reprocesar el prompt entero en cada turno
+9f8e7d6 feat: muestreo recomendado por el fabricante
+5c4b3a2 docs: corrige la arquitectura del modelo
+$ grep -rn "TODO" src/ | wc -l
+17
+
+Traceback (most recent call last):
+  File "app.py", line 42, in <module>
+    resultado = procesar(datos)
+  File "app.py", line 17, in procesar
+    return datos["clave"] / total
+ZeroDivisionError: division by zero
+
+2026-10-04 12:01:07 WARN  cache: 3 entradas expiradas, 12 conservadas
+2026-10-04 12:01:09 ERROR db: conexion rechazada (host=10.0.0.5 puerto=5432), reintento 2/5
+
+== Matematicas y ciencia ==
+Sea f(x) = x^3 - 6x^2 + 11x - 6. Sus raices son 1, 2 y 3, porque f(x) = (x - 1)(x - 2)(x - 3). La derivada f'(x) = 3x^2 - 12x + 11 se anula en x = 2 +/- sqrt(3)/3, de modo que f tiene un maximo local en 2 - sqrt(3)/3 y un minimo local en 2 + sqrt(3)/3. La integral de f entre 0 y 3 vale 3^4/4 - 2*3^3 + 11*3^2/2 - 6*3 = 81/4 - 54 + 99/2 - 18 = 0.75.
+
+La fotosintesis convierte dioxido de carbono y agua en glucosa y oxigeno aprovechando la energia de la luz: 6 CO2 + 6 H2O -> C6H12O6 + 6 O2. Ocurre en los cloroplastos, donde la clorofila absorbe sobre todo luz roja y azul y refleja la verde, que es el color con el que vemos las hojas. La fase luminosa produce ATP y NADPH; el ciclo de Calvin los usa despues para fijar el carbono.
+
+La entropia de un sistema aislado no disminuye con el tiempo. Eso no impide que aparezcan estructuras ordenadas localmente, siempre que exporten desorden al entorno: un frigorifico enfria su interior calentando la cocina.
+
+== Instrucciones y dialogo ==
+Usuario: Escribe una funcion que devuelva los numeros primos menores que n.
+Asistente: Aqui tienes una criba de Eratostenes. Marca como compuestos los multiplos de cada primo empezando en su cuadrado, y devuelve los indices que quedan sin marcar.
+
+Usuario: Resume en dos frases por que conviene versionar el codigo.
+Asistente: Versionar el codigo permite volver a un estado anterior cuando algo se rompe y entender por que cambio cada archivo. Ademas facilita trabajar en equipo, porque los cambios de cada persona se integran sin pisarse.

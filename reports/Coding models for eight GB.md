@@ -1,0 +1,47 @@
+# Ornith gives Bonsai a practical upgrade
+
+**As of October 26, 2026, Ornith-1.5-9B in its official Q4_K_M GGUF is the best-supported first choice for Bonsai on an 8 GB RTX 4060 with all inference tensors on GPU.** It combines strong published coding-agent results, a first-party quantized artifact, and a hybrid architecture whose cache is comparatively small. This is a practical selection judgment, not proof of an absolute winner: published agent scores use different harnesses, much larger contexts, and generally higher precision. Research included releases as recent as October 23; choosing the newest release alone would not improve the evidence for this machine. Begin at **16,384 tokens**, preserve the model’s own chat template, and establish GPU residency and native tool-call reliability before activating it as the IDE default. **Local validation now confirms the download hash, all 34/34 layers and all model weights on CUDA0, GPU KV and recurrent state, and a working 32K context.** ([Official Ornith card](https://huggingface.co/ornith-ai/Ornith-1.5-9B), [official GGUF](https://huggingface.co/ornith-ai/Ornith-1.5-9B-GGUF))
+
+## Recent releases support Ornith as the first trial
+
+The shortlist below uses publisher-reported results. Scores from different rows are **not a controlled ranking**, and none establishes Q4 performance inside Bonsai. Ornith reports a substantial improvement over its own Qwen3.5-9B baseline and supplies a directly usable official quant. Its repository was available in August 2026; later release dates do not by themselves displace it. ([Ornith evaluation and deployment](https://huggingface.co/ornith-ai/Ornith-1.5-9B), [repository metadata](https://huggingface.co/api/models/ornith-ai/Ornith-1.5-9B-GGUF?blobs=true))
+
+| Candidate | Published SWE Verified / Pro | Practical implication |
+|---|---:|---|
+| **Ornith-1.5-9B** | **70.6 / 47.5** | First trial: official Q4, strong agent results, economical hybrid cache. ([Source](https://huggingface.co/ornith-ai/Ornith-1.5-9B)) |
+| K2 Horizon 7B | 72.4 / — | Credible competitor; substantially larger full-attention cache. Its GGUF card lists older scores and says quantized models lack agent-task evaluation. ([Source model](https://huggingface.co/IFM/K2-Horizon-7B), [GGUF caveats](https://huggingface.co/IFM/K2-Horizon-7B-GGUF)) |
+| MiMo V2.6 Distill Qwen 9B | 61.1 / 44.6 | September alternative; different template/parser and a third-party Q4 need validation. ([Official card](https://huggingface.co/XiaomiMiMo/MiMo-V2.6-Distill-Qwen-9B)) |
+| Arctic-SWE 4B / 9B | 65.0 / 38.3; 65.7 / 39.6 | October 23 release considered; newer, with no demonstrated overall advantage for this choice. ([Snowflake release](https://www.snowflake.com/en/blog/engineering/arctic-swe-agentic-rl/)) |
+| FrogNano 4B 2609 | 61.5 / 37.6 | Smaller fallback worth considering if responsiveness dominates; results use its Leaf harness and long context. ([Microsoft card](https://huggingface.co/microsoft/FrogNano-4B-2609)) |
+
+Benchmark differences this small cannot establish K2 as superior across Bonsai tasks. K2’s current source card and GGUF card also disagree on headline results, and this research did not establish whether its pinned quant includes the latest anti-loop weights. A controlled local comparison would require the same tasks, context, sampling, tool scaffold, and quantization. Ornith’s published score should therefore guide selection, not become a promised local pass rate.
+
+## Pin one official artifact and reserve cache space
+
+Use [`ornith-ai/Ornith-1.5-9B-GGUF`](https://huggingface.co/ornith-ai/Ornith-1.5-9B-GGUF), revision **`abdd624b12ebf020b767fff532ff44fe552b28c3`**, file **`Ornith-1.5-9B-Q4_K_M.gguf`**. The exact file is **5,780,090,816 bytes (5.383 GiB)**. Its SHA-256 is **`70c112196e0b7023803c9762752e46d29e612a92c83f995bc3ba1ceb07e8fab6`**. Verify this before configuration. ([Pinned download](https://huggingface.co/ornith-ai/Ornith-1.5-9B-GGUF/resolve/abdd624b12ebf020b767fff532ff44fe552b28c3/Ornith-1.5-9B-Q4_K_M.gguf), [official file metadata](https://huggingface.co/api/models/ornith-ai/Ornith-1.5-9B-GGUF?blobs=true))
+
+Calculated from Ornith’s eight full-attention layers, four KV heads, and 256-dimensional heads, ordinary F16 KV consumes approximately **512 MiB at 16K** or **1 GiB at 32K**. Thus file-size-plus-KV planning subtotals are **5.883 GiB** and **6.383 GiB** respectively. These are estimates, not measured CUDA allocations: recurrent state, checkpoints, compute buffers, graphs, Windows display use, and runtime overhead still need room. Start Q4 at 16K; test 32K under realistic prefill before adopting it. Q5’s 6.186 GiB file leaves much less headroom and has no demonstrated coding benefit here. ([Architecture](https://huggingface.co/ornith-ai/Ornith-1.5-9B/blob/main/config.json), [Q5 size](https://huggingface.co/api/models/ornith-ai/Ornith-1.5-9B-GGUF?blobs=true))
+
+K2’s architecture implies approximately **2.25 GiB F16 KV at 16K**, making its memory fit less comfortable despite a smaller Q4 file. Larger MoE models cannot be selected by active parameter count: Qwen3-Coder-Next’s **80B total / 3B active** still requires storing all expert weights somewhere. CPU expert offload would violate this request. ([K2 config](https://huggingface.co/IFM/K2-Horizon-7B/blob/main/config.json), [Qwen official card](https://huggingface.co/Qwen/Qwen3-Coder-Next))
+
+## Activation requires proof of residency and useful coding
+
+Use the installed runtime’s equivalent of **all GPU layers, all model tensors on CUDA0, GPU KV, one sequence, and automatic fitting disabled**. Current llama.cpp exposes `--n-gpu-layers all`, `--override-tensor '.*=CUDA0'`, `--fit off`, `--kv-offload`, and `--parallel 1`; check supported flags on the actual binary. An all-layer count alone does not prove embeddings or other tensors reside on GPU. Read per-backend model, KV, and recurrent-state buffers, and reject CPU model placement or Windows shared-memory spill under representative work. CPU tokenization and HTTP scheduling are compatible with fully GPU model inference. ([Argument definitions](https://raw.githubusercontent.com/ggml-org/llama.cpp/master/common/arg.cpp), [tensor placement](https://raw.githubusercontent.com/ggml-org/llama.cpp/master/src/llama-model-loader.cpp))
+
+Preserve Ornith’s modified chat template and verify structured tool calls across multiple turns. Its coding settings are temperature **0.6**, top-p **0.95**, top-k **20**, min-p **0**, presence penalty **0**, and repetition penalty **1**. Validate long-prompt prefill, an actual file edit, and a verification command while recording peak dedicated VRAM and responsiveness. Bonsai’s existing 27B memory estimates need per-model replacement; changing only the model filename would leave context planning unreliable. ([Official settings](https://huggingface.co/ornith-ai/Ornith-1.5-9B), [official template](https://huggingface.co/ornith-ai/Ornith-1.5-9B/raw/main/chat_template.jinja))
+
+## Conclusion
+
+The useful upgrade is a model that completes Bonsai’s edit-and-check loop while keeping enough GPU headroom for sustained use. Ornith Q4 is the strongest first experiment supported by these sources; its final acceptance depends on measured residency, tool correctness, and responsiveness. UI freezing, failed saves, and panel rendering also require application fixes, so model selection alone cannot establish that the IDE is ready for daily coding.
+
+
+## Local validation on October 26
+
+The pinned download matched the published SHA-256 and exact byte count. At 32,768 tokens with F16 KV, the runtime reported CUDA0 model weights of 5,357.88 MiB, CUDA0 KV of 1,024 MiB, and CUDA0 recurrent state of 50.25 MiB, with no CPU model-weight buffer. Native function calls and the follow-up tool result worked. A 22,877-token prompt completed at about 1,639 prompt tokens/s; peak dedicated VRAM observed was 6,859 MiB (6.70 GiB). CPU tokenization, sampling, and small transfer/compute buffers remain normal runtime work and are not CPU model-layer offloading.
+
+Evidence: `logs/ornith-validacion-32k.json` and `logs/ornith-gpu.err.log`. The full IDE coding evaluation with a 2,048-token thinking budget scored **17/19** in **404 seconds**, generating at roughly **36–42 tokens/s**. The failures were a Node test/import cleanup problem and a date regex that accepted an invalid month. This is not a clean coding-quality win over the older historical 18/19 result; those single runs also use different contexts and reasoning settings. The no-thinking comparison subsequently passed **19/19** in **398 seconds**. Thinking was therefore set off for the initial IDE configuration; it remains available in Settings. Both runs are saved, and n=1 per setting does not establish a general accuracy advantage. See `salida/eval-ornith-2026-10-26/informe.md`.
+
+
+Final application verification: all 13 offline suites passed, including 40/40 browser checks. The selected model persists as `ornith9b`; existing chats and workspace selection were preserved. No-thinking evaluation: `salida/eval-ornith-2026-10-26-sin-pensar/informe.md`.
+
+Final running configuration was checked again after disabling thinking: all GPU placement/tool/long-prompt checks passed at 32K; observed peak VRAM was 6,664 MiB. The earlier maximum across checks remains 6,859 MiB. Bonsai is running at http://127.0.0.1:8787 with Ornith selected, thinking off, and the existing workspace preserved. Final evidence: `logs/ornith-validacion-32k-final.json`.

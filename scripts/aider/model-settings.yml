@@ -1,0 +1,14 @@
+# Ajustes de Aider para Ternary-Bonsai-2-27B (sin razonamiento).
+# Muestreo: docs.prismml.com/run/llamacpp (--temp 0.5 --top-p 0.85 --top-k 20 --min-p 0).
+# Aider manda temperature=0 por defecto; aqui lo pisa extra_params. top_k y min_p no son
+# parametros de OpenAI, por eso viajan en extra_body. Lo mismo vale ya a nivel de servidor
+# (scripts\start-server.ps1), esto solo evita que Aider lo sobrescriba.
+- name: openai/Ternary-Bonsai-2-27B-Abliterated-PTQ1_0
+  edit_format: whole
+  use_repo_map: true
+  extra_params:
+    temperature: 0.5
+    top_p: 0.85
+    extra_body:
+      top_k: 20
+      min_p: 0

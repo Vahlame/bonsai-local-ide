@@ -1,0 +1,685 @@
+/* ============================================================================
+   BONSAI · Sistema de diseño
+   Se carga DESPUÉS de index.html (<style>) e ide.css: solo pule y añade, nunca
+   cambia la estructura ni los nombres de clase que usa el JavaScript.
+
+   Dirección: instrumento de precisión. Fondo casi negro con matiz verde, líneas
+   de 1 px, un único acento lima usado con avaricia, densidad alta en los datos y
+   aire en el cromo, movimiento corto (120-200 ms) y nada que parpadee.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- 1. Tokens */
+:root {
+  color-scheme: dark;
+
+  /* Tipografía */
+  --sans: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-base: 14px;
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+  --lh-tight: 1.25;
+  --lh-base: 1.5;
+  --lh-code: 1.6;
+  --tracking-cap: 0.09em;
+
+  /* Espacio (base 4) */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+
+  /* Radios */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 9px;
+  --r-lg: 13px;
+  --r-full: 999px;
+
+  /* Elevación: sombra + borde interior para que no parezca pegado */
+  --sh-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --sh-2: 0 4px 14px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sh-3: 0 18px 50px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --hair: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  /* Movimiento */
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 260ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+
+  /* Paleta (afinada sobre la identidad verde de Bonsai) */
+  --ink: #080a07;
+  --bg: #0d100b;
+  --panel: #12160f;
+  --raised: #191e14;
+  --hover: #1f2519;
+  --line: rgba(206, 224, 168, 0.12);
+  --line-strong: rgba(206, 224, 168, 0.26);
+  --text: #e9eee0;
+  --muted: #8d9680;
+  /* --dim es solo para bordes, iconos decorativos y números de línea. Si se usa
+     como color de TEXTO incumple WCAG AA: #5a6350 daba 2,9:1 sobre --panel
+     (mínimo 3:1). Con #6f7a64 sube a ~3,9:1 y sigue leyéndose como "apagado". */
+  --dim: #6f7a64;
+  --accent: #cde86e;
+  --accent-hi: #dcf58a;
+  --accent-ink: #1a2109;
+  --accent-soft: rgba(205, 232, 110, 0.11);
+  --accent-line: rgba(205, 232, 110, 0.32);
+  --gen: #82b8d0;
+  --ok: #7fce8a;
+  --warn: #e8c06a;
+  --danger: #ea9a89;
+  --danger-soft: rgba(234, 154, 137, 0.12);
+
+  /* Medidas del armazón */
+  --top-h: 46px;
+  --bar-h: 34px;
+  --status-h: 28px;
+}
+
+/* Tema claro: mismo esqueleto, otra luz. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ink: #ffffff;
+  --bg: #f4f6f1;
+  --panel: #fbfcf9;
+  --raised: #ffffff;
+  --hover: #eef2e8;
+  --line: rgba(38, 52, 26, 0.13);
+  --line-strong: rgba(38, 52, 26, 0.28);
+  --text: #1a2113;
+  --muted: #5f6a55;
+  --dim: #8b957f;
+  --accent: #5d7a12;
+  --accent-hi: #4c6608;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(93, 122, 18, 0.1);
+  --accent-line: rgba(93, 122, 18, 0.3);
+  --gen: #2c6a86;
+  --ok: #2f7a3d;
+  --warn: #8a6207;
+  --danger: #a8402c;
+  --danger-soft: rgba(168, 64, 44, 0.1);
+  --sh-1: 0 1px 2px rgba(30, 40, 20, 0.08);
+  --sh-2: 0 4px 14px rgba(30, 40, 20, 0.1), 0 1px 2px rgba(30, 40, 20, 0.06);
+  --sh-3: 0 18px 50px rgba(30, 40, 20, 0.16), 0 2px 8px rgba(30, 40, 20, 0.08);
+  --hair: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+/* ------------------------------------------------------------- 2. Tipografía */
+body {
+  font: var(--fs-base) / var(--lh-base) var(--sans);
+  font-feature-settings: "cv05" 1, "ss03" 1; /* Inter: 'l' con cola y 'g' de un piso */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+code, pre, kbd, samp, .mono, #meta, .hud, #meter-num, .ext, #stats-line, .num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "calt" 1, "zero" 1;
+}
+kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--r-xs);
+  background: var(--raised);
+  font-size: var(--fs-xs);
+  color: var(--text);
+  line-height: 1.5;
+}
+.muted { color: var(--muted); }
+
+/* ------------------------------------------------- 3. Foco, selección, scroll */
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); color: var(--text); }
+* { scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent; }
+*::-webkit-scrollbar { width: 11px; height: 11px; }
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: var(--r-full);
+}
+*::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--muted) 70%, transparent); background-clip: padding-box; }
+*::-webkit-scrollbar-corner { background: transparent; }
+
+/* -------------------------------------------------------------- 4. Controles */
+.ghost, .primary {
+  border-radius: var(--r-sm);
+  padding: 5px 10px;
+  font-size: var(--fs-md);
+  font-weight: 500;
+  line-height: 1.25;
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+.ghost {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  color: var(--text);
+  box-shadow: var(--hair);
+}
+.ghost:hover:not(:disabled) { background: var(--hover); border-color: var(--line-strong); }
+.ghost:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 1px solid transparent;
+  font-weight: 600;
+  box-shadow: var(--sh-1), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.primary:hover:not(:disabled) { background: var(--accent-hi); }
+.primary:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+
+/* Botón solo-icono */
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; padding: 0;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.icon-btn:hover:not(:disabled) { background: var(--hover); color: var(--text); border-color: var(--line); }
+.icon-btn.on { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-line); }
+.icon-btn svg { width: 15px; height: 15px; }
+
+/* Inputs */
+input[type="search"], input[type="text"], textarea, select {
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+input[type="search"]:focus, input[type="text"]:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+input[type="search"]::-webkit-search-cancel-button { filter: invert(0.6); cursor: pointer; }
+
+/* ----------------------------------------------------------- 5. Barra superior */
+.top {
+  height: var(--top-h);
+  gap: var(--s3);
+  padding: 0 var(--s3);
+  background: linear-gradient(180deg, var(--ink), color-mix(in srgb, var(--ink) 88%, var(--bg)));
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 5;
+}
+.brand .mark {
+  width: 19px; height: 19px;
+  border-radius: 5px;
+  background:
+    radial-gradient(120% 120% at 25% 20%, var(--accent-hi), var(--accent) 55%, color-mix(in srgb, var(--accent) 55%, #2c3a10) 100%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 2px 8px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.brand strong { letter-spacing: 0.14em; font-weight: 700; font-size: var(--fs-sm); }
+.brand small { color: var(--muted); font-size: var(--fs-xs); letter-spacing: 0.02em; }
+#meta { color: var(--muted); font-size: var(--fs-xs); }
+
+/* Conmutadores de panel: segmentado, no botones sueltos */
+.panes { gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--bg); }
+.panes .ghost {
+  border: 0; background: transparent; box-shadow: none;
+  padding: 4px 10px; font-size: var(--fs-sm); color: var(--muted); border-radius: var(--r-sm);
+}
+.panes .ghost:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.panes .ghost.on {
+  background: var(--raised); color: var(--text); font-weight: 600;
+  box-shadow: var(--sh-1), var(--hair);
+}
+.panes .ghost.on::before {
+  content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent); margin-right: 6px; vertical-align: 1px;
+}
+
+/* ---------------------------------------------------------- 6. Armazón y paneles */
+.work { background: var(--bg); }
+.pane-h {
+  height: var(--bar-h);
+  padding: 0 var(--s3);
+  font-size: var(--fs-xs);
+  letter-spacing: var(--tracking-cap);
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+}
+aside, #editor, #chat { background: var(--panel); }
+#editor { background: var(--ink); }
+.hint { color: var(--muted); font-size: var(--fs-sm); border-top: 1px solid var(--line); }
+
+/* Separadores redimensionables: más fáciles de agarrar, sin ruido visual */
+.gutter { width: 7px; }
+.gutter::after { inset: 0 3px; background: var(--line); transition: background var(--dur-1) var(--ease); }
+.gutter:hover::after, .gutter:active::after { background: var(--accent); inset: 0 2px; }
+
+/* Árbol de archivos */
+.row { min-height: 27px; border-radius: var(--r-sm); transition: background var(--dur-1) var(--ease); }
+.row:hover { background: var(--hover); }
+.row.open { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.row.open:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.row button.name { font-size: var(--fs-md); padding: 4px 7px; }
+.row.open button.name { font-weight: 600; color: var(--text); }
+.ext {
+  font-size: 9px; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--dim); width: 32px;
+}
+.row.on .ext { color: var(--accent); }
+
+/* ------------------------------------------------------ 7. Pestañas del editor */
+.tabbar {
+  height: var(--bar-h);
+  padding: 0 var(--s2) 0 0;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.tabs { display: flex; align-items: stretch; min-width: 0; flex: 1; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { height: 0; }
+.tab-item {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: 0 var(--s2) 0 var(--s3);
+  max-width: 210px; min-width: 0;
+  border: 0; border-right: 1px solid var(--line);
+  background: transparent; color: var(--muted);
+  font-size: var(--fs-sm);
+  position: relative;
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+.tab-item:hover { background: var(--hover); color: var(--text); }
+.tab-item.on { background: var(--ink); color: var(--text); font-weight: 500; }
+.tab-item.on::after {
+  content: ""; position: absolute; inset: auto 0 -1px 0; height: 2px; background: var(--accent);
+}
+.tab-item .tname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab-item .close {
+  width: 17px; height: 17px; flex: none; border: 0; border-radius: var(--r-xs);
+  background: transparent; color: var(--dim);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 1; opacity: 0;
+  transition: opacity var(--dur-1) var(--ease), background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+.tab-item:hover .close, .tab-item.on .close { opacity: 1; }
+.tab-item .close:hover { background: var(--danger-soft); color: var(--danger); }
+.tab-item .dirty { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+
+/* ------------------------------------------------------------- 8. Editor */
+#code { font: var(--fs-md) / var(--lh-code) var(--mono); }
+#code .nums {
+  padding: var(--s3) var(--s2) var(--s3) var(--s3);
+  color: var(--dim);
+  background: var(--ink);
+  border-right: 1px solid var(--line);
+}
+#code .src { padding: var(--s3) var(--s4); }
+#code.empty-code { color: var(--muted); font: var(--fs-md) / var(--lh-base) var(--sans); }
+
+/* Editor real: un textarea transparente sobre el código resaltado.
+   Las dos capas comparten fuente, tamaño, interlineado y relleno, así que el
+   cursor cae exactamente sobre el carácter que se ve. */
+.editor-wrap { position: relative; flex: 1; display: flex; min-height: 0; overflow: hidden; }
+/* El atributo `hidden` NO basta cuando una regla de autor fija `display`:
+   #code { display:flex } gana a la hoja del navegador y el visor seguía viéndose
+   encima del editor. Hay que apagarlo a mano. */
+#code[hidden], .editor-wrap[hidden] { display: none !important; }
+.editor-scroll { flex: 1; overflow: auto; position: relative; }
+.editor-layers { position: relative; display: flex; min-height: 100%; }
+.editor-layers .nums-live {
+  position: sticky; left: 0; z-index: 2;
+  padding: 12px 10px 12px 14px;
+  color: var(--dim); text-align: right; user-select: none;
+  background: var(--ink); border-right: 1px solid var(--line);
+  font: var(--fs-md) / var(--lh-code) var(--mono);
+  white-space: pre; /* sin esto los números se envuelven como un párrafo */
+}
+.editor-layers .stack { position: relative; flex: 1; min-width: 0; }
+.editor-layers .hl,
+.editor-layers textarea {
+  margin: 0; padding: 12px 16px;
+  font: var(--fs-md) / var(--lh-code) var(--mono);
+  white-space: pre; tab-size: 2;
+  border: 0; outline: none;
+}
+.editor-layers .hl {
+  display: block; min-height: 100%; min-width: 100%;
+  color: var(--text); pointer-events: none;
+}
+.editor-layers .hl code { font: inherit; background: none; padding: 0; }
+.editor-layers textarea {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  resize: none; overflow: hidden;
+  background: transparent; color: transparent;
+  caret-color: var(--accent);
+  border-radius: 0;
+}
+.editor-layers textarea::selection { background: color-mix(in srgb, var(--gen) 45%, transparent); }
+.editor-layers textarea:focus { box-shadow: none; border: 0; }
+/* Sin resaltado (archivo enorme o binario): se ve el texto normal */
+.editor-layers textarea.plain { color: var(--text); }
+
+/* Aviso de archivo truncado o con cambios sin guardar */
+.editor-note {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: 5px var(--s3);
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  color: var(--warn);
+}
+.editor-note[hidden] { display: none; }
+.editor-note .sp { flex: 1; }
+.editor-note.danger { background: var(--danger-soft); color: var(--danger); }
+
+/* ---------------------------------------------------------------- 9. Chat */
+.msg { border-radius: var(--r-md); padding: 9px 2px 9px 12px; }
+.msg.user {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--r-md);
+  padding: 9px 12px;
+  box-shadow: var(--hair);
+}
+.msg.assistant { border-left-color: color-mix(in srgb, var(--gen) 70%, transparent); }
+.action { border-radius: var(--r-md); box-shadow: var(--sh-1); }
+.note { font-size: var(--fs-sm); }
+.md-code { border-radius: var(--r-md); background: var(--ink); }
+.md-code-h { background: var(--panel); font-size: var(--fs-xs); }
+.md code { background: color-mix(in srgb, var(--text) 8%, transparent); border-radius: var(--r-xs); }
+
+/* Caja de escritura */
+#box { border-top: 1px solid var(--line); background: var(--panel); }
+#input { border-radius: var(--r-md); padding: 9px 11px; font-size: var(--fs-base); line-height: 1.5; }
+#attach-menu, #picker {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--raised);
+  box-shadow: var(--sh-3);
+  padding: var(--s1);
+}
+
+/* ----------------------------------------------------------- 10. Barra de estado */
+.statusbar {
+  height: var(--status-h);
+  padding: 0 var(--s3);
+  gap: var(--s3);
+  background: var(--ink);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 8px; border-radius: var(--r-full);
+  background: var(--raised); border: 1px solid var(--line);
+  font-size: var(--fs-xs); color: var(--muted);
+}
+.pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 6px color-mix(in srgb, var(--ok) 60%, transparent); }
+.pill .dot.rtx { background: var(--accent); box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent); }
+.meter { border-radius: var(--r-full); overflow: hidden; }
+
+/* ============================================================================
+   11. Componentes nuevos (los que no existían)
+   ========================================================================== */
+
+/* --- Paleta de comandos ---------------------------------------------------- */
+.paleta-fondo {
+  position: fixed; inset: 0; z-index: 60;
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 12vh;
+  animation: paleta-in var(--dur-2) var(--ease);
+}
+.paleta {
+  width: min(620px, 92vw);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--raised) 96%, transparent);
+  box-shadow: var(--sh-3);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  max-height: 62vh;
+}
+.paleta input {
+  border: 0; border-bottom: 1px solid var(--line);
+  border-radius: 0; background: transparent;
+  padding: 14px 16px; font-size: var(--fs-lg);
+  width: 100%;
+}
+.paleta input:focus { box-shadow: none; border-color: var(--line); border-bottom-color: var(--accent); }
+.paleta ul { list-style: none; margin: 0; padding: 6px; overflow: auto; }
+.paleta li {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--r-sm);
+  cursor: pointer; font-size: var(--fs-md);
+}
+.paleta li[aria-selected="true"] { background: var(--accent-soft); color: var(--text); }
+.paleta li[aria-selected="true"] .p-hint { color: var(--muted); }
+.paleta li svg { width: 15px; height: 15px; color: var(--muted); flex: none; }
+.paleta li[aria-selected="true"] svg { color: var(--accent); }
+.paleta .p-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paleta .p-hint { color: var(--dim); font: var(--fs-xs) var(--mono); flex: none; }
+.paleta .p-grupo {
+  padding: 8px 12px 4px; font-size: var(--fs-xs); letter-spacing: var(--tracking-cap);
+  color: var(--dim); text-transform: uppercase;
+}
+.paleta .p-vacio { padding: 18px 16px; color: var(--muted); font-size: var(--fs-md); }
+
+/* --- Avisos emergentes (toasts) ------------------------------------------- */
+.avisos {
+  position: fixed; right: var(--s4); bottom: calc(var(--status-h) + var(--s3));
+  z-index: 70; display: flex; flex-direction: column; gap: var(--s2);
+  pointer-events: none;
+}
+.aviso {
+  display: flex; align-items: center; gap: 10px;
+  min-width: 240px; max-width: 380px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--raised) 97%, transparent);
+  box-shadow: var(--sh-3);
+  font-size: var(--fs-md);
+  pointer-events: auto;
+  animation: aviso-in var(--dur-3) var(--ease);
+}
+.aviso.ok { border-left-color: var(--ok); }
+.aviso.error { border-left-color: var(--danger); }
+.aviso.warn { border-left-color: var(--warn); }
+.aviso svg { width: 16px; height: 16px; flex: none; color: var(--muted); }
+.aviso.ok svg { color: var(--ok); }
+.aviso.error svg { color: var(--danger); }
+.aviso .a-txt { flex: 1; min-width: 0; }
+.aviso .a-x {
+  border: 0; background: transparent; color: var(--dim); cursor: pointer;
+  width: 20px; height: 20px; border-radius: var(--r-xs); flex: none;
+}
+.aviso .a-x:hover { background: var(--hover); color: var(--text); }
+.aviso.sale { animation: aviso-out var(--dur-2) var(--ease) forwards; }
+
+/* --- Menú contextual ------------------------------------------------------ */
+.menu {
+  position: fixed; z-index: 80;
+  min-width: 190px; padding: 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--raised) 97%, transparent);
+  box-shadow: var(--sh-3);
+  animation: paleta-in var(--dur-1) var(--ease);
+}
+.menu[hidden] { display: none; }
+.menu button {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 7px 9px; border: 0; border-radius: var(--r-sm);
+  background: transparent; color: var(--text); text-align: left; font-size: var(--fs-md);
+}
+.menu button:hover:not(:disabled) { background: var(--accent-soft); }
+.menu button:disabled { color: var(--dim); }
+.menu button svg { width: 14px; height: 14px; color: var(--muted); }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: 5px 4px; }
+.menu .m-key { margin-left: auto; color: var(--dim); font: var(--fs-xs) var(--mono); }
+.menu .m-col { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.menu .m-nota { color: var(--muted); font-size: var(--fs-xs); max-width: 300px; white-space: normal; }
+
+/* Botón de modelo en la barra de arriba */
+.modelo-boton {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  padding: 4px 10px; font-size: var(--fs-sm);
+  border-radius: var(--r-md);
+  max-width: 260px;
+}
+.modelo-boton .modelo-ico, .modelo-boton .modelo-flecha { display: inline-flex; color: var(--accent); }
+.modelo-boton .modelo-flecha { color: var(--muted); }
+.modelo-boton svg { width: 14px; height: 14px; }
+.modelo-boton .modelo-nombre { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modelo-boton:disabled { opacity: 0.7; cursor: progress; }
+
+/* --- Diálogo -------------------------------------------------------------- */
+.dialogo-fondo {
+  position: fixed; inset: 0; z-index: 75;
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  animation: paleta-in var(--dur-2) var(--ease);
+}
+.dialogo {
+  width: min(440px, 92vw);
+  border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+  background: var(--raised); box-shadow: var(--sh-3);
+  padding: var(--s5);
+}
+.dialogo h3 { margin: 0 0 var(--s2); font-size: var(--fs-lg); font-weight: 600; }
+.dialogo p { margin: 0 0 var(--s4); color: var(--muted); font-size: var(--fs-md); line-height: 1.5; }
+.dialogo input { width: 100%; padding: 8px 10px; margin-bottom: var(--s4); }
+.dialogo .d-botones { display: flex; justify-content: flex-end; gap: var(--s2); }
+
+/* --- Estados vacíos ------------------------------------------------------- */
+.vacio {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s3); padding: var(--s6) var(--s4); text-align: center;
+  color: var(--muted); font-size: var(--fs-md); flex: 1;
+}
+.vacio svg { width: 30px; height: 30px; color: var(--dim); }
+.vacio strong { color: var(--text); font-weight: 600; }
+
+/* --- Insignias ------------------------------------------------------------ */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 6px; border-radius: var(--r-xs);
+  font: var(--fs-xs) var(--mono);
+  background: var(--raised); border: 1px solid var(--line); color: var(--muted);
+}
+.badge.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+.badge.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, transparent); }
+.badge.err { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+.badge.git-m { color: var(--warn); }
+.badge.git-a { color: var(--ok); }
+.badge.git-q { color: var(--gen); }
+
+/* --- Barra de progreso fina ---------------------------------------------- */
+.prog { height: 3px; border-radius: var(--r-full); background: var(--line); overflow: hidden; }
+.prog > i { display: block; height: 100%; background: var(--accent); transition: width var(--dur-2) var(--ease); }
+
+/* --- Tooltip propio (title nativo no se puede estilizar) ------------------ */
+[data-tip] { position: relative; }
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%) translateY(2px);
+  padding: 5px 9px; border-radius: var(--r-sm);
+  background: var(--raised); color: var(--text);
+  border: 1px solid var(--line-strong); box-shadow: var(--sh-2);
+  font: var(--fs-xs) var(--sans); white-space: nowrap;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
+  z-index: 90;
+}
+[data-tip]:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* --- Resaltado temporal de líneas que tocó el agente --------------------- */
+.linea-nueva { display: inline-block; width: 100%; background: color-mix(in srgb, var(--ok) 13%, transparent); }
+.linea-nueva.decae { animation: decaer 2.4s var(--ease) forwards; }
+
+/* ------------------------------------------------------------ 12. Animaciones */
+@keyframes paleta-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes aviso-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes aviso-out { to { opacity: 0; transform: translateX(12px); } }
+@keyframes decaer { to { background: transparent; } }
+@keyframes pulso { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.pensando { animation: pulso 1.4s ease-in-out infinite; }
+
+/* Quien pida menos movimiento, no lo recibe. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* ---------------------------------------------- 13. Pantallas estrechas */
+@media (max-width: 1100px) {
+  :root { --chat: 360px; --side: 236px; --history: 200px; }
+}
+
+/* Distribucion de trabajo: reserva espacio para el editor y evita desbordar
+   la barra con los botones y los indicadores en pantallas de portatil. */
+:root { --history: 190px; --side: 220px; --chat: clamp(340px, 31vw, 480px); }
+html, body { overflow: hidden; }
+.top { min-height: var(--top-h); height: auto; flex-wrap: wrap; padding-block: 6px; row-gap: 5px; }
+.top .panes { flex: none; }
+.top #meta { max-width: 16ch; }
+.ico { display: inline-block; flex: none; vertical-align: middle; pointer-events: none; }
+.generation-status { padding: 5px 2px; color: var(--muted); font: var(--fs-xs)/1.4 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-theme="light"] .t-kw { color: #793db5; }
+[data-theme="light"] .t-st { color: #286b31; }
+[data-theme="light"] .t-cm { color: #5a6759; }
+[data-theme="light"] .t-nu { color: #91561b; }
+[data-theme="light"] .t-fn { color: #146180; }
+[data-theme="light"] .t-ty, [data-theme="light"] .t-at { color: #775a05; }
+[data-theme="light"] .t-pn { color: #596157; }
+[data-theme="light"] .t-tag { color: #9d4828; }
+[data-theme="light"] .t-va { color: #1d6c62; }
+.statusbar { overflow-x: auto; overflow-y: hidden; white-space: nowrap; }
+.statusbar > * { flex-shrink: 0; }
+.work { overflow: hidden; }
+#editor { min-width: 260px; }
+#chat { min-width: 300px; }
+.editor-layers .hl { min-height: calc(100% + 1.5em); }
+@media (min-width: 981px) and (max-width: 1200px) {
+  #history { max-width: 165px; }
+  #files { max-width: 200px; }
+  #chat { max-width: 38vw; }
+  #editor { min-width: 190px; }
+  .top .brand small, .top #meta { display: none; }
+}
+@media (max-width: 980px) {
+  .work { display: grid; grid-template-columns: 180px minmax(0, 1fr); grid-template-rows: minmax(160px, 0.43fr) minmax(260px, 0.57fr); overflow: hidden; }
+  #history, #files { grid-column: 1; grid-row: 1; width: auto; max-height: none; min-height: 0; }
+  #editor { grid-column: 2; grid-row: 1; min-width: 0; min-height: 0; }
+  #chat { grid-column: 1 / -1; grid-row: 2; width: auto; min-width: 0; min-height: 0; max-height: none; }
+  body.hide-history.hide-files #editor { grid-column: 1 / -1; }
+  body.hide-chat #editor, body.hide-chat #files, body.hide-chat #history { grid-row: 1 / -1; }
+  body.hide-editor #chat { grid-column: 2; grid-row: 1 / -1; }
+  body.hide-editor.hide-history.hide-files #chat { grid-column: 1 / -1; }
+  .statusbar { flex-wrap: nowrap; min-height: 30px; height: 30px; }
+  .hud { gap: 8px; }
+  .hud .cell:nth-child(3), .hud .cell:nth-child(4), .hud .cell:nth-child(6) { display: none; }
+}
