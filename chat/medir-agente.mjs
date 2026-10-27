@@ -317,6 +317,7 @@ function pedir(url, cuerpo, metodo) {
       res.on("end", () => resolve({ status: res.statusCode || 0, body: t }));
     });
     req.on("error", (e) => resolve({ status: 0, body: String(e.message) }));
+    req.setTimeout(2000, () => req.destroy(new Error("tiempo de conexión agotado")));
     if (datos) req.write(datos);
     req.end();
   });
@@ -366,7 +367,11 @@ async function main() {
           });
           res.end();
         });
+        r.on("error", () => { if (!res.destroyed) res.destroy(); });
       });
+      // Al cancelar el cliente también hay que cortar la petición al modelo. De otro
+      // modo el stream queda abierto, conserva sockets y puede impedir salir al proxy.
+      res.on("close", () => { if (!res.writableFinished) arriba.destroy(); });
       arriba.on("error", (e) => {
         // Si el modelo se cae a mitad del stream, las cabeceras YA se enviaron: volver a
         // escribirlas revienta el arnés (ERR_HTTP_HEADERS_SENT) en vez de reportar el corte.
@@ -382,6 +387,10 @@ async function main() {
   const puertoProxy = await libre();
   await new Promise((r) => proxy.listen(puertoProxy, "127.0.0.1", () => r(undefined)));
 
+  let ui;
+  let volcado;
+  try {
+
   // 2. ui-server REAL con estado y carpeta temporales.
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bonsai-agente-"));
   const proyecto = path.join(tmp, "proyecto");
@@ -392,7 +401,7 @@ async function main() {
     fs.writeFileSync(path.join(tmp, "estado", "ui-settings.json"), JSON.stringify({ pensar }), "utf8");
   }
   const puertoUi = await libre();
-  const ui = spawn(process.execPath, [path.join(HERE, "ui-server.mjs"), "--port", String(puertoUi), "--llama-port", String(puertoProxy)], {
+  ui = spawn(process.execPath, [path.join(HERE, "ui-server.mjs"), "--port", String(puertoUi), "--llama-port", String(puertoProxy)], {
     cwd: HERE,
     env: { ...process.env, BONSAI_STATE: path.join(tmp, "estado"), BONSAI_SALIDA: path.join(tmp, "salida") },
     stdio: "ignore",
@@ -407,20 +416,37 @@ async function main() {
   };
   const base = `http://127.0.0.1:${puertoUi}`;
   if (!(await esperar())) throw new Error("el ui-server no arrancó");
-  await pedir(`${base}/api/workspace`, { path: proyecto });
-  await pedir(`${base}/api/permit`, { mode: "all" });
+  const permitir = await pedir(`${base}/api/permit`, { mode: "all" });
+  if (permitir.status !== 200) throw new Error(`no se pudieron habilitar permisos: HTTP ${permitir.status}`);
+
+  // /api/workspace responde 409 hasta que el finally del turno anterior terminó,
+  // incluidos navegador y procesos de fondo. No se borra ni verifica el proyecto
+  // mientras ese turno todavía puede modificarlo.
+  const esperarTurnoLibre = async () => {
+    const limite = Date.now() + 30000;
+    while (Date.now() < limite) {
+      const r = await pedir(`${base}/api/workspace`, { path: proyecto });
+      if (r.status === 200) return;
+      if (r.status !== 409) throw new Error(`no se pudo preparar el proyecto: HTTP ${r.status} ${r.body}`);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    throw new Error("el turno anterior no terminó de cancelarse; se detiene la evaluación para proteger el proyecto temporal");
+  };
 
   fs.mkdirSync(DESTINO, { recursive: true });
   const sello = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const ficheroCrudo = path.join(DESTINO, `agente-${modelo}${pensar ? `-pensar${pensar}` : ""}-${sello}.jsonl`);
   const ficheroInforme = path.join(DESTINO, `agente-${modelo}${pensar ? `-pensar${pensar}` : ""}-${sello}.md`);
-  const volcado = fs.createWriteStream(ficheroCrudo, { flags: "a" });
+  volcado = fs.createWriteStream(ficheroCrudo, { flags: "a" });
 
   /** @type {string[]} */
   const informe = [`# Tareas largas con el agente completo · ${modelo}`, "", `- Proxy: 127.0.0.1:${puertoProxy} → llama-server 127.0.0.1:${puertoLlama}`, `- ui-server: ${base}`, `- Fecha: ${new Date().toISOString()}`, `- Razonamiento: ${pensar ? `${pensar} tokens (si el modelo lo admite)` : "apagado"}`, ""];
   const elegidas = solo ? TAREAS.filter((t) => solo.split(",").includes(t.id)) : TAREAS;
 
   for (const tarea of elegidas) {
+    await esperarTurnoLibre();
+    const reset = await pedir(`${base}/api/reset`, {});
+    if (reset.status !== 204) throw new Error(`no se pudo limpiar el chat: HTTP ${reset.status}`);
     fs.rmSync(proyecto, { recursive: true, force: true });
     fs.mkdirSync(proyecto, { recursive: true });
     if (tarea.preparar) tarea.preparar(proyecto);
@@ -429,6 +455,7 @@ async function main() {
     /** @type {Array<Record<string, any>>} */
     const eventos = [];
     let textoFinal = "";
+    let errorTurno = "";
     try {
       const res = await fetch(`${base}/api/chat`, {
         method: "POST",
@@ -460,10 +487,18 @@ async function main() {
         }
       }
     } catch (err) {
-      eventos.push({ type: "error", text: err instanceof Error ? err.message : String(err) });
+      errorTurno = err instanceof Error ? err.message : String(err);
+      eventos.push({ type: "error", text: errorTurno });
+      // Una conexión SSE cerrada no garantiza que el ui-server haya visto el
+      // corte. /api/reset cancela explícitamente el AbortController del turno.
+      const cancelar = await pedir(`${base}/api/reset`, {});
+      if (cancelar.status !== 204) throw new Error(`no se pudo cancelar el turno: HTTP ${cancelar.status}`);
     }
     const segundos = Math.round((Date.now() - t0) / 1000);
-    const veredicto = await tarea.verificar(proyecto);
+    await esperarTurnoLibre();
+    const veredicto = errorTurno
+      ? { ok: false, incompleta: true, nota: `turno interrumpido: ${errorTurno}` }
+      : await tarea.verificar(proyecto);
     const acciones = eventos.filter((e) => e.type === "action");
     const saltos = eventos.filter((e) => e.type === "start").length;
     const crudo = trafico.filter((t) => String(t.url).includes("chat/completions"));
@@ -488,7 +523,7 @@ async function main() {
       eventos,
     })}\n`);
     const filas = [
-      `## ${tarea.id} — ${veredicto.ok ? "✅ OK" : "❌ FALLA"} (${segundos} s, ${saltos} saltos, ${acciones.length} acciones)`,
+      `## ${tarea.id} — ${veredicto.incompleta ? "⚠️ INCOMPLETA" : veredicto.ok ? "✅ OK" : "❌ FALLA"} (${segundos} s, ${saltos} saltos, ${acciones.length} acciones)`,
       "",
       `- Dialectos vistos: ${[...dialectos].join(", ") || "(ninguno)"}`,
       `- Verificación: ${veredicto.nota.replace(/\n/g, " ").slice(0, 300)}`,
@@ -497,13 +532,20 @@ async function main() {
       "",
     ];
     informe.push(...filas);
-    process.stdout.write(`${tarea.id.padEnd(16)} ${veredicto.ok ? "OK  " : "FALLA"} ${String(segundos).padStart(4)} s  saltos=${saltos}  acciones=${acciones.length}  dialectos=${[...dialectos].join("+") || "-"}\n`);
+    process.stdout.write(`${tarea.id.padEnd(16)} ${veredicto.incompleta ? "INCOMPLETA" : veredicto.ok ? "OK  " : "FALLA"} ${String(segundos).padStart(4)} s  saltos=${saltos}  acciones=${acciones.length}  dialectos=${[...dialectos].join("+") || "-"}\n`);
   }
-  volcado.end();
   fs.writeFileSync(ficheroInforme, informe.join("\n"), "utf8");
   process.stdout.write(`\ncrudo: ${ficheroCrudo}\ninforme: ${ficheroInforme}\n`);
-  ui.kill();
-  proxy.close();
+  } finally {
+    if (volcado) await new Promise((resolve) => volcado.end(resolve));
+    if (ui && ui.exitCode === null) {
+      const cerrado = new Promise((resolve) => ui.once("exit", resolve));
+      ui.kill();
+      await Promise.race([cerrado, new Promise((resolve) => setTimeout(resolve, 3000))]);
+    }
+    proxy.closeAllConnections();
+    await new Promise((resolve) => proxy.close(resolve));
+  }
 }
 
 main().catch((err) => {
