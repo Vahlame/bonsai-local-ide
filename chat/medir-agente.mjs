@@ -389,10 +389,11 @@ async function main() {
 
   let ui;
   let volcado;
+  let tmp;
   try {
 
   // 2. ui-server REAL con estado y carpeta temporales.
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bonsai-agente-"));
+  tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bonsai-agente-"));
   const proyecto = path.join(tmp, "proyecto");
   fs.mkdirSync(proyecto, { recursive: true });
   // Con --pensar N el ui-server arranca con ese ajuste (solo se usa si el modelo lo admite).
@@ -481,6 +482,7 @@ async function main() {
             const ev = JSON.parse(linea.slice(5));
             eventos.push(ev);
             if (ev.type === "replace") textoFinal = String(ev.text || "");
+            if (ev.type === "error") errorTurno = String(ev.text || "error del turno");
           } catch {
             /* trozo */
           }
@@ -545,6 +547,13 @@ async function main() {
     }
     proxy.closeAllConnections();
     await new Promise((resolve) => proxy.close(resolve));
+    // Solo se elimina la carpeta temporal que creó este proceso, y solo una vez
+    // cerrado el servidor que podía estar escribiendo en ella.
+    if (tmp && (!ui || ui.exitCode !== null || ui.signalCode !== null)
+        && path.dirname(path.resolve(tmp)) === path.resolve(os.tmpdir())
+        && path.basename(tmp).startsWith("bonsai-agente-")) {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
   }
 }
 

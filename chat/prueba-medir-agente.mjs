@@ -13,6 +13,7 @@ const temp = fs.mkdtempSync(path.join(os.tmpdir(), "bonsai-medir-test-"));
 let chats = 0;
 let cerrado = false;
 let segundoSinAnterior = false;
+let segundoTrasCancelacion = false;
 const server = http.createServer((req, res) => {
   const json = (data) => res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(data));
   if (req.url === "/health") return json({ status: "ok" });
@@ -32,6 +33,7 @@ const server = http.createServer((req, res) => {
       return;
     }
     segundoSinAnterior = !JSON.stringify(body.messages).includes("Crea expr.py con un analizador");
+    segundoTrasCancelacion = cerrado;
     res.writeHead(200, { "content-type": "text/event-stream" });
     res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Terminé." }, finish_reason: null }] })}\n\n`);
     res.end(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: "stop" }] })}\n\ndata: [DONE]\n\n`);
@@ -53,6 +55,7 @@ try {
   assert.equal(result, 0, output);
   assert.equal(chats, 2, output);
   assert.equal(cerrado, true, "el proxy no canceló la conexión al modelo");
+  assert.equal(segundoTrasCancelacion, true, "el siguiente turno empezó antes de cerrar la petición anterior");
   assert.equal(segundoSinAnterior, true, "el segundo turno heredó el primero");
   assert.match(output, /parser\s+INCOMPLETA/);
   assert.match(output, /arreglar-bugs\s+FALLA/); // modelo simulado: no corrigió las fechas
@@ -66,4 +69,7 @@ try {
   if (child.exitCode === null) child.kill();
   server.closeAllConnections();
   await new Promise((resolve) => server.close(resolve));
+  if (path.dirname(path.resolve(temp)) === path.resolve(os.tmpdir()) && path.basename(temp).startsWith("bonsai-medir-test-")) {
+    fs.rmSync(temp, { recursive: true, force: true });
+  }
 }
