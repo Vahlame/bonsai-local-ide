@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contador</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding-top: 40vh; }
+    #numero { font-size: 48px; }
+  </style>
+</head>
+<body>
+  <div id="numero">0</div>
+  <button id="boton">Sumar</button>
+
+  <script>
+    var numero = document.getElementById("numero");
+    var contador = 0;
+    document.getElementById("boton").addEventListener("click", function () {
+      contador++;
+      numero.textContent = contador;
+    });
+  </script>
+</body>
+</html>

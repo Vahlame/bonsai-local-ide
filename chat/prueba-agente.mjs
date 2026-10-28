@@ -171,6 +171,15 @@ const guion = (body, n) => {
   if (/prueba del servidor de fondo/i.test(ultimo)) return [nativa("sf1", "ejecutar", { comando: "node -e \"require('http').createServer((q,s)=>s.end('hola desde el fondo')).listen(8798,()=>console.log('escuchando en 8798'))\"", segundo_plano: true })];
   if (ultimoMsg.role === "tool" && ultimoMsg.tool_call_id === "sf1") return [nativa("sf2", "ejecutar", { comando: "node -e \"fetch('http://127.0.0.1:8798').then(r=>r.text()).then(t=>console.log(t))\"" })];
   if (ultimoMsg.role === "tool" && ultimoMsg.tool_call_id === "sf2") return [{ content: "La API responde." }];
+  // Prueba 23: plan persistente (checklist que sobrevive al turno).
+  if (/prueba del plan/i.test(ultimo)) return [nativa("plan1", "plan", { pasos: ["crear", "probar", "cerrar"], hechos: [1] })];
+  if (ultimoMsg.role === "tool" && ultimoMsg.tool_call_id === "plan1") return [{ content: "Plan guardado." }];
+  // Prueba 24: borrar un archivo (con punto de deshacer).
+  if (/prueba del borrado/i.test(ultimo)) return [nativa("del1", "borrar", { ruta: "borrar.txt" })];
+  if (ultimoMsg.role === "tool" && ultimoMsg.tool_call_id === "del1") return [{ content: "Borrado." }];
+  // Prueba 25: mover un archivo a una subcarpeta.
+  if (/prueba del movimiento/i.test(ultimo)) return [nativa("mv1", "mover", { origen: "mover.txt", destino: "sub/movido.txt" })];
+  if (ultimoMsg.role === "tool" && ultimoMsg.tool_call_id === "mv1") return [{ content: "Movido." }];
   // Prueba 21: releer las MISMAS líneas sin que nada cambie se frena; tras un cambio, no.
   if (/prueba de la relectura/i.test(ultimo)) return [nativa("rl1", "archivo", { ruta: "relee.txt", contenido: "uno\ndos\ntres\n" })];
   if (ultimoMsg.role === "tool" && ultimoMsg.tool_call_id === "rl1") return [nativa("rl2", "leer", { ruta: "relee.txt", desde: 1, hasta: 2 })];
@@ -476,10 +485,10 @@ try {
   check("cada llamada recibe SU resultado (dos mensajes tool)", Boolean(resCmd) && Boolean(resLeer), JSON.stringify((conDos?.messages || []).filter((m) => m.role === "tool").map((m) => m.tool_call_id)));
   check("el resultado del comando va solo en su llamada", /Salida de node/.test(String(resCmd?.content || "")) && !/Archivo grande\.txt/.test(String(resCmd?.content || "")));
   check("la salida larga conserva la cola (el error del final)", /ERROR_AL_FINAL/.test(String(resCmd?.content || "")), String(resCmd?.content || "").slice(-200));
-  check("la lectura grande avisa del recorte y de cómo seguir", /recortado: faltan las líneas/.test(String(resLeer?.content || "")) && /desde/.test(String(resLeer?.content || "")), String(resLeer?.content || "").slice(-240));
+  check("la lectura grande avisa del recorte y de cómo seguir", /recortado por presupuesto: faltan las líneas|recorte dentro de la línea/.test(String(resLeer?.content || "")) && /desde \d+/.test(String(resLeer?.content || "")), String(resLeer?.content || "").slice(-240));
   const conTrozo = visto.find((b) => (b.messages || []).some((m) => m.tool_call_id === "trozo"));
   const resTrozo = String(conTrozo?.messages?.find((m) => m.tool_call_id === "trozo")?.content || "");
-  check("leer con desde/hasta trae ese trozo (y no se toma por releer)", /líneas 2900-2905 de 3000/.test(resTrozo) && resTrozo.includes("línea 2903") && !/Ya leíste/.test(resTrozo), resTrozo.slice(0, 200));
+  check("leer con desde/hasta trae ese trozo (y no se toma por releer)", /líneas 2900-2905 de 3000/.test(resTrozo) && resTrozo.includes("línea 2903") && !/Misma versión del archivo/.test(resTrozo), resTrozo.slice(0, 200));
 
   // --- 12b. La guardia de repeticiones deja relanzar tras arreglar el código --
   fs.writeFileSync(path.join(proyecto, "comprobar.cjs"), "const fs = require('fs');\nif (!fs.existsSync('valor.txt') || fs.readFileSync('valor.txt', 'utf8').trim() !== 'ok') { console.error('FALTA valor.txt'); process.exit(1); }\nconsole.log('TODO OK');\n", "utf8");
@@ -516,22 +525,76 @@ try {
   await chat("explica el error de app.py y arréglalo");
   check("si hay algo que hacer, las herramientas siguen puestas", visto.slice(antesNoCharla).filter((b) => b.stream)[0]?.tool_choice === "auto");
 
-  // --- 22. Servidor en segundo plano: se usa y muere con el turno -------------
+  // --- 22. Servidor en segundo plano: se usa y SIGUE VIVO tras el turno ---------
   await pedir("POST", "/api/permit", { mode: "all" });
   await chat("prueba del servidor de fondo");
   const resFondo = (id) => String(visto.find((b) => (b.messages || []).some((m) => m.tool_call_id === id))?.messages?.find((m) => m.tool_call_id === id)?.content || "");
-  check("el servidor queda en segundo plano", /Lanzado en segundo plano/.test(resFondo("sf1")) && /escuchando en 8798/.test(resFondo("sf1")), resFondo("sf1").slice(0, 200));
+  check("el servidor queda en segundo plano", /Corriendo en segundo plano/.test(resFondo("sf1")) && /escuchando en 8798/.test(resFondo("sf1")), resFondo("sf1").slice(0, 200));
   check("otro comando lo consulta mientras corre", /hola desde el fondo/.test(resFondo("sf2")), resFondo("sf2").slice(0, 200));
   await new Promise((r) => setTimeout(r, 1500));
   const sigueVivo = await fetch("http://127.0.0.1:8798").then(() => true).catch(() => false);
-  check("al acabar el turno el servidor se cierra", !sigueVivo);
+  check("al acabar el turno el servidor YA NO se cierra", sigueVivo);
+  const listaProc = JSON.parse((await pedir("GET", "/api/procesos")).body);
+  const fondo = (listaProc.procesos || []).find((p) => /escuchando en 8798/.test(String(p.comando)));
+  check("el proceso aparece en /api/procesos", Boolean(fondo), JSON.stringify(listaProc));
+  const parado = await pedir("POST", "/api/procesos", { accion: "detener", id: fondo?.id });
+  check("detener el proceso responde 200", parado.status === 200, parado.body);
+  await new Promise((r) => setTimeout(r, 800));
+  const aunVivo = await fetch("http://127.0.0.1:8798").then(() => true).catch(() => false);
+  check("tras detenerlo el puerto queda libre", !aunVivo);
+
+  // --- 23. Plan persistente: se guarda y se recuerda en el turno siguiente -----
+  const evPlan = await chat("prueba del plan");
+  const sesionPlan = JSON.parse(fs.readFileSync(path.join(tmp, "estado", "ui-session.json"), "utf8"));
+  check("el plan queda guardado en la sesión", Array.isArray(sesionPlan.plan?.pasos) && sesionPlan.plan.pasos.length === 3 && sesionPlan.plan.hechos[0] === 1, JSON.stringify(sesionPlan.plan));
+  check("la tarjeta del plan sale en el chat", evPlan.some((e) => e.type === "action" && e.kind === "plan"), JSON.stringify(evPlan.filter((e) => e.type === "action").map((e) => e.kind)));
+  await chat("gracias, sigue");
+  const peticionPlan = visto.filter((b) => b.stream).pop();
+  const sisPlan = String(peticionPlan?.messages?.[0]?.content || "");
+  check("el plan viaja en el mensaje de sistema del turno siguiente", /PLAN DE LA TAREA/.test(sisPlan) && /\[x\] 1\./.test(sisPlan), sisPlan.slice(-220));
+
+  // --- 24. Borrar: archivo eliminado + punto de deshacer -----------------------
+  fs.writeFileSync(path.join(proyecto, "borrar.txt"), "efimero\n");
+  const evBorrar = await chat("prueba del borrado");
+  check("el archivo se borra", !fs.existsSync(path.join(proyecto, "borrar.txt")));
+  const accionBorrar = evBorrar.filter((e) => e.type === "action").find((e) => /borrar/.test(String(e.title)));
+  check("la acción de borrar trae punto de deshacer", Boolean(accionBorrar) && typeof accionBorrar.undo === "string" && accionBorrar.undo.length > 4, JSON.stringify(evBorrar.filter((e) => e.type === "action")));
+  const vueltaBorrar = await pedir("POST", "/api/undo", { id: accionBorrar?.undo });
+  check("deshacer restaura el archivo borrado", vueltaBorrar.status === 200 && fs.existsSync(path.join(proyecto, "borrar.txt")), `HTTP ${vueltaBorrar.status} ${vueltaBorrar.body}`);
+
+  // --- 25. Mover/renombrar: se mueve y el undo lo devuelve ---------------------
+  fs.writeFileSync(path.join(proyecto, "mover.txt"), "mueveme\n");
+  const evMover = await chat("prueba del movimiento");
+  check("el archivo se mueve a la subcarpeta", fs.existsSync(path.join(proyecto, "sub", "movido.txt")) && !fs.existsSync(path.join(proyecto, "mover.txt")));
+  const accionMover = evMover.filter((e) => e.type === "action").find((e) => /mover/.test(String(e.title)));
+  check("la acción de mover trae punto de deshacer", Boolean(accionMover) && typeof accionMover.undo === "string", JSON.stringify(evMover.filter((e) => e.type === "action")));
+  const vueltaMover = await pedir("POST", "/api/undo", { id: accionMover?.undo });
+  check("deshacer devuelve el archivo a su sitio", vueltaMover.status === 200 && fs.existsSync(path.join(proyecto, "mover.txt")) && !fs.existsSync(path.join(proyecto, "sub", "movido.txt")), `HTTP ${vueltaMover.status} ${vueltaMover.body}`);
+
+  // --- 26. Panel: terminal con stdin y diagnósticos/esquema/definición ---------
+  const abierto = JSON.parse((await pedir("POST", "/api/terminal", { accion: "abrir" })).body);
+  check("el terminal se abre", typeof abierto.id === "string" && abierto.id.length > 0, JSON.stringify(abierto));
+  await pedir("POST", "/api/terminal", { accion: "escribir", id: abierto.id, datos: "node -e \"console.log('panel-terminal')\"\r\n" });
+  await new Promise((r) => setTimeout(r, 1800));
+  const leido = JSON.parse((await pedir("POST", "/api/terminal", { accion: "leer", id: abierto.id, desde: 0 })).body);
+  check("el terminal devuelve la salida del comando", /panel-terminal/.test(String(leido.salida)), String(leido.salida).slice(0, 200));
+  await pedir("POST", "/api/terminal", { accion: "cerrar", id: abierto.id });
+  fs.writeFileSync(path.join(proyecto, "roto.js"), "function foo() {\n");
+  const diagRoto = JSON.parse((await pedir("GET", `/api/diag?path=${encodeURIComponent("roto.js")}`)).body);
+  check("los diagnósticos detectan el JS roto", Array.isArray(diagRoto.diagnosticos) && diagRoto.diagnosticos.length > 0 && diagRoto.diagnosticos[0].severidad === "error", JSON.stringify(diagRoto));
+  const simbolosOk = JSON.parse((await pedir("GET", `/api/simbolos?path=${encodeURIComponent("roto.js")}`)).body);
+  check("el esquema del archivo responde", Array.isArray(simbolosOk.simbolos) && simbolosOk.simbolos.some((s) => s.nombre === "foo"), JSON.stringify(simbolosOk));
+  const def = JSON.parse((await pedir("POST", "/api/definir", { palabra: "foo", path: "roto.js" })).body);
+  check("ir a definición encuentra la función", def.definicion?.archivo === "roto.js" && def.definicion?.linea === 1, JSON.stringify(def));
   // (El permiso sigue en "all": lo necesitan los pasos de abajo y se devuelve a "ask" tras el 12c.)
 
   // --- 21. Releer sin cambios se frena; tras un cambio, se permite ------------
   await chat("prueba de la relectura");
   const resLect = (id) => String(visto.find((b) => (b.messages || []).some((m) => m.tool_call_id === id))?.messages?.find((m) => m.tool_call_id === id)?.content || "");
-  check("releer las mismas líneas sin cambios se frena", /Ya leíste/.test(resLect("rl3")), resLect("rl3").slice(0, 120));
-  check("tras cambiar el archivo, esa relectura sí se hace", /DOS/.test(resLect("rl5")) && !/Ya leíste/.test(resLect("rl5")), resLect("rl5").slice(0, 120));
+  // Releer sin cambios ya NO se bloquea: el servidor conserva el contenido en un caché del
+  // turno y lo devuelve, para que recuperar evidencia plegada no sea imposible.
+  check("releer las mismas líneas sin cambios se sirve del caché (no se bloquea)", /Misma versión del archivo/.test(resLect("rl3")), resLect("rl3").slice(0, 160));
+  check("tras cambiar el archivo, esa relectura sí se hace", /DOS/.test(resLect("rl5")) && !/Misma versión del archivo/.test(resLect("rl5")), resLect("rl5").slice(0, 120));
 
   // --- 17. Cierre optimista con el último comando en rojo: se avisa ------------
   const eventosOpt = await chat("prueba optimista final");

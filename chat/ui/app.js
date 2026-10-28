@@ -47,7 +47,14 @@
       init.body = JSON.stringify(opciones.cuerpo);
     }
     const res = await fetch(ruta, init);
-    if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+    if (!res.ok) {
+      const detalle = (await res.text()) || `HTTP ${res.status}`;
+      const error = new Error(detalle);
+      // El estado HTTP importa para distinguir un 409 (el archivo cambió en disco y no
+      // hay que pisarlo) de un fallo genérico del servidor.
+      error.status = res.status;
+      throw error;
+    }
     return res.status === 204 ? null : res.json();
   }
 
@@ -268,7 +275,7 @@
 
   // ================================================================== ajustes
   /** @type {{tema: string, perfil: string, pensar: number, reglas: boolean, historial: number}} */
-  let ajustes = { tema: "dark", perfil: "codigo", pensar: 0, reglas: true, historial: 32768 };
+  let ajustes = { tema: "dark", perfil: "codigo", pensar: 0, reglas: true, historial: 32768, continuarAuto: true, saltosTope: 192, comandoSegundos: 180 };
 
   function aplicarTema(tema) {
     document.documentElement.dataset.theme = tema === "light" ? "light" : "dark";
@@ -616,6 +623,32 @@
 
   // Reemplaza las funciones del script principal manteniendo su comportamiento.
   window.openFile = abrirArchivo;
+  // Puente para paneles.js (diagnósticos, esquema, ir a definición): estado del editor y salto a línea.
+  /** @returns {{rel: string, texto: string, linea: number, columna: number} | null} */
+  window.bonsaiEditor = () => {
+    const p = pestanas[activa];
+    if (!p) return null;
+    const antes = area.value.slice(0, area.selectionStart);
+    return { rel: p.rel, texto: area.value, linea: antes.split(/\r?\n/).length, columna: antes.length - antes.lastIndexOf("\n"), cursor: area.selectionStart };
+  };
+  /** Abre el archivo y deja el cursor en la línea indicada (1-based). */
+  window.bonsaiAbrirLinea = async (rel, linea = 1) => {
+    if (!rel) return;
+    await abrirArchivo(rel, 0);
+    const p = pestanas.find((x) => x.rel === rel);
+    if (!p) return;
+    const lineas = p.texto.split(/\r?\n/);
+    const l = Math.max(1, Math.min(lineas.length, Number(linea) || 1));
+    let off = 0;
+    for (let i = 0; i < l - 1; i += 1) off += (lineas[i] || "").length + 1;
+    mostrarPestana(pestanas.indexOf(p));
+    area.value = p.texto;
+    area.focus();
+    area.setSelectionRange(off, Math.min(area.value.length, off + 1));
+    const alto = Number.parseInt(getComputedStyle(area).lineHeight, 10) || 18;
+    area.scrollTop = Math.max(0, (l - 2) * alto - 40);
+  };
+  window.bonsaiAvisar = avisar;
   window.selectionInsideEditor = function selectionInsideEditor() {
     const p = pestanas[activa];
     if (!p || area.selectionStart === area.selectionEnd) return null;
@@ -1245,6 +1278,131 @@
       });
   }
 
+  // ======================================== presupuesto real de contexto (finding 16)
+  /**
+   * Formatea un número de tokens para enseñarlo (— si no es un número).
+   * @param {unknown} n
+   * @returns {string}
+   */
+  const formatoTokens = (n) => (Number.isFinite(Number(n)) ? Number(n).toLocaleString("es-ES") : "—");
+
+  /**
+   * Pide a /api/state el presupuesto REAL: ventana del servidor, historial pedido,
+   * historial efectivo y reserva de salida. Devuelve null si el servidor no lo da: la
+   * interfaz prefiere no enseñar nada antes que prometer un contexto que no existe.
+   * @returns {Promise<{ventana: number, solicitado: number | null, efectivo: number, reservaSalida: number, historial: {error?: string, carpeta?: string} | null} | null>}
+   */
+  async function leerPresupuesto() {
+    try {
+      const datos = await api("/api/state");
+      const p = datos && datos.presupuesto;
+      if (!p || !Number.isFinite(Number(p.ventana))) return null;
+      return {
+        ventana: Number(p.ventana),
+        solicitado: Number.isFinite(Number(p.solicitado)) ? Number(p.solicitado) : null,
+        efectivo: Number.isFinite(Number(p.efectivo)) ? Number(p.efectivo) : Number(p.ventana),
+        reservaSalida: Number.isFinite(Number(p.reservaSalida)) ? Number(p.reservaSalida) : null,
+        historial: datos.historial && typeof datos.historial === "object" ? datos.historial : null,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Pinta los cuatro valores reales dentro del diálogo de Ajustes.
+   * @param {HTMLElement} contenedor
+   */
+  async function pintarPresupuestoEn(contenedor) {
+    contenedor.replaceChildren(el("p", "", "Consultando el presupuesto real del servidor…"));
+    const datos = await leerPresupuesto();
+    contenedor.replaceChildren();
+    if (!datos) {
+      const aviso = el(
+        "p",
+        "",
+        "El servidor no informa del presupuesto real de contexto. El tope de historial es solo una petición: depende de la ventana con la que arrancó llama-server, así que aquí no se muestra un valor inventado.",
+      );
+      aviso.style.cssText = "color:var(--muted);font-size:12.5px;margin:0;line-height:1.5";
+      contenedor.append(aviso);
+      return;
+    }
+    const dl = el("dl");
+    dl.style.cssText = "display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:6px 0 0;font-size:13px";
+    /**
+     * @param {string} etiqueta
+     * @param {string} valor
+     * @param {string} [detalle]
+     */
+    const dato = (etiqueta, valor, detalle) => {
+      dl.append(el("dt", "", etiqueta));
+      const dd = el("dd", "", valor);
+      dd.style.cssText = "margin:0;font-family:var(--mono)";
+      if (detalle) dd.title = detalle;
+      dl.append(dd);
+    };
+    dato("Ventana del servidor", `${formatoTokens(datos.ventana)} tokens`, "Contexto con el que arrancó llama-server.");
+    dato(
+      "Historial solicitado",
+      datos.solicitado === null ? "— (sin ajuste explícito)" : `${formatoTokens(datos.solicitado)} tokens`,
+      "Tope pedido en Ajustes; el servidor lo puede recortar.",
+    );
+    dato("Historial efectivo", `${formatoTokens(datos.efectivo)} tokens`, "Lo que de verdad puede viajar como historial en cada petición.");
+    dato(
+      "Reserva de salida",
+      datos.reservaSalida === null ? "—" : `${formatoTokens(datos.reservaSalida)} tokens`,
+      "Tokens de la ventana reservados para la respuesta del modelo.",
+    );
+    contenedor.append(dl);
+    const nota = el("p", "");
+    nota.style.cssText = "color:var(--muted);font-size:12px;margin:8px 0 0;line-height:1.5";
+    nota.textContent =
+      `El tope de historial que elijas es una petición: con una ventana de ${formatoTokens(datos.ventana)} tokens, ` +
+      `el historial efectivo es ${formatoTokens(datos.efectivo)} y la reserva de salida ${formatoTokens(datos.reservaSalida)}. ` +
+      "No es VRAM libre: es el reparto de la misma ventana.";
+    contenedor.append(nota);
+    if (datos.solicitado !== null && datos.solicitado > datos.efectivo) {
+      const recorte = el("p", "");
+      recorte.style.cssText = "color:var(--warn);font-size:12px;margin:4px 0 0;line-height:1.5";
+      recorte.textContent = `Pediste ${formatoTokens(datos.solicitado)} tokens de historial, pero el servidor solo entrega ${formatoTokens(datos.efectivo)} con esta ventana: la diferencia se recorta.`;
+      contenedor.append(recorte);
+    }
+    if (datos.historial && datos.historial.error) {
+      const error = el("p", "");
+      error.style.cssText = "color:var(--danger);font-size:12px;margin:6px 0 0;line-height:1.5";
+      error.textContent = datos.historial.error;
+      contenedor.append(error);
+    }
+  }
+
+  /**
+   * Chip de la barra de estado con lo que de verdad hay (ventana e historial efectivo).
+   * Se oculta si el servidor no da el dato; nunca enseña el tope pedido como si fuera real.
+   */
+  async function actualizarChipPresupuesto() {
+    const chip = $("#contexto-chip");
+    if (!chip) return;
+    const datos = await leerPresupuesto();
+    if (!datos) {
+      chip.hidden = true;
+      return;
+    }
+    const k = (n) => (Number.isFinite(Number(n)) ? `${Math.round(Number(n) / 1024)}K` : "?");
+    chip.hidden = false;
+    chip.className = "pill";
+    chip.replaceChildren(el("i", "dot"), el("span", "", `contexto ${k(datos.ventana)} · hist. ${k(datos.efectivo)}`));
+    chip.title =
+      `Ventana del servidor: ${formatoTokens(datos.ventana)} tokens\n` +
+      `Historial solicitado: ${datos.solicitado === null ? "—" : `${formatoTokens(datos.solicitado)} tokens`}\n` +
+      `Historial efectivo: ${formatoTokens(datos.efectivo)} tokens\n` +
+      `Reserva de salida: ${datos.reservaSalida === null ? "—" : `${formatoTokens(datos.reservaSalida)} tokens`}\n\n` +
+      "Pulsa para ver el detalle en Ajustes.";
+    if (datos.historial && datos.historial.error) {
+      chip.classList.add("warn");
+      chip.title += `\n\n${datos.historial.error}`;
+    }
+  }
+
   // ================================================================== ajustes
   function abrirAjustes() {
     const fondo = el("div", "dialogo-fondo");
@@ -1259,6 +1417,9 @@
       f.append(el("span", "", etiqueta), control);
       return f;
     };
+    // Se rellena después con /api/state: son los valores REALES, no el tope pedido.
+    const presupuestoCaja = el("div");
+    presupuestoCaja.id = "ajustes-presupuesto";
 
     const tema = el("select");
     for (const [v, t] of [["dark", "Oscuro"], ["light", "Claro"]]) {
@@ -1319,9 +1480,11 @@
     }
 
     // Cuánto historial viaja tal cual antes de resumirse. Con poco, en una tarea de muchos
-    // pasos el modelo acababa trabajando sobre un resumen y perdía el pedido.
+    // pasos el modelo acababa trabajando sobre un resumen y perdía el pedido. OJO: esto es
+    // una PETICIÓN al servidor; el tope real lo recorta historyCap() según la ventana que
+    // arrancó llama-server (por eso abajo se enseñan los cuatro valores reales).
     const historial = el("select");
-    const topes = [[8192, "8192 tokens (más rápido)"], [16384, "16384 tokens"], [32768, "32768 tokens (recomendado)"], [49152, "49152 tokens"]];
+    const topes = [[8192, "8192 tokens (más rápido)"], [16384, "16384 tokens"], [32768, "32768 tokens"], [49152, "49152 tokens"]];
     if (Number.isFinite(Number(ajustes.historial)) && !topes.some(([v]) => v === Number(ajustes.historial))) topes.push([Number(ajustes.historial), `${ajustes.historial} tokens`]);
     for (const [v, t] of topes) {
       const o = el("option", "", String(t));
@@ -1329,23 +1492,69 @@
       if (Number(ajustes.historial) === v) o.selected = true;
       historial.append(o);
     }
-    historial.addEventListener("change", () => guardarAjustes({ historial: Number(historial.value) }));
+    historial.addEventListener("change", async () => {
+      await guardarAjustes({ historial: Number(historial.value) });
+      // El historial efectivo puede cambiar: se vuelven a leer los valores reales.
+      void pintarPresupuestoEn(presupuestoCaja);
+      void actualizarChipPresupuesto();
+    });
 
     const reglas = el("input");
     reglas.type = "checkbox";
     reglas.checked = Boolean(ajustes.reglas);
     reglas.addEventListener("change", () => guardarAjustes({ reglas: reglas.checked }));
 
+    // Continuar hasta terminar: si el turno se queda sin pasos o se atasca, la interfaz
+    // encadena otro turno interno (hasta 3 seguidos) en vez de dejarlo a medias.
+    const seguir = el("input");
+    seguir.type = "checkbox";
+    seguir.checked = localStorage.getItem("bonsai-continuar-auto") !== "0";
+    seguir.addEventListener("change", () => {
+      localStorage.setItem("bonsai-continuar-auto", seguir.checked ? "1" : "0");
+      guardarAjustes({ continuarAuto: seguir.checked });
+    });
+
+    // Tope de pasos del agente por turno (antes eran 96 fijos).
+    const pasos = el("select");
+    for (const v of [96, 192, 288, 400]) {
+      const o = el("option", "", `${v} pasos`);
+      o.value = String(v);
+      if (Number(ajustes.saltosTope) === v) o.selected = true;
+      pasos.append(o);
+    }
+    pasos.addEventListener("change", () => guardarAjustes({ saltosTope: Number(pasos.value) }));
+
+    // Tiempo máximo por comando (antes eran 60 s fijos: cortaba npm install y builds).
+    const tiempo = el("select");
+    for (const [v, t] of [[120, "2 min"], [180, "3 min (recomendado)"], [300, "5 min"], [600, "10 min"]]) {
+      const o = el("option", "", t);
+      o.value = String(v);
+      if (Number(ajustes.comandoSegundos) === v) o.selected = true;
+      tiempo.append(o);
+    }
+    tiempo.addEventListener("change", () => guardarAjustes({ comandoSegundos: Number(tiempo.value) }));
+
     caja.append(
       fila("Tema", tema),
       fila("Perfil de muestreo", perfil),
       fila("Modo razonamiento", pensarCaja),
-      fila("Tope de historial", historial),
+      fila("Tope de historial (pedido)", historial),
       fila("Aplicar reglas del proyecto", reglas),
+      fila("Continuar solo hasta terminar", seguir),
+      fila("Pasos del agente por turno", pasos),
+      fila("Tiempo máximo por comando", tiempo),
     );
-    const aviso = el("p", "", "El perfil se aplica en cada petición. El razonamiento solo lo usan los modelos que lo admiten (Override-6): piensa al planificar y cuando algo falla, no en cada paso.");
+    const aviso = el("p", "", "El perfil se aplica en cada petición. El razonamiento solo lo usan los modelos que lo admiten. «Continuar solo» encadena hasta 3 turnos internos si el agente se queda sin pasos o se atasca; los procesos lanzados en segundo plano ya no se cierran al acabar el turno.");
     aviso.style.marginTop = "12px";
     caja.append(aviso);
+
+    // Finding 16: aquí se enseñan los valores REALES de contexto, no el tope pedido.
+    const separador = el("h4", "", "Contexto real");
+    separador.style.cssText = "margin:18px 0 2px;font-size:13px";
+    const explicacion = el("p", "", "Lo que el servidor entrega, no lo que se pide: cambiar el tope no agranda la ventana del modelo.");
+    explicacion.style.cssText = "color:var(--muted);font-size:12px;margin:0 0 2px";
+    caja.append(separador, explicacion, presupuestoCaja);
+    void pintarPresupuestoEn(presupuestoCaja);
 
     const botones = el("div", "d-botones");
     const cerrar = el("button", "primary", "Cerrar");
@@ -1361,7 +1570,7 @@
   // ==================================================== edición en línea (Ctrl+K)
   /**
    * Diff propuesto por el modelo, con Aceptar / Rechazar.
-   * @param {{rel: string, start: number, end: number, diff: string}} r
+   * @param {{rel: string, start: number, end: number, diff: string, borra?: boolean, recortada?: boolean}} r
    * @returns {Promise<boolean>}
    */
   function previsualizarDiff(r) {
@@ -1369,8 +1578,22 @@
       const fondo = el("div", "dialogo-fondo");
       const caja = el("div", "dialogo");
       caja.style.width = "min(780px, 95vw)";
-      caja.append(el("h3", "", `Cambio propuesto en ${r.rel}`));
-      caja.append(el("p", "", `Líneas ${r.start}-${r.end}. Nada se guarda hasta que aceptes.`));
+      caja.append(el("h3", "", r.borra ? `Borrado propuesto en ${r.rel}` : `Cambio propuesto en ${r.rel}`));
+      caja.append(el("p", "", `Se aplicará el rango real de líneas ${r.start}-${r.end}. Nada se guarda hasta que aceptes.`));
+      if (r.recortada) {
+        const aviso = el(
+          "p",
+          "",
+          "La selección es más grande que el límite del modelo: solo se reemplaza la parte que el modelo recibió. El resto de la selección se conserva intacto.",
+        );
+        aviso.style.color = "var(--warn, #d9a441)";
+        caja.append(aviso);
+      }
+      if (r.borra) {
+        const aviso = el("p", "", "El modelo pidió BORRAR esa selección: el texto se eliminará del archivo al aceptar.");
+        aviso.style.color = "var(--warn, #d9a441)";
+        caja.append(aviso);
+      }
       const pre = el("pre", "diff-preview");
       for (const linea of String(r.diff || "(sin cambios)").split("\n")) {
         const fila = el("div");
@@ -1401,7 +1624,7 @@
       const botones = el("div", "d-botones");
       const no = el("button", "ghost", "Rechazar");
       no.type = "button";
-      const si = el("button", "primary", "Aceptar y guardar");
+      const si = el("button", "primary", r.borra ? "Borrar y guardar" : "Aceptar y guardar");
       si.type = "button";
       botones.append(no, si);
       caja.append(botones);
@@ -1417,7 +1640,8 @@
         if (e.key === "Escape") {
           e.stopPropagation();
           cerrar(false);
-        } else if (e.key === "Enter" && !e.shiftKey) {
+        } else if (e.key === "Enter" && !e.shiftKey && !r.borra) {
+          // Un borrado no se acepta con Enter por accidente: exige el clic explícito.
           e.stopPropagation();
           cerrar(true);
         }
@@ -1429,6 +1653,52 @@
         if (e.target === fondo) cerrar(false);
       });
       si.focus();
+    });
+  }
+
+  /**
+   * Carpeta de trabajo actual tal como la pintó la interfaz (sin pedirla otra vez).
+   * Sirve para detectar un cambio de proyecto mientras el modelo responde.
+   * @returns {string}
+   */
+  function proyectoActual() {
+    const marca = $(".brand small");
+    const origen = marca?.title || $("#carpeta")?.title || "";
+    return String(origen || "").replace(/^Carpeta:\s*/, "").trim();
+  }
+
+  /**
+   * Estado de la pestaña que hay que conservar mientras se espera al modelo (hallazgo 8:
+   * aceptar una propuesta vieja no puede pisar lo que el usuario escribió o recargó).
+   * @param {typeof pestanas[number]} p
+   */
+  function instantaneaEditor(p) {
+    return { rel: p.rel, texto: p.texto, guardado: p.guardado, proyecto: proyectoActual() };
+  }
+
+  /**
+   * Qué cambió desde la instantánea, en palabras para el usuario ("" si nada).
+   * @param {typeof pestanas[number]} p
+   * @param {{rel: string, texto: string, guardado: string, proyecto: string}} antes
+   * @returns {string}
+   */
+  function cambioDesde(p, antes) {
+    if (!pestanas.includes(p)) return "Se cerró la pestaña";
+    if (proyectoActual() !== antes.proyecto) return "Cambiaste de proyecto";
+    if (p.rel !== antes.rel) return `Se renombró la pestaña a «${p.rel}»`;
+    if (p.texto !== antes.texto || p.guardado !== antes.guardado) return "Editaste el archivo";
+    return "";
+  }
+
+  /**
+   * Aviso de que la propuesta se descartó porque el editor cambió durante la espera,
+   * con la opción de pedirla otra vez sobre el contenido actual.
+   * @param {string} motivo
+   */
+  function descartarPorCambio(motivo) {
+    avisar(`${motivo} mientras el modelo respondía: no se aplicó nada.`, "warn", 10000, {
+      texto: "Revisar de nuevo",
+      hacer: () => void editarSeleccion(),
     });
   }
 
@@ -1459,34 +1729,103 @@
       ok: "Editar",
     });
     if (!instruccion || !instruccion.trim()) return;
+    // Lo que hay AHORA: al aceptar se compara para no pisar cambios hechos mientras se
+    // espera al modelo (hallazgo 8).
+    const antes = instantaneaEditor(p);
     const cerrarAviso = avisar("Pidiendo la edición al modelo…", "", 0);
-    /** @type {{rel: string, start: number, end: number, texto: string, diff: string, cambia: boolean}} */
+    /** @type {{rel: string, base: string, start: number, end: number, seleccion: string, propuesta: string, texto: string, borra: boolean, cambia: boolean, diff: string}} */
     let r;
     try {
-      r = await api("/api/edit", { cuerpo: { path: p.rel, start: sel.start, end: sel.end, instruccion } });
+      r = await api("/api/edit", { cuerpo: { path: antes.rel, start: sel.start, end: sel.end, instruccion } });
     } catch (err) {
       cerrarAviso();
       avisar(`No se pudo editar: ${err.message}`, "error", 7000);
       return;
     }
     cerrarAviso();
+    const cambio = cambioDesde(p, antes);
+    if (cambio) {
+      descartarPorCambio(cambio);
+      return;
+    }
+    // `base` es el contenido EXACTO del disco sobre el que se generó la propuesta
+    // (contrato de /api/edit): se usa como precondición al guardar.
+    if (typeof r.base !== "string") {
+      avisar("El servidor no devolvió la base de la propuesta: no se toca el archivo. Actualiza el servidor.", "error", 9000);
+      return;
+    }
+    if (r.base !== antes.guardado) {
+      avisar(
+        "El archivo cambió en disco desde que se abrió y la propuesta se hizo sobre otra versión. No se ha tocado nada: recarga el archivo y vuelve a intentarlo.",
+        "warn",
+        11000,
+        { texto: "Revisar de nuevo", hacer: () => void editarSeleccion() },
+      );
+      return;
+    }
     if (!r.cambia) {
       avisar("El modelo no cambió nada.", "", 3000);
       return;
     }
-    if (!(await previsualizarDiff({ rel: p.rel, start: r.start, end: r.end, diff: r.diff }))) {
+    // Si el servidor recortó la selección por tokens, hay que decirlo: la vista de diff
+    // puede estar truncada y no se debe prometer que se cambió toda la selección.
+    const norm = (t) => String(t ?? "").replace(/\r\n/g, "\n");
+    const seleccionLocal = norm(sel.text).replace(/\n+$/, "");
+    const recortada = typeof r.seleccion === "string" && norm(r.seleccion).length < seleccionLocal.length;
+    const aceptar = await previsualizarDiff({
+      rel: antes.rel,
+      start: r.start,
+      end: r.end,
+      diff: r.diff,
+      borra: Boolean(r.borra),
+      recortada,
+    });
+    if (!aceptar) {
       avisar("Edición descartada.", "", 2200);
       return;
     }
+    if (r.borra) {
+      // El borrado nunca se ejecuta por el mero hecho de que el modelo devuelva BORRAR.
+      const seguro = await confirmar(
+        "Borrar la selección",
+        `El modelo pidió borrar ${r.start === r.end ? `la línea ${r.start}` : `las líneas ${r.start}-${r.end}`} de «${antes.rel}». Revisa el diff de la vista previa: lo que no se envió al modelo no se toca.`,
+        "Borrar",
+      );
+      if (!seguro) {
+        avisar("Borrado descartado.", "", 2200);
+        return;
+      }
+    }
+    // Comprobación final entre la vista previa y el guardado: el sondeo de cambios
+    // externos (2,5 s) o el usuario pudieron modificar la pestaña durante el diálogo.
+    const cambioFinal = cambioDesde(p, antes);
+    if (cambioFinal) {
+      descartarPorCambio(cambioFinal);
+      return;
+    }
     try {
-      await api("/api/file", { cuerpo: { path: p.rel, content: r.texto } });
-      p.texto = r.texto;
+      await api("/api/file", { cuerpo: { path: antes.rel, content: r.texto, before: r.base } });
+      // El disco ya tiene r.texto. Si mientras se enviaba el guardado el usuario siguió
+      // escribiendo, se conserva lo escrito como cambio sin guardar (no se pierde).
+      const seguiaIgual = p.texto === antes.texto;
       p.guardado = r.texto;
+      if (seguiaIgual) p.texto = r.texto;
       if (pestanas[activa] === p) mostrarPestana(activa);
       else pintarPestanas();
-      avisar(`Editado ${p.rel}`, "ok", 2400);
+      avisar(`Editado ${antes.rel}`, "ok", 2400);
     } catch (err) {
-      avisar(`No se pudo guardar: ${err.message}`, "error", 6000);
+      if (err.status === 409) {
+        // El archivo cambió en disco entre la propuesta y el guardado: se conservan los
+        // cambios del usuario y NO se sobrescribe nada.
+        avisar(
+          `«${antes.rel}» cambió en disco mientras el modelo respondía. No se guardó nada: tus cambios siguen en el editor, sin tocar la versión nueva. Revísala y vuelve a intentarlo.`,
+          "error",
+          12000,
+          { texto: "Revisar de nuevo", hacer: () => void editarSeleccion() },
+        );
+      } else {
+        avisar(`No se pudo guardar: ${err.message}`, "error", 6000);
+      }
     }
   }
 
@@ -1497,12 +1836,16 @@
   let cargandoModelo = "";
 
   async function refrescarModelos() {
+    const antes = estadoModelos && estadoModelos.actual;
     try {
       estadoModelos = await api("/api/modelos");
     } catch {
       estadoModelos = { actual: "", modelos: [] };
     }
     pintarChipModelo();
+    // Si el modelo cambió por fuera de la app, la ventana (y con ella el presupuesto de
+    // contexto) también: se refresca el chip en vez de enseñar el valor anterior.
+    if (antes !== estadoModelos.actual) void actualizarChipPresupuesto();
   }
 
   function pintarChipModelo() {
@@ -1576,6 +1919,7 @@
       cerrar();
       avisar(`${r.nombre} listo${r.pensar ? ` · razona con hasta ${r.pensar} tokens` : ""}`, "ok", 6000);
       await cargarAjustes();
+      void actualizarChipPresupuesto();
     } catch (err) {
       cargandoModelo = "";
       cerrar();
@@ -1602,6 +1946,7 @@
       await cargarAjustes();
       await refrescarModelos();
       void pintarChipVision();
+      void actualizarChipPresupuesto();
       const meta = $("#meta");
       if (meta) meta.textContent = `ventana ${r.nCtx}`;
     } catch (err) {
@@ -1700,7 +2045,16 @@
     modelo.hidden = true;
     modelo.title = "Cambiar de modelo";
     modelo.addEventListener("click", () => menuModelos(modelo));
-    barra.prepend(modelo, vision, reglas, git);
+    // Presupuesto real de contexto (finding 16): ventana del servidor e historial
+    // efectivo. Se oculta si /api/state no da el dato: nunca se enseña el tope pedido
+    // como si fuera el contexto que hay.
+    const contexto = el("button", "pill");
+    contexto.id = "contexto-chip";
+    contexto.type = "button";
+    contexto.hidden = true;
+    contexto.title = "Presupuesto real de contexto";
+    contexto.addEventListener("click", () => abrirAjustes());
+    barra.prepend(modelo, contexto, vision, reglas, git);
   }
 
   /** Enciende el chip de visión si el servidor la tiene. */
@@ -1782,6 +2136,7 @@
     pintarChipReglas();
     void pintarChipVision();
     void refrescarModelos();
+    void actualizarChipPresupuesto();
     refrescarGit();
     setInterval(refrescarGit, 15000);
     // El modelo también puede cambiar por fuera de la app (start-server.ps1 -Modelo, otra

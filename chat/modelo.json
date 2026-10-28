@@ -37,7 +37,7 @@
         "offload": true,
         "imageMaxTokens": 512,
         "reservaMiB": 900,
-        "contexto": 16384
+        "contexto": 32768
       },
       "servidor": { "tipo": "gpu-completa", "contexto": 32768, "capasAtencionCompleta": 8, "cabezasKV": 4, "dimCabeza": 256, "reservaMiB": 864, "ubatch": 128 },
       "muestreo": {

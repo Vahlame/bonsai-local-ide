@@ -1,0 +1,139 @@
+{
+  "_nota": "Fuente única de los datos del modelo. La leen chat/modelo.mjs y scripts/start-server.ps1. Los números de arquitectura salen del encabezado del GGUF; el muestreo, de las fichas de PrismML (ver 'fuente').",
+
+  "modeloPredeterminado": "ornith9b",
+  "modelo": {
+    "archivo": "Ternary-Bonsai-2-27B-PTQ1_0-abliterated-Override6.gguf",
+    "bytes": 5946648928,
+    "arquitectura": "qwen35: Gated DeltaNet (lineal) + atención completa cada 4 capas",
+    "ctxNativo": 262144,
+    "capas": 64,
+    "capasAtencionCompleta": 16,
+    "capasLineales": 48,
+    "cabezasQ": 24,
+    "cabezasKV": 4,
+    "dimCabeza": 256,
+    "fuente": "metadatos del GGUF: qwen35.block_count, attention.head_count(_kv), key_length, full_attention_interval"
+  },
+
+  "catalogo": {
+    "ornith9b": {
+      "archivo": "Ornith-1.5-9B-Q4_K_M.gguf",
+      "nombre": "Ornith 1.5 9B",
+      "bytes": 5780090816,
+      "rol": "codigo GPU",
+      "uso": "Programacion y herramientas; todos los pesos y el contexto en la GPU de 8 GB",
+      "toolcalls": "xml-funcion",
+      "agente": { "saltos": 24, "avisos": 2 },
+      "pensar": { "compatible": true, "presupuesto": 2048 },
+      "origen": "https://huggingface.co/ornith-ai/Ornith-1.5-9B-GGUF",
+      "revision": "abdd624b12ebf020b767fff532ff44fe552b28c3",
+      "sha256": "70c112196e0b7023803c9762752e46d29e612a92c83f995bc3ba1ceb07e8fab6",
+      "licencia": "MIT",
+      "vision": {
+        "archivo": "mmproj-Ornith-1.5-9B-BF16.gguf",
+        "bytes": 921704672,
+        "sha256": "626f9f90627402a6bf4a999111d0fbd69b5fcca7aa8ba089d69e5f10e8858e1d",
+        "offload": true,
+        "imageMaxTokens": 512,
+        "reservaMiB": 900,
+        "contexto": 32768
+      },
+      "servidor": { "tipo": "gpu-completa", "contexto": 32768, "capasAtencionCompleta": 8, "cabezasKV": 4, "dimCabeza": 256, "reservaMiB": 864, "ubatch": 128 },
+      "muestreo": {
+        "codigo": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0, "presence_penalty": 0, "repeat_penalty": 1 },
+        "razonar": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0, "presence_penalty": 0, "repeat_penalty": 1 }
+      }
+    },
+    "_nota": "La eleccion guardada prevalece sobre modeloPredeterminado. Solo se pueden iniciar modelos con perfil gpu-completa. Las cuentas globales de VRAM y modelo describen los Bonsai historicos. Ornith usa sus propios perfiles, con tensores, KV y proyector en CUDA0.",
+    "override6": {
+      "archivo": "Ternary-Bonsai-2-27B-PTQ1_0-abliterated-Override6.gguf",
+      "nombre": "Override-6",
+      "bytes": 5946648928,
+      "rol": "historico (CPU)",
+      "uso": "No disponible: este perfil usa CPU para parte del modelo o la vision",
+      "toolcalls": "xml-funcion",
+      "toolcalls_evidencia": "salida CRUDA capturada en este repo: salida/eval-4/tarea-lru-cache.json:669 y chat/evaluar/resultados/2026-10-04-eval-3-modelo-override6-prompt-arreglado.json:400",
+      "agente": { "saltos": 24, "avisos": 2, "nota": "Medido 2026-10-06 con chat/medir-agente.mjs (6 tareas largas): lru-ttl 8 saltos, arreglar-bugs OK, csv-sucio 4 saltos; FALLA el parser recursivo. En 20 tareas simples: 18 nativas + 2 solo texto." },
+      "pensar": { "compatible": true, "presupuesto": 2048, "nota": "El autor midio 0 respuestas vacias de 104 con thinking encendido (el modelo anterior dejaba 19). Encendido a peticion del usuario el 2026-10-08; en el agente razona al planificar y tras un fallo, no en cada salto." },
+      "origen": "https://huggingface.co/Override-6/Ternary-Bonsai-2-27B-abliterated-gguf",
+      "sha256": "0b3106548351a309b080951705cf978bf3d49288df127d8f99e39d7af47378ed",
+      "metodo": "edicion directa de los trits con volteos estocasticos insesgados (capas 16-48) + 'healing' por ridge least squares solo de las escalas por grupo; pipeline publicado en scripts/",
+      "evidencia": "medido por el autor contra el stock y contra el modelo anterior en el MISMO arnes: 0 respuestas vacias en modo thinking (el anterior dejaba 19 de 104), 74 cumplen / 30 deflectan / 0 rechazan, MMLU 79.0 vs 78.9 del stock, GSM8K 94 = stock, IFEval estricto 81.7 vs 78.4, NIAH 100% de 8k a 64k, KL chat 0.019 / wiki 0.013",
+      "pega": "no esta verificado por terceros y ~26-29% de los prompts daninos reciben una respuesta edulcorada en vez de operativa. No re-evaluo tool calling ni vision: hay que probarlo con el evaluador.",
+      "licencia": "Apache-2.0"
+    },
+    "bolding_v1": {
+      "archivo": "Ternary-Bonsai-2-27B-Abliterated-PTQ1_0.gguf",
+      "nombre": "BoldingBuilds v1",
+      "bytes": 5946648928,
+      "rol": "historico (CPU)",
+      "uso": "No disponible: este perfil usa CPU para parte del modelo o la vision",
+      "toolcalls": "xml-funcion",
+      "toolcalls_evidencia": "VERIFICADO el 2026-10-06 (chat/medir-formato.mjs + chat/medir-agente.mjs): en 26 tareas, 20 simples y 6 largas, emitio SIEMPRE tool_calls NATIVAS (delta.tool_calls con index/id/type/function), 0 en XML y 0 en cercas. Crudo en salida/formato/crudo-boldingv1-*.jsonl y agente-bolding_v1-*.jsonl.",
+      "agente": { "saltos": 32, "avisos": 4, "nota": "Medido 2026-10-06: necesito 14 saltos para el LRU (override6: 8) y ABANDONO arreglar-bugs en 6 saltos; resuelve 5 de 6 tareas largas con mas paciencia que el otro. De ahi el margen extra." },
+      "pensar": { "compatible": false, "nota": "Con thinking encendido y 4.096 tokens deja sin respuesta el 24% de los prompts (63% con greedy): siempre sin razonamiento." },
+      "origen": "https://huggingface.co/BoldingBuilds/Ternary-Bonsai-2-27B-Abliterated-PTQ1_0-GGUF",
+      "sha256": "94dd53cbad55db5a515f245887c9f0317484502a451ccc0424c7d7788b52900a",
+      "sha256_nota": "calculado en esta maquina; coincide con el que anclo el shootout publico",
+      "metodo": "edicion directa de 98 tensores ternarios (ffn_down, ssm_out, attn_output, bloques 15-63)",
+      "evidencia": "el hash local coincide con el que anclo el shootout publico de BoldingBuilds (11 builds, mismo juez): MMLU +0.12 pp (sin coste), HumanEval -3.0 pp (no significativo), 0% de rechazos con thinking OFF; el mejor MMLU de todas las builds ternarias",
+      "pega": "con thinking ON y 4.096 tokens, 24% de los prompts daninos no devuelven respuesta (63% con greedy). Por eso el proyecto lo usa con --reasoning off",
+      "licencia": "Apache-2.0"
+    }
+  },
+
+  "vram": {
+    "totalMiB": 8188,
+    "pesosMiB": 5395,
+    "estadoRecurrenteMiB": 150,
+    "fijoCudaMiB": 138,
+    "computo": { "pisoMiB": 255, "baseMiB": 40, "porMilTokensMiB": 4.5 },
+    "ubatch": { "referencia": 256, "extraPorTokenMiB": 0.302 },
+    "margenMiB": 100,
+    "ctxAutoMax": 131072,
+    "nota": "Calibrado con el servidor REAL el 2026-10-04 (nvidia-smi): con -ub 256 y KV q4_0 la VRAM usada fue 7163 / 7253 / 7343 / 7433 / 7523 MiB a 64k / 68k / 72k / 76k / 80k (22 MiB por cada 1k: 18 de KV + 4.4 del buffer de computo, que crece con el contexto porque la atencion descuantiza el KV); -ub 1024 a 64k = 7394 (+0.30 MiB por token de -ub). pesos = lo que va a la GPU (los 276 MiB de token_embd se quedan en RAM); estado recurrente = 48 capas x ~3.1 MiB (f32); fijoCuda = contexto CUDA. Al ARRANCAR se reserva a la vez dos veces la parte del buffer de computo que depende de la ventana, asi que el pico es el uso estable + esa parte: 81920 arranca (pico 7923 con 7956 libres) y 83968 falla (pico 7977, que sigue pasando de 7956); -ub 1024 con 64k arranco con 7947 libres porque el extra de -ub no se duplica. Eso, y no el uso estable, decide si arranca. llama-fit-params sobreestima el efecto de -ub (de 256 a 1024 estima +682 y se midieron +232) y es demasiado conservador con el contexto, por eso no se usa para elegirlo."
+  },
+
+  "kv": {
+    "bytesPorElemento": { "f16": 2, "q8_0": 1.0625, "q4_0": 0.5625 },
+    "orden": ["f16", "q8_0", "q4_0"],
+    "nota": "Solo parejas iguales K=V: las mezclas (p. ej. q8_0/q4_0) necesitan GGML_CUDA_FA_ALL_QUANTS en la compilación y q5_x es varias veces más lento (KNOWN_ISSUES de prism-ml). Con --kv-mean-center la K tiene que ser q4_0."
+  },
+
+  "muestreo": {
+    "codigo": {
+      "temperature": 0.5, "top_p": 0.85, "top_k": 20, "min_p": 0, "presence_penalty": 0, "repeat_penalty": 1,
+      "fuente": "docs.prismml.com/run/llamacpp: --temp 0.5 --top-p 0.85 --top-k 20 --min-p 0 (sin razonamiento)"
+    },
+    "chat": {
+      "temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0, "presence_penalty": 1.5, "repeat_penalty": 1,
+      "fuente": "ficha de Ternary-Bonsai-2-27B / Qwen3.8-27B, modo instruct (sin razonamiento)"
+    },
+    "razonar": {
+      "temperature": 1.0, "top_p": 0.95, "top_k": 20, "min_p": 0.05, "presence_penalty": 0, "repeat_penalty": 1,
+      "fuente": "ficha de Ternary-Bonsai-2-27B, modo thinking; es también lo que lleva el GGUF en general.sampling.*"
+    }
+  },
+
+  "razonamiento": {
+    "porDefecto": false,
+    "esfuerzo": "medium",
+    "presupuestos": { "bajo": 512, "medio": 2048, "alto": 8192 },
+    "nota": "APAGADO por defecto. La plantilla solo acepta reasoning_effort xhigh|medium|low (high da HTTP 500; low no reduce nada). medium gasta ~1/3 menos tokens que xhigh con precisión parecida. El presupuesto va como thinking_budget_tokens en la raíz de la petición, no dentro de chat_template_kwargs."
+  },
+
+  "servidor": {
+    "cacheRam": { "fraccionRam": 0.25, "minMiB": 2048, "maxMiB": 24576 },
+    "nota": "Medido con el servidor real (prompt de ~4.8k tokens, 3 turnos y prefijo reescrito): los valores por defecto de llama.cpp para checkpoints (-ctxcp 32 -cms 8192) YA reutilizan el prefijo (4749 de 4839 tokens en caché), asi que no se tocan. Solo se limita --cache-ram (por defecto 8192 MiB) a un cuarto de la RAM para no ahogar una maquina de 16 GB: el proceso ya ronda 6.7 GB residentes."
+  },
+  "vision": {
+    "archivo": "Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf",
+    "bytes": 629246976,
+    "sha256": "6807ede61d570bb86ba34b756a0fa109edc33668604de867c6ea6d8f1d631903",
+    "fuente": "prism-ml/Ternary-Bonsai-2-27B-gguf · mmproj-Q8_0 (hay tambien uno BF16 de 931145856 bytes)",
+    "offload": false,
+    "imageMaxTokens": 1024,
+    "nota": "Proyector de vision. Con offload:false va en CPU (--no-mmproj-offload): 0 MiB de VRAM y el contexto automatico no cambia; cuesta ~600 MiB de RAM y la codificacion de cada imagen. En GPU cabria, pero el contexto automatico bajaria de 78848 a 56320 tokens (-29%). Verificado en la maquina: VRAM 7385/8188 MiB y RAM libre 5.7 GB con el modelo cargado."
+  }
+}

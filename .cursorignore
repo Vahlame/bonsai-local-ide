@@ -1,0 +1,11 @@
+# Ignorar binarios pesados y modelos para no gastar tokens de contexto en Cursor
+bin/
+models/
+*.zip
+*.gguf
+*.dll
+*.exe
+.git/
+node_modules/
+dist/
+build/

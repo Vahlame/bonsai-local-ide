@@ -26,6 +26,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { leerSSE } from "./sse.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT = path.dirname(HERE);
@@ -465,29 +466,19 @@ async function main() {
         signal: AbortSignal.timeout(timeoutTurno),
       });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-      const lector = res.body.getReader();
-      const dec = new TextDecoder();
-      let buf = "";
-      while (true) {
-        const { done, value } = await lector.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        let nl = buf.indexOf("\n");
-        while (nl !== -1) {
-          const linea = buf.slice(0, nl).trim();
-          buf = buf.slice(nl + 1);
-          nl = buf.indexOf("\n");
-          if (!linea.startsWith("data:")) continue;
-          try {
-            const ev = JSON.parse(linea.slice(5));
-            eventos.push(ev);
-            if (ev.type === "replace") textoFinal = String(ev.text || "");
-            if (ev.type === "error") errorTurno = String(ev.text || "error del turno");
-          } catch {
-            /* trozo */
-          }
-        }
-      }
+      // Un único lector SSE (chat/sse.mjs). Tolerante: la medición registra los eventos
+      // completos y un corte no convierte el turno en error (como antes).
+      await leerSSE(res.body, {
+        exigirFin: false,
+        jsonInvalido: "ignorar",
+        guardarEventos: false,
+        alEvento: (evento) => {
+          const ev = /** @type {Record<string, any>} */ (evento);
+          eventos.push(ev);
+          if (ev.type === "replace") textoFinal = String(ev.text || "");
+          if (ev.type === "error") errorTurno = String(ev.text || "error del turno");
+        },
+      });
     } catch (err) {
       errorTurno = err instanceof Error ? err.message : String(err);
       eventos.push({ type: "error", text: errorTurno });

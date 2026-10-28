@@ -195,6 +195,30 @@
   // ------------------------------------------------------------------ markdown
 
   /**
+   * Entidades que `esc()` produce para las comillas. La URL de un enlace se inserta
+   * dentro de `href="..."`: si una `&quot;` sobrevive hasta el atributo, el navegador
+   * la decodifica y la comilla queda dentro del atributo (BUG-07). Se rechazan esas
+   * entidades y todo lo que no sea http(s).
+   */
+  const ENTIDAD_INSEGURA = /&(?:quot|#0*34|#x0*22|#0*39|#x0*27|apos);/i;
+  const URL_SEGURA = /^https?:\/\//i;
+
+  /**
+   * Sanea la URL de un enlace Markdown. El texto ya viene escapado por `esc()`, asi
+   * que solo se aceptan http/https y se rechaza cualquier entidad que decodifique a
+   * una comilla. Devuelve null si la URL no es de fiar: entonces el enlace se queda
+   * como texto y no se crea ningun atributo.
+   * @param {string} url
+   * @returns {string | null}
+   */
+  function safeUrl(url) {
+    const limpia = String(url || "").trim();
+    if (!URL_SEGURA.test(limpia)) return null;
+    if (ENTIDAD_INSEGURA.test(limpia)) return null;
+    return limpia;
+  }
+
+  /**
    * @param {string} text texto ya escapado
    * @returns {string}
    */
@@ -215,8 +239,14 @@
     for (let i = 0; i < parts.length; i += 3) {
       let seg = parts[i] || "";
       seg = seg
-        .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, label, url) => `<a href="${url}" target="_blank" rel="noreferrer noopener">${label}</a>`)
-        .replace(/(^|[\s(])(https?:\/\/[^\s<)]+[^\s<).,;:!?])/g, (_, pre, url) => `${pre}<a href="${url}" target="_blank" rel="noreferrer noopener">${url}</a>`)
+        .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (todo, label, url) => {
+          const href = safeUrl(url);
+          return href === null ? todo : `<a href="${href}" target="_blank" rel="noreferrer noopener">${label}</a>`;
+        })
+        .replace(/(^|[\s(])(https?:\/\/[^\s<)]+[^\s<).,;:!?])/g, (todo, pre, url) => {
+          const href = safeUrl(url);
+          return href === null ? todo : `${pre}<a href="${href}" target="_blank" rel="noreferrer noopener">${url}</a>`;
+        })
         .split(/(<[^>]+>)/)
         .map((trozo) => (trozo.startsWith("<") ? trozo : conEnfasis(trozo)))
         .join("");
@@ -244,7 +274,9 @@
 
   const isTableSep = (line) => /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/.test(line) && line.includes("-");
   const cells = (line) => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
-  const startsBlock = (line) => /^\s*(`{3,}|~{3,})/.test(line) || /^#{1,6}\s/.test(line) || /^\s*>/.test(line) || /^\s*([-*+]|\d+[.)])\s+/.test(line) || /^\s*([-*_])(\s*\1){2,}\s*$/.test(line);
+  /** Apertura de fence de código. Compilada una sola vez. */
+  const FENCE = /^\s*(`{3,}|~{3,})\s*([\w+#.-]*)/;
+  const startsBlock = (line) => FENCE.test(line) || /^#{1,6}\s/.test(line) || /^\s*>/.test(line) || /^\s*([-*+]|\d+[.)])\s+/.test(line) || /^\s*([-*_])(\s*\1){2,}\s*$/.test(line);
 
   /**
    * @param {string} text
@@ -261,12 +293,16 @@
         i += 1;
         continue;
       }
-      const fence = line.match(/^\s*(`{3,}|~{3,})\s*([\w+#.-]*)/);
+      const fence = line.match(FENCE);
       if (fence) {
         const mark = fence[1];
         const body = [];
         i += 1;
-        while (i < lines.length && !new RegExp(`^\\s*${mark[0]}{${mark.length},}\\s*$`).test(lines[i])) {
+        // Cierre precompilado FUERA del `while` (BUG-07): antes se hacia un
+        // `new RegExp(...)` por CADA linea del bloque de codigo.
+        const char = mark[0] === "\\" ? "\\\\" : mark[0];
+        const cierre = new RegExp(`^\\s*${char}{${mark.length},}\\s*$`);
+        while (i < lines.length && !cierre.test(lines[i])) {
           body.push(lines[i]);
           i += 1;
         }

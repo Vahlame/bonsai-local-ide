@@ -1,0 +1,115 @@
+[
+ {
+  "id": "fizzbuzz",
+  "titulo": "Función + tests con unittest",
+  "nivel": "facil",
+  "ok": true,
+  "segundos": 26.7,
+  "saltos": 5,
+  "acciones": 5,
+  "predichos": 980,
+  "leidos": 2762,
+  "cache": 11462,
+  "tokPorSeg": 40.8,
+  "gpu": {
+   "muestras": 26,
+   "utilMedia": 94,
+   "utilMaxima": 99,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 76,
+   "tempMax": 63,
+   "mhz": 2459,
+   "vramMax": 7343
+  },
+  "fallos": [],
+  "notas": [
+   "función ok",
+   "tests ok"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. Los 7 tests pasan.\n\n- **`fizzbuzz.py`**: función `fizzbuzz(n)` que devuelve la lista de textos de 1 a n. Priorizo múltiplo de 15 (`FizzBuzz`) antes que 3 y 5.\n- **`test_fizzbuzz.py`**: suite de `unittest` con 7 casos (rango completo, vacío, múltiplos de 3, 5, 6, 15 y números normales).\n\nEl fallo inicial era un typo en el test `test_multiplo_de_5` (había esperado `\"3\"` en lugar de `\"Fizz\"` para el 3); lo corregí y el comando vuelve a pasar con código 0.",
+  "pasos": [
+   "write:done fizzbuzz.py",
+   "write:done test_fizzbuzz.py",
+   "cmd:done(1) python -m unittest test_fizzbuzz -v",
+   "write:done test_fizzbuzz.py",
+   "cmd:done(0) python -m unittest test_fizzbuzz -v"
+  ]
+ },
+ {
+  "id": "html-contador",
+  "titulo": "Página HTML interactiva en un archivo",
+  "nivel": "facil",
+  "ok": true,
+  "segundos": 21.6,
+  "saltos": 6,
+  "acciones": 5,
+  "predichos": 563,
+  "leidos": 6516,
+  "cache": 11184,
+  "tokPorSeg": 40.8,
+  "gpu": {
+   "muestras": 21,
+   "utilMedia": 85,
+   "utilMaxima": 98,
+   "pctAlto": 76,
+   "pctOcioso": 10,
+   "vatios": 71,
+   "tempMax": 66,
+   "mhz": 2488,
+   "vramMax": 7387
+  },
+  "fallos": [],
+  "notas": [
+   "estructura ok"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. He creado **contador.html** con:\n\n- Un número grande que empieza en **0**.\n- Un botón **\"Sumar\"**.\n- Cada pulsación aumenta el número en 1.\n\nTodo en un solo archivo, sin librerías (HTML + CSS + un `script` mínimo). Verificado en el navegador: al pulsar el botón el contador subió correctamente de 0 → 1 → 2.",
+  "pasos": [
+   "write:done contador.html",
+   "browser:done abrir contador.html",
+   "browser:done clic #boton",
+   "browser:done clic #boton",
+   "browser:done cerrar "
+  ]
+ },
+ {
+  "id": "sqlite",
+  "titulo": "Base de datos con sqlite3",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 13.5,
+  "saltos": 3,
+  "acciones": 2,
+  "predichos": 532,
+  "leidos": 192,
+  "cache": 6186,
+  "tokPorSeg": 41,
+  "gpu": {
+   "muestras": 13,
+   "utilMedia": 94,
+   "utilMaxima": 96,
+   "pctAlto": 92,
+   "pctOcioso": 0,
+   "vatios": 78,
+   "tempMax": 65,
+   "mhz": 2463,
+   "vramMax": 7387
+  },
+  "fallos": [],
+  "notas": [
+   "datos ok",
+   "mostró los de stock bajo"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. El script `inventario.py` se ejecutó correctamente y creó la base de datos `inventario.db`.\n\n**Lo que hace:**\n1. Crea la base `inventario.db` con la tabla `productos(id, nombre, stock)`.\n2. Inserta los 4 productos: tornillo (120), tuerca (3), arandela (40), clavo (2).\n3. Muestra en pantalla los que tienen stock menor que 5:\n   - **clavo: 2 en stock**\n   - **tuerca: 3 en stock**\n\nComo era de esperar, tornillo y arandela quedan fuera por tener stock alto (120 y 40).",
+  "pasos": [
+   "write:done inventario.py",
+   "cmd:done(0) python inventario.py"
+  ]
+ }
+]

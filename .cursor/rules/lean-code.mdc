@@ -1,0 +1,12 @@
+---
+description: Reglas de respuesta ultra-concisa para maximizar la ventana de contexto local
+globs: *
+alwaysApply: true
+---
+
+# Reglas de Programación y Economía de Contexto
+
+- Responde directamente con el código modificado o diff exacto.
+- No incluyas introducciones ("¡Hola!", "Claro, aquí tienes..."), ni conclusiones ni resúmenes triviales.
+- No repitas el código no modificado; enfócate únicamente en las líneas editadas.
+- Prioriza código limpio, tipos explícitos y manejo robusto de excepciones.

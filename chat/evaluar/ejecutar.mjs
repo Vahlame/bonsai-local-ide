@@ -18,6 +18,7 @@ import { spawn, execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { TAREAS } from "./tareas.mjs";
 import { copiarApp } from "./copia-app.mjs";
+import { leerSSE } from "../sse.mjs";
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const CHAT = path.dirname(AQUI);
@@ -97,27 +98,14 @@ async function preguntar(base, text, timeoutMs) {
         httpError = `HTTP ${res.status}: ${await res.text()}`;
         break;
       }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        let at = buf.indexOf("\n\n");
-        while (at !== -1) {
-          const block = buf.slice(0, at);
-          buf = buf.slice(at + 2);
-          at = buf.indexOf("\n\n");
-          const line = block.split("\n").find((l) => l.startsWith("data:"));
-          if (!line) continue;
-          try {
-            events.push(JSON.parse(line.slice(5)));
-          } catch {
-            /* línea parcial */
-          }
-        }
-      }
+      // Un único lector SSE (chat/sse.mjs) en vez del split por "\n\n" de cada script.
+      await leerSSE(res.body, {
+        señal: ac.signal,
+        exigirFin: false,
+        jsonInvalido: "ignorar",
+        guardarEventos: false,
+        alEvento: (evento) => events.push(/** @type {Record<string, any>} */ (evento)),
+      });
       break;
     }
   } catch (err) {

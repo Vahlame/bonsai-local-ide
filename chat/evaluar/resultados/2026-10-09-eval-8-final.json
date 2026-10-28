@@ -1,0 +1,712 @@
+[
+ {
+  "id": "hola-py",
+  "titulo": "Crear un script y ejecutarlo",
+  "nivel": "facil",
+  "ok": true,
+  "segundos": 5.8,
+  "saltos": 2,
+  "acciones": 2,
+  "predichos": 87,
+  "leidos": 1316,
+  "cache": 1302,
+  "tokPorSeg": 28.4,
+  "gpu": {
+   "muestras": 5,
+   "utilMedia": 98,
+   "utilMaxima": 100,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 70,
+   "tempMax": 53,
+   "mhz": 2526,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "salida: \"Hola, Bonsai\""
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. Creé `hola.py` con `print(\"Hola, Bonsai\")` y lo ejecuté: la salida es exactamente `Hola, Bonsai`, sin punto al final.",
+  "pasos": [
+   "write:done hola.py",
+   "cmd:done(0) python hola.py"
+  ]
+ },
+ {
+  "id": "fizzbuzz",
+  "titulo": "Función + tests con unittest",
+  "nivel": "facil",
+  "ok": true,
+  "segundos": 32.5,
+  "saltos": 3,
+  "acciones": 4,
+  "predichos": 866,
+  "leidos": 668,
+  "cache": 5069,
+  "tokPorSeg": 28.1,
+  "gpu": {
+   "muestras": 32,
+   "utilMedia": 97,
+   "utilMaxima": 98,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 79,
+   "tempMax": 59,
+   "mhz": 2503,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "función ok",
+   "tests ok"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo.\n\n- **fizzbuzz.py**: función `fizzbuzz(n)` que devuelve la lista de textos de 1 a n según las reglas (múltiplo de 3 y 5 → \"FizzBuzz\", de 3 → \"Fizz\", de 5 → \"Buzz\", de lo contrario el número como texto).\n- **test_fizzbuzz.py**: 8 pruebas con unittest que cubren el rango completo 1–15, n=0, caso único, múltiplos de 3, de 5, de ambos, tipos de los elementos y casos límite (15, 30, 45).\n\nEjecución: **8 tests, todos OK** (código 0).",
+  "pasos": [
+   "write:done fizzbuzz.py",
+   "write:done test_fizzbuzz.py",
+   "cmd:done(0) python fizzbuzz.py",
+   "cmd:done(0) python -m unittest test_fizzbuzz -v"
+  ]
+ },
+ {
+  "id": "bug-ultimos",
+  "titulo": "Arreglar un bug con tests que fallan",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 20.6,
+  "saltos": 10,
+  "acciones": 8,
+  "predichos": 441,
+  "leidos": 1547,
+  "cache": 20532,
+  "tokPorSeg": 27.9,
+  "gpu": {
+   "muestras": 20,
+   "utilMedia": 91,
+   "utilMaxima": 100,
+   "pctAlto": 90,
+   "pctOcioso": 5,
+   "vatios": 75,
+   "tempMax": 61,
+   "mhz": 2519,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "tests ok",
+   "tests sin tocar"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. El bug estaba en `ultimos()`: usaba `lista[-n + 1:]` (un elemento de más corto) en vez de `lista[-n:]`.\n\nCambio aplicado:\n```python\nreturn lista[-n:]\n```\n\nLos tests ahora pasan:\n- `test_ultimos` ✅\n- `test_maximo` ✅\n\nRan 2 tests in 0.000s — OK.",
+  "pasos": [
+   "index:done carpeta",
+   "read:done utils.py",
+   "read:done test_utils.py",
+   "cmd:done(1) python -m unittest test_utils -v",
+   "write:done utils.py",
+   "cmd:done(0) python -m unittest test_utils -v",
+   "cmd:done(0) python -m unittest test_utils -v",
+   "cmd:done(0) python -m unittest test_utils -v"
+  ]
+ },
+ {
+  "id": "renombrar",
+  "titulo": "Renombrar una función en varios archivos",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 30.4,
+  "saltos": 6,
+  "acciones": 11,
+  "predichos": 766,
+  "leidos": 916,
+  "cache": 9897,
+  "tokPorSeg": 28,
+  "gpu": {
+   "muestras": 30,
+   "utilMedia": 93,
+   "utilMaxima": 100,
+   "pctAlto": 90,
+   "pctOcioso": 3,
+   "vatios": 78,
+   "tempMax": 62,
+   "mhz": 2492,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "sin restos",
+   "main: \"Total: 35\""
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Hecho. Renombré `calc_total` → `calcular_total` en todos los archivos:\n\n- **calc.py**: definición de la función.\n- **informe.py**: importación y llamada.\n- **main.py**: importación y llamada.\n- **README.md**: la referencia en la documentación.\n\nVerificación: `python main.py` sigue imprimiendo exactamente lo mismo que antes:\n\n```\nTotal: 35\n```\n\nY como comprobación extra, `informe.py` también funciona correctamente con el nuevo nombre (`Informe: 35`).",
+  "pasos": [
+   "index:done carpeta",
+   "index:done carpeta",
+   "read:done calc.py, informe.py, main.py, README.md",
+   "write:done calc.py",
+   "write:done informe.py",
+   "write:done informe.py",
+   "write:done main.py",
+   "write:done main.py",
+   "write:done README.md",
+   "cmd:done(0) python main.py",
+   "cmd:done(0) python -c \"import informe; print(informe.informe([{'precio': 5, 'cant': 3}, {'precio': 10,"
+  ]
+ },
+ {
+  "id": "html-contador",
+  "titulo": "Página HTML interactiva en un archivo",
+  "nivel": "facil",
+  "ok": true,
+  "segundos": 9.8,
+  "saltos": 2,
+  "acciones": 1,
+  "predichos": 245,
+  "leidos": 302,
+  "cache": 2445,
+  "tokPorSeg": 28.1,
+  "gpu": {
+   "muestras": 9,
+   "utilMedia": 98,
+   "utilMaxima": 100,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 77,
+   "tempMax": 62,
+   "mhz": 2498,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "estructura ok"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. Creé `contador.html` con un solo archivo y sin librerías:\n\n- Un número que empieza en **0**\n- Un botón que dice **\"Sumar\"**\n- Cada vez que se pulsa, el número aumenta en 1\n\nTodo funciona con JavaScript básico (sin librerías externas).",
+  "pasos": [
+   "write:done contador.html"
+  ]
+ },
+ {
+  "id": "json-resumen",
+  "titulo": "Leer datos, calcular y escribir JSON",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 14.4,
+  "saltos": 2,
+  "acciones": 2,
+  "predichos": 362,
+  "leidos": 665,
+  "cache": 2736,
+  "tokPorSeg": 28.1,
+  "gpu": {
+   "muestras": 14,
+   "utilMedia": 97,
+   "utilMaxima": 100,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 79,
+   "tempMax": 65,
+   "mhz": 2475,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "totales correctos"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. El script `resumen.py` leyó `ventas.json`, sumó los ingresos por producto (unidades × precio) y generó `resumen.json`:\n\nVerificación rápida: manzana (3+5+1)×10=90, pera (2+1)×15=45, uva (4+6)×7=70, kiwi 9×4=36 → total 241. ✓",
+  "pasos": [
+   "write:done resumen.py",
+   "cmd:done(0) python resumen.py"
+  ]
+ },
+ {
+  "id": "explicar-codigo",
+  "titulo": "Leer un archivo y explicarlo (sin escribir)",
+  "nivel": "facil",
+  "ok": true,
+  "segundos": 4.2,
+  "saltos": 1,
+  "acciones": 0,
+  "predichos": 98,
+  "leidos": 349,
+  "cache": 997,
+  "tokPorSeg": 28.1,
+  "gpu": {
+   "muestras": 4,
+   "utilMedia": 96,
+   "utilMaxima": 97,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 78,
+   "tempMax": 65,
+   "mhz": 2464,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "explicación correcta",
+   "no modificó nada"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "La función `buscar` implementa la búsqueda binaria: recibe una lista ordenada y un objetivo, y encuentra su índice dividiendo el rango en mitades en cada iteración. Su complejidad temporal es O(log n), ya que en cada paso se reduce a la mitad el número de elementos restantes, mientras que la complejidad espacial es O(1) al no usar memoria adicional. Si el elemento no existe, devuelve -1 al agotar el rango.",
+  "pasos": []
+ },
+ {
+  "id": "docstrings",
+  "titulo": "Editar un archivo existente sin romperlo",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 10.3,
+  "saltos": 2,
+  "acciones": 1,
+  "predichos": 271,
+  "leidos": 135,
+  "cache": 2688,
+  "tokPorSeg": 28.1,
+  "gpu": {
+   "muestras": 10,
+   "utilMedia": 97,
+   "utilMaxima": 98,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 79,
+   "tempMax": 63,
+   "mhz": 2493,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "docstrings y comportamiento ok"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "He añadido un docstring breve en español a cada función de `modulo.py` sin modificar su comportamiento:\n\n- `suma(a, b)`: \"Devuelve la suma de a y b.\"\n- `es_par(n)`: \"Indica si n es un número par.\"\n- `invertir(texto)`: \"Devuelve el texto invertido.\"\n- `contar_vocales(texto)`: \"Devuelve la cantidad de vocales en texto.\"\n\nEl archivo quedó guardado con el mismo código y solo los docstrings añadidos.",
+  "pasos": [
+   "write:done modulo.py"
+  ]
+ },
+ {
+  "id": "csv-stats",
+  "titulo": "Script que procesa un CSV",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 14.9,
+  "saltos": 2,
+  "acciones": 3,
+  "predichos": 380,
+  "leidos": 531,
+  "cache": 2645,
+  "tokPorSeg": 27.8,
+  "gpu": {
+   "muestras": 14,
+   "utilMedia": 98,
+   "utilMaxima": 100,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 79,
+   "tempMax": 65,
+   "mhz": 2474,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "salida correcta",
+   "código 0"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. `stats.py` creado y ejecutado. Salida:\n\n- **Edad media:** 36.62\n- **Edad mínima:** 23\n- **Edad máxima:** 52\n- **Personas por ciudad:**\n  - Bilbao: 2\n  - Madrid: 4\n  - Sevilla: 2",
+  "pasos": [
+   "write:done datos.csv",
+   "write:done stats.py",
+   "cmd:done(0) python stats.py"
+  ]
+ },
+ {
+  "id": "lru-cache",
+  "titulo": "Estructura de datos con comportamiento exacto",
+  "nivel": "dificil",
+  "ok": true,
+  "segundos": 68.3,
+  "saltos": 8,
+  "acciones": 9,
+  "predichos": 1778,
+  "leidos": 1057,
+  "cache": 19506,
+  "tokPorSeg": 27.4,
+  "gpu": {
+   "muestras": 67,
+   "utilMedia": 95,
+   "utilMaxima": 98,
+   "pctAlto": 99,
+   "pctOcioso": 0,
+   "vatios": 79,
+   "tempMax": 66,
+   "mhz": 2491,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "comportamiento ok",
+   "sus tests pasan"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Todo listo. Implementación y tests completados:\n\n**lru.py** — Clase `LRUCache(capacidad)` con:\n- `get(clave)`: devuelve el valor o `-1` si no existe. Marca la clave como más reciente.\n- `put(clave, valor)`: inserta o actualiza. Si la capacidad se excede, elimina la clave menos usada (la primera de la lista de orden).\n\n**test_lru.py** — 9 tests con `unittest`, todos pasando:\n- `get` de clave inexistente → `-1`\n- put/get básico\n- Eliminación de la clave más antigua al superar capacidad\n- `get` marca como reciente (no elimina esa clave)\n- `put` actualiza valor sin cambiar el orden\n- Capacidad 1\n-",
+  "pasos": [
+   "index:done carpeta",
+   "write:done lru.py",
+   "cmd:done(0) python lru.py",
+   "write:done test_lru.py",
+   "cmd:done(1) python test_lru.py",
+   "write:done lru.py",
+   "cmd:done(1) python test_lru.py",
+   "write:done lru.py",
+   "cmd:done(0) python test_lru.py"
+  ]
+ },
+ {
+  "id": "node-esm",
+  "titulo": "Módulo JavaScript con node:test",
+  "nivel": "medio",
+  "ok": false,
+  "segundos": 54.5,
+  "saltos": 7,
+  "acciones": 8,
+  "predichos": 1338,
+  "leidos": 2335,
+  "cache": 20061,
+  "tokPorSeg": 27.2,
+  "gpu": {
+   "muestras": 54,
+   "utilMedia": 95,
+   "utilMaxima": 100,
+   "pctAlto": 98,
+   "pctOcioso": 0,
+   "vatios": 78,
+   "tempMax": 64,
+   "mhz": 2493,
+   "vramMax": 7454
+  },
+  "fallos": [
+   "comandos-repetidos"
+  ],
+  "notas": [
+   "mal [[\"Ya, está.\",\"ya-está\"]]",
+   "node --test pasa"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. Creé:\n\n- **modulo.mjs** — exporta `slugify(texto)`: convierte a minúsculas, elimina signos de puntuación (los sustituye por espacio para no unirse palabras), colapsa espacios en un solo guión y quita guiones iniciales/finales.\n- **modulo.test.mjs** — 7 tests con `node:test` y `assert/strict`.\n\nTodos los tests pasan:\n\n```\nℹ tests 7\nℹ pass 7\nℹ fail 0\n```\n\nLos casos cubren: minúsculas, eliminación de puntuación, reemplazo de espacios por guiones, ausencia de guiones en extremos, colapso de guiones consecutivos, acentos y valores vacíos/no cadenas.",
+  "pasos": [
+   "write:done modulo.mjs",
+   "write:done modulo.test.mjs",
+   "cmd:done(1) node --test",
+   "write:done modulo.mjs",
+   "write:done modulo.test.mjs",
+   "cmd:done(1) node --test",
+   "write:done modulo.test.mjs",
+   "cmd:done(0) node --test"
+  ]
+ },
+ {
+  "id": "sqlite",
+  "titulo": "Base de datos con sqlite3",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 10.9,
+  "saltos": 2,
+  "acciones": 2,
+  "predichos": 268,
+  "leidos": 385,
+  "cache": 2495,
+  "tokPorSeg": 27.9,
+  "gpu": {
+   "muestras": 10,
+   "utilMedia": 96,
+   "utilMaxima": 100,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 77,
+   "tempMax": 63,
+   "mhz": 2516,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "datos ok",
+   "mostró los de stock bajo"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. El script `inventario.py` se ejecutó correctamente y creó la base de datos `inventario.db` con la tabla `productos` y los 4 registros insertados.\n\n**Productos con stock menor que 5:**\n- tuerca: 3\n- clavo: 2",
+  "pasos": [
+   "write:done inventario.py",
+   "cmd:done(0) python inventario.py"
+  ]
+ },
+ {
+  "id": "error-recuperable",
+  "titulo": "Ejecutar, ver el error y corregirlo",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 16.1,
+  "saltos": 7,
+  "acciones": 5,
+  "predichos": 361,
+  "leidos": 858,
+  "cache": 10900,
+  "tokPorSeg": 27.7,
+  "gpu": {
+   "muestras": 15,
+   "utilMedia": 94,
+   "utilMaxima": 97,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 76,
+   "tempMax": 63,
+   "mhz": 2518,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "salida: \"Total: 6\"",
+   ""
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Funciona.\n\nEl error era en la línea 2: `datos.valores()` → en Python los diccionarios usan `values()` (en español sería \"valores\", pero el método se llama `values` en inglés).\n\nCorregí:\n```python\ntotal = sum(datos.values())\n```\n\nSalida:\n```\nTotal: 6\n```",
+  "pasos": [
+   "cmd:done(1) python app.py",
+   "write:done app.py",
+   "cmd:done(0) python app.py",
+   "cmd:done(0) python app.py",
+   "cmd:done(0) python app.py"
+  ]
+ },
+ {
+  "id": "paquete",
+  "titulo": "Varios archivos que se importan entre sí",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 20.8,
+  "saltos": 3,
+  "acciones": 5,
+  "predichos": 536,
+  "leidos": 496,
+  "cache": 4489,
+  "tokPorSeg": 27.6,
+  "gpu": {
+   "muestras": 20,
+   "utilMedia": 95,
+   "utilMaxima": 97,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 78,
+   "tempMax": 64,
+   "mhz": 2492,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "paquete ok",
+   "main imprime los 3 resultados"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. Creé el paquete y ejecuté `main.py`:\n\n- **calculadora/__init__.py** — inicializa el paquete.\n- **calculadora/ops.py** — funciones `suma`, `resta`, `multiplica` y `divide` (esta última lanza `ValueError` si el divisor es 0).\n- **main.py** — importa el paquete y imprime los resultados.\n\nSalida de la ejecución:\n```\nsuma(2, 3) = 5\nmultiplica(4, 5) = 20\ndivide(10, 4) = 2.5\n```",
+  "pasos": [
+   "write:done calculadora/__init__.py",
+   "write:done calculadora/ops.py",
+   "write:done main.py",
+   "cmd:done(0) python calculadora/__init__.py",
+   "cmd:done(0) python main.py"
+  ]
+ },
+ {
+  "id": "regex-fechas",
+  "titulo": "Función con casos límite",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 17,
+  "saltos": 2,
+  "acciones": 2,
+  "predichos": 438,
+  "leidos": 459,
+  "cache": 2498,
+  "tokPorSeg": 27.8,
+  "gpu": {
+   "muestras": 16,
+   "utilMedia": 96,
+   "utilMaxima": 100,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 79,
+   "tempMax": 63,
+   "mhz": 2487,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "extrae bien"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo. Creé `fechas.py` con la función `extraer_fechas(texto)` que usa un regex para encontrar todas las fechas en formato `dd/mm/aaaa` y las devuelve en orden de aparición.\n\nLa prueba con el texto de ejemplo funcionó correctamente:\n- **Texto de prueba:** \"La reunión fue el 05/03/2024 y se repitió el 12/03/2024. El informe final se entregó el 31/12/2023, pero el pago se hará el 15/01/2025.\"\n- **Resultado:** `['05/03/2024', '12/03/2024', '31/12/2023', '15/01/2025']`\n\nLas cuatro fechas se extrajeron correctamente y en el orden en que aparecen en el texto.",
+  "pasos": [
+   "write:done fechas.py",
+   "cmd:done(0) python fechas.py"
+  ]
+ },
+ {
+  "id": "solo-chat",
+  "titulo": "Pregunta conceptual (sin herramientas)",
+  "nivel": "facil",
+  "ok": true,
+  "segundos": 18.1,
+  "saltos": 1,
+  "acciones": 0,
+  "predichos": 485,
+  "leidos": 243,
+  "cache": 997,
+  "tokPorSeg": 27.8,
+  "gpu": {
+   "muestras": 17,
+   "utilMedia": 95,
+   "utilMaxima": 97,
+   "pctAlto": 94,
+   "pctOcioso": 0,
+   "vatios": 79,
+   "tempMax": 63,
+   "mhz": 2501,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "explicación con ejemplo",
+   "sin herramientas"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Una **closure** (cierre) en JavaScript es una función que \"recuerda\" las variables del entorno donde fue creada, incluso cuando esa función se usa fuera de ese entorno.\n\nCada función en JavaScript tiene acceso a las variables de su **ámbito de creación** (scope), y una closure es cuando una función interna \"captura\" esas variables y las conserva aunque la función externa ya haya terminado de ejecutarse.\n\n### Ejemplo corto\n\n```javascript\nfunction crearContador() {\n  let contador = 0; // variable privada\n  return function() {\n    contador++;\n    return contador;\n  };\n}\n\nconst miContador = crearC",
+  "pasos": []
+ },
+ {
+  "id": "buscar-simbolo",
+  "titulo": "Encontrar algo en un proyecto con varios archivos",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 6.4,
+  "saltos": 3,
+  "acciones": 2,
+  "predichos": 150,
+  "leidos": 211,
+  "cache": 3857,
+  "tokPorSeg": 27.6,
+  "gpu": {
+   "muestras": 6,
+   "utilMedia": 97,
+   "utilMaxima": 100,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 76,
+   "tempMax": 62,
+   "mhz": 2518,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "archivo y parámetros correctos",
+   "herramientas de lectura/índice: 2"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "La función `conectar_db` está definida en **`servicios/db.py`**.\n\nRecibe estos parámetros:\n- **`host`** (obligatorio)\n- **`puerto`** (opcional, valor por defecto `5432`)\n- **`usuario`** (opcional, valor por defecto `\"admin\"`)\n\nSu docstring indica que \"Abre la conexión con la base de datos\" y devuelve un diccionario con esas tres claves.",
+  "pasos": [
+   "index:done carpeta",
+   "read:done servicios/db.py"
+  ]
+ },
+ {
+  "id": "editar-config",
+  "titulo": "Cambio puntual en un JSON",
+  "nivel": "facil",
+  "ok": true,
+  "segundos": 12.1,
+  "saltos": 5,
+  "acciones": 3,
+  "predichos": 279,
+  "leidos": 544,
+  "cache": 6952,
+  "tokPorSeg": 27.7,
+  "gpu": {
+   "muestras": 11,
+   "utilMedia": 95,
+   "utilMaxima": 98,
+   "pctAlto": 91,
+   "pctOcioso": 0,
+   "vatios": 77,
+   "tempMax": 64,
+   "mhz": 2483,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "solo cambió el puerto"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Ya estaba cambiado: el puerto es 9090 y el resto del archivo sigue igual.",
+  "pasos": [
+   "write:done config.json",
+   "deny:denied reemplazar config.json",
+   "read:done config.json"
+  ]
+ },
+ {
+  "id": "tres-pasos",
+  "titulo": "Instrucciones en varios pasos",
+  "nivel": "facil",
+  "ok": true,
+  "segundos": 7.4,
+  "saltos": 3,
+  "acciones": 3,
+  "predichos": 170,
+  "leidos": 346,
+  "cache": 3785,
+  "tokPorSeg": 27.8,
+  "gpu": {
+   "muestras": 7,
+   "utilMedia": 95,
+   "utilMaxima": 97,
+   "pctAlto": 100,
+   "pctOcioso": 0,
+   "vatios": 77,
+   "tempMax": 64,
+   "mhz": 2503,
+   "vramMax": 7454
+  },
+  "fallos": [],
+  "notas": [
+   "a=\"uno\" b=\"dos\" c=\"uno dos\""
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Listo:\n- **a.txt** → `uno`\n- **b.txt** → `dos`\n- **c.txt** → `uno dos` (contenido de a.txt seguido del de b.txt, separados por un espacio)",
+  "pasos": [
+   "write:done a.txt",
+   "write:done b.txt",
+   "write:done c.txt"
+  ]
+ }
+]

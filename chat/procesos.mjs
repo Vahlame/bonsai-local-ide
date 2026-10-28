@@ -52,6 +52,80 @@ export function recortarCentro(texto, max, cabeza = 0.3) {
 }
 
 /**
+ * Acumula la salida de un comando conservando desde el PRIMER bloque la cabeza Y la
+ * cola, sin crecer sin limite (hallazgo 12). Antes se hacia `output += ...` y, al
+ * pasar de 4*max, `output.slice(-4*max)` borraba el principio: recortarCentro ya no
+ * podia conservar la cabeza, aunque el mensaje decia lo contrario. Aqui los dos
+ * extremos se guardan por separado desde el primer bloque y el texto final tiene el
+ * mismo formato que recortarCentro (cabeza + marca de recorte + cola).
+ * @param {number} max caracteres maximos (sin contar la marca del recorte)
+ * @param {number} [cabeza] fraccion para la cabeza (el resto va a la cola)
+ * @returns {{take: (texto: string) => void, texto: () => string}}
+ */
+function crearSalida(max, cabeza = 0.3) {
+  const capCabeza = Math.max(0, Math.floor(max * cabeza));
+  const capCola = Math.max(0, Math.floor(max) - capCabeza);
+  let inicio = "";
+  let final = "";
+  let total = 0;
+  return {
+    /** @param {string} texto */
+    take(texto) {
+      const limpio = String(texto || "");
+      if (!limpio) return;
+      total += limpio.length;
+      let resto = limpio;
+      if (inicio.length < capCabeza) {
+        const falta = capCabeza - inicio.length;
+        inicio += resto.slice(0, falta);
+        resto = resto.slice(falta);
+      }
+      if (resto) {
+        final += resto;
+        if (final.length > capCola) final = final.slice(-capCola);
+      }
+    },
+    texto() {
+      const quitados = total - (inicio.length + final.length);
+      return quitados > 0 ? `${inicio}\n[…${quitados} caracteres recortados…]\n${final}` : inicio + final;
+    },
+  };
+}
+
+/**
+ * Borra un archivo temporal sin poder romper el comando (BUG-04). En Windows el
+ * `.cmd`/`.py` recien ejecutado puede seguir retenido por el proceso que acaba de
+ * cerrarse, por el antivirus o por otro handle (EBUSY/EPERM); `rmSync` con
+ * `force:true` no basta y una excepcion aqui se llevaria por delante el `resolve`
+ * del resultado. Se reintenta un poco de forma sincrona y, si sigue bloqueado, en
+ * segundo plano; los temporizadores van con `unref()` para no retrasar la salida.
+ * @param {string} file
+ * @returns {void}
+ */
+function borrarTemporal(file) {
+  if (!file) return;
+  /** @param {number} reintentos */
+  const intento = (reintentos) => {
+    try {
+      fs.rmSync(file, { force: true, maxRetries: reintentos, retryDelay: 50 });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  if (intento(2)) return;
+  let pendientes = 3;
+  const reintentar = () => {
+    if (intento(1)) return;
+    if (pendientes > 0) {
+      pendientes -= 1;
+      setTimeout(reintentar, 150).unref();
+    }
+  };
+  setTimeout(reintentar, 100).unref();
+}
+
+/**
  * Mata un proceso y toda su descendencia.
  * En Windows `child.kill()` solo mata la shell (`cmd.exe` cuando se lanza con
  * `shell: true`), y el proceso de verdad —python, node, lo que sea— sobrevive.
@@ -130,7 +204,7 @@ export function launchCommand(command, cwd, env) {
     fs.writeFileSync(file, desescaparComillas(hallado[2].replace(/^\r?\n/, "")), "utf8");
     return {
       child: spawn(`"${hallado[1].trim()}" "${file}"`, { cwd, shell: true, windowsHide: true, env, stdio: STDIO }),
-      cleanup: () => fs.rmSync(file, { force: true }),
+      cleanup: () => borrarTemporal(file),
     };
   }
   if (multiline && process.platform === "win32") {
@@ -141,7 +215,7 @@ export function launchCommand(command, cwd, env) {
     fs.writeFileSync(file, ["@echo off", "chcp 65001 >nul", ...lineas].join("\r\n"), "utf8");
     return {
       child: spawn(`"${file}"`, { cwd, shell: true, windowsHide: true, env, stdio: STDIO }),
-      cleanup: () => fs.rmSync(file, { force: true }),
+      cleanup: () => borrarTemporal(file),
     };
   }
   return {
@@ -176,16 +250,16 @@ export function lanzarEnFondo(command, opts = {}) {
       return;
     }
     const { child, cleanup } = lanzado;
-    let output = "";
+    const salida = crearSalida(maxBytes);
+    const decodificadorOut = new TextDecoder();
+    const decodificadorErr = new TextDecoder();
+    // Decodificacion INCREMENTAL: un caracter UTF-8 puede quedar partido entre dos
+    // bloques de datos y `buf.toString("utf8")` por bloque lo rompe (hallazgo 12).
+    child.stdout?.on("data", (buf) => salida.take(decodificadorOut.decode(buf, { stream: true })));
+    child.stderr?.on("data", (buf) => salida.take(decodificadorErr.decode(buf, { stream: true })));
     /** @type {number | null} */
     let code = null;
     let parado = false;
-    const take = (buf) => {
-      output += buf.toString("utf8");
-      if (output.length > maxBytes * 4) output = output.slice(-maxBytes * 4);
-    };
-    child.stdout?.on("data", take);
-    child.stderr?.on("data", take);
     const parar = () => {
       if (parado) return;
       parado = true;
@@ -198,16 +272,19 @@ export function lanzarEnFondo(command, opts = {}) {
     const responder = () => {
       if (resuelto) return;
       resuelto = true;
+      // Volcar lo que quedara a medias en los decodificadores antes de recoger el texto.
+      salida.take(decodificadorOut.decode());
+      salida.take(decodificadorErr.decode());
       const vivo = code === null;
       if (!vivo) parar();
-      resolve({ vivo, code, output: recortarCentro(output.trim(), maxBytes) || "(sin salida todavía)", pid: child.pid || 0, parar });
+      resolve({ vivo, code, output: salida.texto().trim() || "(sin salida todavía)", pid: child.pid || 0, parar });
     };
     child.on("close", (c) => {
       code = c ?? 1;
       responder();
     });
     child.on("error", (err) => {
-      take(Buffer.from(`\n${err.message}`));
+      salida.take(`\n${err.message}`);
       code = 1;
       responder();
     });
@@ -239,7 +316,9 @@ export function ejecutarComando(command, opts = {}) {
       return;
     }
     const { child, cleanup } = lanzado;
-    let output = "";
+    const salida = crearSalida(maxBytes);
+    const decodificadorOut = new TextDecoder();
+    const decodificadorErr = new TextDecoder();
     let settled = false;
     /** @type {NodeJS.Timeout | null} */
     let timer = null;
@@ -254,32 +333,29 @@ export function ejecutarComando(command, opts = {}) {
       settled = true;
       if (timer) clearTimeout(timer);
       signal?.removeEventListener("abort", alAbortar);
+      // Volcar primero los decodificadores: puede quedar un caracter UTF-8 a medias.
+      salida.take(decodificadorOut.decode());
+      salida.take(decodificadorErr.decode());
+      if (extra) salida.take(extra);
       // Cerrar los pipes aquí: si el árbol sobreviviera, el padre se quedaría con el
       // descriptor abierto y recibiendo datos de un proceso que ya no le importa.
       child.stdout?.destroy();
       child.stderr?.destroy();
+      // Puede fallar en Windows (EBUSY/EPERM); cleanup lo tolera y nunca lanza.
       cleanup();
-      const body = recortar(`${output}${extra}`.trim());
+      const body = salida.texto().trim();
       resolve({ code, output: body || "(sin salida en stdout ni stderr)", motivo });
     };
-    // Se guardan la CABEZA y la COLA: el final es donde van los tracebacks de Python, que
-    // es justo lo que el modelo necesita para corregir el script.
-    const take = (buf) => {
-      output += buf.toString("utf8");
-      if (output.length > maxBytes * 4) output = output.slice(-maxBytes * 4);
-    };
-    /**
-     * @param {string} texto
-     * @returns {string}
-     */
-    const recortar = (texto) => recortarCentro(texto, maxBytes);
+    // La cabeza y la cola se guardan desde el PRIMER bloque (hallazgo 12): el final
+    // es donde van los tracebacks de Python y el principio donde va el mensaje
+    // inicial del script; `output.slice(-4*max)` perdia la cabeza.
+    child.stdout?.on("data", (buf) => salida.take(decodificadorOut.decode(buf, { stream: true })));
+    child.stderr?.on("data", (buf) => salida.take(decodificadorErr.decode(buf, { stream: true })));
     const alAbortar = () => {
       motivo = "cancelado";
       matarArbol(child);
       finish(1, "\n(turno cancelado)");
     };
-    child.stdout?.on("data", take);
-    child.stderr?.on("data", take);
     child.on("close", (code) => finish(code ?? 1));
     child.on("error", (err) => {
       motivo = "error";

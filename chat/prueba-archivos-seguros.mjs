@@ -21,6 +21,29 @@ try {
   assert.throws(() => writeOutputs(root, [{ rel: "fuera/nueva/cosa.txt", content: "mal" }]));
   assert.equal(fs.readFileSync(path.join(outside, "secreto.txt"), "utf8"), "intacto");
   assert.throws(() => writeOutputs(root, [{ rel: "node_modules/privado.js", content: "mal" }]));
+
+  // Hallazgo 7: lo que rutaSegura SI garantiza es rechazar enlaces en CUALQUIER
+  // componente (junction anidado, enlace colgante) y dejar pasar rutas normales.
+  // La comprobacion sigue siendo best-effort (lstat + uso posterior): no se promete
+  // una barrera TOCTOU, solo se fija la semantica actual con pruebas.
+  fs.mkdirSync(path.join(root, "sub"), { recursive: true });
+  fs.symlinkSync(outside, path.join(root, "sub", "enlace-anidado"), process.platform === "win32" ? "junction" : "dir");
+  assert.equal(rutaSegura(root, "sub/enlace-anidado/secreto.txt"), null, "junction en un componente intermedio");
+  assert.equal(rutaSegura(root, "sub/enlace-anidado"), null, "el propio junction se rechaza");
+  assert.throws(() => writeOutputs(root, [{ rel: "sub/enlace-anidado/secreto2.txt", content: "mal" }]));
+  assert.equal(fs.readFileSync(path.join(outside, "secreto.txt"), "utf8"), "intacto");
+  try {
+    fs.symlinkSync(path.join(tmp, "no-existe-todavia"), path.join(root, "colgante"), process.platform === "win32" ? "junction" : "dir");
+    assert.equal(rutaSegura(root, "colgante/algo.txt"), null, "un enlace colgante tambien se rechaza");
+  } catch (error) {
+    console.warn(`aviso: sin permisos para crear el enlace colgante (${error.code}); caso omitido`);
+  }
+  fs.mkdirSync(path.join(root, "sub", "carpeta"), { recursive: true });
+  assert.equal(rutaSegura(root, "sub/carpeta/normal.txt"), path.join(root, "sub/carpeta/normal.txt"), "una ruta normal se acepta");
+  // Contrato actual: la RAIZ elegida puede ser un enlace; sus descendientes no.
+  const rootEnlace = path.join(tmp, "proyecto-enlazado");
+  fs.symlinkSync(root, rootEnlace, process.platform === "win32" ? "junction" : "dir");
+  assert.equal(rutaSegura(rootEnlace, "normal.txt"), path.join(rootEnlace, "normal.txt"), "la raiz elegida puede ser un enlace");
   const rename = fs.renameSync;
   try {
     fs.renameSync = () => { throw Object.assign(new Error("fallo de escritura simulado"), { code: "EIO" }); };

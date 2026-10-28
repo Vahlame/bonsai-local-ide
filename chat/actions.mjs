@@ -390,6 +390,60 @@ export const PC_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "proceso",
+      description: "Gestiona los procesos en segundo plano que lanzaste con ejecutar (segundo_plano: true). `listar` enseña los que siguen vivos (con id y pid); `detener` para uno con su `id`. Estos procesos YA NO se cierran al acabar el turno: viven hasta que se paren.",
+      parameters: {
+        type: "object",
+        properties: {
+          accion: { type: "string", enum: ["listar", "detener"] },
+          id: { type: "string", description: "id del proceso, el que devolvió ejecutar en segundo plano" },
+        },
+        required: ["accion"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "borrar",
+      description: "Borra un archivo (o una carpeta VACÍA) del proyecto. Se guarda copia para deshacer. No borra carpetas con contenido: borra antes sus archivos uno a uno.",
+      parameters: {
+        type: "object",
+        properties: { ruta: { type: "string" } },
+        required: ["ruta"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "mover",
+      description: "Mueve o renombra un archivo o una carpeta: `origen` y `destino`, rutas relativas al proyecto. Si `destino` es una carpeta que ya existe, el origen se mete dentro. No sobrescribe: si el destino ya existe, falla. Se guarda punto de deshacer.",
+      parameters: {
+        type: "object",
+        properties: { origen: { type: "string" }, destino: { type: "string" } },
+        required: ["origen", "destino"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "plan",
+      description: "Fija o actualiza el PLAN de la tarea como lista de pasos cortos. `hechos` son los números (1,2,3…) de los pasos ya completados. El plan se guarda entre turnos y se te recuerda en cada turno: úsalo en tareas de varios pasos o archivos y actualízalo al avanzar.",
+      parameters: {
+        type: "object",
+        properties: {
+          pasos: { type: "array", items: { type: "string" }, description: "lista de pasos, cada uno en una línea corta" },
+          hechos: { type: "array", items: { type: "integer" }, description: "números de paso (1-based) ya completados" },
+        },
+        required: ["pasos"],
+      },
+    },
+  },
 ];
 
 /**
@@ -493,6 +547,14 @@ export function nativeToolEffects(calls) {
   const reads = [];
   /** @type {Array<{rel: string, content: string}>} */
   const writes = [];
+  /** Procesos en segundo plano pedidos con `proceso`. @type {Array<{accion: string, id: string}>} */
+  const procesos = [];
+  /** Archivos o carpetas que el modelo pide borrar. @type {string[]} */
+  const borrados = [];
+  /** Movimientos o renombrados pedidos. @type {Array<{origen: string, destino: string}>} */
+  const movidos = [];
+  /** Plan de la tarea pedido con la función `plan` (null si no la llamó). @type {{pasos: string[], hechos: number[]} | null} */
+  let plan = null;
   /** @type {string[]} */
   const notes = [];
   /** @type {string[]} */
@@ -574,6 +636,40 @@ export function nativeToolEffects(calls) {
         edits.push({ rel, buscar, poner });
       } else if (cortada) nota(notaCortada("reemplazar"));
       else nota("reemplazar necesita `ruta`, `buscar` (el texto exacto que hay ahora) y `poner` (el nuevo).");
+    } else if (name === "proceso") {
+      const accion = argText(args.accion || args.action).toLowerCase();
+      const id = argText(args.id || args.proceso).trim();
+      if (accion === "listar" || (accion === "detener" && id)) {
+        procesos.push({ accion, id });
+        marca(`proc:${accion}`);
+      } else if (cortada) nota(notaCortada("proceso"));
+      else nota("proceso necesita accion \"listar\" o \"detener\" con el `id` del proceso.");
+    } else if (name === "borrar") {
+      const rel = argText(args.ruta || args.path).replace(/\\/g, "/").replace(/^\.\/+/, "").trim();
+      if (rel) {
+        borrados.push(rel);
+        marca(`del:${rel}`);
+      } else if (cortada) nota(notaCortada("borrar"));
+      else nota("borrar llegó sin `ruta`: vuelve a llamarla con el archivo o la carpeta vacía que quieres quitar.");
+    } else if (name === "mover") {
+      const origen = argText(args.origen || args.desde || args.from || args.ruta).replace(/\\/g, "/").replace(/^\.\/+/, "").trim();
+      const destino = argText(args.destino || args.to || args.hasta).replace(/\\/g, "/").replace(/^\.\/+/, "").trim();
+      if (origen && destino) {
+        movidos.push({ origen, destino });
+        marca(`move:${origen}`);
+      } else if (cortada) nota(notaCortada("mover"));
+      else nota("mover necesita `origen` y `destino` (por ejemplo origen: \"a.txt\", destino: \"carpeta/b.txt\"). Para renombrar, usa el mismo sitio con otro nombre.");
+    } else if (name === "plan") {
+      const crudos = Array.isArray(args.pasos) ? args.pasos : (typeof args.plan === "string" ? args.plan.split(/\r?\n/) : []);
+      const pasos = crudos.map((p) => String(p || "").replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 30);
+      const hechos = (Array.isArray(args.hechos) ? args.hechos : [])
+        .map((n) => Number.parseInt(String(n), 10))
+        .filter((n) => Number.isInteger(n) && n >= 1 && n <= pasos.length);
+      if (pasos.length) {
+        plan = { pasos, hechos: [...new Set(hechos)] };
+        marca("plan");
+      } else if (cortada) nota(notaCortada("plan"));
+      else nota("plan llegó sin `pasos`: vuelve a llamarla con los pasos de la tarea en `pasos` (lista de textos).");
     } else if (name) {
       nota(`función desconocida: ${name}. Las que hay: ejecutar, leer, indice, archivo, reemplazar, buscar, navegador.`);
     }
@@ -593,6 +689,10 @@ export function nativeToolEffects(calls) {
     reads: reads.slice(0, 8),
     writes: writes.slice(0, 6),
     edits: edits.slice(0, 8),
+    borrados: borrados.slice(0, 6),
+    movidos: movidos.slice(0, 6),
+    procesos: procesos.slice(0, 6),
+    plan,
     enFondo,
     scope,
     notes,
@@ -834,6 +934,212 @@ export function stripReads(text) {
  * @returns {string}
  */
 /**
+ * Tope de filas que se generan para un diff. Es alto a propósito: el llamador ya recorta
+ * el texto a 8.000 caracteres, y un tope bajo cortaba el diff antes de llegar a un cambio
+ * situado al final de un archivo grande. No se reserva memoria cuadrática: solo una fila
+ * por línea recordada.
+ */
+const MAX_DIFF_ROWS = 200_000;
+/** Tope de trabajo (líneas recorridas) para no bloquear con archivos enormes. */
+const MAX_DIFF_TRABAJO = 2_000_000;
+/** Tope de líneas por región para buscar el ancla menos repetida. */
+const MAX_REGION_ANCLAS = 20_000;
+
+/**
+ * Cuenta las líneas de un rango: cuántas veces aparece cada una y dónde está la primera.
+ * @param {string[]} lineas
+ * @param {number} desde
+ * @param {number} hasta
+ * @returns {Map<string, {n: number, i: number}>}
+ */
+function contarLineasRango(lineas, desde, hasta) {
+  /** @type {Map<string, {n: number, i: number}>} */
+  const mapa = new Map();
+  for (let i = desde; i < hasta; i += 1) {
+    const linea = lineas[i];
+    const previo = mapa.get(linea);
+    if (previo) previo.n += 1;
+    else mapa.set(linea, { n: 1, i });
+  }
+  return mapa;
+}
+
+/**
+ * De los pares (posición vieja, posición nueva) que ya vienen ordenados por posición
+ * nueva, devuelve la subsecuencia más larga con posiciones viejas crecientes. Patience
+ * sort O(k log k): sin matrices N×M.
+ * @param {Array<{a: number, b: number}>} pares
+ * @returns {Array<{a: number, b: number}>}
+ */
+function subsecuenciaCreciente(pares) {
+  if (pares.length <= 1) return pares.slice();
+  /** @type {number[]} */
+  const colas = [];
+  /** @type {number[]} */
+  const previos = new Array(pares.length).fill(-1);
+  for (let i = 0; i < pares.length; i += 1) {
+    const a = pares[i].a;
+    let lo = 0;
+    let hi = colas.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (pares[colas[mid]].a < a) lo = mid + 1;
+      else hi = mid;
+    }
+    if (lo > 0) previos[i] = colas[lo - 1];
+    colas[lo] = i;
+  }
+  /** @type {Array<{a: number, b: number}>} */
+  const resultado = [];
+  let i = colas.length ? colas[colas.length - 1] : -1;
+  while (i >= 0) {
+    resultado.push(pares[i]);
+    i = previos[i];
+  }
+  return resultado.reverse();
+}
+
+/**
+ * Anclas para un bloque distinto: primero las líneas que aparecen UNA sola vez en cada
+ * lado (patience diff). Si no hay ninguna, la línea menos repetida presente en ambos
+ * lados (histogram diff), con un número acotado de anclas para no fragmentar de más.
+ * @param {string[]} viejas
+ * @param {number} a0
+ * @param {number} a1
+ * @param {string[]} nuevas
+ * @param {number} b0
+ * @param {number} b1
+ * @returns {Array<{a: number, b: number}>}
+ */
+function buscarAnclas(viejas, a0, a1, nuevas, b0, b1) {
+  const mapaViejas = contarLineasRango(viejas, a0, a1);
+  const mapaNuevas = contarLineasRango(nuevas, b0, b1);
+  /** @type {Array<{a: number, b: number}>} */
+  const unicas = [];
+  for (const [linea, info] of mapaViejas) {
+    if (info.n !== 1) continue;
+    const otra = mapaNuevas.get(linea);
+    if (!otra || otra.n !== 1) continue;
+    unicas.push({ a: info.i, b: otra.i });
+  }
+  if (unicas.length) {
+    unicas.sort((x, y) => x.b - y.b);
+    return subsecuenciaCreciente(unicas);
+  }
+  if (a1 - a0 > MAX_REGION_ANCLAS || b1 - b0 > MAX_REGION_ANCLAS) return [];
+  /** @type {string | null} */
+  let frecuente = null;
+  let peso = Infinity;
+  for (const [linea, info] of mapaViejas) {
+    const otra = mapaNuevas.get(linea);
+    if (!otra) continue;
+    const candidato = Math.max(info.n, otra.n);
+    if (candidato < peso) {
+      peso = candidato;
+      frecuente = linea;
+    }
+  }
+  if (frecuente === null) return [];
+  /** @type {number[]} */
+  const posViejas = [];
+  for (let i = a0; i < a1; i += 1) if (viejas[i] === frecuente) posViejas.push(i);
+  /** @type {number[]} */
+  const posNuevas = [];
+  for (let i = b0; i < b1; i += 1) if (nuevas[i] === frecuente) posNuevas.push(i);
+  const total = Math.min(posViejas.length, posNuevas.length);
+  const cuantas = Math.min(total, 16);
+  /** @type {Array<{a: number, b: number}>} */
+  const anclas = [];
+  for (let k = 0; k < cuantas; k += 1) {
+    const indice = cuantas === 1 ? 0 : Math.round((k * (total - 1)) / (cuantas - 1));
+    anclas.push({ a: posViejas[indice], b: posNuevas[indice] });
+  }
+  return anclas;
+}
+
+/**
+ * Filas de un diff línea a línea sin matriz N×M: prefijo común, sufijo común y, en el
+ * bloque distinto, anclas de líneas iguales para partirlo (recursivo, con pila). Si un
+ * bloque no tiene anclas se emite quitado y añadido, que es lo que haría un diff
+ * conservador sin gastar memoria cuadrática.
+ * @param {string[]} viejas
+ * @param {string[]} nuevas
+ * @returns {string[]}
+ */
+function filasDiffLineal(viejas, nuevas) {
+  /** @type {string[]} */
+  const filas = [];
+  const lleno = () => filas.length >= MAX_DIFF_ROWS;
+  /**
+   * @typedef {{tipo: "rango", a0: number, a1: number, b0: number, b1: number} | {tipo: "fila", texto: string}} Tarea
+   */
+  /** @type {Tarea[]} */
+  const pila = [{ tipo: "rango", a0: 0, a1: viejas.length, b0: 0, b1: nuevas.length }];
+  let trabajo = 0;
+  while (pila.length && !lleno()) {
+    const tarea = pila.pop();
+    if (!tarea) break;
+    if (tarea.tipo === "fila") {
+      filas.push(tarea.texto);
+      continue;
+    }
+    let { a0, a1, b0, b1 } = tarea;
+    while (a0 < a1 && b0 < b1 && viejas[a0] === nuevas[b0]) {
+      filas.push(` ${viejas[a0]}`);
+      a0 += 1;
+      b0 += 1;
+      if (lleno()) break;
+    }
+    if (lleno()) break;
+    let sufijo = 0;
+    while (a1 - sufijo > a0 && b1 - sufijo > b0 && viejas[a1 - 1 - sufijo] === nuevas[b1 - 1 - sufijo]) sufijo += 1;
+    const finA = a1 - sufijo;
+    const finB = b1 - sufijo;
+    // El sufijo se emite al final del bloque: se deja preparado debajo en la pila.
+    if (sufijo > 0) pila.push({ tipo: "rango", a0: finA, a1, b0: finB, b1 });
+    if (a0 >= finA && b0 >= finB) continue;
+    if (a0 >= finA) {
+      for (let b = b0; b < finB && !lleno(); b += 1) filas.push(`+${nuevas[b]}`);
+      continue;
+    }
+    if (b0 >= finB) {
+      for (let a = a0; a < finA && !lleno(); a += 1) filas.push(`-${viejas[a]}`);
+      continue;
+    }
+    trabajo += finA - a0 + (finB - b0);
+    /** @type {Array<{a: number, b: number}>} */
+    let anclas = [];
+    if (trabajo <= MAX_DIFF_TRABAJO) anclas = buscarAnclas(viejas, a0, finA, nuevas, b0, finB);
+    if (!anclas.length) {
+      // Sin anclas (o demasiado trabajo): todo el bloque cambia. Se acota a MAX_DIFF_ROWS.
+      for (let a = a0; a < finA && !lleno(); a += 1) filas.push(`-${viejas[a]}`);
+      for (let b = b0; b < finB && !lleno(); b += 1) filas.push(`+${nuevas[b]}`);
+      continue;
+    }
+    // Se empuja en orden inverso: la pila LIFO emite hueco, ancla, hueco, ancla…
+    pila.push({
+      tipo: "rango",
+      a0: anclas[anclas.length - 1].a + 1,
+      a1: finA,
+      b0: anclas[anclas.length - 1].b + 1,
+      b1: finB,
+    });
+    for (let k = anclas.length - 1; k >= 0; k -= 1) {
+      const ancla = anclas[k];
+      pila.push({ tipo: "fila", texto: ` ${viejas[ancla.a]}` });
+      pila.push({
+        tipo: "rango",
+        a0: k === 0 ? a0 : anclas[k - 1].a + 1,
+        a1: ancla.a,
+        b0: k === 0 ? b0 : anclas[k - 1].b + 1,
+        b1: ancla.b,
+      });
+    }
+  }
+  return filas;
+}
+
+/**
  * @param {string} rel
  * @param {string} before
  * @param {string} after
@@ -844,50 +1150,19 @@ export function unifiedDiff(rel, before, after) {
   const newLines = String(after).replace(/\s+$/, "").split(/\r?\n/);
   const header = before ? [`--- ${rel}`, `+++ ${rel}`] : ["--- /dev/null", `+++ ${rel}`];
   if (!before) return [...header, ...newLines.map((line) => `+${line}`)].join("\n");
-  if (oldLines.length * newLines.length > 400000) {
-    /** @type {string[]} */
-    const rows = [...header];
+  /** @type {string[]} */
+  let rows;
+  try {
+    rows = filasDiffLineal(oldLines, newLines);
+  } catch {
+    // Si algo inesperado falla, un diff posicional acotado es mejor que no enseñar nada.
+    rows = [];
     const max = Math.max(oldLines.length, newLines.length);
     for (let i = 0; i < max && rows.length < 240; i += 1) {
       if (oldLines[i] === newLines[i]) continue;
       if (oldLines[i] !== undefined) rows.push(`-${oldLines[i]}`);
       if (newLines[i] !== undefined) rows.push(`+${newLines[i]}`);
     }
-    return rows.join("\n");
-  }
-  const n = oldLines.length;
-  const m = newLines.length;
-  /** @type {Uint16Array[]} */
-  const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
-  for (let i = n - 1; i >= 0; i -= 1) {
-    for (let j = m - 1; j >= 0; j -= 1) {
-      dp[i][j] = oldLines[i] === newLines[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
-    }
-  }
-  /** @type {string[]} */
-  const rows = [];
-  let i = 0;
-  let j = 0;
-  while (i < n && j < m) {
-    if (oldLines[i] === newLines[j]) {
-      rows.push(` ${oldLines[i]}`);
-      i += 1;
-      j += 1;
-    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-      rows.push(`-${oldLines[i]}`);
-      i += 1;
-    } else {
-      rows.push(`+${newLines[j]}`);
-      j += 1;
-    }
-  }
-  while (i < n) {
-    rows.push(`-${oldLines[i]}`);
-    i += 1;
-  }
-  while (j < m) {
-    rows.push(`+${newLines[j]}`);
-    j += 1;
   }
   const keep = rows.map(() => false);
   for (let k = 0; k < rows.length; k += 1) {
@@ -996,7 +1271,40 @@ export function selfTest() {
   check("no escribe en bin", blockedBin);
   check("lee un comando", extractCommands("```ejecutar\r\nnode -e \"console.log(1)\"\r\n```")[0]?.startsWith("node"));
   const loose = "ahora\n```\nejecutar\ndel main.py README.md\n```\n";
-  check("diff marca el cambio", unifiedDiff("a.txt", "a\nb", "a\nc").includes("-b") && unifiedDiff("a.txt", "a\nb", "a\nc").includes("+c"));
+  const diffCambio = unifiedDiff("a.txt", "a\nb", "a\nc");
+  check("diff marca el cambio", diffCambio.includes("-b") && diffCambio.includes("+c"));
+  check("diff conserva el contexto", diffCambio.includes(" a"));
+  check("diff sin cambios", unifiedDiff("a.txt", "a\nb", "a\nb").endsWith(" sin cambios"));
+  const diffCreado = unifiedDiff("n.txt", "", "uno\ndos");
+  check("diff de archivo nuevo", diffCreado.startsWith("--- /dev/null") && diffCreado.includes("+uno") && diffCreado.includes("+dos"));
+  const largo = Array.from({ length: 4000 }, (_, i) => `linea ${i}`).join("\n");
+  const largoEditado = largo.replace("linea 2000", "linea 2000 CAMBIADA").replace("linea 3950", "linea 3950 AL_FINAL");
+  const t0 = Date.now();
+  const diffLargo = unifiedDiff("l.txt", largo, largoEditado);
+  const msDiff = Date.now() - t0;
+  check(
+    "diff grande sin matriz y con contexto",
+    msDiff < 800 &&
+      diffLargo.includes("-linea 2000") &&
+      diffLargo.includes("+linea 2000 CAMBIADA") &&
+      diffLargo.includes(" linea 1999") &&
+      diffLargo.includes("+linea 3950 AL_FINAL"),
+  );
+  const base30 = Array.from({ length: 30 }, (_, i) => `L${i}`).join("\n");
+  const dosCambios = base30.replace("L2", "L2X").replace("L25", "L25X");
+  const diffDos = unifiedDiff("d.txt", base30, dosCambios);
+  check("diff separa grupos con @@", diffDos.includes("@@") && diffDos.includes(" L1") && diffDos.includes(" L3"));
+  const reproA = ["x", "x", "y", "x", "x"].join("\n");
+  const reproB = ["x", "x", "y2", "x", "x"].join("\n");
+  const diffRepro = unifiedDiff("r.txt", reproA, reproB);
+  check("diff con líneas repetidas usa un ancla", diffRepro.includes("-y") && diffRepro.includes("+y2") && diffRepro.includes(" x"));
+  const antesRen = Array.from({ length: 200 }, (_, i) => `const foo${i} = foo(${i});`).join("\n");
+  const despuesRen = antesRen.replaceAll("foo", "bar");
+  const t1 = Date.now();
+  const diffRen = unifiedDiff("r.txt", antesRen, despuesRen);
+  const msRen = Date.now() - t1;
+  check("diff masivo termina rápido", msRen < 800);
+  check("diff masivo enseña quitar y poner", diffRen.includes("-const foo0 = foo(0);") && diffRen.includes("+const bar0 = bar(0);"));
   check("lee ejecutar dentro de la cerca", extractCommands(loose)[0] === "del main.py README.md");
   check("quita esa cerca", !stripCommands(loose).includes("ejecutar") && stripCommands(loose).includes("ahora"));
   check("leer vacío lista la carpeta", indexScope("```\nleer\n```") === "");
@@ -1068,6 +1376,25 @@ export function selfTest() {
   const conEdit = nativeToolEffects([{ id: "e1", name: "reemplazar", arguments: { ruta: "a.py", buscar: "x = 1", poner: "x = 2" } }, { id: "e2", name: "reemplazar", arguments: { ruta: "a.py" } }]);
   check("reemplazar llega como edición con su id", conEdit.edits.length === 1 && conEdit.edits[0].poner === "x = 2" && conEdit.ids.get("edit:0") === "e1");
   check("reemplazar sin buscar/poner avisa", conEdit.notes.some((n) => /reemplazar necesita/.test(n)) && conEdit.notesIds[0] === "e2");
+  const conFs = nativeToolEffects([
+    { id: "b1", name: "borrar", arguments: { ruta: "viejo.txt" } },
+    { id: "m1", name: "mover", arguments: { origen: "a.py", destino: "src/a.py" } },
+    { id: "p1", name: "plan", arguments: { pasos: ["crear modulo", "testear", "borrar temporal"], hechos: [1] } },
+    { id: "b2", name: "borrar", arguments: {} },
+  ]);
+  check("borrar llega como borrado con su id", conFs.borrados.includes("viejo.txt") && conFs.ids.get("del:viejo.txt") === "b1");
+  check("mover llega con origen y destino", conFs.movidos.length === 1 && conFs.movidos[0].origen === "a.py" && conFs.movidos[0].destino === "src/a.py" && conFs.ids.get("move:a.py") === "m1");
+  check("plan llega con pasos y hechos", conFs.plan?.pasos.length === 3 && conFs.plan?.hechos[0] === 1 && conFs.ids.get("plan") === "p1");
+  check("borrar sin ruta avisa", conFs.notes.some((n) => /borrar llegó sin/.test(n)) && conFs.notesIds[conFs.notes.findIndex((n) => /borrar llegó sin/.test(n))] === "b2");
+  const planTexto = nativeToolEffects([{ name: "plan", arguments: { plan: "uno\ndos" } }]);
+  check("plan acepta texto con líneas como respaldo", planTexto.plan?.pasos.length === 2);
+  const conProc = nativeToolEffects([
+    { id: "pr1", name: "proceso", arguments: { accion: "listar" } },
+    { id: "pr2", name: "proceso", arguments: { accion: "detener", id: "bg123" } },
+    { id: "pr3", name: "proceso", arguments: { accion: "detener" } },
+  ]);
+  check("proceso lista y detiene con su id", conProc.procesos[0].accion === "listar" && conProc.procesos[1].id === "bg123" && conProc.ids.get("proc:listar") === "pr1");
+  check("proceso sin id avisa", conProc.notes.some((n) => /proceso necesita/.test(n)) && conProc.notesIds[0] === "pr3");
   const r1 = aplicarReemplazo("a\nb\nc\n", "b", "B");
   check("reemplazo único", r1.ok && r1.texto === "a\nB\nc\n" && r1.linea === 2);
   check("reemplazo ambiguo o ausente no toca nada", !aplicarReemplazo("b b", "b", "x").ok && aplicarReemplazo("b b", "b", "x").veces === 2 && aplicarReemplazo("abc", "z", "x").veces === 0);

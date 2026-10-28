@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import { PC_TOOLS } from "./actions.mjs";
 import { SYSTEM_RULES } from "./context.mjs";
 import { MODELO, muestreo } from "./modelo.mjs";
+import { leerSSE } from "./sse.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT = path.dirname(HERE);
@@ -144,28 +145,15 @@ async function main() {
         signal: AbortSignal.timeout(args.timeout),
       });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`);
-      const lector = res.body.getReader();
-      const dec = new TextDecoder();
-      let buf = "";
-      while (true) {
-        const { done, value } = await lector.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        let nl = buf.indexOf("\n");
-        while (nl !== -1) {
-          const linea = buf.slice(0, nl).replace(/\r$/, "");
-          buf = buf.slice(nl + 1);
-          nl = buf.indexOf("\n");
-          if (!linea.startsWith("data:")) continue;
-          frames.push(linea);
-          const payload = linea.slice(5).trim();
-          if (!payload || payload === "[DONE]") continue;
-          let json;
-          try {
-            json = JSON.parse(payload);
-          } catch {
-            continue;
-          }
+      // Un único lector SSE (chat/sse.mjs): fragmentos, CRLF, UTF-8 partido y resto final.
+      // Para medir el formato se conserva el comportamiento tolerante de siempre: un JSON
+      // roto o un corte se ignoran y los frames crudos se guardan igual.
+      const meta = await leerSSE(res.body, {
+        exigirFin: false,
+        jsonInvalido: "ignorar",
+        guardarEventos: false,
+        alLineaData: (linea) => frames.push(linea),
+        alEvento: (json) => {
           const choice = json.choices?.[0];
           const delta = choice?.delta || {};
           if (typeof delta.content === "string") texto += delta.content;
@@ -185,8 +173,9 @@ async function main() {
             }
           }
           if (choice?.finish_reason) finish = choice.finish_reason;
-        }
-      }
+        },
+      });
+      if (!finish && meta.finishReason) finish = meta.finishReason;
     } catch (err) {
       finish = `ERROR: ${err instanceof Error ? err.message : String(err)}`;
     }

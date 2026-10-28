@@ -17,6 +17,8 @@ const collectorPort = await listen(collector);
 const html = `<!doctype html><title>Prueba</title>
 <button>Primero</button><button>Segundo</button><button id="duplicate">Tercero</button><button id="duplicate">Cuarto</button>
 <div><input name="nombre"><input name="nombre"></div><p id="result">0</p>
+<div id="oculto" style="display:none">no visible</div>
+<button id="boton-oculto" style="display:none">Oculto</button>
 <script>
 document.querySelectorAll('button').forEach((e,i)=>e.onclick=()=>document.querySelector('#result').textContent=String(i+1));
 const secret='DATO_FICTICIO';
@@ -56,8 +58,9 @@ try {
   }
   for (const control of state.controles.filter((c) => c.selector.includes("input"))) assert.equal(await nav.page.locator(control.selector).count(), 1);
   const inspected = JSON.parse((await nav.run({ accion: "inspeccionar", selector: "button" })).texto);
-  assert.equal(inspected.elementos.length, 4);
+  assert.equal(inspected.elementos.length, 5, "se inspeccionan todos los botones, incluido el oculto");
   for (const item of inspected.elementos) assert.equal(await nav.page.locator(item.selector).count(), 1);
+  assert.equal(inspected.elementos.filter((e) => e.visible === false).length, 1, "el botón oculto se marca como no visible");
   await assert.rejects(nav.run({ accion: "abrir", url: `http://127.0.0.1:${appPort}/redirect` }), /ERR|net::|navigation/i);
   await nav.page.waitForTimeout(300);
   assert.equal(collectorHits.length, 0, `la redirección no debe llegar al colector: ${collectorHits}`);
@@ -65,7 +68,27 @@ try {
   await nav.page.waitForTimeout(300);
   assert.equal(collectorHits.length, 0, `el HTML estático tampoco puede enviar datos: ${collectorHits}`);
   assert.ok(state.eventos.some((e) => e.tipo === "bloqueado"));
-  console.log("Navegador: solicitudes entre orígenes, redirecciones y WebSocket bloqueados; misma aplicación, selectores y clics verificados.");
+
+  // BUG-03: si el selector de captura no existe o está oculto, el mensaje tiene que
+  // decir eso (antes decía "elige un elemento más pequeño" y desorientaba al modelo).
+  await assert.rejects(nav.run({ accion: "captura", selector: "#no-existe" }), /no existe ningún elemento/i);
+  await assert.rejects(nav.run({ accion: "captura", selector: "#oculto" }), /no está visible/i);
+  await assert.rejects(nav.run({ accion: "captura", selector: "#boton-oculto" }), /no está visible/i);
+  const recorte = JSON.parse((await nav.run({ accion: "captura", selector: "#result" })).texto);
+  assert.ok(/\.png$/.test(recorte.captura), "un elemento visible pequeño sí se captura");
+
+  // BUG-02: Playwright puede devolver viewportSize() === null; sin el fallback
+  // 1280x800, `current.width` lanzaba TypeError y la acción moría.
+  const viewportReal = nav.page.viewportSize.bind(nav.page);
+  nav.page.viewportSize = () => null;
+  try {
+    await nav.run({ accion: "inspeccionar", ancho: 1000 });
+  } finally {
+    nav.page.viewportSize = viewportReal;
+  }
+  assert.deepEqual(nav.page.viewportSize(), { width: 1000, height: 800 }, "viewportSize null usa el fallback y aplica el ancho pedido");
+
+  console.log("Navegador: solicitudes entre orígenes, redirecciones y WebSocket bloqueados; misma aplicación, selectores y clics verificados; selector de captura inexistente/oculto y viewportSize null cubiertos.");
 } finally {
   await nav.close();
   await Promise.all([new Promise((r) => app.close(r)), new Promise((r) => collector.close(r))]);

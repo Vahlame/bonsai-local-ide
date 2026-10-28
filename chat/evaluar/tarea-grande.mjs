@@ -15,6 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { leerSSE } from "../sse.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CHAT = path.dirname(HERE);
@@ -53,29 +54,20 @@ await json("/api/permit", { mode: "all" });
 
 const t0 = Date.now();
 const res = await fetch(`${base}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: PEDIDO }) });
-const lector = res.body.getReader();
-const dec = new TextDecoder();
-let buf = "";
+if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
 /** @type {Array<Record<string, any>>} */
 const eventos = [];
-while (true) {
-  const { done, value } = await lector.read();
-  if (done) break;
-  buf += dec.decode(value, { stream: true });
-  let nl = buf.indexOf("\n");
-  while (nl !== -1) {
-    const linea = buf.slice(0, nl).trim();
-    buf = buf.slice(nl + 1);
-    nl = buf.indexOf("\n");
-    if (!linea.startsWith("data:")) continue;
-    try {
-      const e = JSON.parse(linea.slice(5));
-      eventos.push(e);
-      if (e.type === "action" && e.state !== "run") process.stdout.write(`  · ${e.kind} ${e.state} ${String(e.title).split("\n")[0].slice(0, 70)}${e.code !== undefined ? ` (código ${e.code})` : ""}\n`);
-      if (e.type === "status") process.stdout.write(`  [${e.text}]\n`);
-    } catch { /* trozo incompleto */ }
-  }
-}
+await leerSSE(res.body, {
+  exigirFin: false,
+  jsonInvalido: "ignorar",
+  guardarEventos: false,
+  alEvento: (evento) => {
+    const e = /** @type {Record<string, any>} */ (evento);
+    eventos.push(e);
+    if (e.type === "action" && e.state !== "run") process.stdout.write(`  · ${e.kind} ${e.state} ${String(e.title).split("\n")[0].slice(0, 70)}${e.code !== undefined ? ` (código ${e.code})` : ""}\n`);
+    if (e.type === "status") process.stdout.write(`  [${e.text}]\n`);
+  },
+});
 const segundos = Math.round((Date.now() - t0) / 1000);
 // La respuesta final: lo último que se pintó. Si tras la última generación ("start") hubo un
 // "replace", manda ese; si no, son los tokens que se emitieron después del último "start".

@@ -9,7 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { aplicarReemplazo, commandAllowed, commandKey, esCharla, extractCommands, trozoParecido, extractReads, extractSearches, extractWrites, impliedAction, indexScope, inventedToolResult, nativeToolEffects, partirLectura, resolveInside, stripCommands, stripFakeToolText, stripFileBlocks, stripIndex, stripReads, stripSearches, unifiedDiff, writeOutputs } from "./actions.mjs";
+import { aplicarReemplazo, commandAllowed, commandKey, esCharla, extractCommands, trozoParecido, extractReads, extractSearches, extractWrites, impliedAction, indexScope, inventedToolResult, nativeToolEffects, resolveInside, stripCommands, stripFakeToolText, stripFileBlocks, stripIndex, stripReads, stripSearches, unifiedDiff, writeOutputs } from "./actions.mjs";
 import { dialectoDe, llamadasCrudas } from "./adaptadores.mjs";
 import { BonsaiChat } from "./bonsai-chat.mjs";
 import { MODELO, muestreo, pensarDe, perfilAgente, presupuestoPensar } from "./modelo.mjs";
@@ -22,6 +22,10 @@ import { cambiarConRecuperacion } from "./cambio-modelo.mjs";
 import { ocrLocal } from "./ocr.mjs";
 import { analizarEstadoGit, elegirRutasGit } from "./git-seguro.mjs";
 import { rutaSegura, escribirAtomico } from "./archivos-seguros.mjs";
+import { LIMITE_TEXTO, decodificarRecorteUtf8, describirLectura, leerPrimerosBytes, leerTextoAcotado, parseLectura } from "./lecturas.mjs";
+import { crearHistorial } from "./historial.mjs";
+import { Terminales } from "./terminal.mjs";
+import { buscarDefinicion, diagnosticarArchivo, diagnosticarTexto, indiceSimbolos, simbolos } from "./diagnosticos.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT = path.dirname(HERE);
@@ -30,8 +34,6 @@ const STATE = process.env.BONSAI_STATE ? path.resolve(process.env.BONSAI_STATE) 
 const SALIDA = process.env.BONSAI_SALIDA ? path.resolve(process.env.BONSAI_SALIDA) : path.join(PROJECT, "salida");
 const PAGE = path.join(HERE, "ui", "index.html");
 const WORKSPACE_FILE = path.join(STATE, "ui-workspace.json");
-const CHATS_DIR = path.join(STATE, "ui-chats");
-const CHATS_INDEX = path.join(CHATS_DIR, "index.json");
 const PERMIT_FILE = path.join(STATE, "ui-permit.json");
 // Copias para deshacer lo que escribe el agente o el editor (una por escritura).
 const UNDO_DIR = path.join(STATE, "undo");
@@ -40,6 +42,61 @@ const ADJUNTOS_DIR = path.join(SALIDA, "adjuntos");
 const startedAt = Date.now();
 /** @type {string} */
 let workspaceRoot = PROJECT;
+
+// --- Ajustes de alcance que se pueden cambiar desde Ajustes (ver aplicarAjustesAlChat) ---
+/** Tope duro de pasos del agente en un turno (el bucle puede encadenar tandas hasta este número). */
+let saltosTope = 192;
+/** Tiempo máximo de un comando del agente, en ms (antes eran 60 s fijos y cortaba builds/instalaciones). */
+let comandoTimeoutMs = 180000;
+/** Sesiones del terminal integrado (se recrean si cambia la carpeta de trabajo). */
+let terminales = null;
+/** Índice de símbolos cacheado del proyecto (para «ir a definición»). */
+let indiceCache = null;
+/** Momento en que se construyó el índice (se descarta a los 60 s por si un comando tocó archivos). */
+let indiceCacheTs = 0;
+
+/** @returns {Terminales} */
+function sesionesTerminal() {
+  if (!terminales || terminales.root !== workspaceRoot) {
+    try { terminales?.cerrarTodo(); } catch { /* sin sesiones */ }
+    terminales = new Terminales({ root: workspaceRoot });
+  }
+  return terminales;
+}
+
+// Al apagar el servidor se cierran las shells abiertas (taskkill /T es síncrono).
+for (const evento of ["exit", "SIGINT", "SIGTERM"]) {
+  process.once(evento, () => {
+    try { terminales?.cerrarTodo(); } catch { /* ya cerrado */ }
+  });
+}
+
+/**
+ * Índice nombre → definiciones del proyecto, con caché corta. Se invalida al escribir.
+ * @returns {Map<string, Array<{archivo: string, linea: number, columna: number, tipo: string}>>}
+ */
+function indiceProyecto() {
+  if (indiceCache && Date.now() - indiceCacheTs < 60000) return indiceCache;
+  const archivos = [...snapshotFiles(workspaceRoot).keys()];
+  indiceCache = indiceSimbolos(workspaceRoot, archivos);
+  indiceCacheTs = Date.now();
+  return indiceCache;
+}
+/** Procesos en segundo plano del agente que SOBREVIVEN al turno hasta que se paren. */
+const procesosFondoVivos = new Map();
+
+/**
+ * Texto del plan persistente (checklist) para el mensaje de sistema.
+ * @param {{pasos?: string[], hechos?: number[]} | null | undefined} plan
+ * @returns {string}
+ */
+function textoPlan(plan) {
+  if (!plan || !Array.isArray(plan.pasos) || !plan.pasos.length) return "";
+  const hechos = new Set((Array.isArray(plan.hechos) ? plan.hechos : []).map(Number));
+  const filas = plan.pasos.map((paso, i) => `${hechos.has(i + 1) ? "[x]" : "[ ]"} ${i + 1}. ${paso}`);
+  return `PLAN DE LA TAREA (te lo recuerda la app; actualízalo con la función plan):\n${filas.join("\n")}`;
+}
+
 
 /**
  * Un punto de deshacer. `antes`/`despues` son el contenido antes y después;
@@ -63,7 +120,7 @@ function guardarUndo(dato, bolsa) {
     return "";
   }
   if (bolsa) bolsa.push(id);
-  podarUndo();
+  podarUndoDiferido();
   return id;
 }
 
@@ -82,8 +139,30 @@ function enCarpetaProtegida(rel) {
   return partes.some((parte) => PROTEGIDOS.has(parte));
 }
 
-/** Cuántos puntos de deshacer se conservan (cada uno guarda hasta dos versiones de un archivo). */
+/**
+ * Cuántos puntos de deshacer se conservan (cada uno guarda hasta dos versiones de un archivo). */
 const UNDO_MAX = 400;
+/** Cada cuántas escrituras se lanza la poda en segundo plano (no en la ruta del guardado). */
+const PODAR_CADA = 16;
+let podarPendiente = false;
+let escriturasUndo = 0;
+
+/**
+ * Poda diferida: antes CADA guardado hacía readdir + statSync de hasta 400 JSON en el
+ * hilo principal. Ahora se cuenta y se lanza con setImmediate cada PODAR_CADA escrituras,
+ * fuera de la ruta crítica del guardado (el resultado es el mismo: se conservan los más
+ * recientes).
+ * @returns {void}
+ */
+function podarUndoDiferido() {
+  escriturasUndo += 1;
+  if (podarPendiente || escriturasUndo % PODAR_CADA !== 0) return;
+  podarPendiente = true;
+  setImmediate(() => {
+    podarPendiente = false;
+    podarUndo();
+  });
+}
 
 /**
  * chat\undo\ crecía sin límite: cada escritura del agente o del editor dejaba un JSON con el
@@ -156,7 +235,11 @@ function aplicarUndo(id, forzar, soloComprobar = false) {
   const previsto = typeof dato.despues === "string" ? dato.despues : null;
   let actual = null;
   if (fs.existsSync(abs)) {
-    if (!fs.statSync(abs).isFile()) return { ok: false, code: 409, motivo: "hay una carpeta en esa ruta", rel: dato.rel };
+    const st = fs.statSync(abs);
+    if (!st.isFile()) return { ok: false, code: 409, motivo: "hay una carpeta en esa ruta", rel: dato.rel };
+    // Los puntos de deshacer solo guardan escrituras de ≤2 MB: si el archivo actual es
+    // mayor, es que cambió por fuera. No se carga entero para compararlo.
+    if (st.size > LIMITE_TEXTO) return { ok: false, code: 409, motivo: "el archivo cambio desde entonces (es demasiado grande para compararlo)", rel: dato.rel };
     actual = fs.readFileSync(abs, "utf8");
   }
   if (!forzar && actual !== previsto) return { ok: false, code: 409, motivo: "el archivo cambio desde entonces", rel: dato.rel };
@@ -223,17 +306,36 @@ function readBody(req, limite = 200_000) {
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
+    let rechazado = false;
+    // Un 413 limpio necesita que el servidor pueda contestar ANTES de cerrar la conexión:
+    // antes se hacía req.destroy() al pasarse del límite y el cliente veía una conexión
+    // interrumpida en vez del error prometido. Ahora se rechaza con un error tipado, se
+    // deja de acumular y el manejador de arriba responde 413 y cierra cuando toca.
     req.on("data", (chunk) => {
+      if (rechazado) return;
       size += chunk.length;
       if (size > limite) {
-        reject(new Error("mensaje demasiado largo"));
-        req.destroy();
+        rechazado = true;
+        chunks.length = 0;
+        const err = new Error(`cuerpo demasiado grande (máximo ${limite} bytes)`);
+        err.name = "PayloadTooLargeError";
+        err.code = "PAYLOAD_TOO_LARGE";
+        err.limite = limite;
+        reject(err);
+        req.pause();
         return;
       }
       chunks.push(chunk);
     });
-    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-    req.on("error", reject);
+    req.on("end", () => {
+      if (!rechazado) resolve(Buffer.concat(chunks).toString("utf8"));
+    });
+    req.on("error", (err) => {
+      if (!rechazado) reject(err);
+    });
+    req.on("aborted", () => {
+      if (!rechazado) reject(new Error("petición interrumpida por el cliente"));
+    });
   });
 }
 
@@ -319,60 +421,6 @@ function repoIndex(scope) {
  * @param {unknown} rels
  * @returns {string}
  */
-/**
- * @param {string} rel
- * @returns {string}
- */
-/** Cuánto texto de un archivo se le pasa al modelo en una lectura (estimado a 3 car./token). */
-const LECTURA_TOKENS = 2000;
-
-/**
- * Lee un archivo para el modelo. `clave` es la ruta o `ruta:desde-hasta` (líneas).
- * Si no cabe entero, se corta por una línea y SE DICE: antes se cortaba a ~2.100
- * caracteres sin avisar y el modelo creía que su archivo estaba incompleto, o se ponía a
- * trocearlo con `python -c`.
- * @param {string} clave
- * @returns {string}
- */
-function describeRead(clave) {
-  const { rel, desde, hasta } = partirLectura(clave);
-  const clean = rel.replace(/\\/g, "/");
-  const abs = fileInside(workspaceRoot, clean);
-  if (!abs) return `leer ${clean}: ruta no permitida`;
-  if (!fs.existsSync(abs)) return `leer ${clean}: no existe`;
-  if (fs.statSync(abs).isDirectory()) {
-    const names = fs.readdirSync(abs).filter((name) => !name.startsWith(".")).slice(0, 40);
-    return `leer ${clean}: es una carpeta.\n${names.join("\n") || "(vacía)"}`;
-  }
-  if (!fs.statSync(abs).isFile()) return `leer ${clean}: no existe`;
-  const size = fs.statSync(abs).size;
-  if (SKIP_EXT.has(path.extname(abs).toLowerCase())) return `leer ${clean}: binario, ${size} bytes. No se pega el contenido.`;
-  const buf = fs.readFileSync(abs);
-  if (buf.includes(0)) return `leer ${clean}: binario, ${size} bytes. No se pega el contenido.`;
-  const lineas = buf.toString("utf8").split(/\r?\n/);
-  if (lineas.length > 1 && lineas[lineas.length - 1] === "") lineas.pop();
-  const total = lineas.length;
-  const ini = Math.min(Math.max(1, desde || 1), Math.max(1, total));
-  const finPedido = hasta > 0 ? Math.min(hasta, total) : total;
-  // Líneas enteras mientras quepan en el presupuesto (una línea gigante se corta igual).
-  const presupuesto = LECTURA_TOKENS * 3;
-  const tomadas = [];
-  let usados = 0;
-  for (let i = ini; i <= finPedido; i += 1) {
-    const linea = lineas[i - 1] ?? "";
-    if (usados + linea.length + 1 > presupuesto && tomadas.length) break;
-    tomadas.push(linea.length > presupuesto ? `${linea.slice(0, presupuesto)}…` : linea);
-    usados += Math.min(linea.length, presupuesto) + 1;
-  }
-  const fin = ini + tomadas.length - 1;
-  const entero = ini === 1 && fin >= total;
-  if (entero) return `Archivo ${clean} (${total} líneas, ${size} bytes):\n${tomadas.join("\n")}`;
-  const cola = fin < total
-    ? `\n[…recortado: faltan las líneas ${fin + 1}-${total}. Para verlas llama leer con ruta "${clean}", desde ${fin + 1} y hasta.]`
-    : "";
-  return `Archivo ${clean} (líneas ${ini}-${fin} de ${total}, ${size} bytes):\n${tomadas.join("\n")}${cola}`;
-}
-
 function attachFiles(text, rels) {
   if (!Array.isArray(rels) || rels.length === 0) return text;
   const chosen = rels.filter((rel) => typeof rel === "string").slice(0, 8);
@@ -382,9 +430,9 @@ function attachFiles(text, rels) {
     const abs = fileInside(workspaceRoot, rel.replace(/\\/g, "/"));
     if (!abs || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) continue;
     if (SKIP_EXT.has(path.extname(abs).toLowerCase())) continue;
-    const buf = fs.readFileSync(abs);
-    if (buf.includes(0)) continue;
-    const clip = takeHeadByTokens(buf.toString("utf8"), budget, estimateTokens);
+    const leido = leerTextoAcotado(abs, 400_000);
+    if (!leido.ok) continue;
+    const clip = takeHeadByTokens(leido.texto, budget, estimateTokens);
     pieces.push(`Archivo ${rel.replace(/\\/g, "/")}:\n${clip}`);
   }
   if (!pieces.length) return text;
@@ -740,7 +788,7 @@ function runCommand(command, signal) {
   const text = command.trim();
   if (!text || text.length > 16000) return Promise.resolve({ code: 1, output: "Comando vacío o demasiado largo." });
   const before = snapshotFiles(workspaceRoot);
-  return ejecutarComando(text, { cwd: workspaceRoot, env: shellEnv, signal }).then((result) => {
+  return ejecutarComando(text, { cwd: workspaceRoot, env: shellEnv, signal, timeoutMs: comandoTimeoutMs }).then((result) => {
     const files = fileDelta(before, snapshotFiles(workspaceRoot));
     const body = result.output.trim();
     // Recorte por el MEDIO: el final (traceback, FAILED) es lo que el modelo necesita.
@@ -1035,55 +1083,6 @@ function pickFolder(startDir) {
 }
 
 /**
- * @param {string} url
- */
-/**
- * @returns {{active: string, items: Array<{id: string, title: string, updated: number}>}}
- */
-function readChatIndex() {
-  try {
-    const raw = JSON.parse(fs.readFileSync(CHATS_INDEX, "utf8"));
-    if (!raw || typeof raw.active !== "string" || !Array.isArray(raw.items)) throw new Error("índice");
-    /** @type {Array<{id: string, title: string, updated: number}>} */
-    const items = [];
-    for (const item of raw.items) {
-      if (!item || typeof item.id !== "string" || !/^[a-z0-9]{6,40}$/.test(item.id)) continue;
-      items.push({
-        id: item.id,
-        title: typeof item.title === "string" && item.title.trim() ? item.title.trim().slice(0, 80) : "Nueva conversación",
-        updated: Number(item.updated) || 0,
-      });
-    }
-    return { active: /^[a-z0-9]{6,40}$/.test(raw.active) ? raw.active : "", items };
-  } catch {
-    return { active: "", items: [] };
-  }
-}
-
-/**
- * @param {{active: string, items: Array<{id: string, title: string, updated: number}>}} index
- */
-function writeChatIndex(index) {
-  fs.mkdirSync(CHATS_DIR, { recursive: true });
-  const tmp = `${CHATS_INDEX}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(index));
-  fs.renameSync(tmp, CHATS_INDEX);
-}
-
-/**
- * @param {string} id
- * @returns {string}
- */
-function chatFile(id) {
-  if (!/^[a-z0-9]{6,40}$/.test(id)) throw new Error("conversación desconocida");
-  return path.join(CHATS_DIR, `${id}.json`);
-}
-
-function newChatId() {
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-}
-
-/**
  * @param {{turns?: Array<{role?: string, content?: string}>}} session
  * @returns {string}
  */
@@ -1103,6 +1102,10 @@ function openBrowser(url) {
  */
 async function main(args) {
   loadWorkspace();
+  // El historial (índice, archivos y copia de trabajo) vive en chat/historial.mjs: aquí
+  // solo se recupera lo que haya quedado corrupto antes de crear el chat.
+  const historial = crearHistorial({ stateDir: STATE, sessionPath: path.join(STATE, "ui-session.json"), tituloDe: chatTitle });
+  const avisosInicio = historial.prepararSesionInicial();
   const chat = new BonsaiChat({
     host: "127.0.0.1",
     port: args.llamaPort,
@@ -1115,11 +1118,14 @@ async function main(args) {
   chat.silent = true;
   chat.actOnPc = true;
   chat.loadSession();
+  for (const aviso of avisosInicio) chat.note(`historial: ${aviso}`);
   await chat.connect();
   /** Visión: el servidor la anuncia en /props. Sin mmproj no puede ver imágenes. */
   chat.vision = Boolean(chat.props?.modalities && chat.props.modalities.vision === true);
 
   let busy = false;
+  /** Último fallo del archivado del historial (se muestra en /api/state; "" si ninguno). */
+  let errorHistorial = "";
   /** Puntos de deshacer de las escrituras del AGENTE en el turno en curso (para "revertir el turno"). */
   /** @type {string[]} */
   let undoDelTurno = [];
@@ -1313,27 +1319,38 @@ async function main(args) {
   }
 
   function archiveActive() {
-    const index = readChatIndex();
-    const id = index.active || newChatId();
+    const index = historial.readIndex();
+    const id = index.active || historial.newChatId();
     if (!index.active) {
       index.active = id;
       index.items.unshift({ id, title: chatTitle(chat.session), updated: Date.now() });
     }
-    fs.mkdirSync(CHATS_DIR, { recursive: true });
-    fs.writeFileSync(chatFile(id), JSON.stringify(chat.session));
+    // Reemplazo atómico TAMBIÉN para el historial: antes un corte dejaba el JSON a medias
+    // y el catch del llamador se lo tragaba sin avisar al usuario.
+    historial.archive(id, chat.session);
     const item = index.items.find((row) => row.id === id);
     const title = chatTitle(chat.session);
     if (item) {
       item.title = title;
       item.updated = Date.now();
     } else index.items.unshift({ id, title, updated: Date.now() });
-    writeChatIndex(index);
+    historial.writeIndex(index);
   }
 
   const persistSession = chat.saveSession.bind(chat);
   chat.saveSession = () => {
+    // La copia de trabajo es el dato crítico: si falla, el error sube (no se puede seguir
+    // fingiendo que se guardó). El archivado sí es recuperable: se reintenta en el
+    // siguiente guardado y el fallo queda visible en /api/state.
     persistSession();
-    try { archiveActive(); } catch { /* el siguiente guardado reintenta el historial */ }
+    try {
+      archiveActive();
+      errorHistorial = "";
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      errorHistorial = `no se pudo archivar el historial: ${message}. Tus mensajes siguen en la copia de trabajo y se reintentará al siguiente guardado.`;
+      process.stderr.write(`[historial] ${errorHistorial}\n`);
+    }
   };
 
   function blankSession() {
@@ -1346,13 +1363,15 @@ async function main(args) {
    * @param {string} id
    */
   function loadChat(id) {
-    const raw = JSON.parse(fs.readFileSync(chatFile(id), "utf8"));
-    const index = readChatIndex();
+    const leido = historial.leerChat(id);
+    if (!leido.ok) throw new Error(leido.motivo);
+    const raw = /** @type {{memory?: unknown, folded?: unknown, turns?: unknown, files?: unknown}} */ (leido.dato);
+    const index = historial.readIndex();
     index.active = id;
     if (!index.items.some((item) => item.id === id)) {
       index.items.unshift({ id, title: chatTitle(raw), updated: Date.now() });
     }
-    writeChatIndex(index);
+    historial.writeIndex(index);
     chat.session = {
       memory: typeof raw.memory === "string" ? raw.memory : "",
       folded: Number.isInteger(raw.folded) ? raw.folded : 0,
@@ -1368,38 +1387,38 @@ async function main(args) {
     const empty = !(chat.session.turns || []).some((turn) => turn.role === "user");
     if (!empty) {
       archiveActive();
-      const index = readChatIndex();
-      const id = newChatId();
+      const index = historial.readIndex();
+      const id = historial.newChatId();
       index.active = id;
       index.items.unshift({ id, title: "Nueva conversación", updated: Date.now() });
-      writeChatIndex(index);
+      historial.writeIndex(index);
       blankSession();
     }
-    return readChatIndex();
+    return historial.readIndex();
   }
 
   /**
    * @param {string} id
    */
   function removeChat(id) {
-    const index = readChatIndex();
+    const index = historial.readIndex();
     index.items = index.items.filter((item) => item.id !== id);
-    fs.rmSync(chatFile(id), { force: true });
+    fs.rmSync(historial.chatFile(id), { force: true });
     if (index.active === id) {
       const next = index.items[0];
       if (next) {
-        writeChatIndex(index);
+        historial.writeIndex(index);
         loadChat(next.id);
-        return readChatIndex();
+        return historial.readIndex();
       }
-      const fresh = newChatId();
+      const fresh = historial.newChatId();
       index.active = fresh;
       index.items = [{ id: fresh, title: "Nueva conversación", updated: Date.now() }];
-      writeChatIndex(index);
+      historial.writeIndex(index);
       blankSession();
-      return readChatIndex();
+      return historial.readIndex();
     }
-    writeChatIndex(index);
+    historial.writeIndex(index);
     return index;
   }
 
@@ -1416,8 +1435,12 @@ async function main(args) {
     const inSalida = fileInside(SALIDA, last.rel);
     const abs = inProject && fs.existsSync(inProject) ? inProject : inSalida;
     if (!abs || !fs.existsSync(abs)) return text;
-    const clip = takeHeadByTokens(fs.readFileSync(abs, "utf8"), 1200, estimateTokens);
-    return `${text}\n\nArchivo actual ${last.rel}:\n${clip}`;
+    // Solo hace falta el principio del archivo: no se carga un archivo enorme entero.
+    const leido = leerTextoAcotado(abs, 512 * 1024);
+    if (!leido.ok) return text;
+    const clip = takeHeadByTokens(leido.texto, 1200, estimateTokens);
+    if (!clip) return text;
+    return `${text}\n\nArchivo actual ${last.rel}:\n${clip}${leido.truncado ? "\n[…archivo recortado]" : ""}`;
   }
 
   /* ------------------------------------------------------------------------
@@ -1461,6 +1484,10 @@ async function main(args) {
         if (SKIP_EXT.has(path.extname(e.name).toLowerCase())) continue;
         let buf;
         try {
+          // stat antes de leer: un archivo de 500 MB no debe cargarse para luego
+          // descubrir que supera el límite de 800 KB.
+          const st = fs.statSync(path.join(workspaceRoot, hijoRel));
+          if (st.size > 800_000) continue;
           buf = fs.readFileSync(path.join(workspaceRoot, hijoRel));
         } catch {
           continue;
@@ -1525,33 +1552,40 @@ async function main(args) {
     const fuentes = [];
     /** @type {string[]} */
     const trozos = [];
+    // Política de rutas compartida con el resto del servidor: `fileInside` rechaza
+    // enlaces/junctions en cualquier componente, así que una regla enlazada a un archivo
+    // de fuera del proyecto no se lee (antes se seguía el enlace y su contenido acababa
+    // en el contexto del modelo). Además se limita el tamaño antes de leer.
+    const leerRegla = (rel) => {
+      const abs = fileInside(workspaceRoot, rel);
+      if (!abs) return "";
+      const leido = leerTextoAcotado(abs, 128 * 1024);
+      return leido.ok ? leido.texto.slice(0, 8000) : "";
+    };
     const sueltos = ["BONSAI.md", "AGENTS.md", ".cursorrules"];
     for (const nombre of sueltos) {
-      const abs = path.join(workspaceRoot, nombre);
-      if (fs.existsSync(abs)) {
-        try {
-          const txt = fs.readFileSync(abs, "utf8").slice(0, 8000);
-          if (txt.trim()) {
-            trozos.push(`# ${nombre}\n${txt}`);
-            fuentes.push(nombre);
-          }
-        } catch {
-          /* ilegible */
-        }
+      const txt = leerRegla(nombre);
+      if (txt.trim()) {
+        trozos.push(`# ${nombre}\n${txt}`);
+        fuentes.push(nombre);
       }
     }
-    const dirReglas = path.join(workspaceRoot, ".cursor", "rules");
-    if (fs.existsSync(dirReglas)) {
+    const dirRel = ".cursor/rules";
+    const dirAbs = fileInside(workspaceRoot, dirRel);
+    let esCarpeta = false;
+    try { esCarpeta = Boolean(dirAbs) && fs.statSync(/** @type {string} */ (dirAbs)).isDirectory(); } catch { esCarpeta = false; }
+    if (esCarpeta) {
       let entradas = [];
       try {
-        entradas = fs.readdirSync(dirReglas, { withFileTypes: true });
+        entradas = fs.readdirSync(/** @type {string} */ (dirAbs), { withFileTypes: true });
       } catch {
         entradas = [];
       }
       for (const e of entradas) {
-        if (!e.isFile() || !/\.(mdc|md)$/i.test(e.name)) continue;
+        if (!/\.(mdc|md)$/i.test(e.name)) continue;
         try {
-          let txt = fs.readFileSync(path.join(dirReglas, e.name), "utf8").slice(0, 8000);
+          let txt = leerRegla(`${dirRel}/${e.name}`);
+          if (!txt) continue;
           const m = txt.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
           let siempre = true;
           if (m) {
@@ -1582,7 +1616,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const AJUSTES_DEFECTO = { tema: "dark", perfil: "codigo", pensar: 0, reglas: true, historial: DEFAULT_HISTORY_CAP };
+  const AJUSTES_DEFECTO = { tema: "dark", perfil: "codigo", pensar: 0, reglas: true, historial: DEFAULT_HISTORY_CAP, continuarAuto: true, saltosTope: 192, comandoSegundos: 180 };
   // Los ajustes guardados en la interfaz (perfil de muestreo, tope de historial, pensar)
   // mandan sobre los valores por defecto de la línea de comandos. Va AQUÍ y no al principio
   // de main(): `AJUSTES_DEFECTO` es un `const` y llamarlo antes revienta el arranque con
@@ -1622,6 +1656,11 @@ async function main(args) {
     // Razonamiento: el que pidió el usuario, pero SOLO si el modelo cargado lo admite
     // (catalogo.<clave>.pensar). Con bolding_v1 se queda apagado aunque esté pedido.
     chat.thinkBudget = presupuestoPensar(modeloActualClave(), Number(ajustes.pensar));
+    // Tope de pasos del agente y tope de tiempo por comando: configurables con límites sanos.
+    const topePasos = Number(ajustes.saltosTope);
+    if (Number.isFinite(topePasos)) saltosTope = Math.max(24, Math.min(400, Math.round(topePasos)));
+    const segundos = Number(ajustes.comandoSegundos);
+    if (Number.isFinite(segundos)) comandoTimeoutMs = Math.max(10, Math.min(1800, Math.round(segundos))) * 1000;
   }
 
   /**
@@ -1728,6 +1767,12 @@ async function main(args) {
         res.end(JSON.stringify({
           nCtx: chat.nCtx,
           historyCap: chat.historyCap(),
+          // Presupuesto real de contexto: ventana del servidor, tope pedido por el usuario,
+          // historial efectivo y reserva de salida. La UI no debe prometer más de lo que hay.
+          presupuesto: typeof chat.presupuestoContexto === "function"
+            ? chat.presupuestoContexto()
+            : { ventana: chat.nCtx, solicitado: chat.configuredCap, efectivo: chat.historyCap(), reservaSalida: Math.max(0, chat.nCtx - chat.historyCap()) },
+          historial: { error: errorHistorial, carpeta: historial.chatsDir },
           usage,
           turns: chat.session.turns.filter((turn) => !hiddenTurn(turn)).map((turn) => ({
             role: turn.role,
@@ -1776,26 +1821,37 @@ async function main(args) {
       if (req.method === "GET" && url.pathname === "/api/file") {
         const rel = url.searchParams.get("path") || "";
         const abs = fileInside(workspaceRoot, rel);
-        if (!abs || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
+        if (!abs) {
           res.writeHead(404).end("no está");
           return;
         }
-        const body = fs.readFileSync(abs);
-        if (body.includes(0)) {
+        let st;
+        try {
+          st = fs.statSync(abs);
+        } catch {
+          res.writeHead(404).end("no está");
+          return;
+        }
+        if (!st.isFile()) {
+          res.writeHead(404).end("no está");
+          return;
+        }
+        // stat ANTES de leer: antes se hacía readFileSync de un archivo enorme para
+        // recortarlo a 2 MB después, bloqueando el event loop. Ahora solo se leen los
+        // primeros 2 MB (y se recorta en un límite UTF-8 válido).
+        const cortado = st.size > LIMITE_TEXTO;
+        const buf = cortado ? leerPrimerosBytes(abs, LIMITE_TEXTO) : fs.readFileSync(abs);
+        if (buf.includes(0)) {
           res.writeHead(415).end("no es texto");
           return;
         }
-        // El editor necesita saber si el archivo venía cortado: antes se truncaba a
-        // 60.000 caracteres en silencio y se podía guardar un archivo a medias.
-        const recorte = body.subarray(0, 2_000_000);
-        const cortado = body.length > recorte.length;
         res.writeHead(200, {
           "Content-Type": "text/plain; charset=utf-8",
           "Cache-Control": "no-store",
-          "X-Bonsai-Bytes": String(body.length),
+          "X-Bonsai-Bytes": String(st.size),
           "X-Bonsai-Truncado": cortado ? "1" : "0",
         });
-        res.end(recorte.toString("utf8"));
+        res.end(cortado ? decodificarRecorteUtf8(buf) : buf.toString("utf8"));
         return;
       }
       // ---------------------------------------------------------- guardar archivo
@@ -1825,14 +1881,31 @@ async function main(args) {
           res.writeHead(413, { "Content-Type": "text/plain; charset=utf-8" }).end("archivo demasiado grande (2 MB)");
           return;
         }
-        const existe = fs.existsSync(abs);
+        const existe = (() => {
+          try { return fs.statSync(abs); } catch { return null; }
+        })();
+        if (existe && !existe.isFile()) {
+          res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end("en esa ruta hay una carpeta, no un archivo");
+          return;
+        }
         if (!existe && !crear) {
           res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("no existe (usa create para crearlo)");
           return;
         }
         let antes = null;
         if (existe) {
+          // El editor nunca edita archivos de más de 2 MB (los abre recortados y no los
+          // guarda). Comprobar el tamaño con stat evita leer entero un archivo enorme solo
+          // para descubrir que no se puede guardar.
+          if (existe.size > LIMITE_TEXTO) {
+            res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end("el archivo en disco supera 2 MB y no se puede editar desde el editor; usa el agente");
+            return;
+          }
           const previo = fs.readFileSync(abs);
+          if (previo.length > LIMITE_TEXTO) {
+            res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end("el archivo creció mientras se guardaba; vuelve a abrirlo");
+            return;
+          }
           if (previo.includes(0)) {
             res.writeHead(415, { "Content-Type": "text/plain; charset=utf-8" }).end("no es texto");
             return;
@@ -1979,9 +2052,12 @@ async function main(args) {
           const carpeta = fs.statSync(abs).isDirectory();
           let undoId = "";
           if (!carpeta) {
-            const buf = fs.readFileSync(abs);
-            if (!buf.includes(0) && buf.length <= 2_000_000) {
-              undoId = guardarUndo({ tipo: "texto", rel, antes: buf.toString("utf8"), despues: null });
+            // Se guarda copia solo si es un texto de tamaño razonable: comprobar el tamaño
+            // antes evita leer un archivo enorme para descubrir que no cabe en el undo.
+            const st = fs.statSync(abs);
+            if (st.size <= LIMITE_TEXTO) {
+              const buf = fs.readFileSync(abs);
+              if (!buf.includes(0)) undoId = guardarUndo({ tipo: "texto", rel, antes: buf.toString("utf8"), despues: null });
             }
           }
           fs.rmSync(abs, { recursive: true, force: true });
@@ -2016,6 +2092,12 @@ async function main(args) {
           res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("no existe");
           return;
         }
+        // Edición en línea: el archivo se manda al modelo entero, así que se limita el
+        // tamaño ANTES de leerlo (antes se hacía readFileSync de cualquier tamaño).
+        if (fs.statSync(abs).size > LIMITE_TEXTO) {
+          res.writeHead(413, { "Content-Type": "text/plain; charset=utf-8" }).end("archivo demasiado grande para editar en línea (2 MB)");
+          return;
+        }
         const buf = fs.readFileSync(abs);
         if (buf.includes(0)) {
           res.writeHead(415, { "Content-Type": "text/plain; charset=utf-8" }).end("no es texto");
@@ -2041,13 +2123,20 @@ async function main(args) {
           // Sin herramientas (tool_choice "none"): el modelo solo devuelve el reemplazo.
           const salida = await chat.streamSlice(mensajes, 1200, false, ac.signal);
           const aplicado = aplicarRespuesta({ texto, start: desde, end: hasta, respuesta: salida.chunk });
+          // `base` es el contenido EXACTO sobre el que se generó la propuesta: la UI lo
+          // manda como precondición `before` al aceptar. Sin esto, guardar una propuesta
+          // tardía pisaba los cambios hechos en disco/editor mientras se esperaba.
+          const inicioReal = Number.isInteger(aplicado.start) ? aplicado.start : desde;
+          const finReal = Number.isInteger(aplicado.end) ? aplicado.end : hasta;
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({
             ok: true,
             rel,
-            start: desde,
-            end: hasta,
-            seleccion: recorteLineas(texto, desde, hasta),
+            base: texto,
+            start: inicioReal,
+            end: finReal,
+            lineasAplicadas: aplicado.lineasAplicadas,
+            seleccion: typeof aplicado.seleccion === "string" ? aplicado.seleccion : recorteLineas(texto, inicioReal, finReal),
             propuesta: aplicado.propuesta,
             texto: aplicado.texto,
             borra: aplicado.borra,
@@ -2056,7 +2145,12 @@ async function main(args) {
           }));
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-          res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" }).end(`el modelo no pudo editar: ${message}`);
+          // Respuesta vacía: no es un 502 del modelo, es una propuesta que no se aplica.
+          const estado = err && typeof err === "object" && /** @type {{status?: number}} */ (err).status === 422 ? 422 : 502;
+          const motivo = err && typeof err === "object" && typeof /** @type {{motivo?: unknown}} */ (err).motivo === "string"
+            ? /** @type {{motivo: string}} */ (err).motivo
+            : (estado === 422 ? message : `el modelo no pudo editar: ${message}`);
+          res.writeHead(estado, { "Content-Type": "text/plain; charset=utf-8" }).end(motivo);
         } finally {
           chat.toolChoice = previoTool;
           chat.push = previoPush;
@@ -2282,7 +2376,7 @@ async function main(args) {
       }
       if (req.method === "GET" && url.pathname === "/api/chats") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-        res.end(JSON.stringify(readChatIndex()));
+        res.end(JSON.stringify(historial.readIndex()));
         return;
       }
       if (req.method === "POST" && url.pathname === "/api/chats") {
@@ -2303,7 +2397,7 @@ async function main(args) {
           if (chat.active) chat.active.abort();
           loadChat(id);
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-          res.end(JSON.stringify(readChatIndex()));
+          res.end(JSON.stringify(historial.readIndex()));
           return;
         }
         if (op === "delete") {
@@ -2344,6 +2438,137 @@ async function main(args) {
         }
         finish(raw.allow === true);
         res.writeHead(204).end();
+        return;
+      }
+      // ------------------------------------------ procesos en segundo plano
+      if (req.method === "GET" && url.pathname === "/api/procesos") {
+        const lista = [...procesosFondoVivos.values()].map((p) => ({ id: p.id, pid: p.pid, comando: p.comando, inicio: p.inicio, segundos: Math.round((Date.now() - p.inicio) / 1000) }));
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ procesos: lista }));
+        return;
+      }
+      if (req.method === "POST" && url.pathname === "/api/procesos") {
+        const raw = JSON.parse(await readBody(req));
+        const accion = raw && typeof raw.accion === "string" ? raw.accion : "";
+        if (accion === "detener") {
+          const id = raw && typeof raw.id === "string" ? raw.id : "";
+          const vivo = procesosFondoVivos.get(id);
+          if (!vivo) {
+            res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("ese proceso no existe");
+            return;
+          }
+          try { vivo.parar(); } catch { /* ya terminó */ }
+          procesosFondoVivos.delete(id);
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: true, id }));
+          return;
+        }
+        if (accion === "detener-todos") {
+          for (const p of procesosFondoVivos.values()) { try { p.parar(); } catch { /* ya terminó */ } }
+          procesosFondoVivos.clear();
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+        res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("accion desconocida");
+        return;
+      }
+      // ------------------------------------------ terminal integrado (panel inferior)
+      if (url.pathname === "/api/terminal" && (req.method === "GET" || req.method === "POST")) {
+        try {
+          const t = sesionesTerminal();
+          if (req.method === "GET") {
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+            res.end(JSON.stringify({ terminales: t.listar() }));
+            return;
+          }
+          const raw = JSON.parse(await readBody(req));
+          const accion = raw && typeof raw.accion === "string" ? raw.accion : "";
+          if (accion === "abrir") {
+            const r = t.abrir({ cwd: raw && typeof raw.cwd === "string" ? raw.cwd : "" });
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ...r, vivo: true }));
+            return;
+          }
+          if (accion === "listar") {
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ terminales: t.listar() }));
+            return;
+          }
+          const id = raw && typeof raw.id === "string" ? raw.id : "";
+          if (accion === "escribir") {
+            const ok = t.escribir(id, raw && typeof raw.datos === "string" ? raw.datos : "");
+            res.writeHead(ok ? 200 : 404, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok }));
+            return;
+          }
+          if (accion === "leer") {
+            const desde = Number(raw && raw.desde) || 0;
+            const leido = t.leer(id, desde);
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+            res.end(JSON.stringify(leido));
+            return;
+          }
+          if (accion === "cerrar") {
+            const ok = t.cerrar(id);
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok }));
+            return;
+          }
+          res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("accion desconocida");
+        } catch (err) {
+          const mensaje = err instanceof Error ? err.message : String(err);
+          const noExiste = /no existe|desconocid/i.test(mensaje);
+          res.writeHead(noExiste ? 404 : 500, { "Content-Type": "text/plain; charset=utf-8" }).end(mensaje);
+        }
+        return;
+      }
+      // ------------------------------------------ diagnósticos / esquema / definición
+      if (req.method === "GET" && url.pathname === "/api/diag") {
+        const rel = String(url.searchParams.get("path") || "").trim().replace(/\\/g, "/");
+        const abs = rel ? fileInside(workspaceRoot, rel) : null;
+        if (!abs || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
+          res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("no existe ese archivo");
+          return;
+        }
+        const diagnosticos = await diagnosticarArchivo(abs);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ diagnosticos: diagnosticos.map((d) => ({ ...d, archivo: rel })) }));
+        return;
+      }
+      if (req.method === "POST" && url.pathname === "/api/diag") {
+        const raw = JSON.parse(await readBody(req));
+        const rel = String(raw && raw.path ? raw.path : "").trim().replace(/\\/g, "/");
+        const texto = raw && typeof raw.texto === "string" ? raw.texto.slice(0, LIMITE_TEXTO) : "";
+        if (!rel) {
+          res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("falta path");
+          return;
+        }
+        const diagnosticos = diagnosticarTexto(rel, texto);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ diagnosticos }));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/simbolos") {
+        const rel = String(url.searchParams.get("path") || "").trim().replace(/\\/g, "/");
+        const abs = rel ? fileInside(workspaceRoot, rel) : null;
+        if (!abs || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
+          res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("no existe ese archivo");
+          return;
+        }
+        const st = fs.statSync(abs);
+        const texto = st.size <= LIMITE_TEXTO ? fs.readFileSync(abs, "utf8") : "";
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ simbolos: simbolos(rel, texto) }));
+        return;
+      }
+      if (req.method === "POST" && url.pathname === "/api/definir") {
+        const raw = JSON.parse(await readBody(req));
+        const palabra = String(raw && raw.palabra ? raw.palabra : "").trim().slice(0, 200);
+        const rel = String(raw && raw.path ? raw.path : "").trim().replace(/\\/g, "/");
+        const definicion = palabra ? buscarDefinicion(palabra, indiceProyecto(), rel) : null;
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ definicion }));
         return;
       }
       if (req.method === "POST" && url.pathname === "/api/chat") {
@@ -2428,6 +2653,9 @@ async function main(args) {
           // Reglas del proyecto (BONSAI.md, AGENTS.md, .cursor/rules) al mensaje de sistema.
           // Se releen al empezar cada turno; son estables por carpeta, así que la caché sirve.
           chat.rules = leerAjustes().reglas === false ? "" : reglasParaModelo();
+          // Plan persistente: viaja en el mensaje de sistema para que el modelo sepa en qué
+          // paso va aunque el turno de antes se haya cerrado (o haya continuado solo).
+          chat.rules = [chat.rules, textoPlan(chat.session.plan)].filter(Boolean).join("\n\n");
           let step = 0;
           // Los ids de acción empezaban en "a1" en CADA turno: la interfaz reutilizaba
           // la tarjeta del turno anterior y el nuevo diff se pintaba encima. Con el
@@ -2438,8 +2666,6 @@ async function main(args) {
           // cargado (chat\modelo.json → catalogo.<clave>.agente), no una constante igual
           // para todos: bolding_v1 necesita más margen que override6 y se rinde antes.
           const agente = perfilAgente(modeloActualClave());
-          let repeatTold = false;
-          let readTold = false;
           /**
            * Resultados del último present() (UNO por tool call nativa, con el id de SU
            * llamada) que todavía no se le han mandado al modelo. Antes viajaba un solo
@@ -2450,6 +2676,16 @@ async function main(args) {
           /** ¿Falló algo en el último paso? El salto siguiente razona (si está encendido). */
           let ultimoFallo = false;
           let xmlTold = false;
+          /** Motivo real por el que termina el turno (viaja en el evento `done`). */
+          let motivoParada = "completed";
+          /** ¿El último paso produjo información o acciones nuevas? (detección de atasco) */
+          let progresoPaso = false;
+          /** Caché de lecturas del turno: clave → {version, texto}. Permite releer sin bloquear. */
+          const CACHE_LECTURAS_MAX = 100;
+          /** @type {Map<string, {version: string, texto: string}>} */
+          const cacheLecturas = new Map();
+          /** Tipo de acción del último paso ("read" | "write" | "cmd" | …), para la fase. */
+          let accionPaso = "";
           /**
            * @typedef {{id: string, kind: string, title: string, state: string, detail: string, code?: number, undo?: string, sinCambios?: boolean}} ActionRow
            */
@@ -2475,6 +2711,8 @@ async function main(args) {
           const present = async (current, follow) => {
             ultimoFallo = false;
             resultadosPendientes = null;
+            progresoPaso = false;
+            accionPaso = "";
             /** @type {ActionRow[]} */
             const actions = [];
             /**
@@ -2693,6 +2931,150 @@ async function main(args) {
                 fallar(`No se pudo guardar ${rel}: ${err instanceof Error ? err.message : String(err)}`);
               }
             });
+            /** Notas de plan/borrar/mover/proceso: se guardan aquí y se vuelcan cuando exista ponerEn. */
+            /** @type {Array<[string, string]>} */
+            const notasDiferidas = [];
+            /** @type {(clave: string, texto: string) => void} */
+            let poner = (clave, texto) => notasDiferidas.push([clave, texto]);
+            // ---- Plan persistente: el modelo fija/actualiza el checklist de la tarea ----
+            if (effects?.plan) {
+              const pasos = effects.plan.pasos.slice(0, 30).map((p) => String(p).slice(0, 200));
+              const hechos = effects.plan.hechos.filter((n) => n >= 1 && n <= pasos.length);
+              chat.session.plan = { pasos, hechos, ts: Date.now() };
+              chat.saveSession();
+              const filas = pasos.map((p, i) => `${hechos.includes(i + 1) ? "[x]" : "[ ]"} ${i + 1}. ${p}`);
+              const row = showAction("plan", "plan de la tarea", "run");
+              finishAction(row, "done", clipText(filas.join("\n")));
+              log.push(`plan:\n${filas.join("\n")}`);
+              poner("plan", `Plan guardado (${pasos.length} pasos, ${hechos.length} hechos). Se te recordará en cada turno; actualízalo con plan(pasos, hechos).\n${filas.join("\n")}`);
+              wrote = true;
+            }
+            // ---- borrar: archivo o carpeta vacía, con copia para deshacer ----
+            (effects?.borrados || []).forEach((relPedido) => {
+              const clave = `del:${relPedido}`;
+              const rel = relCanonica(String(relPedido || ""));
+              const abs = rel ? fileInside(workspaceRoot, rel) : null;
+              /** @param {string} motivo */
+              const fallar = (motivo) => {
+                showAction("cmd", `borrar ${relPedido}`, "denied", motivo);
+                poner(clave, motivo);
+                wrote = true;
+                ultimoFallo = true;
+              };
+              if (!rel || !abs) return fallar("No se borró: ruta no permitida.");
+              if (enCarpetaProtegida(rel)) return fallar(`No se borró ${rel}: esa carpeta está protegida.`);
+              if (!fs.existsSync(abs)) return fallar(`No se borró: ${rel} no existe.`);
+              let st;
+              try { st = fs.statSync(abs); } catch (err) { return fallar(`No se pudo leer ${rel}: ${err instanceof Error ? err.message : String(err)}`); }
+              if (st.isDirectory() && fs.readdirSync(abs).length) return fallar(`No se borró ${rel}: es una carpeta con contenido. Borra antes sus archivos uno a uno.`);
+              let undoId = "";
+              try {
+                if (st.isFile() && st.size <= LIMITE_TEXTO) {
+                  const buf = fs.readFileSync(abs);
+                  if (!buf.includes(0)) undoId = guardarUndo({ tipo: "texto", rel, antes: buf.toString("utf8"), despues: null }, undoDelTurno);
+                }
+                fs.rmSync(abs, { recursive: false });
+              } catch (err) {
+                descartarUndo(undoId, undoDelTurno);
+                return fallar(`No se pudo borrar ${rel}: ${err instanceof Error ? err.message : String(err)}`);
+              }
+              step += 1;
+              /** @type {ActionRow} */
+              const rowBorrar = { id: `${idTurno}-a${step}`, kind: "cmd", title: `borrar ${rel}`, state: "done", detail: st.isDirectory() ? "Carpeta vacía borrada." : "Archivo borrado (hay copia para deshacer)." };
+              if (undoId) rowBorrar.undo = undoId;
+              actions.push(rowBorrar);
+              emitAction(rowBorrar);
+              log.push(`borrar: ${rel}`);
+              const conocido = new Map((chat.session.files || []).map((file) => [file.rel, file]));
+              conocido.delete(rel);
+              chat.session.files = [...conocido.values()];
+              poner(clave, `Borrado ${rel}. Hay punto de deshacer (botón en la tarjeta).`);
+              wrote = true;
+              progresoPaso = true;
+              accionPaso = "write";
+            });
+            // ---- mover / renombrar: archivo o carpeta, sin sobrescribir y con undo ----
+            (effects?.movidos || []).forEach((mov) => {
+              const clave = `move:${mov.origen}`;
+              const origen = relCanonica(String(mov.origen || ""));
+              let destino = relCanonica(String(mov.destino || ""));
+              const absO = origen ? fileInside(workspaceRoot, origen) : null;
+              let absD = destino ? fileInside(workspaceRoot, destino) : null;
+              /** @param {string} motivo */
+              const fallar = (motivo) => {
+                showAction("cmd", `mover ${mov.origen} → ${mov.destino}`, "denied", motivo);
+                poner(clave, motivo);
+                wrote = true;
+                ultimoFallo = true;
+              };
+              if (!origen || !destino || !absO || !absD) return fallar("No se movió: ruta no permitida.");
+              if (enCarpetaProtegida(origen) || enCarpetaProtegida(destino)) return fallar("No se movió: hay una carpeta protegida en la ruta.");
+              if (!fs.existsSync(absO)) return fallar(`No se movió: ${origen} no existe.`);
+              // Si el destino es una carpeta que ya existe, se mete dentro (como un arrastrar).
+              if (fs.existsSync(absD) && fs.statSync(absD).isDirectory()) {
+                destino = `${destino.replace(/\/+$/, "")}/${path.basename(origen)}`;
+                absD = fileInside(workspaceRoot, destino);
+                if (!absD) return fallar(`No se movió: el destino dentro de esa carpeta no es válido.`);
+              }
+              if (fs.existsSync(absD)) return fallar(`No se movió: ${destino} ya existe. Elige otro nombre o bórralo antes.`);
+              try {
+                fs.mkdirSync(path.dirname(absD), { recursive: true });
+                fs.renameSync(absO, absD);
+              } catch (err) {
+                return fallar(`No se pudo mover ${origen} a ${destino}: ${err instanceof Error ? err.message : String(err)}`);
+              }
+              const undoId = guardarUndo({ tipo: "renombrado", rel: origen, destino }, undoDelTurno);
+              step += 1;
+              /** @type {ActionRow} */
+              const rowMover = { id: `${idTurno}-a${step}`, kind: "cmd", title: `mover ${origen} → ${destino}`, state: "done", detail: "Movido (hay punto de deshacer)." };
+              if (undoId) rowMover.undo = undoId;
+              actions.push(rowMover);
+              emitAction(rowMover);
+              log.push(`mover: ${origen} → ${destino}`);
+              const conocidos = (chat.session.files || []).map((file) => {
+                const rel = String(file.rel || "");
+                if (rel === origen) return { ...file, rel: destino };
+                if (rel.startsWith(`${origen}/`)) return { ...file, rel: `${destino}${rel.slice(origen.length)}` };
+                return file;
+              });
+              chat.session.files = conocidos;
+              poner(clave, `Movido ${origen} → ${destino}. Hay punto de deshacer.`);
+              wrote = true;
+              progresoPaso = true;
+              accionPaso = "write";
+            });
+            // ---- proceso: listar o detener procesos en segundo plano que sobreviven al turno ----
+            (effects?.procesos || []).forEach((pedido) => {
+              const clave = `proc:${pedido.accion}`;
+              if (pedido.accion === "listar") {
+                const vivos = [...procesosFondoVivos.values()];
+                const texto = vivos.length
+                  ? vivos.map((p) => `${p.id} · pid ${p.pid} · ${Math.round((Date.now() - p.inicio) / 1000)} s · ${p.comando}`).join("\n")
+                  : "No hay procesos en segundo plano vivos.";
+                const row = showAction("cmd", "procesos en segundo plano", "run");
+                finishAction(row, "done", clipText(texto));
+                poner(clave, `Procesos en segundo plano:\n${texto}`);
+              } else {
+                const vivo = procesosFondoVivos.get(pedido.id);
+                if (!vivo) {
+                  showAction("cmd", `detener ${pedido.id}`, "denied", "ese proceso no existe o ya terminó");
+                  poner(clave, `No hay ningún proceso ${pedido.id}. Usa proceso listar para ver los ids.`);
+                  ultimoFallo = true;
+                } else {
+                  try { vivo.parar(); } catch { /* ya terminó */ }
+                  procesosFondoVivos.delete(pedido.id);
+                  showAction("cmd", `detener ${pedido.id}`, "done", "proceso detenido");
+                  poner(clave, `Proceso ${pedido.id} detenido (y sus hijos).`);
+                }
+              }
+              wrote = true;
+              progresoPaso = true;
+              accionPaso = "cmd";
+            });
+            if (savedNow.some((file) => !sinCambiosAhora.has(file.rel)) || editadosAhora.length) {
+              progresoPaso = true;
+              accionPaso = "write";
+            }
             const prose = stripFakeToolText(stripSearches(stripCommands(stripIndex(stripReads(stripFileBlocks(raw)))))).trim();
             send({ type: "replace", text: prose });
             // Antes decía que el pedido seguía pendiente «hasta la lectura final»: el modelo se pasaba los saltos
@@ -2718,7 +3100,8 @@ async function main(args) {
              * @param {string} clave
              * @param {string} texto
              */
-            const poner = (clave, texto) => ponerEn(effects?.ids?.get(clave) || "", texto);
+            poner = (clave, texto) => ponerEn(effects?.ids?.get(clave) || "", texto);
+            for (const [claveDiferida, textoDiferido] of notasDiferidas.splice(0)) poner(claveDiferida, textoDiferido);
             (effects?.notes || []).forEach((note, i) => {
               showAction("deny", note, "denied", note);
               ponerEn(effects?.notesIds?.[i] || "", note);
@@ -2746,109 +3129,72 @@ async function main(args) {
               finishAction(row, "done", detail);
               log.push(`índice: ${scope || "carpeta"}\n${detail}`);
               poner("index", index);
+              progresoPaso = true;
+              accionPaso = "read";
             }
-            let stopFollow = false;
-            const earlierReads = chat.session.turns.slice(0, -1);
-            let requestAt = 0;
-            for (let i = earlierReads.length - 1; i >= 0; i -= 1) {
-              if (earlierReads[i].role === "user" && !hiddenTurn(earlierReads[i])) {
-                requestAt = i;
-                break;
-              }
-            }
-            // Una lectura es una CLAVE: la ruta o `ruta:desde-hasta`. Leer otro trozo del mismo
-            // archivo no es «releer»: es justo lo que hay que hacer con uno largo.
-            /** @param {string} clave */
-            const relDe = (clave) => partirLectura(clave).rel.replace(/\\/g, "/").toLowerCase();
-            // Orden de lecturas y escrituras en este pedido: lo que importa es si el archivo
-            // cambió DESPUÉS de la última lectura de esa clave, no si cambió alguna vez.
-            /** @type {Map<string, number>} clave leída → orden de su última lectura */
-            const ultimaLectura = new Map();
-            /** @type {Map<string, number>} ruta → orden de su última escritura real */
-            const ultimaEscritura = new Map();
-            let orden = 0;
-            for (const turn of earlierReads.slice(requestAt)) {
-              for (const action of turn.actions || []) {
-                orden += 1;
-                const detalle = String(action.detail || "");
-                const leida = action.kind === "read" && !detalle.startsWith("Ya leíste") && !detalle.startsWith("Ya hubo");
-                const escrita = action.kind === "write" && action.state === "done" && !action.sinCambios;
-                if (!leida && !escrita) continue;
-                for (const part of String(action.title || "").split(",")) {
-                  const clave = part.trim().replace(/\\/g, "/").toLowerCase();
-                  if (!clave) continue;
-                  if (leida) ultimaLectura.set(clave, orden);
-                  else ultimaEscritura.set(relDe(clave), orden);
-                }
-              }
-            }
-            // Lo escrito o editado en ESTE paso va antes que las lecturas de este paso.
-            for (const file of savedNow) if (!sinCambiosAhora.has(file.rel)) ultimaEscritura.set(file.rel.toLowerCase(), Number.POSITIVE_INFINITY);
-            for (const rel of editadosAhora) ultimaEscritura.set(rel.toLowerCase(), Number.POSITIVE_INFINITY);
-            const archivosVistos = new Set([...ultimaLectura.keys()].map(relDe));
-            // Un archivo REESCRITO desde la última vez que se leyó se puede volver a leer: es
-            // justo lo que hace falta para depurar (en `proyecto-completo` el modelo se quedó
-            // sin poder releer api.py tras reescribirlo). Pero releer lo MISMO sin que nada haya
-            // cambiado se frena: antes, tras una escritura cualquiera, el modelo pudo leer las
-            // mismas líneas 65-85 de expr.py cinco veces seguidas (parser, 2026-10-09).
-            const yaVista = (clave) => {
-              const leida = ultimaLectura.get(clave.replace(/\\/g, "/").toLowerCase());
-              if (leida === undefined) return false;
-              const escrita = ultimaEscritura.get(relDe(clave));
-              return !(escrita !== undefined && escrita > leida);
+            // Lecturas: no hay tope fijo de archivos ni bloqueo por «ya leído». Cada lectura
+            // se sirve desde el caché del turno si la versión del archivo no cambió
+            // (mtime+size), y si cambió (un comando, otra herramienta o el editor lo
+            // tocaron) se vuelve a leer. Así se puede revisar un proyecto de 6+ archivos y
+            // recuperar evidencia que quedó plegada: justo lo que el controlador impedía.
+            /** @param {string} abs @returns {string} */
+            const versionDe = (abs) => {
+              try { const st = fs.statSync(abs); return `${st.mtimeMs}:${st.size}`; } catch { return ""; }
             };
-            const reescritas = new Set(ultimaEscritura.keys());
-            // Tope de archivos DISTINTOS por pedido (no de trozos de uno): ya con 4 abiertos,
-            // abrir otro nuevo se frena; seguir leyendo uno ya abierto o uno reescrito, no.
-            const demasiados = archivosVistos.size >= 4
-              ? reads.filter((clave) => !archivosVistos.has(relDe(clave)) && !reescritas.has(relDe(clave)))
-              : [];
-            const permitidas = reads.filter((clave) => !demasiados.includes(clave));
-            if (demasiados.length) {
-              showAction("read", demasiados.join(", "), "done", "Ya hubo varias lecturas en este mensaje. No se leyeron otra vez.");
-              if (readTold) stopFollow = true;
-              else {
-                readTold = true;
-                poner(`read:${demasiados[0]}`, "Ya leíste suficiente en este mensaje. No abras más archivos. Ejecuta el test o el main que todavía no haya corrido.");
+            /**
+             * @param {string} clave
+             * @param {string | null} abs
+             * @param {string} texto
+             */
+            const guardarEnCache = (clave, abs, texto) => {
+              if (!abs) return;
+              const version = versionDe(abs);
+              if (!version) return;
+              cacheLecturas.set(clave.toLowerCase(), { version, texto });
+              while (cacheLecturas.size > CACHE_LECTURAS_MAX) {
+                const primera = /** @type {string | undefined} */ (cacheLecturas.keys().next().value);
+                if (primera === undefined) break;
+                cacheLecturas.delete(primera);
               }
-            }
-            if (permitidas.length) {
-              const fresh = permitidas.filter((clave) => !yaVista(clave));
-              const again = permitidas.filter((clave) => yaVista(clave));
-              if (again.length) {
-                showAction("read", again.join(", "), "done", "Ya leíste esa ruta en este mensaje. No se volvió a leer.");
-                if (readTold) stopFollow = true;
-                else {
-                  readTold = true;
-                  poner(`read:${again[0]}`, `Ya leíste ${again.join(", ")}. No la vuelvas a leer. Ejecuta el test o el main que todavía no haya corrido.`);
+            };
+            if (reads.length) {
+              /** @type {Array<{clave: string, abs: string | null, version: string}>} */
+              const porLeer = [];
+              for (const clave of reads) {
+                const abs = fileInside(workspaceRoot, parseLectura(clave).rel);
+                const version = abs ? versionDe(abs) : "";
+                const guardada = cacheLecturas.get(clave.toLowerCase());
+                if (abs && version && guardada && guardada.version === version) {
+                  showAction("read", clave, "done", `Misma versión ya leída en este turno: se reutiliza el contenido (${clave}).`);
+                  poner(`read:${clave}`, `(Misma versión del archivo que ya leíste en este turno; te repito el contenido porque puede haber quedado fuera del contexto.)\n${guardada.texto}`);
+                } else {
+                  porLeer.push({ clave, abs, version });
                 }
               }
-              if (fresh.length) {
-                const title = fresh.join(", ");
+              if (porLeer.length) {
+                const title = porLeer.map((clave) => clave.clave).join(", ");
                 const row = showAction("read", title, "run");
-                const cuerpos = fresh.map((clave) => describeRead(clave));
+                const cuerpos = porLeer.map((item) => describirLectura({ root: workspaceRoot, clave: item.clave, skipExt: SKIP_EXT }));
                 const body = cuerpos.join("\n\n");
-                const detail = clipText(body);
-                finishAction(row, "done", detail);
-                log.push(`leer: ${title}\n${detail}`);
-                fresh.forEach((clave, i) => {
-                  poner(`read:${clave}`, cuerpos[i]);
-                  if (/: no existe/.test(cuerpos[i])) {
-                    poner(`read:${clave}`, "Esa ruta no existe todavía. Si toca crearla, escríbela. No releas la misma ruta.");
+                finishAction(row, "done", clipText(body));
+                log.push(`leer: ${title}\n${clipText(body)}`);
+                let leidoNuevo = false;
+                porLeer.forEach((item, i) => {
+                  const cuerpo = cuerpos[i];
+                  poner(`read:${item.clave}`, cuerpo);
+                  const sinContenido = /: (no existe|ruta no permitida)|: binario|el archivo tiene .* líneas; no hay|no se encontró el rango/.test(cuerpo);
+                  if (sinContenido) {
+                    poner(`read:${item.clave}`, "Esa lectura no devolvió contenido útil. Comprueba la ruta o crea el archivo si toca; no repitas la misma lectura sin cambiar nada.");
                     ultimoFallo = true;
+                  } else {
+                    guardarEnCache(item.clave, item.abs, cuerpo);
+                    leidoNuevo = true;
                   }
                 });
-              }
-            }
-            const plainAsk = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            const wantsRun = /\b(pdf|ejecut)/i.test(plainAsk) && !/\bno\s+(lo\s+)?ejecut/i.test(plainAsk);
-            if (!requested.length && wantsRun) {
-              const py = writes.find((file) => file.rel.toLowerCase().endsWith(".py"));
-              if (py) {
-                const exe = fs.existsSync(path.join(workspaceRoot, ".venv", "Scripts", "python.exe"))
-                  ? ".venv\\Scripts\\python"
-                  : "python";
-                requested.push(`${exe} ${py.rel}`);
+                if (leidoNuevo) {
+                  progresoPaso = true;
+                  accionPaso = "read";
+                }
               }
             }
             let ranCommand = false;
@@ -2936,21 +3282,20 @@ async function main(args) {
               if (priorOk && lastRun === priorOk && !cambioDesde(key, priorOk)) {
                 const repeated = `Ya se ejecutó. No se volvió a lanzar.\n${priorOk.detail || "(sin salida)"}`;
                 showAction("cmd", command, "done", repeated, priorOk.code);
-                if (repeatTold) stopFollow = true;
-                else {
-                  repeatTold = true;
-                  poner(`cmd:${rawCommand}`, `${repeated}\nNo lo repitas. Responde con esta salida. Si cambias algún archivo, el comando sí se vuelve a lanzar.`);
-                  ranCommand = true;
-                }
+                poner(`cmd:${rawCommand}`, `${repeated}\nNo lo repitas. Responde con esta salida. Si cambias algún archivo, el comando sí se vuelve a lanzar.`);
+                ranCommand = true;
                 continue;
               }
               if (fails >= 2) {
                 const lastFail = realSame.filter((action) => action.code !== 0).pop();
                 if (!lastFail || (lastRun === lastFail && !cambioDesde(key, lastFail))) {
-                  const repeated = `Falló ${fails} veces. No se volvió a lanzar.\n${lastFail?.detail || "(sin salida)"}`;
+                  // Antes esto CERRABA el turno («stopFollow»). Ahora se le devuelve el último
+                  // fallo y se le deja corregir y reintentar: un bloqueo permanente impedía
+                  // resolver justo los comandos que fallan por un error del código.
+                  const repeated = `Falló ${fails} veces sin cambios desde entonces; no se volvió a lanzar.\n${lastFail?.detail || "(sin salida)"}`;
                   showAction("cmd", command, "done", repeated, lastFail?.code);
-                  poner(`cmd:${rawCommand}`, `${repeated}\nCorrige el archivo con ese error y vuelve a guardarlo: entonces el mismo comando sí se ejecuta. No lo cambies por bash, cd /home ni tail.`);
-                  stopFollow = true;
+                  poner(`cmd:${rawCommand}`, `${repeated}\nCorrige el archivo con ese error y vuelve a guardarlo: tras un cambio, el mismo comando sí se ejecuta. No lo cambies por bash, cd /home ni tail.`);
+                  ranCommand = true;
                   ultimoFallo = true;
                   continue;
                 }
@@ -2977,8 +3322,17 @@ async function main(args) {
               // Servidor o proceso que no termina solo: en segundo plano hasta el final del turno.
               if (effects?.enFondo?.has(rawCommand)) {
                 const fondo = await lanzarEnFondo(command, { cwd: workspaceRoot, env: shellEnv });
-                if (fondo.vivo) procesosFondo.push(fondo.parar);
+                if (fondo.vivo) {
+                  const idFondo = `bg${Date.now().toString(36)}${Math.floor(Math.random() * 90 + 10)}`;
+                  procesosFondoVivos.set(idFondo, { id: idFondo, comando: command, pid: fondo.pid, inicio: Date.now(), parar: fondo.parar, output: fondo.output || "" });
+                  poner(`cmd:${rawCommand}`, `Corriendo en segundo plano (id ${idFondo}, pid ${fondo.pid}). SOBREVIVE al turno: ya está escuchando/servido. No lo relaunces. Para pararlo, revisa el panel Terminal o pide que se detenga.\n${recortarCentro(fondo.output || "", 1200)}`);
+                  finishAction(row, "done", `En segundo plano (id ${idFondo}, pid ${fondo.pid}); no se cierra al acabar el turno.`, 0);
+                } else {
+                  poner(`cmd:${rawCommand}`, `Terminó enseguida (código ${fondo.code}).\n${recortarCentro(fondo.output || "", 3000)}`);
+                  finishAction(row, "done", recortarCentro(`Terminó enseguida (código ${fondo.code}).\n${fondo.output || ""}`, 1600), fondo.code ?? 1);
+                }
                 lanzadosAhora.add(key);
+                progresoPaso = true;
                 const detalleFondo = fondo.vivo
                   ? `En segundo plano (pid ${fondo.pid}); se cierra al acabar el turno.\n${fondo.output}`
                   : `Terminó enseguida (código ${fondo.code}).\n${fondo.output}`;
@@ -2993,6 +3347,7 @@ async function main(args) {
               }
               const result = await runCommand(command, ac.signal);
               lanzadosAhora.add(key);
+              progresoPaso = true;
               // Cabeza y COLA: el traceback y el `FAILED` van al final (antes se cortaba la cola).
               const detail = recortarCentro(result.output || "(sin salida)", 1600);
               finishAction(row, "done", detail, result.code);
@@ -3021,6 +3376,7 @@ async function main(args) {
               finishAction(row, "done", detail);
               log.push(`buscar: ${query}\n${detail}`);
               poner(`search:${query}`, `Búsqueda «${query}»:\n${detail}`);
+              progresoPaso = true;
             }
             const imagenesPorLlamada = new Map();
             for (const [i, argsNav] of (effects?.navegaciones || []).entries()) {
@@ -3042,6 +3398,7 @@ async function main(args) {
                 }
                 finishAction(row, "done", detail);
                 poner(`browser:${i}`, detail);
+                progresoPaso = true;
                 const callId = effects.ids.get(`browser:${i}`);
                 if (chat.vision && result.imagen && callId) imagenesPorLlamada.set(callId, [result.imagen]);
               } catch (err) {
@@ -3054,6 +3411,7 @@ async function main(args) {
             }
             current.shown = prose;
             current.actions = actions;
+            if (savedNow.length || editadosAhora.length || (effects?.borrados || []).length || (effects?.movidos || []).length) indiceCache = null;
             current.content = prose;
             delete current.cortadas;
             chat.saveSession();
@@ -3070,7 +3428,6 @@ async function main(args) {
             // Aunque no se siga (tope, repetición), quedan para el cierre: así ninguna llamada
             // del historial se queda sin su respuesta.
             resultadosPendientes = resultados;
-            if (stopFollow) return null;
             const work = scope !== null || reads.length > 0 || ranCommand || searches.length > 0 || wrote || effects?.navegaciones?.length > 0;
             if (follow && work) {
               if (nativa) return { texto: "", resultados };
@@ -3129,27 +3486,62 @@ async function main(args) {
               send({ type: "replace", text: limpio });
             }
           }
+          // Tandas de saltos: el límite POR TANDA deja margen para tareas que necesitan más
+          // pasos (leer 6+ archivos, corregir, probar). Se encadenan tandas MIENTRAS el
+          // trabajo avance; si una tanda entera no produce nada nuevo se declara atasco en
+          // vez de fingir que terminó. El tope global sigue existiendo (contra bucles).
+          const saltosTanda = Math.max(8, agente.saltos);
+          const saltosMaximos = Math.max(saltosTanda, Math.min(agente.saltos * 8, saltosTope));
+          // Procesos del agente en segundo plano: viven fuera del turno (no se matan al cerrarlo).
+          // Se listan y se paran desde el panel Terminal o con `proceso` del propio agente.
+          let saltosUsados = 0;
+          /** @type {{texto: string, resultados: Array<{toolCallId: string, content: string}> | null} | null} */
+          let pendienteCierre = null;
           try {
-            for (let hop = 0; hop < agente.saltos && !soloCharla; hop += 1) {
-              // Razonar (si está encendido y el modelo lo admite) al planificar y cuando algo
-              // acaba de fallar; en los saltos rutinarios, no: costaba ~75 s por salto.
-              chat.pensarEsteSalto = hop === 0 || ultimoFallo;
-              // Las imágenes solo viajan en el primer salto del turno.
-              await enviar(siguiente, hop === 0 ? imagenesData : []);
-              const current = chat.session.turns[chat.session.turns.length - 1];
-              if (current?.role !== "assistant") {
-                pending = null;
+            while (!soloCharla && saltosUsados < saltosMaximos) {
+              let progresoTanda = false;
+              const finTanda = Math.min(saltosUsados + saltosTanda, saltosMaximos);
+              while (saltosUsados < finTanda) {
+                // Razonar (si está encendido y el modelo lo admite) al planificar y cuando algo
+                // acaba de fallar; en los saltos rutinarios, no: costaba ~75 s por salto.
+                // Fase para la reserva de salida adaptativa (la calcula el chat). Tras leer,
+                // el siguiente paso suele actuar; se usa la reserva de PLAN (mantiene ~3k tokens
+                // de salida y NO desplaza la evidencia leída a la mitad, que era el fallo 16).
+                // Tras escribir/ejecutar lo normal es volver a leer: reserva de lectura.
+                chat.faseSalto = saltosUsados === 0 || accionPaso === "read" ? "plan" : "lectura";
+                chat.pensarEsteSalto = saltosUsados === 0 || ultimoFallo;
+                // Las imágenes solo viajan en el primer salto del turno.
+                await enviar(siguiente, saltosUsados === 0 ? imagenesData : []);
+                saltosUsados += 1;
+                const current = chat.session.turns[chat.session.turns.length - 1];
+                if (current?.role !== "assistant") {
+                  pendienteCierre = null;
+                  break;
+                }
+                const next = await present(current, true);
+                if (progresoPaso) progresoTanda = true;
+                if (!next) {
+                  pendienteCierre = null;
+                  break;
+                }
+                siguiente = next;
+                pendienteCierre = next;
+              }
+              if (!pendienteCierre) break;
+              if (!progresoTanda) {
+                motivoParada = "stalled";
                 break;
               }
-              const next = await present(current, true);
-              if (!next) {
-                pending = null;
+              if (saltosUsados >= saltosMaximos) {
+                motivoParada = "step_limit";
                 break;
               }
-              siguiente = next;
-              pending = next;
+              // Quedan acciones pendientes y la tanda avanzó: seguir con otra tanda.
             }
+            pending = pendienteCierre;
             if (pending) {
+              // Última generación: responder con lo hecho (sin ejecutar más herramientas).
+              chat.faseSalto = "final";
               chat.pensarEsteSalto = ultimoFallo;
               await enviar(pending);
               const current = chat.session.turns[chat.session.turns.length - 1];
@@ -3158,16 +3550,33 @@ async function main(args) {
           } finally {
             chat.pensarEsteSalto = true;
           }
-          // Si la última intervención quedó sin texto (se cortó al repetir una acción), se le pide cerrar con un
-          // resumen. Las herramientas siguen definidas con tool_choice "none": el prompt no cambia y la caché sirve.
-          // Los resultados que quedaron sin mandar van delante: ninguna llamada se queda sin respuesta.
+          // Si terminó sin llamada y la última prosa solo ANUNCIA una acción futura, no se
+          // puede presentar como trabajo terminado: se marca como atasco y se avisa.
+          if (motivoParada === "completed" && !soloCharla) {
+            const ultimo = chat.session.turns[chat.session.turns.length - 1];
+            const dicho = String(ultimo?.content || "").trim();
+            const anuncia = dicho.length > 0 && dicho.length < 320 && /\b(voy a|ahora |siguiente|leer[eé]|ejecutar[eé]|escribir[eé]|buscar[eé]|d[eé]jame|procedo a)\b/i.test(dicho);
+            if (anuncia) motivoParada = "stalled";
+          }
+          // Si la última intervención quedó sin texto, o el turno paró por límite/atasco, se
+          // le pide cerrar con un resumen HONESTO. Las herramientas siguen definidas con
+          // tool_choice "none": el prompt no cambia y la caché sirve. Los resultados que
+          // quedaron sin mandar van delante: ninguna llamada se queda sin respuesta.
+          const motivoTexto = motivoParada === "step_limit"
+            ? `Se alcanzó el límite de ${saltosUsados} pasos y la tarea puede quedar incompleta.`
+            : motivoParada === "stalled"
+              ? "El turno se atascó: los últimos pasos no produjeron progreso y puede quedar trabajo pendiente."
+              : "";
           const lastTurn = chat.session.turns[chat.session.turns.length - 1];
-          if (!ac.signal.aborted && lastTurn?.role === "assistant" && !String(lastTurn.content || "").trim()) {
+          if (!ac.signal.aborted && lastTurn?.role === "assistant" && (!String(lastTurn.content || "").trim() || motivoParada !== "completed")) {
             chat.toolChoice = "none";
             chat.pensarEsteSalto = false;
             try {
               await enviar({
-                texto: "Sigue con lo que pedí. Ya no hagas más acciones: responde al usuario con un resumen breve de lo que hiciste y del resultado. Si algo sigue fallando o no lo comprobaste, dilo claramente; no lo des por terminado.",
+                // El prefijo «Sigue con lo que pedí» es el que `turnoInterno` reconoce:
+                // así este mensaje interno no se pinta como si lo hubiera escrito el
+                // usuario ni se toma como «el pedido» al resumir el cierre.
+                texto: `Sigue con lo que pedí. Cierra el turno. ${motivoTexto ? `${motivoTexto} ` : ""}Ya no hagas más acciones: responde al usuario con un resumen breve de lo que hiciste y del resultado. Si algo sigue fallando, no lo comprobaste o no lo terminaste, dilo claramente y explica qué falta; no lo des por terminado ni prometas acciones futuras. `,
                 resultados: Array.isArray(lastTurn.toolCalls) && lastTurn.toolCalls.length ? resultadosPendientes : null,
               });
             } finally {
@@ -3215,10 +3624,28 @@ async function main(args) {
               send({ type: "replace", text: texto });
             }
           }
-          send({ type: "done" });
+          // Y si el turno paró por límite o atasco, la respuesta final lo dice SIEMPRE (no
+          // puede quedar como una promesa de acción futura ni como una finalización limpia).
+          if (!ac.signal.aborted && motivoParada !== "completed" && final?.role === "assistant") {
+            const dicho = String(final.content || "");
+            if (!dicho.includes("⚠️")) {
+              const marca = motivoParada === "step_limit" ? `límite de ${saltosUsados} pasos` : "falta de progreso";
+              const texto = `${dicho.trim()}\n\n> ⚠️ El turno se detuvo por ${marca}: el trabajo puede estar incompleto.`.trim();
+              final.content = texto;
+              final.shown = texto;
+              chat.saveSession();
+              send({ type: "replace", text: texto });
+            }
+          }
+          // El motivo real de la parada viaja a la interfaz: antes un `done` sin más no
+          // distinguía una tarea terminada de una que se quedó sin pasos.
+          chat.session.lastStop = { motivo: motivoParada, saltos: saltosUsados, completo: motivoParada === "completed", ts: Date.now() };
+          send({ type: "done", motivo: motivoParada, saltos: saltosUsados, incompleto: motivoParada !== "completed" });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
+          motivoParada = ac.signal.aborted ? "cancelled" : "error";
           send({ type: "error", text: message });
+          if (!res.writableEnded) send({ type: "done", motivo: motivoParada, saltos: saltosUsados, incompleto: true });
         } finally {
           finished = true;
           if (latido) clearInterval(latido);
@@ -3241,8 +3668,20 @@ async function main(args) {
       res.writeHead(404).end("no está");
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (!res.headersSent) res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
-      if (!res.writableEnded) res.end(message);
+      const codigo = err && typeof err === "object" ? /** @type {{code?: string}} */ (err).code : "";
+      const demasiadoGrande = codigo === "PAYLOAD_TOO_LARGE";
+      const jsonInvalido = err instanceof SyntaxError;
+      if (!res.headersSent) {
+        if (demasiadoGrande) res.writeHead(413, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", Connection: "close" });
+        else if (jsonInvalido) res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+        else res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
+      }
+      if (!res.writableEnded) {
+        const salida = demasiadoGrande ? "mensaje demasiado largo para este endpoint" : jsonInvalido ? "el cuerpo de la petición no es JSON válido" : message;
+        // Con un cuerpo gigante que el cliente sigue enviando, la respuesta se manda y
+        // después se cierra: así llega el 413 limpio en vez de un reset de conexión.
+        res.end(salida, demasiadoGrande ? () => { try { req.destroy(); } catch { /* ya cerrada */ } } : undefined);
+      }
     }
   });
 

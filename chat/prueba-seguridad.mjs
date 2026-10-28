@@ -16,7 +16,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { revisarPeticion, hostsPermitidos } from "./guardia.mjs";
+import { revisarPeticion, hostsPermitidos, esHostComodin } from "./guardia.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -54,6 +54,9 @@ const pide = (method, headers) => revisarPeticion({ method, headers }, ARGS);
   check("Origin ajeno => rechazado", !pide("POST", { host: "127.0.0.1:8787", origin: "http://evil.com", "content-type": "application/json", "content-length": "2" }).ok);
   check("Origin null (iframe sandbox / file://) => rechazado", !pide("POST", { host: "127.0.0.1:8787", origin: "null", "content-type": "application/json", "content-length": "2" }).ok);
   check("Origin en otro puerto => rechazado", !pide("POST", { host: "127.0.0.1:8787", origin: "http://127.0.0.1:9999", "content-type": "application/json", "content-length": "2" }).ok);
+  check("Origin https del mismo host => aceptado (proxy TLS/tunel)", pide("POST", { host: "127.0.0.1:8787", origin: "https://127.0.0.1:8787", "content-type": "application/json", "content-length": "2" }).ok);
+  check("Origin con ruta => rechazado (la cabecera Origin no lleva ruta)", !pide("POST", { host: "127.0.0.1:8787", origin: "http://127.0.0.1:8787/api/chat", "content-type": "application/json", "content-length": "2" }).ok);
+  check("Origin con credenciales => rechazado", !pide("POST", { host: "127.0.0.1:8787", origin: "http://user@127.0.0.1:8787", "content-type": "application/json", "content-length": "2" }).ok);
 
   check("POST con cuerpo y text/plain => rechazado (vector CSRF)", !pide("POST", { host: "127.0.0.1:8787", "content-type": "text/plain", "content-length": "10" }).ok);
   check("POST con cuerpo y formulario => rechazado (vector CSRF)", !pide("POST", { host: "127.0.0.1:8787", "content-type": "application/x-www-form-urlencoded", "content-length": "10" }).ok);
@@ -67,6 +70,54 @@ const pide = (method, headers) => revisarPeticion({ method, headers }, ARGS);
   check("bind 0.0.0.0: sigue aceptando loopback", lan.has("127.0.0.1:8787") && lan.has("localhost:8787"));
   const soloLocal = hostsPermitidos({ host: "127.0.0.1", port: 9000 });
   check("bind loopback: el puerto manda", soloLocal.has("127.0.0.1:9000") && !soloLocal.has("127.0.0.1:8787"));
+}
+
+// ------------------------------------- BUG-01: bind comodin y acceso por LAN
+/** Primera IPv4 no interna de esta maquina (la que usaria un cliente de la LAN). */
+const HOST_LAN = (() => {
+  for (const lista of Object.values(os.networkInterfaces())) {
+    for (const direccion of lista || []) if (direccion && !direccion.internal && direccion.family === "IPv4") return direccion.address;
+  }
+  return null;
+})();
+if (!HOST_LAN) console.warn("aviso: esta maquina no tiene IPv4 no interna; se omite el caso de IP LAN real");
+{
+  check("esHostComodin reconoce 0.0.0.0 y ::", esHostComodin("0.0.0.0") && esHostComodin("::") && esHostComodin("[::]"));
+  check("esHostComodin no confunde un host concreto", !esHostComodin("127.0.0.1") && !esHostComodin("192.168.1.50"));
+
+  const comodin = { host: "0.0.0.0", port: 8787 };
+  const pc = (method, headers) => revisarPeticion({ method, headers }, comodin);
+  const conJson = (host, origin) => pc("POST", { host, origin, "content-type": "application/json", "content-length": "2" });
+  check("bind 0.0.0.0: acepta el Host de la IP LAN", HOST_LAN ? pc("GET", { host: `${HOST_LAN}:8787` }).ok : true);
+  check("bind 0.0.0.0: acepta Origin http de la IP LAN", HOST_LAN ? conJson(`${HOST_LAN}:8787`, `http://${HOST_LAN}:8787`).ok : true);
+  check("bind 0.0.0.0: acepta Origin https de la IP LAN (proxy TLS)", HOST_LAN ? conJson(`${HOST_LAN}:8787`, `https://${HOST_LAN}:8787`).ok : true);
+  check("bind 0.0.0.0: la misma IP en otro puerto se rechaza", HOST_LAN ? !pc("GET", { host: `${HOST_LAN}:9999` }).ok : true);
+  check("bind 0.0.0.0: un dominio ajeno se rechaza (DNS rebinding)", !pc("GET", { host: "evil.com:8787" }).ok);
+  check("bind 0.0.0.0: Origin https de un host ajeno se rechaza", HOST_LAN ? !conJson(`${HOST_LAN}:8787`, "https://evil.com:8787").ok : true);
+  check("bind 0.0.0.0: Origin null se rechaza", HOST_LAN ? !conJson(`${HOST_LAN}:8787`, "null").ok : true);
+  check("bind 0.0.0.0: Origin de otro puerto se rechaza", HOST_LAN ? !conJson(`${HOST_LAN}:8787`, `http://${HOST_LAN}:9999`).ok : true);
+  const nombre = os.hostname().toLowerCase();
+  check("bind 0.0.0.0: acepta el nombre de la maquina con su Origin", conJson(`${nombre}:8787`, `http://${nombre}:8787`).ok);
+  check("hostsPermitidos incluye la IP LAN con bind comodin", HOST_LAN ? hostsPermitidos(comodin).has(`${HOST_LAN}:8787`) : true);
+
+  const comodinV6 = { host: "::", port: 8787 };
+  check("bind :: sigue aceptando loopback", revisarPeticion({ method: "GET", headers: { host: "[::1]:8787" } }, comodinV6).ok);
+  check("bind :: tambien acepta el Host de la IP LAN", HOST_LAN ? revisarPeticion({ method: "GET", headers: { host: `${HOST_LAN}:8787` } }, comodinV6).ok : true);
+  check("bind :: rechaza un dominio ajeno", !revisarPeticion({ method: "GET", headers: { host: "evil.com:8787" } }, comodinV6).ok);
+}
+
+// ------------------------------------- BUG-01: host concreto configurado
+{
+  const concreto = { host: "192.168.1.50", port: 8787 };
+  const p = (method, headers) => revisarPeticion({ method, headers }, concreto);
+  const conJson = (host, origin) => p("POST", { host, origin, "content-type": "application/json", "content-length": "2" });
+  check("host concreto: Host configurado aceptado", p("GET", { host: "192.168.1.50:8787" }).ok);
+  check("host concreto: Origin http del host configurado aceptado", conJson("192.168.1.50:8787", "http://192.168.1.50:8787").ok);
+  check("host concreto: Origin https del host configurado aceptado", conJson("192.168.1.50:8787", "https://192.168.1.50:8787").ok);
+  check("host concreto: loopback sigue aceptado", p("GET", { host: "127.0.0.1:8787" }).ok);
+  check("host concreto: otra IP se rechaza", !p("GET", { host: "192.168.1.51:8787" }).ok);
+  check("host concreto: el mismo host en otro puerto se rechaza", !p("GET", { host: "192.168.1.50:8788" }).ok);
+  check("host concreto: Origin ajeno se rechaza", !conJson("192.168.1.50:8787", "http://evil.com:8787").ok);
 }
 
 // ---------------------------------------------------------------- parte 2

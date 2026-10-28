@@ -2,6 +2,39 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
+/**
+ * POLITICA DE RUTAS DEL PROYECTO Y ALCANCE REAL DE LA PROTECCION (hallazgo 7)
+ *
+ * `rutaSegura()` RECHAZA ENLACES: recorre con `lstat` cada componente que ya existe
+ * (tambien junctions y enlaces colgantes) y devuelve null si alguno es un enlace
+ * simbolico. La raiz del proyecto puede ser un enlace; sus descendientes no.
+ *
+ * QUE GARANTIZA
+ *  - corta el caso estatico: un proyecto que ya contiene un enlace hacia fuera (o
+ *    hacia `.git`, `node_modules`…) no sirve para leer/escribir fuera de la raiz;
+ *  - normaliza y limita la ruta (nada de `..`, unidades de Windows, nombres
+ *    reservados ni rutas absolutas) antes de tocar el disco.
+ *
+ * QUE **NO** GARANTIZA (importante, no presentarlo como mas de lo que es)
+ * La comprobacion es `lstat` y DESPUES se usa la ruta: entre comprobar y abrir/
+ * leer/escribir queda una ventana en la que OTRO PROCESO LOCAL puede sustituir un
+ * directorio por un junction o un archivo por un symlink. Por tanto esto es
+ * BEST-EFFORT y **NO ES UNA BARRERA TOCTOU** frente a procesos locales concurrentes
+ * con permiso de escritura en el proyecto. `escribirAtomico()` tampoco lo es: evita
+ * archivos a medias y deja intacto el destino si falla, no carreras de enlaces.
+ *
+ * No se puede cerrar del todo con la API portable de Node: haria falta abrir por
+ * handle/identificador con primitivas del SO (openat2/RESOLVE_NO_SYMLINKS en Linux,
+ * FILE_FLAG_OPEN_REPARSE_POINT en Windows) que Node no expone de forma uniforme.
+ * La amenaza que cubre este modulo es un ENLACE ya presente en el proyecto (o creado
+ * por el agente a traves de la propia API, que tambien valida), no un atacante local
+ * compitiendo en el tiempo con la comprobacion. Cualquier futuro helper que prometa
+ * mas que esto debe demostrarlo con una prueba de carrera controlada.
+ *
+ * IMPORTANTE: la semantica de `rutaSegura` es contrato de `ui-server.mjs` y
+ * `actions.mjs`; no cambiarla sin actualizar a sus consumidores y sus pruebas.
+ */
+
 // Reject links at every existing component, including dangling links and junctions.
 // The selected root itself may be a link; its descendants may not be.
 export function rutaSegura(root, rel) {

@@ -21,13 +21,17 @@ import {
   fitDraft,
   isRepetition,
   limpiarNotas,
+  notaDeResultado,
   sampleText,
   selectContext,
   selfTest,
   takeHeadByTokens,
+  takeTailByTokens,
   turnoInterno,
 } from "./context.mjs";
 import { PC_TOOLS, stripFakeToolText } from "./actions.mjs";
+import { escribirJsonAtomico, leerJson } from "./almacen-json.mjs";
+import { leerSSE } from "./sse.mjs";
 import { MODELO, muestreo } from "./modelo.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -35,6 +39,21 @@ const SESSION_PATH = path.join(ROOT, "session.json");
 const TIMINGS_PATH = path.join(ROOT, "timings.jsonl");
 /** Hueco por tanda cuando el modelo puede escribir archivos con una tool call. */
 export const AGENT_SLICE_TOKENS = 16384;
+
+/**
+ * Reserva de salida (en tokens) de cada fase del salto. Se aparta de la ventana ANTES de
+ * calcular el tope de historial: no es una bolsa de VRAM, es el hueco que necesita la
+ * respuesta. Una lectura o un plan son respuestas cortas (no desplazan evidencia); una
+ * escritura puede ser un archivo entero; un cierre es un resumen breve.
+ * @type {Readonly<Record<"plan" | "lectura" | "escritura" | "final" | "charla", number>>}
+ */
+export const RESERVA_POR_FASE = Object.freeze({
+  plan: 3072,
+  lectura: 2048,
+  escritura: AGENT_SLICE_TOKENS,
+  final: 4096,
+  charla: SLICE_TOKENS,
+});
 
 // El resumidor es el MISMO modelo que hace la tarea y, con la transcripción delante, tendía a
 // seguir con ella («Creo test_api.py: ```python…»). De ahí que se le diga qué NO hacer y que
@@ -111,6 +130,19 @@ function readContextSize(props) {
   return null;
 }
 
+/**
+ * Una sesión válida es un objeto JSON; los turnos se validan uno a uno después (una sesión
+ * antigua puede tener turnos con formas distintas, y se conservan los que se entienden).
+ * @param {unknown} dato
+ * @returns {boolean}
+ */
+function sesionValida(dato) {
+  return Boolean(dato) && typeof dato === "object" && !Array.isArray(dato);
+}
+
+/** Huellas de un fallo o de una verificación pendiente: eso no se puede perder al recortar. */
+const HUELLA_FALLO = /\b(?:error(?:es)?|fall(?:a|ó|o|an|as|ando|id[oa])|fail(?:ed|s|ing)?|traceback|exception|pendiente|roto|rota|no (?:pasa|funciona|compila|termina)|no se pudo)/i;
+
 class ApiError extends Error {
   /**
    * @param {string} message
@@ -144,12 +176,20 @@ function status(msg) {
 
 export class BonsaiChat {
   /**
-   * @param {{ host: string, port: number, historyCap: number, sessionPath?: string, think?: number, perfil?: string, parallelTools?: boolean, timingsPath?: string | null }} opts
+   * @param {{ host: string, port: number, historyCap: number, sessionPath?: string, think?: number, perfil?: string, parallelTools?: boolean, timingsPath?: string | null, faseSalto?: "plan" | "lectura" | "escritura" | "final" | "charla" }} opts
    */
   constructor(opts) {
     this.base = `http://${opts.host}:${opts.port}`;
     this.configuredCap = opts.historyCap;
     this.sessionPath = opts.sessionPath || SESSION_PATH;
+    /**
+     * Fase del salto que se está por pedir, si el controlador la conoce. Decide cuánta
+     * ventana se reserva para la respuesta (ver reservaSalida): una lectura o un plan
+     * necesitan poco; una escritura, una slice entera. `undefined` = no se sabe (se usa la
+     * reserva conservadora de siempre).
+     * @type {"plan" | "lectura" | "escritura" | "final" | "charla" | undefined}
+     */
+    this.faseSalto = opts.faseSalto === undefined ? undefined : opts.faseSalto;
     /** Razonamiento APAGADO por defecto: solo se enciende con un presupuesto explícito (tokens). */
     this.thinkBudget = Number.isInteger(opts.think) && /** @type {number} */ (opts.think) > 0 ? /** @type {number} */ (opts.think) : 0;
     /**
@@ -292,75 +332,111 @@ export class BonsaiChat {
     });
   }
 
-  historyCap() {
-    // Reserva espacio para producir codigo. Con una ventana de 32K y un tope
-    // de historial de 32K antes solo quedaban ~384 tokens para escribir el archivo.
-    const respuesta = this.actOnPc && this.toolChoice !== "none"
-      ? Math.min(AGENT_SLICE_TOKENS, Math.floor(this.nCtx / 2))
+  /**
+   * Tokens que se apartan de la ventana para la respuesta de ESTE salto.
+   *
+   * Antes con herramientas siempre se reservaba media ventana (con nCtx=16384 el historial
+   * quedaba en 8064 aunque el usuario pidiera 32768) porque la reserva era una constante.
+   * Una lectura o un plan no necesitan desplazar tanta evidencia: su respuesta es corta.
+   * Una escritura sí puede ser un archivo grande. Reglas:
+   *  - Nunca menos de MIN_ROOM (siempre hay hueco para terminar la frase).
+   *  - Nunca más de media ventana (el resto no se usaría: el tope de historial ya no baja).
+   *  - Sin fase conocida se conserva la reserva de siempre (compatibilidad).
+   * @returns {number}
+   */
+  reservaSalida() {
+    const fase = this.faseSalto;
+    const conHerramientas = this.actOnPc && this.toolChoice !== "none";
+    const reservaFase = conHerramientas
+      ? (fase && Object.prototype.hasOwnProperty.call(RESERVA_POR_FASE, fase) ? RESERVA_POR_FASE[fase] : AGENT_SLICE_TOKENS)
       : SLICE_TOKENS;
-    const ceiling = this.nCtx > 0 ? Math.max(512, this.nCtx - Math.max(MIN_ROOM, respuesta) - 128) : this.configuredCap;
+    const mediaVentana = this.nCtx > 0 ? Math.floor(this.nCtx / 2) : Number.POSITIVE_INFINITY;
+    return Math.max(MIN_ROOM, Math.floor(Math.min(reservaFase, mediaVentana)));
+  }
+
+  historyCap() {
+    // La reserva de salida es adaptativa (ver reservaSalida) y el tope que pidió el usuario
+    // (configuredCap) sigue mandando: si es menor que lo que cabe, se respeta.
+    const reserva = this.reservaSalida();
+    const ceiling = this.nCtx > 0 ? Math.max(512, this.nCtx - reserva - 128) : this.configuredCap;
     return Math.max(512, Math.min(this.configuredCap, ceiling) - this.tighten);
   }
 
+  /**
+   * Presupuesto de contexto REAL, en tokens, para mostrarlo en la interfaz:
+   *  - ventana: `n_ctx` que cargó el servidor (0 si aún no se sabe).
+   *  - solicitado: tope de historial que pidió el usuario (configuredCap).
+   *  - efectivo: historial que de verdad se puede mandar ahora (historyCap()).
+   *  - reservaSalida: hueco real que queda para la respuesta (ventana - efectivo); si la
+   *    ventana aún no se conoce, la reserva nominal de la fase.
+   * @returns {{ventana: number, solicitado: number, efectivo: number, reservaSalida: number}}
+   */
+  presupuestoContexto() {
+    const ventana = this.nCtx;
+    const efectivo = this.historyCap();
+    return {
+      ventana,
+      solicitado: this.configuredCap,
+      efectivo,
+      reservaSalida: ventana > 0 ? Math.max(0, ventana - efectivo) : this.reservaSalida(),
+    };
+  }
+
   loadSession() {
-    if (!fs.existsSync(this.sessionPath)) return;
-    try {
-      const raw = JSON.parse(fs.readFileSync(this.sessionPath, "utf8"));
-      const turns = Array.isArray(raw.turns) ? raw.turns : [];
-      /** @type {Array<{role: "user"|"assistant"|"tool", content: string, toolCallId?: string, shown?: string, actions?: Array<{id: string, kind: string, title: string, state: string, detail?: string, code?: number}>}>} */
-      const clean = [];
-      for (const turn of turns) {
-        if (!turn || (turn.role !== "user" && turn.role !== "assistant" && turn.role !== "tool")) continue;
-        if (typeof turn.content !== "string") continue;
-        const storedCalls = Array.isArray(turn.toolCalls) ? turn.toolCalls.filter((call) => call && typeof call.name === "string") : [];
-        const storedActions = Array.isArray(turn.actions) ? turn.actions.filter((action) => action && typeof action.title === "string" && typeof action.kind === "string") : [];
-        if (!turn.content && !storedCalls.length && !storedActions.length) continue;
-        /** @type {{role: "user"|"assistant"|"tool", content: string, toolCallId?: string, shown?: string, actions?: Array<{id: string, kind: string, title: string, state: string, detail?: string, code?: number}>, toolCalls?: Array<{id: string, name: string, arguments: unknown}>}} */
-        const kept = { role: turn.role, content: turn.content };
-        if (turn.role === "tool") kept.toolCallId = typeof turn.toolCallId === "string" ? turn.toolCallId : "";
-        if (typeof turn.shown === "string") kept.shown = turn.shown;
-        if (storedActions.length) kept.actions = storedActions;
-        if (storedCalls.length) {
-          kept.toolCalls = storedCalls.map((call) => ({
-            id: typeof call.id === "string" ? call.id : "",
-            name: call.name,
-            arguments: call.arguments,
-          }));
-        }
-        clean.push(kept);
-      }
-      const folded = Number.isInteger(raw.folded) ? Math.min(Math.max(0, raw.folded), clean.length) : 0;
-      const memory = typeof raw.memory === "string" ? raw.memory : "";
-      const draft = typeof raw.draft === "string" ? raw.draft : "";
-      if (draft) clean.push({ role: "assistant", content: draft });
-      /** @type {Array<{rel: string, bytes: number}>} */
-      const files = [];
-      if (Array.isArray(raw.files)) {
-        for (const file of raw.files) {
-          if (!file || typeof file.rel !== "string" || !file.rel) continue;
-          files.push({ rel: file.rel, bytes: Number(file.bytes) || 0 });
-        }
-      }
-      this.session = { memory, folded, turns: clean, draft: "", files };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      // Se APARTA el fichero ilegible antes de seguir con la sesión vacía: si no, el primer
-      // saveSession lo pisa y la conversación del usuario desaparece del disco.
-      try {
-        fs.renameSync(this.sessionPath, `${this.sessionPath}.corrupto`);
-      } catch {
-        /* sin copia: al menos queda el aviso */
-      }
-      this.note(`sesión ilegible (${message}); la aparto como .corrupto y empiezo vacía`);
+    // Lectura con respaldo `.bak` y apartado de corruptos (chat/almacen-json.mjs): un corte a
+    // mitad de escritura ya no pierde la conversación y el archivo malo se conserva.
+    const leido = leerJson(this.sessionPath, { validar: sesionValida });
+    if (!leido.ok) {
+      if (leido.code === "ENOENT") return;
+      // Mismo mensaje de siempre: sesión ilegible, se aparta y se empieza vacía.
+      this.note(`sesión ilegible (${leido.error}); la aparto como .corrupto y empiezo vacía`);
       this.session = { memory: "", folded: 0, turns: [], draft: "", files: [] };
+      return;
     }
+    if (leido.origen !== this.sessionPath) this.note("la sesión estaba ilegible; la recupero del respaldo .bak");
+    const raw = /** @type {any} */ (leido.dato);
+    const turns = Array.isArray(raw.turns) ? raw.turns : [];
+    /** @type {Array<{role: "user"|"assistant"|"tool", content: string, toolCallId?: string, shown?: string, actions?: Array<{id: string, kind: string, title: string, state: string, detail?: string, code?: number}>}>} */
+    const clean = [];
+    for (const turn of turns) {
+      if (!turn || (turn.role !== "user" && turn.role !== "assistant" && turn.role !== "tool")) continue;
+      if (typeof turn.content !== "string") continue;
+      const storedCalls = Array.isArray(turn.toolCalls) ? turn.toolCalls.filter((call) => call && typeof call.name === "string") : [];
+      const storedActions = Array.isArray(turn.actions) ? turn.actions.filter((action) => action && typeof action.title === "string" && typeof action.kind === "string") : [];
+      if (!turn.content && !storedCalls.length && !storedActions.length) continue;
+      /** @type {{role: "user"|"assistant"|"tool", content: string, toolCallId?: string, shown?: string, actions?: Array<{id: string, kind: string, title: string, state: string, detail?: string, code?: number}>, toolCalls?: Array<{id: string, name: string, arguments: unknown}>}} */
+      const kept = { role: turn.role, content: turn.content };
+      if (turn.role === "tool") kept.toolCallId = typeof turn.toolCallId === "string" ? turn.toolCallId : "";
+      if (typeof turn.shown === "string") kept.shown = turn.shown;
+      if (storedActions.length) kept.actions = storedActions;
+      if (storedCalls.length) {
+        kept.toolCalls = storedCalls.map((call) => ({
+          id: typeof call.id === "string" ? call.id : "",
+          name: call.name,
+          arguments: call.arguments,
+        }));
+      }
+      clean.push(kept);
+    }
+    const folded = Number.isInteger(raw.folded) ? Math.min(Math.max(0, raw.folded), clean.length) : 0;
+    const memory = typeof raw.memory === "string" ? raw.memory : "";
+    const draft = typeof raw.draft === "string" ? raw.draft : "";
+    if (draft) clean.push({ role: "assistant", content: draft });
+    /** @type {Array<{rel: string, bytes: number}>} */
+    const files = [];
+    if (Array.isArray(raw.files)) {
+      for (const file of raw.files) {
+        if (!file || typeof file.rel !== "string" || !file.rel) continue;
+        files.push({ rel: file.rel, bytes: Number(file.bytes) || 0 });
+      }
+    }
+    this.session = { memory, folded, turns: clean, draft: "", files };
   }
 
   saveSession() {
-    const payload = JSON.stringify(this.session);
-    const tmp = `${this.sessionPath}.tmp`;
-    fs.writeFileSync(tmp, payload);
-    fs.renameSync(tmp, this.sessionPath);
+    // Escritura atómica (temporal + fsync + rename) con copia `.bak` de la versión anterior:
+    // un corte deja intacta la sesión buena. Si falla, el error sube (no se finge guardar).
+    escribirJsonAtomico(this.sessionPath, this.session, { copia: true, espacio: 0 });
   }
 
   /**
@@ -626,19 +702,42 @@ export class BonsaiChat {
    * @returns {string}
    */
   fallbackNotes(notes, turns, extra) {
-    const bits = [];
-    if (notes) bits.push(notes);
+    // Hallazgo 21: la memoria de respaldo no puede quedarse con lo viejo y perder lo nuevo.
+    // Primero se aparta espacio para los hechos recientes (fallos abiertos y verificaciones
+    // pendientes primero) y solo con lo que sobra se recortan las notas antiguas.
+    /** @type {string[]} */
+    const recientes = [];
     for (const turn of turns) {
       // R = resultado de una herramienta: no lo dijo el usuario.
       const label = turn.role === "tool" ? "R" : turn.role === "user" ? "U" : "A";
       const llamadas = turn.role === "assistant" ? describirLlamadas(/** @type {{toolCalls?: Array<{name?: string, arguments?: unknown}>}} */ (turn).toolCalls) : "";
-      bits.push(`${label}: ${[limpiarNotas(turn.content).replace(/\s+/g, " ").slice(0, 180), llamadas].filter(Boolean).join(" ")}`);
+      const texto = limpiarNotas(turn.content).replace(/\s+/g, " ").slice(0, 180);
+      const linea = `${label}: ${[texto, llamadas].filter(Boolean).join(" ")}`.trim();
+      if (linea.length > 3) recientes.push(linea);
     }
     if (extra) {
       const flat = extra.replace(/\s+/g, " ");
-      bits.push(`Ya dicho: ${flat.slice(0, 220)} … ${flat.slice(-160)}`);
+      recientes.push(`Ya dicho: ${flat.slice(0, 220)} … ${flat.slice(-160)}`);
     }
-    return takeHeadByTokens(bits.join("\n"), MEMORY_CAP_TOKENS, estimateTokens);
+    const fallos = recientes.filter((linea) => HUELLA_FALLO.test(linea));
+    const normales = recientes.filter((linea) => !HUELLA_FALLO.test(linea));
+    // Reserva para lo nuevo: ~45 % del tope. Los fallos van delante y completos; de los
+    // turnos normales se conservan los más recientes (el final del bloque plegado).
+    const reservaNueva = Math.max(320, Math.floor(MEMORY_CAP_TOKENS * 0.45));
+    const parteFallos = takeHeadByTokens(fallos.join("\n"), Math.max(96, Math.floor(reservaNueva * 0.7)), estimateTokens);
+    const parteNormal = takeTailByTokens(normales.join("\n"), Math.max(64, reservaNueva - estimateTokens(parteFallos)), estimateTokens);
+    const nuevas = [parteFallos, parteNormal].filter(Boolean).join("\n");
+    if (!nuevas && !notes) return "";
+    const tokensNuevas = estimateTokens(nuevas);
+    const presupuestoViejas = Math.max(0, MEMORY_CAP_TOKENS - tokensNuevas - 2);
+    const viejas = presupuestoViejas > 0 && notes ? takeHeadByTokens(notes, presupuestoViejas, estimateTokens) : "";
+    let texto = [viejas, nuevas].filter(Boolean).join("\n");
+    // Red de seguridad: si aun así no cabe, se recorta MÁS lo viejo, nunca lo nuevo.
+    if (estimateTokens(texto) > MEMORY_CAP_TOKENS && viejas) {
+      const sobra = Math.max(0, MEMORY_CAP_TOKENS - tokensNuevas - 1);
+      texto = [takeHeadByTokens(viejas, sobra, estimateTokens), nuevas].filter(Boolean).join("\n");
+    }
+    return texto;
   }
 
   /**
@@ -745,7 +844,14 @@ export class BonsaiChat {
     this.session.folded = Math.max(0, this.session.turns.length - 1);
     this.session.memory = takeHeadByTokens(this.session.memory, 80, estimateTokens);
     this.tighten = 0;
-    const last = this.modelTurn(this.session.turns[this.session.turns.length - 1]);
+    const ultimoTurno = this.session.turns[this.session.turns.length - 1];
+    let last = this.modelTurn(ultimoTurno);
+    if (last.role === "tool") {
+      // La salida de emergencia conservaba SOLO el último mensaje: si era un resultado de
+      // herramienta quedaba un `tool` sin la llamada que lo explica (hallazgo 18). Se
+      // convierte en una nota explícita: no se inventa una llamada ni se deja un id huérfano.
+      last = /** @type {any} */ (notaDeResultado(ultimoTurno));
+    }
     const solo = selectContext({
       turns: [{ ...last, content: takeHeadByTokens(last.content, Math.max(256, this.historyCap() - 400), estimateTokens) }],
       memory: this.session.memory,
@@ -765,7 +871,7 @@ export class BonsaiChat {
    * @param {number} maxTokens
    * @param {boolean} continueFinal
    * @param {AbortSignal} signal
-   * @returns {Promise<{ chunk: string, reason: string, toolCalls: Array<{id: string, name: string, arguments: string}>, timings: Record<string, number> | null, usage: Record<string, number> | null }>}
+   * @returns {Promise<{ chunk: string, reason: string, toolCalls: Array<{id: string, name: string, arguments: string}>, timings: Record<string, number> | null, usage: Record<string, number> | null, completo: boolean, motivo: string }>}
    */
   async streamSlice(messages, maxTokens, continueFinal, signal) {
     // El razonamiento (si está encendido) solo acompaña a una generación nueva: una
@@ -812,9 +918,6 @@ export class BonsaiChat {
     }
     if (!res.body) throw new Error("El servidor no devolvió un stream");
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
     let chunk = "";
     let reason = "stop";
     let thinking = false;
@@ -822,29 +925,19 @@ export class BonsaiChat {
     let timings = null;
     /** @type {Record<string, number> | null} */
     let usage = null;
-    /** @type {Map<number, {id: string, name: string, arguments: string}>} */
+    /** @type {Map<number, {index: number, id: string, name: string, arguments: string}>} */
     const calls = new Map();
     let ultimoProgreso = 0;
+    /** @type {{completo: boolean, motivo: string, finishReason: string}} */
+    let cierre = { completo: false, motivo: "cierre_sin_fin", finishReason: "" };
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        let nl = buf.indexOf("\n");
-        while (nl !== -1) {
-          const line = buf.slice(0, nl).replace(/\r$/, "").trim();
-          buf = buf.slice(nl + 1);
-          nl = buf.indexOf("\n");
-          if (!line.startsWith("data:")) continue;
-          const payload = line.slice(5).trim();
-          if (!payload || payload === "[DONE]") continue;
-          /** @type {{choices?: Array<{delta?: {content?: string, reasoning_content?: string}, finish_reason?: string | null}>, error?: {message?: string, type?: string}, timings?: Record<string, number>, usage?: Record<string, number>}} */
-          let json;
-          try {
-            json = JSON.parse(payload);
-          } catch {
-            continue;
-          }
+      // Un ÚNICO lector SSE (chat/sse.mjs). Antes el bucle de aquí se tragaba los finales
+      // raros: un JSON inválido se ignoraba y una conexión cortada tras un trozo válido
+      // parecía una respuesta completa (hallazgo 1). Ahora fragmentos, CRLF, UTF-8 partido,
+      // `data:` multilínea, [DONE] y el último evento sin salto se manejan una sola vez.
+      const fin = await leerSSE(res.body, {
+        señal: signal,
+        alEvento: (json) => {
           if (json.error?.message) {
             const apiErr = new ApiError(json.error.message, 400, json.error.type || "");
             apiErr.partial = chunk;
@@ -893,17 +986,27 @@ export class BonsaiChat {
             }
           }
           if (choice?.finish_reason) reason = choice.finish_reason;
-        }
-      }
+        },
+      });
+      if (fin.finishReason) reason = fin.finishReason;
+      cierre = { completo: fin.completo, motivo: fin.motivo, finishReason: fin.finishReason };
     } catch (err) {
-      if (err instanceof Error && !("partial" in err)) {
-        Object.defineProperty(err, "partial", { value: chunk });
+      // La API de retorno para el llamador no cambia: `partial` sigue siendo el texto de ESTA
+      // slice. Un cierre prematuro o un JSON inválido llegan como ErrorSSE con `motivo` y
+      // `parcial`; runTurn conserva lo recibido en el borrador y el error sube (no se finge
+      // una respuesta completa).
+      if (err instanceof Error) {
+        const yaHay = typeof /** @type {{partial?: unknown}} */ (err).partial === "string" && /** @type {{partial?: string}} */ (err).partial;
+        if (!yaHay) {
+          const parcial = typeof /** @type {{parcial?: unknown}} */ (err).parcial === "string" ? /** @type {{parcial: string}} */ (err).parcial : "";
+          Object.defineProperty(err, "partial", { value: chunk || parcial, configurable: true });
+        }
       }
       throw err;
     }
     // Un trozo de continuación puede venir SIN `name` (solo `arguments`): si se tirara aquí,
     // la llamada se quedaría cortada para siempre. Vale con que traiga nombre o argumentos.
-    return { chunk, reason, toolCalls: [...calls.values()].filter((call) => call.name || call.arguments), timings, usage };
+    return { chunk, reason, toolCalls: [...calls.values()].filter((call) => call.name || call.arguments), timings, usage, completo: cierre.completo, motivo: cierre.motivo };
   }
 
   /**

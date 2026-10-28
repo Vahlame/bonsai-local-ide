@@ -1,0 +1,55 @@
+[
+ {
+  "id": "node-esm",
+  "titulo": "Módulo JavaScript con node:test",
+  "nivel": "medio",
+  "ok": true,
+  "segundos": 107.4,
+  "saltos": 19,
+  "acciones": 19,
+  "predichos": 3870,
+  "leidos": 6535,
+  "cache": 122383,
+  "tokPorSeg": 38.8,
+  "gpu": {
+   "muestras": 106,
+   "utilMedia": 94,
+   "utilMaxima": 99,
+   "pctAlto": 98,
+   "pctOcioso": 0,
+   "vatios": 78,
+   "tempMax": 67,
+   "mhz": 2499,
+   "vramMax": 6459
+  },
+  "fallos": [],
+  "notas": [
+   "slugify ok",
+   "node --test pasa"
+  ],
+  "httpError": "",
+  "errores": [],
+  "textoFinal": "Los 7 tests pasan (código 0).\n\n**Resumen:**\n\n- **`modulo.mjs`** — exporta `slugify(texto)`: minúsculas, elimina signos de puntuación, convierte espacios en guiones, y sin guiones al inicio/final.\n- **`modulo.test.mjs`** — 7 tests con `node:test` + `assert/strict`.\n- `node --test` → **7 pass, 0 fail**.\n\nDetalles del entorno que condicionaron la implementación:\n- `.trim('-')` **no recorta** en este entorno (devuelve el string sin cambios), así que usé un bucle `while` con `startsWith`/`endsWith` en lugar de `trim`.\n- El normalizador de acentos se mantiene (á→a, é→e, etc.). Se conserva la `ñ` com",
+  "pasos": [
+   "write:done modulo.mjs",
+   "write:done modulo.test.mjs",
+   "cmd:done(1) node --test",
+   "write:done modulo.mjs",
+   "cmd:done(1) node --test",
+   "read:done modulo.mjs",
+   "cmd:done(0) dir modulo.mjs",
+   "cmd:done(0) node --input-type=module -e \"import('./modulo.mjs').then(m => console.log(JSON.stringify([",
+   "cmd:done(9) node --no-cache -e \"console.log('ok')\" && node -e \"import('./modulo.mjs').then(m => consol",
+   "cmd:done(0) type modulo.mjs",
+   "cmd:done(1) dir node_modules 2>nul && dir /s /b node_modules\\*.mjs 2>nul",
+   "write:done modulo.mjs",
+   "cmd:done(0) node --input-type=module -e \"import('./modulo.mjs').then(m => console.log(JSON.stringify([",
+   "cmd:done(0) node --input-type=module -e \"import('./modulo.mjs').then(m => { const s=m.slugify('!!!bang",
+   "cmd:done(0) node -e \"const fs=require('fs'); const st=fs.statSync('modulo.mjs'); console.log('mtime=',",
+   "cmd:done(0) node -e \"console.log(JSON.stringify('-bang'.trim('-')))\"",
+   "write:done modulo.mjs",
+   "cmd:done(0) node --input-type=module -e \"import('./modulo.mjs').then(m => console.log(JSON.stringify([",
+   "cmd:done(0) node --test"
+  ]
+ }
+]

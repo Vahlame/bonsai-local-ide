@@ -14,23 +14,43 @@ const MIB = 1024 * 1024;
 export const MODELO = JSON.parse(fs.readFileSync(new URL("./modelo.json", import.meta.url), "utf8"));
 
 /**
+ * Arquitectura que dimensiona el KV para un modelo del catálogo
+ * (`catalogo.<clave>.servidor`) o, sin clave, la histórica de `modelo` (Bonsai).
+ * Ornith usa 8 capas de atención completa (no 16): su KV cuesta la mitad.
+ * @param {string} [clave] clave del catálogo; vacía = arquitectura global del Bonsai
+ * @returns {{capasAtencionCompleta: number, cabezasKV: number, dimCabeza: number}}
+ */
+export function arquitecturaDe(clave = "") {
+  if (clave) {
+    const servidor = MODELO.catalogo?.[clave]?.servidor;
+    if (!servidor || !(servidor.capasAtencionCompleta > 0) || !(servidor.cabezasKV > 0) || !(servidor.dimCabeza > 0)) {
+      throw new Error(`modelo sin arquitectura de servidor en el catálogo: ${clave}`);
+    }
+    return servidor;
+  }
+  return MODELO.modelo;
+}
+
+/**
  * @param {string} tipo f16 | q8_0 | q4_0
+ * @param {string} [clave] clave del catálogo; sin ella se usa la arquitectura del Bonsai global
  * @returns {number} bytes de caché KV por token (solo las capas de atención completa)
  */
-export function kvBytesPorToken(tipo) {
-  const bytes = MODELO.kv.bytesPorElemento[tipo];
+export function kvBytesPorToken(tipo, clave = "") {
+  const bytes = MODELO.kv.bytesPorElemento?.[tipo];
   if (!bytes) throw new Error(`tipo de KV no admitido: ${tipo}`);
-  const m = MODELO.modelo;
+  const m = arquitecturaDe(clave);
   return m.capasAtencionCompleta * m.cabezasKV * m.dimCabeza * 2 * bytes;
 }
 
 /**
  * @param {number} ctx
  * @param {string} tipo
- * @returns {number}
+ * @param {string} [clave] clave del catálogo
+ * @returns {number} MiB, redondeando hacia arriba
  */
-export function kvMiB(ctx, tipo) {
-  return Math.ceil((ctx * kvBytesPorToken(tipo)) / MIB);
+export function kvMiB(ctx, tipo, clave = "") {
+  return Math.ceil((ctx * kvBytesPorToken(tipo, clave)) / MIB);
 }
 
 /**
@@ -58,12 +78,59 @@ export function computoCtxMiB(ctx) {
 
 /**
  * VRAM en uso una vez cargado el modelo (lo que marca nvidia-smi).
- * @param {{ctx: number, kv: string, ubatch?: number}} args
+ * Sin clave reproduce la calibración histórica del Bonsai (Bonsai global); con clave usa la
+ * cuenta conservadora del catálogo: pesos del GGUF + KV de SU arquitectura + reservas.
+ * @param {{ctx: number, kv: string, ubatch?: number, clave?: string, vision?: boolean}} args
  * @returns {number} MiB
  */
-export function estimarVramMiB({ ctx, kv, ubatch = 256 }) {
+export function estimarVramMiB({ ctx, kv, ubatch = 256, clave = "", vision = false }) {
+  if (clave) return estimarVramModeloMiB({ clave, ctx, kv, vision });
   const v = MODELO.vram;
   return Math.ceil(v.pesosMiB + v.estadoRecurrenteMiB + v.fijoCudaMiB + kvMiB(ctx, kv) + computoMiB(ctx, ubatch));
+}
+
+/**
+ * @param {string} clave clave del catálogo
+ * @returns {number} MiB de los pesos que van a la GPU (GGUF redondeado hacia arriba)
+ */
+export function pesosCatalogoMiB(clave) {
+  const bytes = Number(MODELO.catalogo?.[clave]?.bytes);
+  if (!Number.isFinite(bytes) || bytes <= 0) throw new Error(`modelo sin bytes en el catálogo: ${clave}`);
+  return Math.ceil(bytes / MIB);
+}
+
+/**
+ * @param {string} clave clave del catálogo
+ * @returns {number} MiB de reserva del perfil `catalogo.<clave>.servidor`
+ */
+export function reservaServidorMiB(clave) {
+  const perfil = MODELO.catalogo?.[clave]?.servidor;
+  if (!perfil || perfil.tipo !== "gpu-completa") throw new Error(`modelo sin perfil de GPU completa: ${clave}`);
+  const reserva = Number(perfil.reservaMiB);
+  if (!Number.isFinite(reserva) || reserva < 0) throw new Error(`modelo sin reservaMiB en el catálogo: ${clave}`);
+  return reserva;
+}
+
+/**
+ * @param {string} clave clave del catálogo
+ * @returns {number} MiB que ocupa el proyector de visión en GPU (0 si no se descarga en GPU)
+ */
+export function reservaVisionMiB(clave) {
+  const vision = MODELO.catalogo?.[clave]?.vision;
+  if (!vision || vision.offload !== true) return 0;
+  return Math.max(0, Number(vision.reservaMiB) || 0);
+}
+
+/**
+ * VRAM conservadora para ARRANCAR un modelo del catálogo con GPU completa:
+ * pesos del GGUF + KV de su arquitectura + reserva del perfil de servidor + reserva de visión.
+ * Es la misma cuenta que hace scripts/start-gpu-model.ps1 y la que decide si se lanza.
+ * @param {{clave: string, ctx: number, kv: string, vision?: boolean}} args
+ * @returns {number} MiB
+ */
+export function estimarVramModeloMiB({ clave, ctx, kv, vision = false }) {
+  const visionMiB = vision ? reservaVisionMiB(clave) : 0;
+  return Math.ceil(pesosCatalogoMiB(clave) + kvMiB(ctx, kv, clave) + reservaServidorMiB(clave) + visionMiB);
 }
 
 /**
@@ -135,7 +202,7 @@ export function muestreo(perfil, clave = "") {
  * @returns {{saltos: number, avisos: number}}
  */
 export function perfilAgente(clave) {
-  const fila = clave ? MODELO.catalogo[clave] : null;
+  const fila = clave ? MODELO.catalogo?.[clave] : null;
   const a = fila && typeof fila.agente === "object" && fila.agente ? fila.agente : {};
   const saltos = Number.isInteger(a.saltos) && a.saltos > 0 ? a.saltos : 24;
   const avisos = Number.isInteger(a.avisos) && a.avisos >= 0 ? a.avisos : 2;
@@ -150,7 +217,7 @@ export function perfilAgente(clave) {
  * @returns {{compatible: boolean, presupuesto: number}}
  */
 export function pensarDe(clave) {
-  const fila = clave ? MODELO.catalogo[clave] : null;
+  const fila = clave ? MODELO.catalogo?.[clave] : null;
   const p = fila && typeof fila.pensar === "object" && fila.pensar ? fila.pensar : {};
   const compatible = p.compatible === true;
   const presupuesto = compatible && Number.isInteger(p.presupuesto) && p.presupuesto > 0 ? p.presupuesto : 0;
@@ -187,6 +254,24 @@ export function selfTest() {
   check("KV f16 = 64 KiB por token", kvBytesPorToken("f16") === 64 * 1024);
   check("KV q4_0 = 18 KiB por token", kvBytesPorToken("q4_0") === 18 * 1024);
   check("KV q4_0 con 64k = 1152 MiB", kvMiB(65536, "q4_0") === 1152);
+  // BUG-06: el modelo activo (Ornith) dimensiona el KV con `catalogo.<clave>.servidor`
+  // (8 capas de atención completa, no las 16 del Bonsai histórico de `modelo`).
+  check("KV f16 de Ornith = 32 KiB por token (8 capas)", kvBytesPorToken("f16", "ornith9b") === 32 * 1024);
+  check("KV q8_0 de Ornith a 32768 = 544 MiB", kvMiB(32768, "q8_0", "ornith9b") === 544);
+  // Tabla del informe (presupuesto conservador con visión): pesos 5513 + KV + 864 de reserva + 900 de visión.
+  const tablaOrnith = [[16384, "f16", 7789], [24576, "f16", 8045], [32768, "f16", 8301], [32768, "q8_0", 7821], [32768, "q4_0", 7565]];
+  for (const [ctx, kv, esperado] of tablaOrnith) {
+    check(`VRAM de Ornith con visión (${ctx}/${kv} = ${esperado} MiB)`, estimarVramMiB({ clave: "ornith9b", ctx, kv, vision: true }) === esperado);
+  }
+  check("VRAM de Ornith sin visión (32768/f16 = 7401 MiB)", estimarVramMiB({ clave: "ornith9b", ctx: 32768, kv: "f16" }) === 7401);
+  check("la cuenta global del Bonsai no cambia sin clave", estimarVramMiB({ ctx: 65536, kv: "q4_0" }) === 7163);
+  let rejectedClave = false;
+  try {
+    kvBytesPorToken("f16", "no-existe");
+  } catch {
+    rejectedClave = true;
+  }
+  check("una clave desconocida no cae en silencio en la arquitectura del Bonsai", rejectedClave);
   // Puntos medidos con el servidor real (nvidia-smi, -ub 256, KV q4_0): el modelo los reproduce
   const medidos = [[65536, 7163], [69632, 7253], [73728, 7343], [77824, 7433], [81920, 7523]];
   for (const [ctx, usada] of medidos) {

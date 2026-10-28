@@ -1,0 +1,3 @@
+# Requisitos para los ejemplos
+# Instalación:  pip install -r requirements.txt
+openai>=1.40.0

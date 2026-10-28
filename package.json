@@ -1,0 +1,16 @@
+{
+  "name": "bonsai-local-ide",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bonsai Local IDE: chat, agente y editor local con llama-server (Windows 11, sin dependencias nuevas en la raíz)",
+  "scripts": {
+    "test": "node scripts/run-tests.mjs",
+    "test:gpu": "node scripts/run-tests.mjs gpu",
+    "test:navegador": "node scripts/run-tests.mjs navegador",
+    "test:todo": "node scripts/run-tests.mjs todo",
+    "test:listar": "node scripts/run-tests.mjs --listar"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

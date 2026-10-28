@@ -105,6 +105,34 @@ try {
   check("una salida larga conserva la cola", /ERROR_AL_FINAL/.test(larga.output) && larga.output.length < 9000);
   check("recortarCentro guarda cabeza y cola", recortarCentro(`INICIO${"m".repeat(500)}FINAL`, 100).startsWith("INICIO") && recortarCentro(`INICIO${"m".repeat(500)}FINAL`, 100).endsWith("FINAL"));
 
+  // 5d-bis. Hallazgo 12: con una salida que supera de largo el tope tambien se
+  // conserva el mensaje INICIAL (antes el `slice(-max*4)` borraba la cabeza).
+  const ancho = `node -e "console.log('INICIO_UNICO');process.stdout.write('m'.repeat(4000));process.stdout.write('\\nERROR_AL_FINAL\\n')"`;
+  const cabeCola = await ejecutarComando(ancho, { cwd: dir, timeoutMs: 20000, maxBytes: 400 });
+  check("salida enorme conserva el mensaje INICIAL", /INICIO_UNICO/.test(cabeCola.output));
+  check("salida enorme conserva el FINAL", /ERROR_AL_FINAL/.test(cabeCola.output));
+  check("salida enorme avisa del recorte", /caracteres recortados/.test(cabeCola.output));
+  check("salida enorme no crece por encima del tope", cabeCola.output.length < 500);
+
+  // 5d-ter. Lo mismo con un error real al final: código y traza tienen que sobrevivir.
+  const conError = await ejecutarComando(`node -e "console.log('PRINCIPIO_ERR');console.log('x'.repeat(4000));setTimeout(()=>{console.error('TRAZA_FINAL');process.exit(7)},30)"`, { cwd: dir, timeoutMs: 20000, maxBytes: 400 });
+  check("un error al final conserva su código", conError.code === 7);
+  check("un error al final conserva la traza", /TRAZA_FINAL/.test(conError.output));
+  check("un error al final conserva el principio", /PRINCIPIO_ERR/.test(conError.output));
+
+  // 5d-quater. Hallazgo 12: decodificacion UTF-8 incremental. Un caracter de 3 bytes
+  // partido entre dos bloques (se escribe el primer byte y, 60 ms después, el resto)
+  // antes salía como dos caracteres de reemplazo.
+  const partido = await ejecutarComando(`node -e "process.stdout.write(Buffer.from([0xe2]));setTimeout(()=>{process.stdout.write(Buffer.from([0x82,0xac]))},60)"`, { cwd: dir, timeoutMs: 20000 });
+  check("un caracter UTF-8 partido entre bloques se decodifica entero", partido.output.trim() === "€" && !partido.output.includes("\uFFFD"));
+  const acentos = await ejecutarComando(`node -e "console.log('ñ€á😀')"`, { cwd: dir, timeoutMs: 20000 });
+  check("los caracteres multibyte normales llegan intactos", /ñ€á😀/.test(acentos.output));
+
+  // 5d-quinquies. Tambien en segundo plano: cabeza y cola desde el primer bloque.
+  const fondoLargo = await lanzarEnFondo(`node -e "console.log('FONDO_INICIO');console.log('m'.repeat(4000));setTimeout(()=>console.log('FONDO_FINAL'),50)"`, { cwd: dir, esperaMs: 1200, maxBytes: 400 });
+  check("en segundo plano tambien se conservan cabeza y cola", /FONDO_INICIO/.test(fondoLargo.output) && /FONDO_FINAL/.test(fondoLargo.output));
+  fondoLargo.parar();
+
   // 5e. En segundo plano: un servidor sigue vivo, devuelve su primera salida y `parar` lo mata
   // (con sus hijos). Un comando que muere enseguida devuelve su código.
   const marcaFondo = path.join(dir, "fondo-sigue.txt").replace(/\\/g, "/");
@@ -117,6 +145,28 @@ try {
   check("parar mata el proceso en segundo plano", (fs.existsSync(marcaFondo) ? fs.readFileSync(marcaFondo, "utf8") : "") === tras);
   const muere = await lanzarEnFondo("node -e \"console.error('roto');process.exit(4)\"", { cwd: dir, esperaMs: 3000 });
   check("si muere enseguida, se sabe su código", !muere.vivo && muere.code === 4 && /roto/.test(muere.output));
+
+  // 5f. BUG-04: cleanup tolerante a EBUSY/EPERM en Windows. Se fuerza fs.rmSync a
+  // fallar como cuando el SO aun retiene el .cmd: el resultado del comando no puede
+  // romperse y no puede quedar ninguna excepcion sin capturar. Los reintentos en
+  // segundo plano (con `unref`) borran el temporal cuando Windows lo suelta.
+  const antesLimpieza = new Set(temporales());
+  const rmReal = fs.rmSync;
+  let intentosBorrado = 0;
+  fs.rmSync = () => {
+    intentosBorrado += 1;
+    throw Object.assign(new Error("handle retenido por Windows"), { code: "EBUSY" });
+  };
+  let conLimpiezaRota;
+  try {
+    conLimpiezaRota = await ejecutarComando("echo limpio\necho tambien", { cwd: dir, timeoutMs: 20000 });
+  } finally {
+    fs.rmSync = rmReal;
+  }
+  check("EBUSY al borrar el temporal no rompe el resultado", Boolean(conLimpiezaRota) && conLimpiezaRota.code === 0 && /limpio/.test(conLimpiezaRota.output));
+  check("EBUSY al borrar el temporal no lanza ninguna excepcion", intentosBorrado > 0);
+  await esperar(1200);
+  check("los reintentos en segundo plano acaban borrando el temporal", temporales().every((n) => antesLimpieza.has(n)));
 
   // 6. Un AbortController ya cancelado no lanza nada raro.
   const ac2 = new AbortController();

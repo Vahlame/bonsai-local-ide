@@ -5,10 +5,10 @@ import path from "node:path";
 // Mantener esta lista al agregar dependencias o recursos a la interfaz. No copiar por extensión:
 // el directorio de la app puede contener archivos personales de cualquier tipo o nombre.
 const ARCHIVOS = [
-  "actions.mjs", "adaptadores.mjs", "archivos-seguros.mjs", "bonsai-chat.mjs",
-  "cambio-modelo.mjs", "context.mjs", "editar.mjs", "git-seguro.mjs", "guardia.mjs",
-  "modelo.mjs", "modelo.json", "navegador.mjs", "ocr.mjs", "procesos.mjs", "ui-server.mjs",
-  "ui/app.js", "ui/iconos.js", "ui/ide.css", "ui/ide.js", "ui/index.html", "ui/markdown.js",
+  "actions.mjs", "adaptadores.mjs", "almacen-json.mjs", "archivos-seguros.mjs", "bonsai-chat.mjs",
+  "cambio-modelo.mjs", "context.mjs", "diagnosticos.mjs", "editar.mjs", "git-seguro.mjs", "guardia.mjs", "historial.mjs", "lecturas.mjs",
+  "modelo.mjs", "modelo.json", "navegador.mjs", "ocr.mjs", "procesos.mjs", "sse.mjs", "terminal.mjs", "ui-server.mjs",
+  "ui/app.js", "ui/chat-core.js", "ui/iconos.js", "ui/ide.css", "ui/ide.js", "ui/index.html", "ui/markdown.js", "ui/paneles.js",
   "ui/tema.css", "ui/fuentes/fuentes.css", "ui/fuentes/inter-latin.woff2",
   "ui/fuentes/jetbrains-mono-latin.woff2",
 ];

@@ -1,0 +1,582 @@
+{
+ "id": "sqlite",
+ "titulo": "Base de datos con sqlite3",
+ "nivel": "medio",
+ "ok": true,
+ "segundos": 13.5,
+ "saltos": 3,
+ "acciones": [
+  {
+   "kind": "write",
+   "title": "inventario.py",
+   "state": "done",
+   "detail": "--- /dev/null\n+++ inventario.py\n+import sqlite3\n+\n+# Elimina el archivo si existe y crea la base de datos nueva\n+try:\n+    import os\n+    if os.path.exists(\"inventario.db\"):\n+        os.remove(\"inventario.db\")\n+except Exception:\n+    pass\n+\n+conn = sqlite3.connect(\"inventario.db\")\n+cur = conn.cursor()\n+\n+# Crea la tabla productos\n+cur.execute(\"\"\"\n+    CREATE TABLE productos (\n+        id INTEGER PRIMARY KEY AUTOINCREMENT,\n+        nombre TEXT NOT NULL,\n+        stock INTEGER NOT NULL\n+    )\n+\"\"\")\n+\n+# Inserta 4 productos\n+productos = [\n+    (\"tornillo\", 120),\n+    (\"tuerca\", 3),\n+    (\"arandela\", 40),\n+    (\"clavo\", 2),\n+]\n+cur.executemany(\"INSERT INTO productos (nombre, stock) VALUES (?, ?)\", productos)\n+conn.commit()\n+\n+# Muestra los productos con stock menor que 5\n+cur.execute(\"SELECT id, nombre, stock FROM productos WHERE stock < 5 ORDER BY stock ASC\")\n+bajos = cur.fetchall()\n+print(\"Productos con stock menor que 5:\")\n+for row in bajos:\n+    print(f\"  - {row[1]}: {row[2]} en stock\")\n+\n+conn.close()"
+  },
+  {
+   "kind": "cmd",
+   "title": "python inventario.py",
+   "state": "done",
+   "detail": "Archivos:\nnuevo inventario.db (12288 bytes)\nProductos con stock menor que 5:\r\n  - clavo: 2 en stock\r\n  - tuerca: 3 en stock",
+   "code": 0
+  }
+ ],
+ "predichos": 532,
+ "leidos": 192,
+ "cache": 6186,
+ "tokPorSeg": 41,
+ "gpu": {
+  "muestras": 13,
+  "utilMedia": 94,
+  "utilMaxima": 96,
+  "pctAlto": 92,
+  "pctOcioso": 0,
+  "vatios": 78,
+  "tempMax": 65,
+  "mhz": 2463,
+  "vramMax": 7387
+ },
+ "fallos": [],
+ "notas": [
+  "datos ok",
+  "mostró los de stock bajo"
+ ],
+ "httpError": "",
+ "errores": [],
+ "textoFinal": "Listo. El script `inventario.py` se ejecutó correctamente y creó la base de datos `inventario.db`.\n\n**Lo que hace:**\n1. Crea la base `inventario.db` con la tabla `productos(id, nombre, stock)`.\n2. Inserta los 4 productos: tornillo (120), tuerca (3), arandela (40), clavo (2).\n3. Muestra en pantalla los que tienen stock menor que 5:\n   - **clavo: 2 en stock**\n   - **tuerca: 3 en stock**\n\nComo era de esperar, tornillo y arandela quedan fuera por tener stock alto (120 y 40).",
+ "pasos": [
+  "write:done inventario.py",
+  "cmd:done(0) python inventario.py"
+ ],
+ "eventos": [
+  {
+   "type": "start"
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 0,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 12,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 24,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "tool_progress",
+   "name": "archivo",
+   "ruta": "",
+   "chars": 1
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 26,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "tool_progress",
+   "name": "archivo",
+   "ruta": "inventario.py",
+   "chars": 126
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 75,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "tool_progress",
+   "name": "archivo",
+   "ruta": "inventario.py",
+   "chars": 296
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 142,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "tool_progress",
+   "name": "archivo",
+   "ruta": "inventario.py",
+   "chars": 496
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 221,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "tool_progress",
+   "name": "archivo",
+   "ruta": "inventario.py",
+   "chars": 610
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 274,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "tool_progress",
+   "name": "archivo",
+   "ruta": "inventario.py",
+   "chars": 739
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 331,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "tool_progress",
+   "name": "archivo",
+   "ruta": "inventario.py",
+   "chars": 905
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 399,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "tool_progress",
+   "name": "archivo",
+   "ruta": "inventario.py",
+   "chars": 1035
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 456,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "speed",
+   "t": "2026-10-28T05:26:07.139Z",
+   "cache_n": 1763,
+   "prompt_n": 84,
+   "prompt_ps": 608.7,
+   "predicted_n": 332,
+   "predicted_ps": 41.1,
+   "prompt_tokens": 1847,
+   "n_ctx": 32768,
+   "continued": false
+  },
+  {
+   "type": "usage",
+   "prompt": 1847,
+   "generated": 20,
+   "cap": 29568,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 1,
+   "memory": 0
+  },
+  {
+   "type": "action",
+   "id": "t3-a1",
+   "kind": "write",
+   "title": "inventario.py",
+   "state": "done",
+   "detail": "--- /dev/null\n+++ inventario.py\n+import sqlite3\n+\n+# Elimina el archivo si existe y crea la base de datos nueva\n+try:\n+    import os\n+    if os.path.exists(\"inventario.db\"):\n+        os.remove(\"inventario.db\")\n+except Exception:\n+    pass\n+\n+conn = sqlite3.connect(\"inventario.db\")\n+cur = conn.cursor()\n+\n+# Crea la tabla productos\n+cur.execute(\"\"\"\n+    CREATE TABLE productos (\n+        id INTEGER PRIMARY KEY AUTOINCREMENT,\n+        nombre TEXT NOT NULL,\n+        stock INTEGER NOT NULL\n+    )\n+\"\"\")\n+\n+# Inserta 4 productos\n+productos = [\n+    (\"tornillo\", 120),\n+    (\"tuerca\", 3),\n+    (\"arandela\", 40),\n+    (\"clavo\", 2),\n+]\n+cur.executemany(\"INSERT INTO productos (nombre, stock) VALUES (?, ?)\", productos)\n+conn.commit()\n+\n+# Muestra los productos con stock menor que 5\n+cur.execute(\"SELECT id, nombre, stock FROM productos WHERE stock < 5 ORDER BY stock ASC\")\n+bajos = cur.fetchall()\n+print(\"Productos con stock menor que 5:\")\n+for row in bajos:\n+    print(f\"  - {row[1]}: {row[2]} en stock\")\n+\n+conn.close()",
+   "undo": "mvro8q42-yk71kq"
+  },
+  {
+   "type": "file",
+   "rel": "inventario.py",
+   "url": "/p/inventario.py",
+   "bytes": 946
+  },
+  {
+   "type": "replace",
+   "text": "Voy a crear el script Python que maneja la base de datos."
+  },
+  {
+   "type": "start"
+  },
+  {
+   "type": "usage",
+   "prompt": 2207,
+   "generated": 0,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 3,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2207,
+   "generated": 10,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 3,
+   "memory": 0
+  },
+  {
+   "type": "tool_progress",
+   "name": "ejecutar",
+   "ruta": "",
+   "chars": 1
+  },
+  {
+   "type": "usage",
+   "prompt": 2207,
+   "generated": 12,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 3,
+   "memory": 0
+  },
+  {
+   "type": "speed",
+   "t": "2026-10-28T05:26:08.232Z",
+   "cache_n": 2178,
+   "prompt_n": 29,
+   "prompt_ps": 287.8,
+   "predicted_n": 39,
+   "predicted_ps": 40.9,
+   "prompt_tokens": 2207,
+   "n_ctx": 32768,
+   "continued": false
+  },
+  {
+   "type": "usage",
+   "prompt": 2207,
+   "generated": 9,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 3,
+   "memory": 0
+  },
+  {
+   "type": "replace",
+   "text": "Ahora ejecuto el script."
+  },
+  {
+   "type": "action",
+   "id": "t3-a2",
+   "kind": "cmd",
+   "title": "python inventario.py",
+   "state": "run",
+   "detail": ""
+  },
+  {
+   "type": "action",
+   "id": "t3-a2",
+   "kind": "cmd",
+   "title": "python inventario.py",
+   "state": "done",
+   "detail": "Archivos:\nnuevo inventario.db (12288 bytes)\nProductos con stock menor que 5:\r\n  - clavo: 2 en stock\r\n  - tuerca: 3 en stock",
+   "code": 0
+  },
+  {
+   "type": "start"
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 0,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 10,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 25,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 36,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 47,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 56,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 68,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 82,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 93,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 106,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 114,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 122,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 130,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 146,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 156,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 165,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 173,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 183,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 196,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 211,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 219,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "speed",
+   "t": "2026-10-28T05:26:12.387Z",
+   "cache_n": 2245,
+   "prompt_n": 79,
+   "prompt_ps": 662.6,
+   "predicted_n": 161,
+   "predicted_ps": 41,
+   "prompt_tokens": 2324,
+   "n_ctx": 32768,
+   "continued": false
+  },
+  {
+   "type": "usage",
+   "prompt": 2324,
+   "generated": 159,
+   "cap": 30592,
+   "nCtx": 32768,
+   "folded": 0,
+   "turns": 5,
+   "memory": 0
+  },
+  {
+   "type": "replace",
+   "text": "Listo. El script `inventario.py` se ejecutó correctamente y creó la base de datos `inventario.db`.\n\n**Lo que hace:**\n1. Crea la base `inventario.db` con la tabla `productos(id, nombre, stock)`.\n2. Inserta los 4 productos: tornillo (120), tuerca (3), arandela (40), clavo (2).\n3. Muestra en pantalla los que tienen stock menor que 5:\n   - **clavo: 2 en stock**\n   - **tuerca: 3 en stock**\n\nComo era de esperar, tornillo y arandela quedan fuera por tener stock alto (120 y 40)."
+  },
+  {
+   "type": "done",
+   "motivo": "completed",
+   "saltos": 3,
+   "incompleto": false
+  }
+ ],
+ "texto": "Listo. El script `inventario.py` se ejecutó correctamente y creó la base de datos `inventario.db`.\n\n**Lo que hace:**\n1. Crea la base `inventario.db` con la tabla `productos(id, nombre, stock)`.\n2. Inserta los 4 productos: tornillo (120), tuerca (3), arandela (40), clavo (2).\n3. Muestra en pantalla los que tienen stock menor que 5:\n   - **clavo: 2 en stock**\n   - **tuerca: 3 en stock**\n\nComo era de esperar, tornillo y arandela quedan fuera por tener stock alto (120 y 40)."
+}

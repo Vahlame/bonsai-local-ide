@@ -1,0 +1,14 @@
+{"t":"2026-10-28T05:25:26.685Z","cache_n":0,"prompt_n":1853,"prompt_ps":1262.4,"predicted_n":601,"predicted_ps":41,"prompt_tokens":1853,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:25:27.746Z","cache_n":2453,"prompt_n":48,"prompt_ps":458.7,"predicted_n":37,"predicted_ps":40.6,"prompt_tokens":2501,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:25:31.932Z","cache_n":2497,"prompt_n":573,"prompt_ps":1496,"predicted_n":148,"predicted_ps":40.8,"prompt_tokens":3070,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:25:32.987Z","cache_n":3217,"prompt_n":42,"prompt_ps":430.2,"predicted_n":37,"predicted_ps":40.9,"prompt_tokens":3259,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:25:37.190Z","cache_n":3295,"prompt_n":246,"prompt_ps":1314.4,"predicted_n":157,"predicted_ps":40.9,"prompt_tokens":3541,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:25:43.576Z","cache_n":1721,"prompt_n":99,"prompt_ps":599.6,"predicted_n":249,"predicted_ps":41.1,"prompt_tokens":1820,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:25:45.037Z","cache_n":2068,"prompt_n":28,"prompt_ps":238.3,"predicted_n":53,"predicted_ps":40.9,"prompt_tokens":2096,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:25:48.998Z","cache_n":2148,"prompt_n":842,"prompt_ps":824,"predicted_n":71,"predicted_ps":41,"prompt_tokens":2990,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:25:51.921Z","cache_n":1721,"prompt_n":1713,"prompt_ps":1294.8,"predicted_n":42,"predicted_ps":40.5,"prompt_tokens":3434,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:25:55.363Z","cache_n":1763,"prompt_n":2107,"prompt_ps":1380.1,"predicted_n":56,"predicted_ps":40.4,"prompt_tokens":3870,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:25:58.861Z","cache_n":1763,"prompt_n":1727,"prompt_ps":1624.7,"predicted_n":92,"predicted_ps":40.7,"prompt_tokens":3490,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:26:07.139Z","cache_n":1763,"prompt_n":84,"prompt_ps":608.7,"predicted_n":332,"predicted_ps":41.1,"prompt_tokens":1847,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:26:08.232Z","cache_n":2178,"prompt_n":29,"prompt_ps":287.8,"predicted_n":39,"predicted_ps":40.9,"prompt_tokens":2207,"n_ctx":32768,"continued":false}
+{"t":"2026-10-28T05:26:12.387Z","cache_n":2245,"prompt_n":79,"prompt_ps":662.6,"predicted_n":161,"predicted_ps":41,"prompt_tokens":2324,"n_ctx":32768,"continued":false}
