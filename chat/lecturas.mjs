@@ -18,7 +18,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { rutaSegura } from "./archivos-seguros.mjs";
+import { rutaProyecto } from "./archivos-seguros.mjs";
 
 /** Tope duro para leer un archivo entero en memoria (editor, comparación, undo). */
 export const LIMITE_TEXTO = 2_000_000;
@@ -181,7 +181,7 @@ export function recorrerLineas(abs, alLinea, opts = {}) {
 export function describirLectura({ root, clave, skipExt = new Set(), presupuestoTokens = LECTURA_TOKENS }) {
   const { rel, desde, hasta, linea, colDesde, colHasta } = parseLectura(clave);
   const clean = rel.replace(/\\/g, "/");
-  const abs = rutaSegura(root, clean);
+  const abs = rutaProyecto(root, clean, { permitirRaiz: true });
   if (!abs) return `leer ${clean}: ruta no permitida`;
   let st;
   try {

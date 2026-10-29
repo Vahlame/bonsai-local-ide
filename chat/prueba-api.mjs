@@ -33,6 +33,10 @@ const PUERTO = 8793;
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bonsai-api-"));
 const proyecto = path.join(tmp, "proyecto");
 fs.mkdirSync(proyecto, { recursive: true });
+const planGuardado = { pasos: ["Compilar", "Verificar"], hechos: [1], ts: 123 };
+const paradaGuardada = { motivo: "step_limit", saltos: 192, completo: false, ts: 456 };
+fs.mkdirSync(path.join(tmp, "estado"), { recursive: true });
+fs.writeFileSync(path.join(tmp, "estado", "ui-session.json"), JSON.stringify({ memory: "", folded: 0, turns: [{ role: "user", content: "Trabajo pendiente" }], draft: "", files: [], plan: planGuardado, lastStop: paradaGuardada }));
 
 // Proyecto de prueba: un archivo, un BONSAI.md y una regla de Cursor.
 fs.writeFileSync(path.join(proyecto, "saludo.txt"), "hola mundo\nsegunda linea\n", "utf8");
@@ -188,7 +192,7 @@ try {
     fs.renameSync(undoReservado, undoDir);
   }
 
-  check("no guarda en carpeta protegida", (await pedir("POST", "/api/file", { path: "models/malo.txt", content: "x", create: true })).status === 403);
+  check("no guarda en metadatos Git", (await pedir("POST", "/api/file", { path: ".git/malo.txt", content: "x", create: true })).status === 403);
   check("no guarda fuera del proyecto", (await pedir("POST", "/api/file", { path: "../fuera.txt", content: "x", create: true })).status === 403);
   check("rechaza archivos de mas de 2 MB", (await pedir("POST", "/api/file", { path: "gordo.txt", content: "x".repeat(2_100_000), create: true })).status === 413);
   check("404 si no existe y no se pide crear", (await pedir("POST", "/api/file", { path: "nuevo.txt", content: "x" })).status === 404);
@@ -222,9 +226,10 @@ try {
 
   // --- carpetas protegidas a CUALQUIER profundidad --------------------------
   // Antes bastaba un prefijo ("./" o "sub/") para escribir dentro de node_modules o .git.
-  check("no guarda dentro de un node_modules anidado", (await pedir("POST", "/api/file", { path: "sub/node_modules/malo.js", content: "x", create: true })).status === 403);
+  check("node_modules pertenece al proyecto y admite texto explícito", (await pedir("POST", "/api/file", { path: "sub/node_modules/malo.js", content: "x", create: true })).status === 200);
   check("no guarda en .git ni con ./ delante", (await pedir("POST", "/api/file", { path: "./.git/config", content: "x", create: true })).status === 403);
-  check("no borra una carpeta protegida anidada", (await pedir("POST", "/api/fs", { op: "borrar", path: "sub/models" })).status === 403);
+  fs.mkdirSync(path.join(proyecto, "sub", "models"), { recursive: true });
+  check("models es una carpeta normal del proyecto", (await pedir("POST", "/api/fs", { op: "borrar", path: "sub/models" })).status === 200);
 
   // Una junction de Windows puede apuntar fuera aunque la ruta parezca interna.
   const externo = path.join(tmp, "externo");
@@ -248,7 +253,7 @@ try {
   check("crea un archivo vacío y sus carpetas", (await pedir("POST", "/api/fs", { op: "nuevo", path: "sub/carpeta/x.txt" })).status === 200 && fs.existsSync(path.join(proyecto, "sub", "carpeta", "x.txt")));
   check("crea una carpeta", (await pedir("POST", "/api/fs", { op: "carpeta", path: "otra" })).status === 200 && fs.statSync(path.join(proyecto, "otra")).isDirectory());
   check("no renombra a algo que existe", (await pedir("POST", "/api/fs", { op: "renombrar", path: "sub/carpeta/x.txt", to: "saludo.txt" })).status === 409);
-  check("no toca carpetas protegidas", (await pedir("POST", "/api/fs", { op: "borrar", path: "models" })).status === 403);
+  check("no toca metadatos Git", (await pedir("POST", "/api/fs", { op: "borrar", path: ".git" })).status === 403);
   check("no borra fuera del proyecto", (await pedir("POST", "/api/fs", { op: "borrar", path: "../fuera.txt" })).status === 403);
   check("no crea fuera del proyecto", (await pedir("POST", "/api/fs", { op: "nuevo", path: "../malo.txt" })).status === 403);
   const renombrado = JSON.parse((await pedir("POST", "/api/fs", { op: "renombrar", path: "sub/carpeta/x.txt", to: "sub/y.txt" })).body);
@@ -307,11 +312,15 @@ try {
 
   // --- ajustes -------------------------------------------------------------
   const porDefecto = JSON.parse((await pedir("GET", "/api/settings")).body);
-  check("ajustes por defecto", porDefecto.tema === "dark" && porDefecto.pensar === 0, JSON.stringify(porDefecto));
+  check("ajustes por defecto", porDefecto.tema === "slate" && porDefecto.pensar === 0, JSON.stringify(porDefecto));
   const puestos = JSON.parse((await pedir("POST", "/api/settings", { tema: "light", inventado: 1 })).body);
   check("guarda ajustes", puestos.tema === "light", JSON.stringify(puestos));
   check("ignora claves no permitidas", !("inventado" in puestos), JSON.stringify(puestos));
   check("los ajustes persisten", JSON.parse((await pedir("GET", "/api/settings")).body).tema === "light");
+  const limites = JSON.parse((await pedir("POST", "/api/settings", { saltosTope: 288, comandoSegundos: 900, continuarAuto: false })).body);
+  check("los controles de autonomía y tiempo se guardan", limites.saltosTope === 288 && limites.comandoSegundos === 900 && limites.continuarAuto === false);
+  const releidos = JSON.parse((await pedir("GET", "/api/settings")).body);
+  check("los límites de ejecución sobreviven a una recarga", releidos.comandoSegundos === 900 && releidos.saltosTope === 288);
 
   // --- modelos: catálogo y cambio (sin reiniciar si ya está cargado) --------
   const modelos = await pedir("GET", "/api/modelos");
@@ -358,6 +367,13 @@ try {
   // --- git -----------------------------------------------------------------
   const gitFuera = JSON.parse((await pedir("GET", "/api/git")).body);
   check("detecta que no hay repositorio git", gitFuera.repo === false, JSON.stringify(gitFuera));
+  const chats = JSON.parse((await pedir("GET", "/api/chats")).body);
+  const guardadoInicio = JSON.parse(fs.readFileSync(path.join(tmp, "estado", "ui-chats", `${chats.active}.json`), "utf8"));
+  check("arranque: el archivado conserva plan y parada", JSON.stringify(guardadoInicio.plan) === JSON.stringify(planGuardado) && JSON.stringify(guardadoInicio.lastStop) === JSON.stringify(paradaGuardada));
+  check("crea otro chat", (await pedir("POST", "/api/chats", { op: "new" })).status === 200);
+  check("reabre el chat pendiente", (await pedir("POST", "/api/chats", { op: "open", id: chats.active })).status === 200);
+  const reabierto = JSON.parse(fs.readFileSync(path.join(tmp, "estado", "ui-session.json"), "utf8"));
+  check("cambiar de chat conserva el plan y el motivo de parada", JSON.stringify(reabierto.plan) === JSON.stringify(planGuardado) && JSON.stringify(reabierto.lastStop) === JSON.stringify(paradaGuardada));
 } finally {
   hijo.kill();
   falsoLlama.close();

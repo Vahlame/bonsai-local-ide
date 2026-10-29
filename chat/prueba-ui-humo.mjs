@@ -83,7 +83,7 @@ const falsoLlama = http.createServer((req, res) => {
     return json({
       default_generation_settings: { n_ctx: 16384 },
       modalities: { vision: false },
-      model_path: path.join(RAIZ, "models", "falso.gguf"),
+      model_path: path.join(RAIZ, "models", "Ornith-1.5-9B-Q4_K_M.gguf"),
     });
   }
   if (url === "/v1/models") return json({ data: [{ id: "falso.gguf" }] });
@@ -109,6 +109,7 @@ const falsoLlama = http.createServer((req, res) => {
     const mandar = (delta, finish = null) => {
       res.write(`data: ${JSON.stringify({ choices: [{ delta, finish_reason: finish }] })}\n\n`);
     };
+    mandar({ reasoning_content: "Reviso el pedido local. <b>dato literal</b>" });
     mandar({ content: contenido });
     mandar({}, "stop");
     res.write(`data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 10, completion_tokens: 2 } })}\n\n`);
@@ -264,7 +265,50 @@ try {
     textoPresupuesto.slice(0, 120),
   );
   check("el chip de contexto de la barra de estado está visible", await pagina.locator("#contexto-chip").isVisible());
+  const ajustesDialogo=pagina.locator(".dialogo").last();
+  const perfiles=ajustesDialogo.getByRole("combobox",{name:"Perfil de motor",exact:true});
+  check("hay perfiles simultáneos de visión con 16k y 32k",await perfiles.locator('option[value="8GB-VISION"]').count()===1&&await perfiles.locator('option[value="8GB-VISION-CONTEXT"]').count()===1);
+  check("está disponible 32k F16 con pensamiento",await perfiles.locator('option[value="8GB-VISION-QUALITY"]').count()===1&&await ajustesDialogo.locator('select option[value="1024"]').count()===1);
+  const temas=ajustesDialogo.getByRole("combobox",{name:"Tema visual",exact:true});
+  for(const tema of ['ocean','forest','sand','light','dark','slate']) {
+    await temas.selectOption(tema);
+    await pagina.waitForFunction(t=>document.documentElement.dataset.theme===t,tema);
+  }
+  check("los seis temas se aplican y se guardan",(await(await fetch(new URL('api/settings',url))).json()).tema==='slate');
+  await ajustesDialogo.getByRole("combobox",{name:"Modo de respuesta",exact:true}).selectOption("consulta");
+  await pagina.waitForFunction(async()=> (await (await fetch('/api/settings')).json()).modoRespuesta==='consulta');
+  check("el modo consulta se guarda",(await (await fetch(new URL("api/settings",url))).json()).modoRespuesta==="consulta");
+  let perfilEnviado;
+  await pagina.route('**/api/modelos',async route=>{
+    if(route.request().method()!=="POST")return route.continue();
+    perfilEnviado=route.request().postDataJSON();
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({ok:true,cambiado:true,nombre:"Modelo simulado",nCtx:32768,vision:true})});
+  });
+  await perfiles.selectOption("8GB-VISION-CONTEXT");
+  await ajustesDialogo.getByRole("button",{name:"Aplicar perfil",exact:true}).click();
+  await pagina.waitForFunction(()=>!document.querySelector('button#modelo-chip')?.disabled);
+  await esperar(350);
+  check("Aplicar perfil envía el preset y pide recarga",perfilEnviado?.enginePreset==="8GB-VISION-CONTEXT"&&perfilEnviado.recargar===true);
+  const artefactos=process.env.BONSAI_UI_EVIDENCE;
+  if(artefactos){fs.mkdirSync(artefactos,{recursive:true});await pagina.screenshot({path:path.join(artefactos,"ui-desktop.png")});}
+  await pagina.setViewportSize({width:390,height:844});
+  check("Ajustes no desborda horizontalmente a 390px",await ajustesDialogo.evaluate(e=>e.scrollWidth<=e.clientWidth+2));
+  if(artefactos)await pagina.screenshot({path:path.join(artefactos,"ui-mobile.png")});
   await pagina.locator(".dialogo").last().getByRole("button", { name: "Cerrar", exact: true }).click();
+  await pagina.setViewportSize({width:1440,height:960});
+  await pagina.locator('#input').fill('Hola, responde una frase breve.');
+  await pagina.locator('#send').click();
+  await pagina.locator('.reasoning-panel pre').first().waitFor({timeout:10000});
+  check("el pensamiento llega a un panel separado",(await pagina.locator('.reasoning-panel pre').first().textContent()).includes('<b>dato literal</b>'));
+  check("el pensamiento se pinta como texto seguro",await pagina.locator('.reasoning-panel pre b').count()===0);
+  await pagina.waitForFunction(()=>!document.querySelector('#stop')||document.querySelector('#stop').hidden,null,{timeout:10000});
+  await esperar(250);
+  await pagina.reload();
+  await pagina.locator('.reasoning-panel pre').first().waitFor({timeout:10000});
+  check("el pensamiento se conserva al recargar",(await pagina.locator('.reasoning-panel pre').first().textContent()).includes('Reviso el pedido local.'));
+  await pagina.waitForFunction(()=>document.querySelector('#vram-free')?.textContent.includes('MiB libres'),{timeout:10000});
+  check("VRAM libre visible",await pagina.locator('#vram-free').isVisible());
+  if(artefactos)await pagina.screenshot({path:path.join(artefactos,'ui-desktop.png')});
 
   // ---- 5. Errores de consola al final (todo lo anterior incluido) ----
   check("sin errores de consola durante toda la prueba", erroresConsola.length === 0, erroresConsola.slice(0, 3).join(" | "));

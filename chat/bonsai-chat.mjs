@@ -33,6 +33,8 @@ import { PC_TOOLS, stripFakeToolText } from "./actions.mjs";
 import { escribirJsonAtomico, leerJson } from "./almacen-json.mjs";
 import { leerSSE } from "./sse.mjs";
 import { MODELO, muestreo } from "./modelo.mjs";
+import { CODER_CONFIG, CODER_SYSTEM, CODER_TOOLS } from "./coder-harness.mjs";
+import { contextoEntorno } from "./entorno.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SESSION_PATH = path.join(ROOT, "session.json");
@@ -174,6 +176,21 @@ function status(msg) {
   process.stderr.write(`\x1b[90m${msg}\x1b[0m\n`);
 }
 
+/** Estado de la tarea que debe sobrevivir tanto al reinicio como al cambio de chat. */
+export function metadatosSesion(raw) {
+  const meta = {};
+  const plan = raw?.plan;
+  if (plan && Array.isArray(plan.pasos) && plan.pasos.every((s) => typeof s === "string") && Array.isArray(plan.hechos) && plan.hechos.every(Number.isInteger)) {
+    meta.plan = { pasos: [...plan.pasos], hechos: [...plan.hechos], ...(Number.isFinite(plan.ts) ? { ts: plan.ts } : {}) };
+  }
+  const stop = raw?.lastStop;
+  if (stop && typeof stop.motivo === "string" && Number.isInteger(stop.saltos) && typeof stop.completo === "boolean") {
+    meta.lastStop = { motivo: stop.motivo, saltos: stop.saltos, completo: stop.completo, ...(Number.isFinite(stop.ts) ? { ts: stop.ts } : {}) };
+  }
+  if (raw?.taskState && typeof raw.taskState.goal === "string" && typeof raw.taskState.phase === "string") meta.taskState = structuredClone(raw.taskState);
+  return meta;
+}
+
 export class BonsaiChat {
   /**
    * @param {{ host: string, port: number, historyCap: number, sessionPath?: string, think?: number, perfil?: string, parallelTools?: boolean, timingsPath?: string | null, faseSalto?: "plan" | "lectura" | "escritura" | "final" | "charla" }} opts
@@ -235,6 +252,9 @@ export class BonsaiChat {
     this.vision = false;
     /** Tope de tokens por imagen (--image-max-tokens); se reserva en la ventana al mandar imágenes. */
     this.imageMaxTokens = 1024;
+    this.agentProfile = opts.agentProfile || process.env.BONSAI_AGENT_PROFILE || "legacy";
+    this.coderTask = null;
+    this.promptCountCache = new Map();
   }
 
   /**
@@ -345,6 +365,7 @@ export class BonsaiChat {
    * @returns {number}
    */
   reservaSalida() {
+    if (this.agentProfile === "small-local-coder") { const c = this.coderTask?.config || this.coderConfig || CODER_CONFIG; return Math.min(c.outputTokens, Math.floor((this.nCtx || c.contextTokens) / 3)); }
     const fase = this.faseSalto;
     const conHerramientas = this.actOnPc && this.toolChoice !== "none";
     const reservaFase = conHerramientas
@@ -358,7 +379,9 @@ export class BonsaiChat {
     // La reserva de salida es adaptativa (ver reservaSalida) y el tope que pidió el usuario
     // (configuredCap) sigue mandando: si es menor que lo que cabe, se respeta.
     const reserva = this.reservaSalida();
-    const ceiling = this.nCtx > 0 ? Math.max(512, this.nCtx - reserva - 128) : this.configuredCap;
+    const coderConfig = this.coderTask?.config || this.coderConfig || CODER_CONFIG;
+    const ventana = this.agentProfile === "small-local-coder" ? Math.min(this.nCtx || coderConfig.contextTokens, coderConfig.contextTokens) : this.nCtx;
+    const ceiling = ventana > 0 ? Math.max(512, ventana - reserva - 128 - (this.pendingImageTokens || 0)) : this.configuredCap;
     return Math.max(512, Math.min(this.configuredCap, ceiling) - this.tighten);
   }
 
@@ -430,7 +453,7 @@ export class BonsaiChat {
         files.push({ rel: file.rel, bytes: Number(file.bytes) || 0 });
       }
     }
-    this.session = { memory, folded, turns: clean, draft: "", files };
+    this.session = { memory, folded, turns: clean, draft: "", files, ...metadatosSesion(raw) };
   }
 
   saveSession() {
@@ -501,10 +524,23 @@ export class BonsaiChat {
     if (think && this.thinkBudget > 0) {
       return {
         chat_template_kwargs: { enable_thinking: true, reasoning_effort: MODELO.razonamiento.esfuerzo },
-        thinking_budget_tokens: this.thinkBudget,
+        thinking_budget_tokens: this.effectiveThinkingBudget(),
       };
     }
     return { chat_template_kwargs: { enable_thinking: false } };
+  }
+
+  thinkingLimit() {
+    const config = this.coderTask?.config || this.coderConfig || CODER_CONFIG;
+    const output = this.reservaSalida();
+    // Keep two thirds for small profiles, up to 2k for an edit/answer on larger ones.
+    return Math.min(config.thinkingTokens ?? 512, Math.max(0, output - Math.min(2048, Math.ceil(output * 2 / 3))));
+  }
+
+  effectiveThinkingBudget() {
+    return this.agentProfile === "small-local-coder"
+      ? Math.min(this.thinkBudget, this.thinkingLimit())
+      : this.thinkBudget;
   }
 
   /**
@@ -520,7 +556,9 @@ export class BonsaiChat {
   }
 
   toolFields() {
+    if (this.consultation) return { tool_choice: "none" };
     if (!this.actOnPc) return {};
+    if (this.agentProfile === "small-local-coder") return { tools: CODER_TOOLS, tool_choice: this.toolChoice === "auto" && this.coderTask?.state.phase === "PLAN" ? {type:"function",function:{name:"plan"}} : this.toolChoice, parallel_tool_calls: false };
     return { tools: PC_TOOLS, tool_choice: this.toolChoice, parallel_tool_calls: this.parallelTools };
   }
 
@@ -573,14 +611,21 @@ export class BonsaiChat {
   async countPrompt(messages, continueFinal) {
     /** @type {Record<string, unknown>} */
     const body = { model: this.model, messages, ...this.templateFields(), ...this.toolFields() };
+    const fallbackCount = () => this.agentProfile === "small-local-coder"
+      ? Buffer.byteLength(JSON.stringify(messages), "utf8") + Buffer.byteLength(JSON.stringify(this.toolFields()), "utf8")
+      : this.estimateMessages(messages);
     if (continueFinal) {
       body.continue_final_message = true;
       body.add_generation_prompt = false;
     }
+    // Bounded exact-count cache. Includes model, template and tools, so changes invalidate it.
+    const countKey = this.agentProfile === "small-local-coder" ? JSON.stringify(body) : "";
+    if (countKey && this.promptCountCache.has(countKey)) return this.promptCountCache.get(countKey);
+    const remember = (n) => { if (countKey) { this.promptCountCache.set(countKey, n); while (this.promptCountCache.size > 8) this.promptCountCache.delete(this.promptCountCache.keys().next().value); } return n; };
     try {
       const data = await this.postJson("/v1/chat/completions/input_tokens", body);
       const n = readTokenCount(data);
-      if (n !== null) return n;
+      if (n !== null) return remember(n);
     } catch (err) {
       if (this.active?.signal.aborted || (err instanceof Error && err.name === "AbortError")) throw err;
       if (isContextError(err)) {
@@ -598,10 +643,10 @@ export class BonsaiChat {
       const prompt = rendered && typeof rendered === "object"
         ? /** @type {{prompt?: unknown}} */ (rendered).prompt
         : null;
-      if (typeof prompt !== "string") return this.estimateMessages(messages);
+      if (typeof prompt !== "string") return fallbackCount();
       const tokens = await this.postJson("/tokenize", { content: prompt, add_special: false });
       const n = readTokenCount(tokens);
-      return n ?? this.estimateMessages(messages);
+      return n !== null ? remember(n) : fallbackCount();
     } catch (err) {
       if (this.active?.signal.aborted || (err instanceof Error && err.name === "AbortError")) throw err;
       if (isContextError(err)) {
@@ -610,7 +655,7 @@ export class BonsaiChat {
       // un poco por encima del tope actual fuerza el mismo repliegue sin envenenar el estado.
       return this.historyCap() + 64;
     }
-      return this.estimateMessages(messages);
+      return fallbackCount();
     }
   }
 
@@ -776,7 +821,8 @@ export class BonsaiChat {
    * @returns {string}
    */
   agentRules() {
-    return this.actOnPc ? agentText({ python: this.pythonCmd }) : "";
+    if (this.consultation) return "Responde a la consulta usando el texto y las imágenes adjuntas. No llames herramientas ni modifiques archivos. Sigue el formato solicitado por el usuario.";
+    return this.actOnPc ? agentText({ python: this.pythonCmd, ...this.entornoAgente }) : "";
   }
 
   /**
@@ -797,6 +843,7 @@ export class BonsaiChat {
   }
 
   async packHistory() {
+    if (this.agentProfile === "small-local-coder" && this.coderTask) return this.packCoderHistory();
     let clipAnchor = false;
     let changed = false;
     for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -866,6 +913,47 @@ export class BonsaiChat {
     return { messages: solo.messages, promptTokens: estimateTokens(solo.messages.map((msg) => msg.content).join("\n")), changed: true, anchorClipped: true };
   }
 
+  /** Keep instructions + original requirements intact; discard complete stale tool groups first. */
+  async packCoderHistory() {
+    const task = this.coderTask;
+    task.stateBudget = Math.max(180, Math.min(600, Math.floor(this.historyCap() * 0.12)));
+    task.contextHint = "";
+    const system = [CODER_SYSTEM, contextoEntorno({root:task.root,python:this.pythonCmd,...this.entornoAgente}), this.rules ? `PROJECT RULES:\n${this.rules}` : "", task.projectMetadata ? `PROJECT METADATA:\n${takeHeadByTokens(task.projectMetadata,250,estimateTokens)}` : ""].filter(Boolean).join("\n\n");
+    const turns = this.session.turns.slice(task.startTurnIndex || 0);
+    const groups = [];
+    for (const turn of turns.slice(1)) {
+      if (turn.role === "tool" && groups.length) groups.at(-1).push(turn);
+      else groups.push([turn]);
+    }
+    let recent = groups.slice(task.invalid ? -1 : -4), map = task.invalid ? "" : task.initialMap, snippets = task.invalid ? "" : task.initialSnippets;
+    const convert = (t) => ({role:t.role,content:typeof t.content === "string" ? t.content : "",...(t.role === "tool" ? {tool_call_id:t.toolCallId} : {}),...(t.toolCalls?.length ? {tool_calls:t.toolCalls.map((c,i)=>({id:c.id||`call_${i}`,type:"function",function:{name:c.name,arguments:typeof c.arguments === "string" ? c.arguments : JSON.stringify(c.arguments)}}))} : {})});
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const messages = [{role:"system",content:system},{role:"user",content:[task.state.goal,map?`MAPA (solo metadatos):\n${map}`:"",snippets?`CONTEXTO SELECCIONADO:\n${snippets}`:""].filter(Boolean).join("\n\n")},...recent.flat().map(convert),{role:"user",content:task.dynamic()}];
+      const count = await this.countPrompt(messages,false);
+      if (count <= this.historyCap()) {
+        task.sentContext = true;
+        task.trace("llm_request",{promptTokens:count,outputReserved:this.reservaSalida(),mapTokens:estimateTokens(map),filesSelected:task.state.inspected});
+        return {messages,promptTokens:count,changed:false,anchorClipped:false};
+      }
+      if (recent.length > 1) { recent.shift(); continue; }
+      if (map) { map=""; continue; }
+      if (snippets) { snippets=""; if (!task.sentContext) task.state.inspected=[]; continue; }
+      if (recent.length && recent.flat().some(t=>t.role==="tool" && estimateTokens(t.content)>256)) {
+        recent=recent.map(g=>g.map(t=>t.role==="tool"?{...t,content:takeHeadByTokens(t.content,256,estimateTokens)+"\n[resultado recortado; consulta líneas concretas]"}:t));continue;
+      }
+      if (recent.length) {
+        // Drop the entire correlated call/result group, including oversized edit
+        // arguments. A result that was never delivered must not authorize editing.
+        task.trace("context_group_dropped", { groups: recent.length });
+        recent=[]; task.state.inspected=[];
+        task.contextHint="Se omitió el último resultado por tamaño. Vuelve a leer solo las líneas necesarias antes de editar.";
+        continue;
+      }
+      throw new Error("El pedido original y las instrucciones no caben en el presupuesto. Reduce el pedido o configura más contexto; no se truncaron los requisitos.");
+    }
+    throw new Error("No se pudo ajustar el contexto sin perder requisitos.");
+  }
+
   /**
    * @param {Array<{role: string, content: string}>} messages
    * @param {number} maxTokens
@@ -874,6 +962,8 @@ export class BonsaiChat {
    * @returns {Promise<{ chunk: string, reason: string, toolCalls: Array<{id: string, name: string, arguments: string}>, timings: Record<string, number> | null, usage: Record<string, number> | null, completo: boolean, motivo: string }>}
    */
   async streamSlice(messages, maxTokens, continueFinal, signal) {
+    const requestStarted = performance.now();
+    let firstUsefulDelta = null;
     // El razonamiento (si está encendido) solo acompaña a una generación nueva: una
     // continuación ya viene con el bloque de pensamiento cerrado en la plantilla.
     const think = !continueFinal && this.pensarEsteSalto !== false;
@@ -883,8 +973,8 @@ export class BonsaiChat {
       messages,
       stream: true,
       stream_options: { include_usage: true },
-      cache_prompt: true,
-      max_tokens: maxTokens,
+      cache_prompt: this.agentProfile === "small-local-coder" ? (this.coderTask?.config || this.coderConfig || CODER_CONFIG).promptCache !== false : true,
+      max_tokens: this.agentProfile === "small-local-coder" ? Math.min(maxTokens,this.reservaSalida()) : maxTokens,
       ...this.samplingFields(think),
       ...this.templateFields(think),
       ...this.toolFields(),
@@ -947,12 +1037,18 @@ export class BonsaiChat {
           if (json.usage && typeof json.usage === "object") usage = json.usage;
           const choice = json.choices?.[0];
           const delta = choice?.delta || {};
+          if (firstUsefulDelta === null && (delta.content || delta.tool_calls?.length)) firstUsefulDelta = performance.now();
           const token = delta.content ?? "";
           if (token) {
             chunk += token;
             this.emitToken(token);
           }
           if (typeof delta.reasoning_content === "string" && delta.reasoning_content) {
+            const visible = delta.reasoning_content.slice(0, Math.max(0, 65536 - (this.currentReasoning || "").length));
+            if (visible) {
+              this.currentReasoning = (this.currentReasoning || "") + visible;
+              this.emit({ type: "reasoning", text: visible });
+            }
             if (!thinking) {
               thinking = true;
               this.note("[pensando…]");
@@ -1006,6 +1102,7 @@ export class BonsaiChat {
     }
     // Un trozo de continuación puede venir SIN `name` (solo `arguments`): si se tirara aquí,
     // la llamada se quedaría cortada para siempre. Vale con que traiga nombre o argumentos.
+    this.coderTask?.trace("llm_result", {latencyMs:performance.now()-requestStarted,ttftMs:firstUsefulDelta === null ? null : firstUsefulDelta-requestStarted,promptTokens:usage?.prompt_tokens,generatedTokens:usage?.completion_tokens,timings});
     return { chunk, reason, toolCalls: [...calls.values()].filter((call) => call.name || call.arguments), timings, usage, completo: cierre.completo, motivo: cierre.motivo };
   }
 
@@ -1025,8 +1122,10 @@ export class BonsaiChat {
       cache_n: timings.cache_n,
       prompt_n: timings.prompt_n,
       prompt_ps: round(timings.prompt_per_second),
+      prompt_ms: timings.prompt_ms,
       predicted_n: timings.predicted_n,
       predicted_ps: round(timings.predicted_per_second),
+      predicted_ms: timings.predicted_ms,
       prompt_tokens: usage?.prompt_tokens,
       n_ctx: this.nCtx,
       continued,
@@ -1053,20 +1152,24 @@ export class BonsaiChat {
    * @returns {Promise<void>}
    */
   async runTurn(userText, signal, imagenes = [], opts = {}) {
+    this.currentReasoning = "";
     const text = String(userText || "").trim();
     const resultados = Array.isArray(opts.resultados) ? opts.resultados.filter((r) => r && typeof r.toolCallId === "string") : [];
+    if (this.vision && this.coderTask && imagenes.length) this.coderTask.images = [...imagenes];
+    const taskImages = this.coderTask?.images || imagenes;
+    this.pendingImageTokens = this.vision ? (taskImages.length + resultados.reduce((n,r)=>n+(r.imagenes?.length || 0),0)) * (this.imageMaxTokens + 64) : 0;
     // Las imágenes de herramientas se adjuntan solo a SU resultado y solo en este salto.
     // No se guardan data URLs en el historial ni se atribuyen al pedido del usuario.
     const adjuntar = (messages) => {
-      let total = imagenes.length;
-      this.aplicarImagenes(messages, imagenes);
+      let total = taskImages.length;
+      this.aplicarImagenes(this.coderTask ? messages.slice(0,2) : messages, taskImages);
       for (const r of resultados) {
         if (this.vision && Array.isArray(r.imagenes) && r.imagenes.length) {
           this.aplicarImagenes(messages, r.imagenes, r.toolCallId);
           total += r.imagenes.length;
         }
       }
-      return this.vision ? total * this.imageMaxTokens : 0;
+      return this.vision ? total * (this.imageMaxTokens + 64) : 0;
     };
     if (!text && !resultados.length) return;
     for (const r of resultados) {
@@ -1290,6 +1393,7 @@ export class BonsaiChat {
     if (spoken.trim() || toolCalls.length) {
       /** @type {{role: "assistant", content: string, toolCalls?: Array<{id: string, name: string, arguments: string}>, cortadas?: string[]}} */
       const turn = { role: "assistant", content: spoken };
+      if (this.currentReasoning) turn.reasoning = this.currentReasoning;
       if (toolCalls.length) turn.toolCalls = toolCalls;
       if (cortadas.length) turn.cortadas = cortadas;
       this.session.turns.push(turn);

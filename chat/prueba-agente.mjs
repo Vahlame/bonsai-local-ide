@@ -359,7 +359,7 @@ try {
   check("Ctrl+K trae un diff", String(ed.diff || "").includes("-original") && String(ed.diff || "").includes("+linea editada"), String(ed.diff || "").slice(0, 120));
   check("Ctrl+K NO escribe el archivo", fs.readFileSync(path.join(proyecto, "hola2.txt"), "utf8") === "original\nsegunda\n");
   check("Ctrl+K sin instrucción da 400", (await pedir("POST", "/api/edit", { path: "hola2.txt", start: 1, end: 1 })).status === 400);
-  check("Ctrl+K en carpeta protegida da 403", (await pedir("POST", "/api/edit", { path: "models/x.txt", start: 1, end: 1, instruccion: "x" })).status === 403);
+  check("Ctrl+K en metadatos Git da 403", (await pedir("POST", "/api/edit", { path: ".git/x.txt", start: 1, end: 1, instruccion: "x" })).status === 403);
   check("Ctrl+K de un archivo que no existe da 404", (await pedir("POST", "/api/edit", { path: "noexiste.txt", start: 1, end: 1, instruccion: "x" })).status === 404);
 
   // --- 6. Imagen adjunta: se guarda y se avisa de que no hay visión ---------
@@ -529,7 +529,7 @@ try {
   await pedir("POST", "/api/permit", { mode: "all" });
   await chat("prueba del servidor de fondo");
   const resFondo = (id) => String(visto.find((b) => (b.messages || []).some((m) => m.tool_call_id === id))?.messages?.find((m) => m.tool_call_id === id)?.content || "");
-  check("el servidor queda en segundo plano", /Corriendo en segundo plano/.test(resFondo("sf1")) && /escuchando en 8798/.test(resFondo("sf1")), resFondo("sf1").slice(0, 200));
+  check("el servidor queda en segundo plano", /Lanzado en segundo plano/.test(resFondo("sf1")) && /id bg/.test(resFondo("sf1")) && /Sobrevive al turno/.test(resFondo("sf1")) && /escuchando en 8798/.test(resFondo("sf1")), resFondo("sf1").slice(0, 200));
   check("otro comando lo consulta mientras corre", /hola desde el fondo/.test(resFondo("sf2")), resFondo("sf2").slice(0, 200));
   await new Promise((r) => setTimeout(r, 1500));
   const sigueVivo = await fetch("http://127.0.0.1:8798").then(() => true).catch(() => false);

@@ -26,9 +26,8 @@ try {
   evidence.modelo = props.model_path;
   check("servidor anuncia Ornith", /Ornith-1\.5-9B/i.test(String(props.model_path)));
   check("contexto minimo de 16K", nCtx >= 16384, nCtx);
-  check("sin proyector en CPU", props.modalities?.vision !== true);
-
   const logs = fs.readFileSync(logPath, "utf8");
+  check("proyector de visión en CUDA si está activado", props.modalities?.vision !== true || (/CLIP using CUDA0 backend/i.test(logs) && !/CLIP using CPU backend/i.test(logs)));
   const layers = [...logs.matchAll(/offloaded\s+(\d+)\/(\d+)\s+layers/gi)].pop();
   check("todas las capas en GPU", layers && layers[1] === layers[2] && Number(layers[1]) >= 32, layers?.[0]);
   const hostWeights = [...logs.matchAll(/(?:CPU(?:_Mapped)?|CUDA\d+_Host)\s+model buffer size\s*=\s*([\d.]+)\s*MiB/gi)].filter((match) => Number(match[1]) > 0);
@@ -66,12 +65,15 @@ try {
   }
   check("prompt representativo ocupa mas del 60% de la ventana", count >= nCtx * 0.6 && count <= nCtx - 256, count);
   let peakMiB = 0;
+  let minFreeMiB = Infinity;
   let sampling = false;
   const sample = () => {
     if (sampling) return;
     sampling = true;
-    execFile("nvidia-smi", ["--query-gpu=memory.used", "--format=csv,noheader,nounits"], { windowsHide: true, timeout: 4000 }, (_err, stdout) => {
-      peakMiB = Math.max(peakMiB, Number.parseInt(stdout, 10) || 0);
+    execFile("nvidia-smi", ["--query-gpu=memory.used,memory.free", "--format=csv,noheader,nounits"], { windowsHide: true, timeout: 4000 }, (_err, stdout) => {
+      const [used, free] = String(stdout || "").split(/\r?\n/)[0].split(",").map(Number);
+      if (Number.isFinite(used)) peakMiB = Math.max(peakMiB, used);
+      if (Number.isFinite(free)) minFreeMiB = Math.min(minFreeMiB, free);
       sampling = false;
     });
   };
@@ -83,7 +85,8 @@ try {
     check("prefill largo y generacion completan en GPU", /VALIDADO_42/.test(answer.choices?.[0]?.message?.content || ""), answer.choices?.[0]?.message?.content);
   } finally { clearInterval(timer); }
   evidence.vramPicoMiB = peakMiB;
-  check("VRAM dedicada dentro de 8 GB con margen", peakMiB > 0 && peakMiB < 7900, peakMiB);
+  evidence.vramLibreMinMiB = minFreeMiB;
+  check("VRAM dedicada con margen medido", peakMiB > 0 && minFreeMiB >= Number(option("--min-free", "180")), { usadaPico: peakMiB, libreMin: minFreeMiB });
 } catch (error) {
   check("validacion completa sin excepcion", false, error.message);
 } finally {

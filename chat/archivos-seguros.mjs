@@ -58,6 +58,17 @@ export function rutaSegura(root, rel) {
   return abs;
 }
 
+/** Adaptador para herramientas del agente: acepta una ruta absoluta contenida en root.
+ * Mantiene el contrato estricto de rutaSegura para las APIs del editor y deshacer. */
+export function rutaProyecto(root, valor, { permitirRaiz = false } = {}) {
+  if (typeof valor !== "string" || valor.includes("\0")) return null;
+  const base = path.resolve(root);
+  const normal = valor.trim().replace(/\\/g, "/");
+  const rel = path.isAbsolute(normal) ? path.relative(base, normal) : normal;
+  if (permitirRaiz && (rel === "" || rel === "." || rel === "./")) return base;
+  return rutaSegura(base, rel);
+}
+
 // Flush a temporary sibling before replacing the destination. A failure leaves
 // the original untouched, and cleanup never deletes the destination.
 export function escribirAtomico(abs, contenido) {

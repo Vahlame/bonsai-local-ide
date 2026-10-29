@@ -35,6 +35,8 @@ const AISLADAS = [
   { archivo: "chat/modelo.mjs" },
   { archivo: "chat/bonsai-chat.mjs", args: ["--self-test"] },
   { archivo: "chat/actions.mjs" },
+  { archivo: "chat/prueba-entorno-local.mjs" },
+  { archivo: "chat/prueba-investigacion.mjs" },
   { archivo: "chat/prueba-terminal.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-diagnosticos.mjs", timeout: 180_000 },
   { archivo: "chat/editar.mjs" },
@@ -60,6 +62,10 @@ const AISLADAS = [
   { archivo: "chat/prueba-servidor-administrado.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-perfil-gpu.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-copia-evaluacion.mjs" },
+  { archivo: "chat/prueba-small-coder.mjs" },
+  { archivo: "chat/prueba-benchmark-coder.mjs" },
+  { archivo: "chat/prueba-python-coder.mjs" },
+  { archivo: "chat/prueba-code-intelligence.mjs" },
 ];
 
 /** Suites que necesitan el modelo real cargado (GPU). No forman parte de `npm test`. */
@@ -75,6 +81,7 @@ const GPU = [
 /** Suites que abren un navegador real (Edge/Chrome headless). No forman parte de `npm test`. */
 /** @type {Suite[]} */
 const NAVEGADOR = [
+  { archivo: "chat/prueba-navegador-desarrollo.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-navegador.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-navegador-aislamiento.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-ui-humo.mjs", timeout: 180_000 },
