@@ -1,0 +1,97 @@
+{
+  "comparisonConfiguration": {
+    "context": 32768,
+    "kv": "f16",
+    "outputTokens": 3072,
+    "thinkingTokens": [
+      0,
+      1024
+    ],
+    "note": "Historical paired coding comparison; not the active 4096-token thinking preset."
+  },
+  "off": {
+    "success": 19,
+    "total": 20,
+    "thinking": 0,
+    "seconds": 560.597,
+    "promptTokens": 428150,
+    "generatedTokens": 17221,
+    "llmCalls": 153,
+    "toolCalls": 133,
+    "reasoningCharacters": 0,
+    "peakVramMiB": 7191,
+    "minFreeVramMiB": 766,
+    "failures": [
+      {
+        "seed": 43,
+        "id": "discover",
+        "stop": "repair_limit"
+      }
+    ],
+    "codeFingerprint": "4b95dd46b3c6a6a7ee6c1485ac04f19c30edce47f0bb06535dc11406834f8d21",
+    "fixtureFingerprint": "16c446abcf24623490e5f79a7f8892905ee542850510160fb328ce671980f300"
+  },
+  "on": {
+    "success": 18,
+    "total": 20,
+    "thinking": 1024,
+    "seconds": 653.887,
+    "promptTokens": 404640,
+    "generatedTokens": 21560,
+    "llmCalls": 148,
+    "toolCalls": 128,
+    "reasoningCharacters": 18932,
+    "peakVramMiB": 7191,
+    "minFreeVramMiB": 766,
+    "failures": [
+      {
+        "seed": 42,
+        "id": "cross-file",
+        "stop": "completed"
+      },
+      {
+        "seed": 43,
+        "id": "typescript-api",
+        "stop": "repair_limit"
+      }
+    ],
+    "codeFingerprint": "4b95dd46b3c6a6a7ee6c1485ac04f19c30edce47f0bb06535dc11406834f8d21",
+    "fixtureFingerprint": "16c446abcf24623490e5f79a7f8892905ee542850510160fb328ce671980f300"
+  },
+  "comparison": {
+    "timePercent": 16.641187876495934,
+    "callsPercent": -3.26797385620915
+  },
+  "vision": {
+    "report": "vision-36k-f16-4k.json",
+    "context": 36864,
+    "thinkingTokens": 4096,
+    "nativeMaxPromptTokens": 28266,
+    "peakVramMiB": 7363,
+    "minFreeVramMiB": 594
+  },
+  "runtime": {
+    "checkedAt": "2026-10-29T12:58:01.183Z",
+    "ok": true,
+    "ide": "http://127.0.0.1:8787",
+    "model": "Ornith 1.5 9B Q4_K_M",
+    "engineBuild": "b10743-adfffbe41",
+    "context": 36864,
+    "historyCap": 30592,
+    "vision": true,
+    "thinkingTokens": 4096,
+    "showThinking": true,
+    "theme": "slate",
+    "enginePreset": "8GB-VISION-LONG",
+    "kv": "f16",
+    "gpuFreeMiB": 594,
+    "gpuUsedMiB": 7363,
+    "minFreeRequiredMiB": 400,
+    "imageAdmissionMinimumMiB": 464,
+    "modelProcesses": 1,
+    "serverPid": 16344,
+    "workspace": "C:\\Users\\user\\Documents\\game 3d",
+    "launcher": "scripts/launch-ide.ps1",
+    "shortcut": "C:/Users/user/Desktop/Bonsai IDE.lnk"
+  }
+}

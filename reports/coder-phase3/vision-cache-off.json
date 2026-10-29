@@ -1,0 +1,248 @@
+{
+  "createdAt": "2026-10-29T11:31:22.517Z",
+  "context": 16384,
+  "model": "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Ornith-1.5-9B-Q4_K_M.gguf",
+  "app": "C:\\Users\\user\\Documents\\prject_local_AI\\chat",
+  "ocr": false,
+  "checks": [
+    {
+      "kind": "short-vision",
+      "ok": false,
+      "checks": {
+        "finished": true,
+        "imagesSent": true,
+        "noPersistedPixels": true,
+        "imageRead": false,
+        "noTools": true,
+        "noEdits": true
+      },
+      "error": null,
+      "expectedPin": "8234",
+      "answer": "{\"pin\": \"2234\"}",
+      "promptTokens": 3300,
+      "completionMs": 2406,
+      "requests": [
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "0bb369a78a56b3487f5d3c5929186fd4d894e4faf185594d5039dd57e711021e"
+            }
+          ],
+          "toolChoice": "none",
+          "maxTokens": 1536,
+          "cachePrompt": false,
+          "visibleContent": "{\"pin\": \"2234\"}",
+          "reasoningCharacters": 0,
+          "toolCalls": [],
+          "finishReason": "stop",
+          "usage": {
+            "completion_tokens": 10,
+            "prompt_tokens": 2724,
+            "total_tokens": 2734,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "kind": "long-vision",
+      "ok": false,
+      "checks": {
+        "finished": true,
+        "imagesSent": true,
+        "noPersistedPixels": true,
+        "imageRead": false,
+        "noTools": true,
+        "noEdits": true,
+        "longContext": true,
+        "recall": false
+      },
+      "error": null,
+      "expectedPin": "5728",
+      "answer": "No tengo una respuesta para eso.",
+      "promptTokens": 13529,
+      "completionMs": 8214,
+      "requests": [
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "3f8e92126dadc1cf5d891f1cb05b67a52562360c9a4a1180c8794523c0fcf547"
+            }
+          ],
+          "toolChoice": "none",
+          "maxTokens": 1536,
+          "cachePrompt": false,
+          "visibleContent": "<tool_call>\n<function=simbolo>\n<parameter=nombre>\npin\n</parameter>\n<parameter=referencias>\ntrue\n</parameter>\n</function>\n</tool_call>",
+          "reasoningCharacters": 0,
+          "toolCalls": [],
+          "finishReason": "stop",
+          "usage": {
+            "completion_tokens": 40,
+            "prompt_tokens": 12953,
+            "total_tokens": 12993,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "kind": "vision-coding",
+      "ok": true,
+      "checks": {
+        "finished": true,
+        "imagesSent": true,
+        "noPersistedPixels": true,
+        "correctPatch": true,
+        "originalTestsPreserved": true,
+        "imagePinnedAcrossSteps": true,
+        "hostVerified": true
+      },
+      "error": null,
+      "expectedPin": "3475",
+      "answer": "Todo verificado: el archivo devuelve exactamente las cuatro cifras de la imagen (**3475**), los tests pasan (code 0), y no se tocaron los tests.\n\nResumen:\n- **Cifras de la imagen:** 3475\n- **Edición:** `src/pin.mjs` → `return \"3475\";` (texto exacto único)\n- **Tests:** `node --test test/pin.test.mjs` → code 0, sin errores\n- Los tests no fueron modificados.\n\nTarea completada.",
+      "promptTokens": 3388,
+      "completionMs": 17679,
+      "requests": [
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "maxTokens": 1536,
+          "cachePrompt": false,
+          "visibleContent": "I'll read the exact file content and verify the digits from the image, then edit.\n\n",
+          "reasoningCharacters": 0,
+          "toolCalls": [
+            "leer"
+          ],
+          "finishReason": "tool_calls",
+          "usage": {
+            "completion_tokens": 51,
+            "prompt_tokens": 2319,
+            "total_tokens": 2370,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "maxTokens": 1536,
+          "cachePrompt": false,
+          "visibleContent": "La imagen muestra las cifras **3475**. Voy a editar devolviendo exactamente esas cuatro cifras.\n\n",
+          "reasoningCharacters": 0,
+          "toolCalls": [
+            "reemplazar"
+          ],
+          "finishReason": "tool_calls",
+          "usage": {
+            "completion_tokens": 91,
+            "prompt_tokens": 2418,
+            "total_tokens": 2509,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "maxTokens": 1536,
+          "cachePrompt": false,
+          "visibleContent": "El edit fue exitoso y los tests focalizados pasaron (code 0). Verifico el estado final.\n\n",
+          "reasoningCharacters": 0,
+          "toolCalls": [
+            "git_diff"
+          ],
+          "finishReason": "tool_calls",
+          "usage": {
+            "completion_tokens": 39,
+            "prompt_tokens": 2604,
+            "total_tokens": 2643,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "maxTokens": 1536,
+          "cachePrompt": false,
+          "visibleContent": "Verifico que el archivo quede exactamente como se espera.\n\n",
+          "reasoningCharacters": 0,
+          "toolCalls": [
+            "leer"
+          ],
+          "finishReason": "tool_calls",
+          "usage": {
+            "completion_tokens": 43,
+            "prompt_tokens": 2720,
+            "total_tokens": 2763,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "maxTokens": 1536,
+          "cachePrompt": false,
+          "visibleContent": "Todo verificado: el archivo devuelve exactamente las cuatro cifras de la imagen (**3475**), los tests pasan (code 0), y no se tocaron los tests.\n\nResumen:\n- **Cifras de la imagen:** 3475\n- **Edición:** `src/pin.mjs` → `return \"3475\";` (texto exacto único)\n- **Tests:** `node --test test/pin.test.mjs` → code 0, sin errores\n- Los tests no fueron modificados.\n\nTarea completada.",
+          "reasoningCharacters": 0,
+          "toolCalls": [],
+          "finishReason": "stop",
+          "usage": {
+            "completion_tokens": 123,
+            "prompt_tokens": 2812,
+            "total_tokens": 2935,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "peakVramMiB": 6715,
+  "minFreeVramMiB": 1242,
+  "ok": false
+}

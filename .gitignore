@@ -12,8 +12,23 @@ chat/modelo-activo.json
 chat/modelo-activo.json.tmp
 chat/.shims/
 chat/timings.jsonl
+chat/agent-traces/
 logs/
 config/optimo.json
+config/inference-toolchain.local.json
+reports/coder-phase2/baseline-app/
+reports/coder-phase2/candidate-app/
+reports/coder-phase2/candidate-v2-app/
+reports/coder-phase2/candidate-final-app/
+reports/coder-phase2/runs/
+reports/coder-phase2/*.log
+reports/coder-phase2/*.nsys-rep
+reports/coder-phase2/*.sqlite
+reports/coder-phase2/*.ncu-rep
+reports/coder-phase2/*.ncu-repz
+reports/coder-phase3/*-app/
+reports/coder-phase3/runs/
+reports/coder-phase3/*.log
 bin/
 models/
 node_modules/
@@ -49,6 +64,10 @@ id_ed25519
 # runtime CUDA de la evaluación K2 (~900 MB, con .exe y .dll), PDFs de verificación,
 # copias de estado de la interfaz y la URL efímera del túnel de Cursor.
 reports/k2-evaluation-2026-10-27/
+reports/coder-2026-10-28/baseline-app/
+reports/coder-2026-10-28/before/
+reports/coder-2026-10-28/after-*/
+reports/coder-2026-10-28/engine-*.log
 _verify_v41/
 *.bak
 URL-CURSOR.txt

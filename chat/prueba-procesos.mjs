@@ -132,6 +132,9 @@ try {
   const fondoLargo = await lanzarEnFondo(`node -e "console.log('FONDO_INICIO');console.log('m'.repeat(4000));setTimeout(()=>console.log('FONDO_FINAL'),50)"`, { cwd: dir, esperaMs: 1200, maxBytes: 400 });
   check("en segundo plano tambien se conservan cabeza y cola", /FONDO_INICIO/.test(fondoLargo.output) && /FONDO_FINAL/.test(fondoLargo.output));
   fondoLargo.parar();
+  const build = await lanzarEnFondo('node -e "console.log(\'INICIO_BUILD\');setTimeout(()=>{console.log(\'FINAL_BUILD\');process.exit(7)},250)"', { cwd: dir, esperaMs: 60 });
+  await build.finalizado;
+  check("un build en segundo plano conserva salida final y código", build.estado().vivo === false && build.estado().code === 7 && /FINAL_BUILD/.test(build.estado().output));
 
   // 5e. En segundo plano: un servidor sigue vivo, devuelve su primera salida y `parar` lo mata
   // (con sus hijos). Un comando que muere enseguida devuelve su código.

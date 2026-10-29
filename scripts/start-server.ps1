@@ -19,10 +19,12 @@ param (
     [int]$Pensar = -1,               # -1 = auto: lo del ajuste "Modo razonamiento" de la interfaz SI el modelo lo admite (catalogo.<clave>.pensar). 0 = apagado. N>0 = tope de N tokens
     [int]$Threads = 8,
     [int]$UBatch = 512,
+    [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG")][string]$EnginePreset = "",
     [int]$DormirSeg = 0,             # libera la VRAM tras N s sin peticiones (0 = nunca)
     [string]$Modelo = "",            # clave de un perfil verificado de GPU completa en chat\modelo.json
     [string]$Log = "",               # guarda todo lo que dice este script en ese archivo (lo usa el cambio de modelo)
     [switch]$Vision,                 # carga el proyector compatible en GPU
+    [switch]$SinVision,
     [switch]$VisionGpu,              # alias de Vision
     [switch]$Forzar,                 # heredado: no permite omitir la comprobacion GPU
     [switch]$DryRun,                 # no lanza nada: comprueba y muestra el comando
@@ -118,7 +120,11 @@ if ($Pensar -gt 0 -and -not $pensarCompatible) {
 }
 
 if ($claveModelo -and $M.catalogo.$claveModelo.servidor.tipo -eq "gpu-completa") {
-    & (Join-Path $PSScriptRoot "start-gpu-model.ps1") -Modelo $claveModelo -ContextSize $ContextSize -Port $Port -HostIP $HostIP -KVCacheType $KVCacheType -Pensar $Pensar -DryRun:$DryRun -DormirSeg $DormirSeg -Vision:($Vision -or $VisionGpu) -ManagedByIDE:$ManagedByIDE
+    if ($EnginePreset -and -not $PSBoundParameters.ContainsKey('Vision') -and -not $PSBoundParameters.ContainsKey('VisionGpu')) {
+        $Vision = [bool](Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json).$EnginePreset.vision
+    }
+    if ($SinVision) { $Vision = $false; $VisionGpu = $false }
+    & (Join-Path $PSScriptRoot "start-gpu-model.ps1") -Modelo $claveModelo -ContextSize $ContextSize -Port $Port -HostIP $HostIP -KVCacheType $KVCacheType -Pensar $Pensar -DryRun:$DryRun -DormirSeg $DormirSeg -Vision:($Vision -or $VisionGpu) -ManagedByIDE:$ManagedByIDE -EnginePreset $EnginePreset
     exit $LASTEXITCODE
 }
 

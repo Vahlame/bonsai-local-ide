@@ -1,0 +1,90 @@
+{
+  "8GB-VISION-LONG": {
+    "label": "Código, visión y pensamiento · 36k F16",
+    "context": 36864,
+    "kv": "f16",
+    "batch": 512,
+    "ubatch": 256,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 400,
+    "vision": true,
+    "coderOutputTokens": 6144,
+    "thinkingTokens": 4096
+  },
+  "8GB-VISION-QUALITY": {
+    "label": "Coding, visión y pensamiento · 32k F16",
+    "context": 32768,
+    "kv": "f16",
+    "batch": 512,
+    "ubatch": 256,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 400,
+    "vision": true,
+    "coderOutputTokens": 6144,
+    "thinkingTokens": 4096
+  },
+  "8GB-VISION": {
+    "label": "Coding y visión · 16k F16",
+    "context": 16384,
+    "kv": "f16",
+    "batch": 512,
+    "ubatch": 256,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 768,
+    "vision": true
+  },
+  "8GB-VISION-CONTEXT": {
+    "label": "Coding y visión · 32k Q8",
+    "context": 32768,
+    "kv": "q8_0",
+    "batch": 512,
+    "ubatch": 256,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 768,
+    "vision": true
+  },
+  "8GB-SAFE": {
+    "context": 4096,
+    "kv": "f16",
+    "batch": 256,
+    "ubatch": 128,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 1024,
+    "vision": false
+  },
+  "8GB-BALANCED": {
+    "context": 8192,
+    "kv": "f16",
+    "batch": 512,
+    "ubatch": 256,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 768,
+    "vision": false
+  },
+  "8GB-MAX-SPEED": {
+    "context": 8192,
+    "kv": "f16",
+    "batch": 1024,
+    "ubatch": 512,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 768,
+    "vision": false
+  },
+  "8GB-CONTEXT": {
+    "context": 16384,
+    "kv": "f16",
+    "batch": 512,
+    "ubatch": 256,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 768,
+    "vision": false
+  }
+}

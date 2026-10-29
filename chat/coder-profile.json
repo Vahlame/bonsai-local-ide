@@ -1,0 +1,17 @@
+{
+  "name": "small-local-coder",
+  "contextTokens": 8192,
+  "outputTokens": 1536,
+  "repoMapTokens": 600,
+  "snippetTokens": 1800,
+  "toolResultTokens": 1000,
+  "maxSteps": 32,
+  "maxRepairs": 2,
+  "timeoutMs": 300000,
+  "maxFileBytes": 131072,
+  "maxIndexBytes": 8388608,
+  "maxFiles": 1500,
+  "wholeFileMaxBytes": 12000,
+  "strategy": "auto",
+  "promptCache": true
+}

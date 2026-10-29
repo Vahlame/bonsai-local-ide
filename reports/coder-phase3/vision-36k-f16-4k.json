@@ -1,0 +1,208 @@
+{
+  "createdAt": "2026-10-29T12:55:58.400Z",
+  "context": 36864,
+  "seed": 42,
+  "fillRatio": 0.76,
+  "thinkingTokens": 4096,
+  "minFreeRequiredMiB": 400,
+  "model": "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Ornith-1.5-9B-Q4_K_M.gguf",
+  "app": "C:\\Users\\user\\Documents\\prject_local_AI\\chat",
+  "ocr": false,
+  "checks": [
+    {
+      "kind": "short-vision",
+      "ok": true,
+      "checks": {
+        "finished": true,
+        "imagesSent": true,
+        "noPersistedPixels": true,
+        "imageRead": true,
+        "noTools": true,
+        "noEdits": true
+      },
+      "error": null,
+      "expectedPin": "8234",
+      "answer": "{\"pin\": \"8234\"}",
+      "promptTokens": 1219,
+      "completionMs": 2142,
+      "requests": [
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "0bb369a78a56b3487f5d3c5929186fd4d894e4faf185594d5039dd57e711021e"
+            }
+          ],
+          "toolChoice": "none",
+          "toolDefinitions": 0,
+          "maxTokens": 6144,
+          "thinkingBudget": 4096,
+          "cachePrompt": true,
+          "visibleContent": "{\"pin\": \"8234\"}",
+          "reasoningCharacters": 67,
+          "toolCalls": [],
+          "finishReason": "stop",
+          "usage": {
+            "completion_tokens": 42,
+            "prompt_tokens": 641,
+            "total_tokens": 683,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "kind": "long-vision",
+      "ok": true,
+      "checks": {
+        "finished": true,
+        "imagesSent": true,
+        "noPersistedPixels": true,
+        "imageRead": true,
+        "noTools": true,
+        "noEdits": true,
+        "longContext": true,
+        "recall": true
+      },
+      "error": null,
+      "expectedPin": "5728",
+      "answer": "```json\n{\n  \"pin\": \"5728\",\n  \"inicio\": \"ALFA_371\",\n  \"centro\": \"BETA_824\",\n  \"fin\": \"OMEGA_592\"\n}\n```",
+      "promptTokens": 28844,
+      "completionMs": 20209,
+      "requests": [
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "3f8e92126dadc1cf5d891f1cb05b67a52562360c9a4a1180c8794523c0fcf547"
+            }
+          ],
+          "toolChoice": "none",
+          "toolDefinitions": 0,
+          "maxTokens": 6144,
+          "thinkingBudget": 4096,
+          "cachePrompt": true,
+          "visibleContent": "```json\n{\n  \"pin\": \"5728\",\n  \"inicio\": \"ALFA_371\",\n  \"centro\": \"BETA_824\",\n  \"fin\": \"OMEGA_592\"\n}\n```",
+          "reasoningCharacters": 228,
+          "toolCalls": [],
+          "finishReason": "stop",
+          "usage": {
+            "completion_tokens": 148,
+            "prompt_tokens": 28266,
+            "total_tokens": 28414,
+            "prompt_tokens_details": {
+              "cached_tokens": 82
+            }
+          }
+        }
+      ]
+    },
+    {
+      "kind": "vision-coding",
+      "ok": true,
+      "checks": {
+        "finished": true,
+        "imagesSent": true,
+        "noPersistedPixels": true,
+        "correctPatch": true,
+        "originalTestsPreserved": true,
+        "imagePinnedAcrossSteps": true,
+        "hostVerified": true
+      },
+      "error": null,
+      "expectedPin": "3475",
+      "answer": "El diff muestra únicamente el cambio pedido: `\"0000\"` → `\"3475\"`, que corresponde exactamente a las cuatro cifras de la imagen (3, 4, 7, 5). Los tests pasan. No se tocaron los tests ni ningún otro archivo.\n\nResumen: actualicé `getPin` en `src/pin.mjs` para devolver `\"3475\"`, las cuatro cifras de la imagen. Tests verifican formato de 4 dígitos y que no sea `\"0000\"`; ambos pasan.",
+      "promptTokens": 3225,
+      "completionMs": 11590,
+      "requests": [
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "toolDefinitions": 9,
+          "maxTokens": 6144,
+          "thinkingBudget": 4096,
+          "cachePrompt": true,
+          "visibleContent": "Voy a inspeccionar el archivo y verificar la imagen. La imagen muestra las cifras 3, 4, 7, 5.\n\n",
+          "reasoningCharacters": 245,
+          "toolCalls": [
+            "leer"
+          ],
+          "finishReason": "tool_calls",
+          "usage": {
+            "completion_tokens": 152,
+            "prompt_tokens": 2317,
+            "total_tokens": 2469,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "toolDefinitions": 9,
+          "maxTokens": 6144,
+          "cachePrompt": true,
+          "visibleContent": "La imagen muestra las cifras 3, 4, 7, 5. Voy a editar la función y verificar los tests.\n\n",
+          "reasoningCharacters": 0,
+          "toolCalls": [
+            "reemplazar"
+          ],
+          "finishReason": "tool_calls",
+          "usage": {
+            "completion_tokens": 96,
+            "prompt_tokens": 2431,
+            "total_tokens": 2527,
+            "prompt_tokens_details": {
+              "cached_tokens": 2229
+            }
+          }
+        },
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "toolDefinitions": 9,
+          "maxTokens": 6144,
+          "cachePrompt": true,
+          "visibleContent": "El diff muestra únicamente el cambio pedido: `\"0000\"` → `\"3475\"`, que corresponde exactamente a las cuatro cifras de la imagen (3, 4, 7, 5). Los tests pasan. No se tocaron los tests ni ningún otro archivo.\n\nResumen: actualicé `getPin` en `src/pin.mjs` para devolver `\"3475\"`, las cuatro cifras de la imagen. Tests verifican formato de 4 dígitos y que no sea `\"0000\"`; ambos pasan.",
+          "reasoningCharacters": 0,
+          "toolCalls": [],
+          "finishReason": "stop",
+          "usage": {
+            "completion_tokens": 119,
+            "prompt_tokens": 2649,
+            "total_tokens": 2768,
+            "prompt_tokens_details": {
+              "cached_tokens": 2341
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "peakVramMiB": 7363,
+  "minFreeVramMiB": 594,
+  "ok": true
+}

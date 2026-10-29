@@ -13,11 +13,23 @@ param (
     [switch]$Vision,
     [switch]$DryRun,
     [switch]$ManagedByIDE,
+    [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG")][string]$EnginePreset = "",
     # SOLO PRUEBAS: sustituye la VRAM libre medida por nvidia-smi. Se ignora sin -DryRun.
     [int]$FreeMiBOverride = 0
 )
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
+$EngineOptions = $null
+$SafetyMiB = 0
+if ($EnginePreset) {
+    $Presets = Get-Content (Join-Path $RootDir "config\local-engine-presets.json") -Raw | ConvertFrom-Json
+    $EngineOptions = $Presets.$EnginePreset
+    if (-not $EngineOptions) { throw "Preset de motor desconocido: $EnginePreset" }
+    if ($ContextSize -eq "auto") { $ContextSize = [string]$EngineOptions.context }
+    if ($KVCacheType -eq "auto") { $KVCacheType = [string]$EngineOptions.kv }
+    $SafetyMiB = [int]$EngineOptions.marginMiB
+    if (-not $PSBoundParameters.ContainsKey('Vision')) { $Vision = [bool]$EngineOptions.vision }
+}
 $Catalogo = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 $Item = $Catalogo.catalogo.$Modelo
 if (-not $Item -or $Item.servidor.tipo -ne "gpu-completa") { throw "Modelo sin perfil de GPU completa: $Modelo" }
@@ -56,10 +68,13 @@ if ($Vision) {
 }
 
 $WeightsMiB = [math]::Ceiling([int64]$Item.bytes / 1MB)
+if ($EngineOptions -and $Item.servidor.pesosGpuEstandarMiB) {
+    $WeightsMiB = [int]$Item.servidor.pesosGpuEstandarMiB
+}
 function Get-RequiredMiB([int]$ContextTokens, [string]$CacheType) {
     $ElementBytes = [double]$Catalogo.kv.bytesPorElemento.$CacheType
     $CacheBytes = $ContextTokens * [double]$GpuProfile.capasAtencionCompleta * $GpuProfile.cabezasKV * $GpuProfile.dimCabeza * 2 * $ElementBytes
-    return $WeightsMiB + [math]::Ceiling($CacheBytes / 1MB) + [int]$GpuProfile.reservaMiB + $VisionMiB
+    return $WeightsMiB + [math]::Ceiling($CacheBytes / 1MB) + [int]$GpuProfile.reservaMiB + $VisionMiB + $SafetyMiB
 }
 
 # Perfil elegido (solo modo automatico): se guarda para reutilizarlo si sigue cabiendo.
@@ -67,12 +82,16 @@ $PerfilPath = Join-Path $RootDir "logs\perfil-servidor-$Port.json"
 $KvOrder = @($Catalogo.kv.orden)
 $TechoContexto = [int]$GpuProfile.contexto
 if ($Vision) { $TechoContexto = [math]::Min($TechoContexto, [int]$VisionProfile.contexto) }
+# Invalida perfiles antiguos cuando cambia el presupuesto o el techo calibrado.
+# El contexto guardado puede ser exacto (39936), sin redondearlo a bloques de 4096.
+$FirmaPerfil = "$($Item.archivo)|$($Item.bytes)|$TechoContexto|$($GpuProfile.reservaMiB)|$VisionMiB|$($GpuProfile.capasAtencionCompleta)|$($GpuProfile.cabezasKV)|$($GpuProfile.dimCabeza)|$($GpuProfile.ubatch)|$($VisionProfile.archivo)|$($VisionProfile.bytes)|$($VisionProfile.imageMaxTokens)"
 
 function Write-PerfilElegido([int]$Contexto, [string]$CacheType) {
     try {
         $Perfil = [ordered]@{
             modelo = $Modelo; archivo = [string]$Item.archivo; puerto = $Port;
             contexto = $Contexto; kv = $CacheType; vision = [bool]$Vision;
+            configuracion = $FirmaPerfil;
             libreMiB = $FreeMiB; fecha = (Get-Date).ToUniversalTime().ToString("o")
         }
         New-Item -ItemType Directory -Force (Split-Path -Parent $PerfilPath) | Out-Null
@@ -86,10 +105,10 @@ function Get-PerfilRecordado {
     if (-not (Test-Path -LiteralPath $PerfilPath)) { return $null }
     try {
         $p = Get-Content -LiteralPath $PerfilPath -Raw | ConvertFrom-Json
-        if (-not $p -or [string]$p.modelo -ne $Modelo -or [int]$p.puerto -ne $Port -or [bool]$p.vision -ne [bool]$Vision) { return $null }
+        if (-not $p -or [string]$p.modelo -ne $Modelo -or [string]$p.archivo -ne [string]$Item.archivo -or [int]$p.puerto -ne $Port -or [bool]$p.vision -ne [bool]$Vision -or [string]$p.configuracion -ne $FirmaPerfil) { return $null }
         $Ctx = [int]$p.contexto
         $Kv = [string]$p.kv
-        if ($Ctx -lt 8192 -or $Ctx -gt $TechoContexto -or ($Ctx % 4096) -ne 0) { return $null }
+        if ($Ctx -lt 8192 -or $Ctx -gt $TechoContexto -or [double]$p.contexto -ne $Ctx) { return $null }
         if ($KvOrder -notcontains $Kv) { return $null }
         if ((Get-RequiredMiB $Ctx $Kv) -gt $FreeMiB) { return $null }
         return @{ contexto = $Ctx; kv = $Kv }
@@ -103,7 +122,7 @@ $AutoKv = ($KVCacheType -eq "auto")
 $PerfilOrigen = "explicito"
 if (-not $AutoContexto) {
     $ContextFijo = [int]$ContextSize
-    if ($ContextFijo -lt 4096 -or $ContextFijo -gt [int]$GpuProfile.contexto) { throw "Contexto admitido: 4096 a $($GpuProfile.contexto) tokens." }
+    if ($ContextFijo -lt 4096 -or $ContextFijo -gt $TechoContexto) { throw "Contexto admitido para este perfil: 4096 a $TechoContexto tokens (vision: $Vision)." }
 }
 if ($AutoContexto -or $AutoKv) {
     $ContextTokens = 0
@@ -118,12 +137,16 @@ if ($AutoContexto -or $AutoKv) {
         $PerfilOrigen = "auto"
         $KvCandidatos = if ($AutoKv) { $KvOrder } else { @($KVCacheType) }
         if ($AutoContexto) {
-            # Busca el contexto MAS GRANDE que quepa (pasos de 4096, desde el techo) y, en cada
-            # uno, el KV mas preciso (f16 > q8_0 > q4_0). No se queda en 16K ni divide por dos.
-            $Tope = [int]([math]::Floor($TechoContexto / 4096) * 4096)
+            # Prueba primero el techo EXACTO calibrado; despues los bloques inferiores.
+            # En cada contexto elige el KV mas preciso (f16 > q8_0 > q4_0).
+            $Tope = $TechoContexto
             if ($Tope -lt 8192) { throw "El techo de contexto ($TechoContexto tokens) es menor que el minimo de 8192." }
+            $Contextos = @($Tope)
+            for ($Inferior = [int]([math]::Floor($Tope / 4096) * 4096); $Inferior -ge 8192; $Inferior -= 4096) {
+                if ($Inferior -lt $Tope) { $Contextos += $Inferior }
+            }
             $Elegido = $false
-            for ($Ctx = $Tope; $Ctx -ge 8192; $Ctx -= 4096) {
+            foreach ($Ctx in $Contextos) {
                 foreach ($Kv in $KvCandidatos) {
                     if ((Get-RequiredMiB $Ctx $Kv) -le $FreeMiB) {
                         $ContextTokens = $Ctx
@@ -159,7 +182,7 @@ if ($AutoContexto -or $AutoKv) {
     $ContextTokens = [int]$ContextSize
     $KvType = $KVCacheType
 }
-if ($ContextTokens -lt 4096 -or $ContextTokens -gt [int]$GpuProfile.contexto) { throw "Contexto admitido: 4096 a $($GpuProfile.contexto) tokens." }
+if ($ContextTokens -lt 4096 -or $ContextTokens -gt $TechoContexto) { throw "Contexto admitido para este perfil: 4096 a $TechoContexto tokens (vision: $Vision)." }
 $RequiredMiB = Get-RequiredMiB $ContextTokens $KvType
 if ($RequiredMiB -gt $FreeMiB) { throw "No cabe todo en GPU: hacen falta ~$RequiredMiB MiB y hay $FreeMiB MiB libres. No se usa CPU como respaldo." }
 
@@ -179,6 +202,18 @@ $ServerArgs = @(
     "--top-k", "$($Sampling.top_k)", "--min-p", (NumberText $Sampling.min_p),
     "--presence-penalty", (NumberText $Sampling.presence_penalty), "--repeat-penalty", (NumberText $Sampling.repeat_penalty)
 )
+if ($EngineOptions) {
+    # Replace values already present; never send contradictory duplicate flags.
+    $ServerArgs[[Array]::IndexOf($ServerArgs, "-b") + 1] = [string]$EngineOptions.batch
+    $ServerArgs[[Array]::IndexOf($ServerArgs, "-ub") + 1] = [string]$EngineOptions.ubatch
+    $ServerArgs[[Array]::IndexOf($ServerArgs, "--flash-attn") + 1] = [string]$EngineOptions.flash
+    # Use llama.cpp's standard tensor placement/mmap. -ngl all still offloads every
+    # model layer, without forcing unused tensors and input embeddings into CUDA.
+    $Remove = @("--override-tensor", ".*=CUDA0", "--no-host", "--load-mode", "none")
+    $ServerArgs = @($ServerArgs | Where-Object { $Remove -notcontains $_ })
+    $ServerArgs += @("--spec-type", [string]$EngineOptions.spec, "--no-context-shift")
+    Write-Host "Preset $EnginePreset | pesos $WeightsMiB MiB | computo/runtime $($GpuProfile.reservaMiB) MiB | vision $VisionMiB MiB | margen $SafetyMiB MiB (estimaciones)" -ForegroundColor Cyan
+}
 if ($Pensar -gt 0) { $ServerArgs += @("--reasoning-budget", "$Pensar", "--reasoning-format", "deepseek") }
 else { $ServerArgs += @("--reasoning", "off") }
 if ($Vision) { $ServerArgs += @("--mmproj", $ProjectorPath, "--mmproj-offload", "--mmproj-device", "CUDA0", "--image-max-tokens", "$($VisionProfile.imageMaxTokens)") }
@@ -192,7 +227,8 @@ if ($PerfilOrigen -eq "recordado") {
     Write-Host "Perfil automatico para el puerto ${Port}: contexto $ContextTokens | KV $KvType (el mas capaz que cabe)." -ForegroundColor Cyan
 }
 Write-Host "VRAM libre: $FreeMiB MiB; presupuesto conservador: $RequiredMiB MiB. Vision GPU: $Vision." -ForegroundColor Gray
-Write-Host "Todos los tensores se fuerzan a CUDA0; ajuste de capas y cache en RAM desactivados." -ForegroundColor Gray
+if ($EngineOptions) { Write-Host "Todas las capas solicitadas en GPU; colocacion de tensores y mmap del runtime. Sin ajuste automatico ni cache de prompts en RAM." -ForegroundColor Gray }
+else { Write-Host "Todos los tensores se fuerzan a CUDA0; ajuste de capas y cache en RAM desactivados." -ForegroundColor Gray }
 
 # Para Start-Process hace falta una sola cadena de argumentos; se entrecomillan los que tengan espacios.
 function ConvertTo-ArgumentText([string]$Value) {
@@ -213,7 +249,7 @@ function Write-MarcadorAdministrado([int]$ServidorPid) {
     $Info = [ordered]@{
         modelo = $Modelo; puerto = $Port; contexto = $ContextTokens; kv = $KvType;
         vision = [bool]$Vision; pensar = $Pensar; dormir = $DormirSeg; hostIP = $HostIP;
-        pid = $PID; wrapperPid = $PID; iniciado = $WrapperTicks
+        pid = $PID; wrapperPid = $PID; iniciado = $WrapperTicks; enginePreset = $EnginePreset
     }
     if ($ServidorPid -gt 0) {
         $Info.pidServidor = $ServidorPid
@@ -225,14 +261,21 @@ function Write-MarcadorAdministrado([int]$ServidorPid) {
 if ($ManagedByIDE) {
     try { Write-MarcadorAdministrado 0 } catch { Write-Host "Aviso: no se pudo escribir el marcador del servidor administrado: $($_.Exception.Message)" -ForegroundColor Yellow }
 }
-$Exec = Start-Process -FilePath $BinPath -ArgumentList $ArgumentLine -PassThru -NoNewWindow
+$ExecOptions = @{ FilePath = $BinPath; ArgumentList = $ArgumentLine; PassThru = $true; NoNewWindow = $true }
+if ($env:BONSAI_LLAMA_LOG_PREFIX) {
+    $ExecOptions.RedirectStandardOutput = $env:BONSAI_LLAMA_LOG_PREFIX + ".out.log"
+    $ExecOptions.RedirectStandardError = $env:BONSAI_LLAMA_LOG_PREFIX + ".err.log"
+}
+$Exec = Start-Process @ExecOptions
+$null = $Exec.Handle
 if ($ManagedByIDE) {
     try { Write-MarcadorAdministrado ([int]$Exec.Id) } catch { Write-Host "Aviso: no se pudo completar el marcador con el PID real de llama-server.exe: $($_.Exception.Message)" -ForegroundColor Yellow }
 }
 $ExitCode = 1
 try {
     $Exec.WaitForExit()
-    $ExitCode = [int]$Exec.ExitCode
+    $NativeExitCode = $Exec.ExitCode
+    if ($null -eq $NativeExitCode) { $ExitCode = 1 } else { $ExitCode = [int]$NativeExitCode }
 } finally {
     if ($ManagedByIDE) {
         try {

@@ -39,7 +39,7 @@ const app = http.createServer((req, res) => {
 });
 app.on("upgrade", (req, socket) => { appHits.push(`ws:${req.url}`); socket.destroy(); });
 const appPort = await listen(app);
-const nav = new NavegadorLocal({ root, output, blockedPorts: [8080, 8787] });
+const nav = new NavegadorLocal({ root, output, blockedPorts: [8080, 8787], policy: "aislado" });
 try {
   let state = JSON.parse((await nav.run({ accion: "abrir", url: `http://127.0.0.1:${appPort}/` })).texto);
   await nav.page.waitForTimeout(500);

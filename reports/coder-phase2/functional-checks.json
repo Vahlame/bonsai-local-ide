@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-29T07:05:58.0649921Z",
+  "ideUrl": "http://127.0.0.1:8787",
+  "ideHttp": 200,
+  "modelHealth": "ok",
+  "context": 8192,
+  "agentProfile": "small-local-coder",
+  "finalSuitePassing": true,
+  "realModelSmokeSuccess": 1,
+  "realModelSmokeTotal": 1,
+  "codeFingerprint": "3970dd08ff1aceae3843269dacff182cf7ac4b9709afea041a2dbb518b4e2816",
+  "runtime": "original bin/llama-server.exe",
+  "preset": "8GB-BALANCED",
+  "processesLeftRunning": true
+}

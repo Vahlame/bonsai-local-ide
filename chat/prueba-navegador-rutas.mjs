@@ -120,7 +120,7 @@ function pedir(url) {
   });
 }
 
-const nav = new NavegadorLocal({ root, output });
+const nav = new NavegadorLocal({ root, output, policy: "aislado" });
 try {
   // fileUrl() lanza el servidor estatico interno y devuelve la URL del HTML pedido.
   const inicio = await nav.fileUrl("index.html");

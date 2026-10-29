@@ -88,19 +88,19 @@ function perfilDryRun({ libre, vision = false, puerto, contexto, kv }) {
   console.log("OK: start-gpu-model.ps1, stop-managed-server.ps1 y start-ui.ps1 son PowerShell válido");
 }
 
-assert.equal(MODELO.catalogo.ornith9b.vision.contexto, 32768, "el techo de visión de ornith9b debe ser 32768");
+assert.equal(MODELO.catalogo.ornith9b.vision.contexto, 39936, "el techo de visión coincide con el perfil final validado");
 assert.equal(MODELO.catalogo.ornith9b.servidor.capasAtencionCompleta, 8, "Ornith debe usar 8 capas de atención completa");
 
-// A) Visión con 7956 MiB libres: 32768/q8_0 (no se queda en el techo fijo de 16K ni exige f16).
+// A) Techo exacto de visión: 39936/q8_0; no se redondea a 36864.
 const p1 = await puertoLibre();
 try {
   borrarPerfil(p1);
   const a = perfilDryRun({ libre: 7956, vision: true, puerto: p1 });
   assert.equal(a.codigo, 0, a.salida);
-  assert.equal(a.contexto, 32768);
+  assert.equal(a.contexto, 39936);
   assert.equal(a.kv, "q8_0");
-  assert.equal(a.presupuesto, 7821);
-  assert.equal(a.presupuesto, estimarVramMiB({ clave: "ornith9b", ctx: 32768, kv: "q8_0", vision: true }));
+  assert.equal(a.presupuesto, 7696);
+  assert.equal(a.presupuesto, estimarVramMiB({ clave: "ornith9b", ctx: 39936, kv: "q8_0", vision: true }));
   assert.match(a.salida, /Perfil automatico/);
   // GPU completa: nada de pesos/KV/proyector en CPU.
   assert.match(a.salida, /--gpu-layers all/);
@@ -108,61 +108,81 @@ try {
   assert.match(a.salida, /--kv-offload/);
   assert.match(a.salida, /--mmproj-offload/);
   assert.match(a.salida, /--mmproj-device CUDA0/);
-  assert.match(a.salida, /-c 32768 -ctk q8_0 -ctv q8_0/);
+  assert.match(a.salida, /-c 39936 -ctk q8_0 -ctv q8_0/);
   assert.doesNotMatch(a.salida, /--n-gpu-layers 0|-ngl 0|--device CPU/);
   const guardado = leerPerfil(p1);
   assert.ok(guardado, "no se guardó logs/perfil-servidor-PUERTO.json");
   assert.equal(guardado.modelo, "ornith9b");
-  assert.equal(guardado.contexto, 32768);
+  assert.equal(guardado.contexto, 39936);
   assert.equal(guardado.kv, "q8_0");
   assert.equal(guardado.vision, true);
   assert.equal(guardado.libreMiB, 7956);
-  console.log("OK: con visión y 7956 MiB libres elige 32768/q8_0 y lo persiste");
+  assert.ok(guardado.configuracion, "la caché identifica el catálogo que eligió el perfil");
+  console.log("OK: con visión y 7956 MiB libres elige 39936/q8_0 y lo persiste");
 
-  // B) Siguiente arranque auto con MÁS VRAM: reutiliza 32768/q8_0 en vez de saltar a f16
+  // B) Siguiente arranque auto con MÁS VRAM: reutiliza 39936/q8_0 en vez de saltar a f16
   //    (un arranque desde cero elegiría f16 porque cabe: q8_0 demuestra que se reutilizó).
   const b = perfilDryRun({ libre: 9000, vision: true, puerto: p1 });
   assert.equal(b.codigo, 0, b.salida);
-  assert.equal(b.contexto, 32768);
+  assert.equal(b.contexto, 39936);
   assert.equal(b.kv, "q8_0", "no reutilizó el perfil recordado");
   assert.match(b.salida, /Perfil recordado/);
-  assert.equal(b.presupuesto, 7821);
+  assert.equal(b.presupuesto, 7696);
   console.log("OK: el siguiente arranque auto reutiliza el perfil recordado si sigue cabiendo");
 
-  // C) Si el perfil recordado ya no cabe (7700 < 7821), se busca de nuevo y baja el KV.
-  const c = perfilDryRun({ libre: 7700, vision: true, puerto: p1 });
+  // C) Si el perfil recordado ya no cabe (7600 < 7696), se busca de nuevo y baja el KV.
+  const c = perfilDryRun({ libre: 7600, vision: true, puerto: p1 });
   assert.equal(c.codigo, 0, c.salida);
-  assert.equal(c.contexto, 32768);
+  assert.equal(c.contexto, 39936);
   assert.equal(c.kv, "q4_0");
-  assert.equal(c.presupuesto, 7565);
+  assert.equal(c.presupuesto, 7384);
   assert.match(c.salida, /Perfil automatico/);
   assert.equal(leerPerfil(p1).kv, "q4_0");
-  console.log("OK: si el perfil recordado no cabe se vuelve a buscar (32768/q4_0 con 7700 MiB)");
+  console.log("OK: si el perfil recordado no cabe se vuelve a buscar (39936/q4_0 con 7600 MiB)");
 
-  // D) Con 7300 MiB no cabe ni la combinación mínima con visión: error claro y sin arrancar.
-  const d = perfilDryRun({ libre: 7300, vision: true, puerto: p1 });
+  // D) Con 7000 MiB no cabe ni la combinación mínima con visión: error claro y sin arrancar.
+  const d = perfilDryRun({ libre: 7000, vision: true, puerto: p1 });
   assert.notEqual(d.codigo, 0, "debería rechazar el arranque si no cabe");
   assert.match(d.salida, /No cabe/);
-  assert.match(d.salida, /7300/);
+  assert.match(d.salida, /7000/);
   assert.match(d.salida, /No se usa CPU como respaldo/);
   assert.equal(leerPerfil(p1).kv, "q4_0", "un rechazo no debe reescribir el perfil guardado");
   console.log("OK: sin VRAM suficiente falla con un error claro y no arranca");
+
+  const inferior = perfilDryRun({ libre: 7250, vision: true, puerto: p1 });
+  assert.equal(inferior.codigo, 0, inferior.salida);
+  assert.equal(inferior.contexto, 24576, "si el techo exacto no cabe, recorre los bloques inferiores");
+  assert.equal(inferior.kv, "q4_0");
+  assert.equal(inferior.presupuesto, 7249);
+
+  // La caché anterior a esta auditoría guardaba 32768 y no tenía firma de catálogo.
+  fs.writeFileSync(perfilDe(p1), JSON.stringify({ ...guardado, contexto: 32768, configuracion: undefined }));
+  const migrado = perfilDryRun({ libre: 7956, vision: true, puerto: p1 });
+  assert.equal(migrado.codigo, 0, migrado.salida);
+  assert.equal(migrado.contexto, 39936);
+  assert.equal(migrado.kv, "q8_0");
+  assert.match(migrado.salida, /Perfil automatico/);
+  const repetido = perfilDryRun({ libre: 7956, vision: true, puerto: p1 });
+  assert.equal(repetido.codigo, 0, repetido.salida);
+  assert.equal(repetido.contexto, 39936);
+  assert.match(repetido.salida, /Perfil recordado/);
+  console.log("OK: migra la caché antigua de 32768 y conserva 39936 en el siguiente arranque");
 } finally {
   borrarPerfil(p1);
 }
 
-// E) Sin visión con 7956 MiB: contexto máximo del perfil de servidor (32768) y KV f16.
+// E) Sin visión con 7956 MiB: techo de texto (53248) y KV f16 según el presupuesto estimado.
 const p2 = await puertoLibre();
 try {
   borrarPerfil(p2);
   const e = perfilDryRun({ libre: 7956, puerto: p2 });
   assert.equal(e.codigo, 0, e.salida);
-  assert.equal(e.contexto, 32768);
+  assert.equal(e.contexto, 53248);
   assert.equal(e.kv, "f16");
-  assert.equal(e.presupuesto, 7401);
-  assert.equal(e.presupuesto, estimarVramMiB({ clave: "ornith9b", ctx: 32768, kv: "f16" }));
+  assert.equal(e.presupuesto, 7797);
+  assert.equal(e.presupuesto, estimarVramMiB({ clave: "ornith9b", ctx: 53248, kv: "f16" }));
   assert.equal(leerPerfil(p2).vision, false);
-  console.log("OK: sin visión con 7956 MiB elige 32768/f16");
+  console.log("OK: sin visión con 7956 MiB elige 53248/f16 según la estimación (sin cargarlo)");
 } finally {
   borrarPerfil(p2);
 }
@@ -174,13 +194,13 @@ try {
   const f1 = perfilDryRun({ libre: 7956, vision: true, puerto: p3, contexto: 32768, kv: "f16" });
   assert.notEqual(f1.codigo, 0, "32768/f16 con visión no cabe en 7956 MiB");
   assert.match(f1.salida, /No cabe todo en GPU/);
-  assert.match(f1.salida, /8301/);
+  assert.match(f1.salida, /8057/);
   assert.equal(leerPerfil(p3), null, "una configuración explícita no genera perfil automático");
   const f2 = perfilDryRun({ libre: 7956, vision: true, puerto: p3, contexto: 16384, kv: "auto" });
   assert.equal(f2.codigo, 0, f2.salida);
   assert.equal(f2.contexto, 16384);
   assert.equal(f2.kv, "f16");
-  assert.equal(f2.presupuesto, 7789);
+  assert.equal(f2.presupuesto, 7545);
   console.log("OK: rechaza 32768/f16 con visión y acepta 16384/f16 con 7956 MiB");
 } finally {
   borrarPerfil(p3);

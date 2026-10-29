@@ -275,12 +275,17 @@
 
   // ================================================================== ajustes
   /** @type {{tema: string, perfil: string, pensar: number, reglas: boolean, historial: number}} */
-  let ajustes = { tema: "dark", perfil: "codigo", pensar: 0, reglas: true, historial: 32768, continuarAuto: true, saltosTope: 192, comandoSegundos: 180 };
+  let ajustes = { tema: "slate", perfil: "codigo", pensar: 0, reglas: true, historial: 32768, continuarAuto: true, saltosTope: 192, comandoSegundos: 180 };
 
+  const TEMAS = [["slate","Grafito"],["ocean","Niebla azul"],["forest","Bosque"],["sand","Arena"],["light","Marfil"],["dark","Medianoche"]];
+  function siguienteTema() { const i=TEMAS.findIndex(([v])=>v===ajustes.tema); return TEMAS[(i+1)%TEMAS.length][0]; }
   function aplicarTema(tema) {
-    document.documentElement.dataset.theme = tema === "light" ? "light" : "dark";
+    const elegido=TEMAS.find(([v])=>v===tema)||TEMAS[0];
+    document.documentElement.dataset.theme = elegido[0];
+    localStorage.setItem("bonsai-theme",elegido[0]);
+    localStorage.setItem("bonsai-ver-pensamiento",ajustes.verPensamiento===false?"0":"1");
     const boton = $("#tema");
-    if (boton) boton.innerHTML = tema === "light" ? ICO.luna({ tam: 15 }) : ICO.sol({ tam: 15 });
+    if (boton) {boton.innerHTML = ICO.sol({ tam: 15 });boton.title=`Tema: ${elegido[1]} · cambiar`;boton.setAttribute("aria-label",boton.title);}
   }
 
   async function cargarAjustes() {
@@ -708,7 +713,7 @@
       { tipo: "comando", texto: "Nueva carpeta", ico: "carpeta", hacer: () => void nuevaCarpeta() },
       { tipo: "comando", texto: "Guardar el archivo activo", ico: "guardar", detalle: "Ctrl+S", hacer: () => guardarActiva() },
       { tipo: "comando", texto: "Buscar en todo el proyecto", ico: "buscar", detalle: "Ctrl+Shift+F", hacer: () => abrirBusqueda() },
-      { tipo: "comando", texto: "Cambiar de tema (claro / oscuro)", ico: "sol", hacer: () => guardarAjustes({ tema: ajustes.tema === "light" ? "dark" : "light" }) },
+      ...TEMAS.map(([tema,nombre])=>({tipo:"comando",texto:`Tema: ${nombre}`,ico:"sol",hacer:()=>guardarAjustes({tema})})),
       { tipo: "comando", texto: "Ajustes", ico: "ajustes", hacer: () => abrirAjustes() },
       { tipo: "comando", texto: "Estado de git / hacer commit", ico: "rama", hacer: () => menuGit() },
       { tipo: "comando", texto: "Reglas del proyecto", ico: "reglas", hacer: () => verReglas() },
@@ -1045,6 +1050,7 @@
     }
     const fondo = el("div", "dialogo-fondo");
     const caja = el("div", "dialogo");
+    caja.classList.add("settings-dialog");
     caja.style.width = "min(620px, 94vw)";
     caja.append(el("h3", "", "Cambios pendientes"));
     const lista = el("div");
@@ -1407,13 +1413,18 @@
   function abrirAjustes() {
     const fondo = el("div", "dialogo-fondo");
     const caja = el("div", "dialogo");
+    caja.style.cssText="width:min(640px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;box-sizing:border-box";
     caja.append(el("h3", "", "Ajustes"));
-    caja.append(el("p", "", "Se guardan en la carpeta de estado y se aplican al instante."));
+    caja.append(el("p", "", "Tu espacio y tu modelo. Los cambios se guardan automáticamente."));
 
     /** @param {string} etiqueta @param {HTMLElement} control */
     const fila = (etiqueta, control) => {
       const f = el("div");
-      f.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line)";
+      f.className="setting-row";
+      f.style.cssText = "display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line)";
+      control.style.maxWidth="100%";control.style.minWidth="0";
+      control.style.marginLeft="auto";
+      if(control instanceof HTMLInputElement && control.type==="checkbox")control.style.width="auto";
       f.append(el("span", "", etiqueta), control);
       return f;
     };
@@ -1422,13 +1433,17 @@
     presupuestoCaja.id = "ajustes-presupuesto";
 
     const tema = el("select");
-    for (const [v, t] of [["dark", "Oscuro"], ["light", "Claro"]]) {
+    tema.setAttribute("aria-label","Tema visual");
+    for (const [v, t] of TEMAS) {
       const o = el("option", "", t);
       o.value = v;
       if (ajustes.tema === v) o.selected = true;
       tema.append(o);
     }
     tema.addEventListener("change", () => guardarAjustes({ tema: tema.value }));
+    const verPensamiento=el("input");verPensamiento.type="checkbox";verPensamiento.checked=ajustes.verPensamiento!==false;
+    verPensamiento.setAttribute("aria-label","Pensamiento expandido");
+    verPensamiento.addEventListener("change",()=>guardarAjustes({verPensamiento:verPensamiento.checked}));
 
     const perfil = el("select");
     for (const [v, t] of [["codigo", "Código (ajustes del modelo)"], ["chat", "Chat (temp 0.7)"]]) {
@@ -1439,12 +1454,41 @@
     }
     perfil.addEventListener("change", () => guardarAjustes({ perfil: perfil.value }));
 
+    const agentePerfil = el("select");
+    agentePerfil.setAttribute("aria-label","Agente");
+    for (const [v, label] of [["legacy", "General"], ["small-local-coder", "Coding local · contexto selectivo y verificación automática"]]) {
+      const option = el("option", "", label); option.value = v;
+      option.selected = (ajustes.agentePerfil || "legacy") === v; agentePerfil.append(option);
+    }
+    agentePerfil.addEventListener("change", () => guardarAjustes({ agentePerfil: agentePerfil.value }));
+    const modo = el("select");
+    modo.setAttribute("aria-label","Modo de respuesta");
+    for (const [value,label] of [["agente","Agente · editar y verificar"],["consulta","Consulta · sin herramientas"]]) {
+      const option=el("option","",label); option.value=value; option.selected=(ajustes.modoRespuesta || "agente")===value; modo.append(option);
+    }
+    modo.addEventListener("change",()=>guardarAjustes({modoRespuesta:modo.value}));
+    const motorCaja=el("div"); motorCaja.style.cssText="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end";
+    const motor=el("select");
+    motor.setAttribute("aria-label","Perfil de motor");
+    const actual=el("option","","Mantener perfil actual"); actual.value=""; motor.append(actual);
+    for(const [name,p] of Object.entries(ajustes.engineProfiles || {})) {
+      const option=el("option","",p.label || `${name} · ${p.context/1024}k`); option.value=name; option.selected=ajustes.enginePreset===name; motor.append(option);
+    }
+    const aplicarMotor=el("button","","Aplicar perfil"); aplicarMotor.type="button";
+    aplicarMotor.addEventListener("click",async()=>{
+      const clave=estadoModelos.actual;
+      if(!motor.value || !clave) { avisar("Selecciona un perfil y un modelo disponible.","warn"); return; }
+      aplicarMotor.disabled=true;
+      try { await recargarModelo(clave,motor.value); } finally { aplicarMotor.disabled=false; motor.value=ajustes.enginePreset || ""; }
+    });
+    motorCaja.append(motor,aplicarMotor);
+
     // Razonamiento: solo lo usan los modelos que lo admiten (Override-6 sí, BoldingBuilds v1
     // no: deja respuestas vacías). Se fija al arrancar llama-server, así que encenderlo pide
     // reiniciarlo; apagarlo no (cada petición dice si razona).
     const infoPensar = ajustes.pensarInfo || { compatible: true, recomendado: 2048 };
     const pensar = el("select");
-    for (const [v, t] of [[0, "Apagado"], [512, "512 tokens"], [2048, `2048 tokens${infoPensar.recomendado === 2048 ? " (recomendado)" : ""}`], [8192, "8192 tokens (lento)"]]) {
+    for (const [v, t] of [[0, "Apagado"], [512, "512 tokens"], [1024, "1024 tokens"], [2048, `2048 tokens${infoPensar.recomendado === 2048 ? " (recomendado)" : ""}`], [4096, "4096 tokens"], [8192, "8192 tokens (lento)"]]) {
       const o = el("option", "", t);
       o.value = String(v);
       if (Number(ajustes.pensar) === v) o.selected = true;
@@ -1473,6 +1517,10 @@
     const pensarCaja = el("div");
     pensarCaja.style.cssText = "display:flex;flex-direction:column;align-items:flex-end;gap:3px";
     pensarCaja.append(pensar);
+    if ((ajustes.agentePerfil || "legacy") === "small-local-coder") {
+      const limite=el("small","",`Coding permite hasta ${infoPensar.limiteCoding ?? 512} tokens de pensamiento; el resto de la salida queda para la respuesta y las ediciones.`);
+      limite.style.cssText="max-width:280px;color:var(--muted)"; pensarCaja.append(limite);
+    }
     if (infoPensar.compatible === false) {
       const nota = el("small", "", "este modelo no lo admite");
       nota.style.color = "var(--muted)";
@@ -1484,7 +1532,7 @@
     // una PETICIÓN al servidor; el tope real lo recorta historyCap() según la ventana que
     // arrancó llama-server (por eso abajo se enseñan los cuatro valores reales).
     const historial = el("select");
-    const topes = [[8192, "8192 tokens (más rápido)"], [16384, "16384 tokens"], [32768, "32768 tokens"], [49152, "49152 tokens"]];
+    const topes = [[8192, "8192 tokens"], [16384, "16384 tokens"], [32768, "32768 tokens"], [36864, "36864 tokens"], [39936, "39936 tokens"]];
     if (Number.isFinite(Number(ajustes.historial)) && !topes.some(([v]) => v === Number(ajustes.historial))) topes.push([Number(ajustes.historial), `${ajustes.historial} tokens`]);
     for (const [v, t] of topes) {
       const o = el("option", "", String(t));
@@ -1526,7 +1574,7 @@
 
     // Tiempo máximo por comando (antes eran 60 s fijos: cortaba npm install y builds).
     const tiempo = el("select");
-    for (const [v, t] of [[120, "2 min"], [180, "3 min (recomendado)"], [300, "5 min"], [600, "10 min"]]) {
+    for (const [v, t] of [[120, "2 min"], [180, "3 min"], [300, "5 min"], [600, "10 min"], [900, "15 min"], [1800, "30 min"]]) {
       const o = el("option", "", t);
       o.value = String(v);
       if (Number(ajustes.comandoSegundos) === v) o.selected = true;
@@ -1535,10 +1583,17 @@
     tiempo.addEventListener("change", () => guardarAjustes({ comandoSegundos: Number(tiempo.value) }));
 
     caja.append(
+      el("h4","settings-section","Apariencia"),
       fila("Tema", tema),
+      fila("Mostrar pensamiento expandido", verPensamiento),
+      el("h4","settings-section","Modelo y respuesta"),
       fila("Perfil de muestreo", perfil),
+      fila("Agente", agentePerfil),
+      fila("Modo de respuesta", modo),
+      fila("Motor · reinicia el modelo", motorCaja),
       fila("Modo razonamiento", pensarCaja),
       fila("Tope de historial (pedido)", historial),
+      el("h4","settings-section","Trabajo del agente"),
       fila("Aplicar reglas del proyecto", reglas),
       fila("Continuar solo hasta terminar", seguir),
       fila("Pasos del agente por turno", pasos),
@@ -1907,14 +1962,14 @@
    * Reinicia el MISMO modelo (p. ej. para encender el razonamiento, que se fija al arrancar).
    * @param {string} clave
    */
-  async function recargarModelo(clave) {
+  async function recargarModelo(clave, enginePreset) {
     const fila = estadoModelos.modelos.find((m) => m.clave === clave);
     const nombre = fila?.nombre || clave;
     const cerrar = avisar(`Reiniciando ${nombre}…`, "warn", 0);
     cargandoModelo = nombre;
     pintarChipModelo();
     try {
-      const r = await api("/api/modelos", { cuerpo: { clave, recargar: true } });
+      const r = await api("/api/modelos", { cuerpo: { clave, recargar: true, ...(enginePreset ? {enginePreset} : {}) } });
       cargandoModelo = "";
       cerrar();
       avisar(`${r.nombre} listo${r.pensar ? ` · razona con hasta ${r.pensar} tokens` : ""}`, "ok", 6000);
@@ -1926,6 +1981,9 @@
       avisar(`No se pudo reiniciar el modelo: ${err.message}`, "error", 10000);
     }
     await refrescarModelos();
+    void pintarChipVision();
+    const presupuestoAbierto=$("#ajustes-presupuesto");
+    if(presupuestoAbierto)void pintarPresupuestoEn(presupuestoAbierto);
   }
 
   async function cambiarModelo(clave, nombre) {
@@ -2088,7 +2146,7 @@
     tema.id = "tema";
     tema.type = "button";
     tema.title = "Cambiar de tema";
-    tema.addEventListener("click", () => guardarAjustes({ tema: ajustes.tema === "light" ? "dark" : "light" }));
+    tema.addEventListener("click", () => guardarAjustes({ tema: siguienteTema() }));
 
     const ajustesBoton = el("button", "icon-btn");
     ajustesBoton.type = "button";

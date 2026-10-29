@@ -20,7 +20,8 @@ try {
   assert.throws(() => writeOutputs(root, [{ rel: "fuera/secreto.txt", content: "mal" }]));
   assert.throws(() => writeOutputs(root, [{ rel: "fuera/nueva/cosa.txt", content: "mal" }]));
   assert.equal(fs.readFileSync(path.join(outside, "secreto.txt"), "utf8"), "intacto");
-  assert.throws(() => writeOutputs(root, [{ rel: "node_modules/privado.js", content: "mal" }]));
+  assert.throws(() => writeOutputs(root, [{ rel: ".git/config", content: "mal" }]));
+  writeOutputs(root, [{ rel: "node_modules/paquete/local.js", content: "// parche local" }]);
 
   // Hallazgo 7: lo que rutaSegura SI garantiza es rechazar enlaces en CUALQUIER
   // componente (junction anidado, enlace colgante) y dejar pasar rutas normales.

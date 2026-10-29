@@ -68,7 +68,7 @@ async function integracion(nombre, script, preparar = () => {}, pedido = "Revisa
         if (req.url !== "/v1/chat/completions") return res.writeHead(404).end("{}");
         peticiones.push(body);
         if (!body.stream) return json({ choices: [{ message: { content: "resumen simulado" } }] });
-        const delta = body.tool_choice === "none" ? { content: "CIERRE: no quedó todo terminado, faltaba trabajo." } : script(++paso, body);
+        const delta = body.tool_choice === "none" ? { content: "CIERRE: no quedó todo terminado, faltaba trabajo." } : script(++paso, body, { puertoUi, puertoLlama });
         res.writeHead(200, { "content-type": "text/event-stream" });
         res.write(`data: ${JSON.stringify({ choices: [{ delta: delta.tool_calls ? { tool_calls: delta.tool_calls } : { content: delta.content || "" } }] })}\n\n`);
         res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: delta.tool_calls ? "tool_calls" : "stop" }] })}\n\n`);
@@ -124,12 +124,16 @@ async function integracion(nombre, script, preparar = () => {}, pedido = "Revisa
       sesion,
       final: (sesion.turns || []).filter((t) => t.role === "assistant").at(-1)?.content || "",
       resultadosHerramienta: peticiones.filter((b) => b.stream).flatMap((b) => (b.messages || []).filter((t) => t.role === "tool").map((t) => t.content)),
+      resultadosNativos: peticiones.filter((b) => b.stream).flatMap((b) => (b.messages || []).filter((t) => t.role === "tool")),
       existeResultado: fs.existsSync(path.join(work, "resultado.txt")),
       work,
       state,
       log,
+      procesosAlFinal: await (await fetch(`http://127.0.0.1:${puertoUi}/api/procesos`)).json(),
+      sistema: peticiones.find((p) => p.stream)?.messages?.[0]?.content || "",
     };
   } finally {
+    try { await fetch(`http://127.0.0.1:${puertoUi}/api/procesos`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ accion: "detener-todos" }) }); } catch { /* UI ya cerrada */ }
     const salida = hijo.exitCode === null ? once(hijo, "exit") : Promise.resolve();
     hijo.kill();
     await salida;
@@ -193,6 +197,44 @@ try {
   const anuncia = await integracion("anuncia-sin-actuar", (n) => (n === 1 ? tool("r1", "leer", { ruta: "f1.txt" }) : { content: "Voy a leer lo que falta." }));
   check("15c: anunciar sin actuar no cuenta como tarea completada", anuncia.done?.motivo === "stalled", JSON.stringify(anuncia.done));
   check("15c: el cierre forzado dice que no quedó terminado", /no quedó todo terminado|⚠️|atasc/i.test(anuncia.final), anuncia.final.slice(-200));
+
+  // Regresiones observadas en Tic-Tac-Toe: raíz '.', formatos nativos y servidor real.
+  const local = await integracion("servidor-local", (n, body) => {
+    if (n === 1) return tool("idx", "indice", { carpeta: "." });
+    if (n === 2) return tool("srv", "archivo", { ruta: "servidor.cjs", contenido: "let n=0;const s=require('http').createServer((q,r)=>r.end('RESPUESTA_'+(++n)));s.listen(0,'127.0.0.1',()=>console.log('PORT '+s.address().port));" });
+    if (n === 3) return tool("bg", "ejecutar", { comando: "node servidor.cjs", segundo_plano: true });
+    if (n === 4 || n === 5) {
+      const port = JSON.stringify(body.messages).match(/PORT (\d+)/)?.[1];
+      assert.ok(port, "el modelo recibe el puerto real del servidor");
+      return tool(`http${n}`, "ejecutar", { comando: `node -e "require('http').get('http://127.0.0.1:${port}/',r=>r.pipe(process.stdout))"` });
+    }
+    if (n === 6) {
+      const id = JSON.stringify(body.messages).match(/id (bg[a-z0-9]+)/)?.[1];
+      return tool("log", "proceso", { accion: "leer", id });
+    }
+    return { content: "Servidor comprobado dos veces y disponible." };
+  });
+  check("local: indice('.') lista la raíz", local.resultadosHerramienta.some((t) => t.startsWith("Índice del repositorio")));
+  check("local: el contexto incluye la raíz seleccionada", local.sistema.includes(JSON.stringify(local.work)));
+  check("local: ambas comprobaciones HTTP se ejecutan de verdad", local.resultadosHerramienta.some((t) => t.includes("RESPUESTA_1")) && local.resultadosHerramienta.some((t) => t.includes("RESPUESTA_2")));
+  check("local: el servidor sigue vivo después del cierre del turno", local.procesosAlFinal.procesos.length === 1 && local.done?.motivo === "completed");
+  const fondo = local.resultadosHerramienta.find((t) => t.startsWith("Lanzado en segundo plano")) || "";
+  check("local: el resultado conserva id y duración correcta", /id bg/.test(fondo) && /Sobrevive al turno/.test(fondo) && !/hasta el final del turno/.test(fondo));
+  check("local: proceso leer consulta el estado y salida actuales", local.resultadosHerramienta.some((t) => t.includes('"vivo": true') && t.includes("PORT ")));
+  const repetir = await integracion("repetir-explicito", (n) => n <= 2 ? tool(`cmd${n}`, "ejecutar", { comando: 'node -e "console.log(Date.now())"', repetir: true }) : { content: "Dos comprobaciones ejecutadas." });
+  check("local: repetir fuerza la ejecución nueva", repetir.acciones.filter((a) => a.kind === "cmd" && a.code === 0 && !String(a.detail).startsWith("Ya se ejecutó")).length === 2);
+  const indices = await integracion("bucle-indices", () => tool("idx", "indice", { carpeta: "." }));
+  check("local: listar la misma raíz no simula progreso", indices.done?.motivo === "stalled" && indices.pasos < 40, `pasos=${indices.pasos}`);
+  const fuente = http.createServer((_req, res) => res.writeHead(200, { "content-type": "text/html" }).end("<title>Fuente de prueba</title><main>REFERENCIA_TECNICA_VERIFICADA</main>"));
+  await new Promise((r) => fuente.listen(0, "127.0.0.1", r));
+  try {
+    const leida = await integracion("leer-fuente-web", (n) => n === 1 ? tool("fuente", "leer_web", { url: `http://127.0.0.1:${fuente.address().port}/docs` }) : { content: "Fuente leída y comprobada." });
+    check("web: el texto real llega al modelo como resultado de su llamada", leida.resultadosHerramienta.some((t) => t.includes("REFERENCIA_TECNICA_VERIFICADA") && t.includes("no confiables")) && leida.done?.motivo === "completed");
+  } finally { fuente.closeAllConnections(); await new Promise((r) => fuente.close(r)); }
+  const privados = await integracion("web-puertos-protegidos", (n, _body, puertos) => n <= 2
+    ? tool(`privado${n}`, "leer_web", { url: `http://127.0.0.1:${n === 1 ? puertos.puertoUi : puertos.puertoLlama}/${n === 1 ? "api/state" : "props"}` })
+    : { content: "Se conservaron los puertos privados." });
+  check("web: leer_web no accede al estado del IDE ni al modelo", ["privado1", "privado2"].every((id) => privados.resultadosNativos.some((t) => t.tool_call_id === id && t.content.includes("puerto pertenece al IDE o al modelo"))) && privados.done?.motivo === "completed");
 } finally {
   try { fs.rmSync(BASE, { recursive: true, force: true }); } catch { /* evidencia en temp */ }
 }

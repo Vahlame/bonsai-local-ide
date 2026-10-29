@@ -388,6 +388,18 @@ const hayTool = (messages) => messages.some((msg) => msg.role === "tool");
 // =====================================================================================
 // Limpieza y resultado
 // =====================================================================================
+{
+  const sessionPath = path.join(TMP, "reinicio-con-plan.json");
+  const plan = { pasos: ["Compilar", "Verificar"], hechos: [1], ts: 123 };
+  const lastStop = { motivo: "step_limit", saltos: 192, completo: false, ts: 456 };
+  fs.writeFileSync(sessionPath, JSON.stringify({ memory: "", folded: 0, turns: [{ role: "user", content: "Continúa el trabajo pendiente" }], draft: "", files: [], plan, lastStop }));
+  const chat = new BonsaiChat({ host: "127.0.0.1", port: 1, historyCap: 32768, sessionPath, timingsPath: null });
+  chat.loadSession();
+  chat.saveSession();
+  chat.loadSession();
+  check("reinicio: el plan y sus pasos hechos sobreviven a cargar/guardar", JSON.stringify(chat.session.plan) === JSON.stringify(plan));
+  check("reinicio: conserva el motivo real de parada", JSON.stringify(chat.session.lastStop) === JSON.stringify(lastStop));
+}
 try {
   fs.rmSync(TMP, { recursive: true, force: true });
 } catch {

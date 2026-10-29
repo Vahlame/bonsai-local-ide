@@ -20,6 +20,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync, spawn } from "node:child_process";
+import { shellPredeterminada } from "./entorno.mjs";
 
 /** Tiempo máximo de un comando del agente, en milisegundos. */
 export const TIMEOUT_MS = 60000;
@@ -196,6 +197,7 @@ function temporal(ext) {
  * @returns {{ child: import("node:child_process").ChildProcess, cleanup: () => void }}
  */
 export function launchCommand(command, cwd, env) {
+  const shell = shellPredeterminada(env);
   const multiline = /[\r\n]/.test(command);
   for (const { patron, ext } of multiline ? INTERPRETES : []) {
     const hallado = command.match(patron);
@@ -203,7 +205,7 @@ export function launchCommand(command, cwd, env) {
     const file = temporal(ext);
     fs.writeFileSync(file, desescaparComillas(hallado[2].replace(/^\r?\n/, "")), "utf8");
     return {
-      child: spawn(`"${hallado[1].trim()}" "${file}"`, { cwd, shell: true, windowsHide: true, env, stdio: STDIO }),
+      child: spawn(`"${hallado[1].trim()}" "${file}"`, { cwd, shell, windowsHide: true, env, stdio: STDIO }),
       cleanup: () => borrarTemporal(file),
     };
   }
@@ -214,12 +216,12 @@ export function launchCommand(command, cwd, env) {
     const lineas = command.replace(/\r\n?/g, "\n").split("\n");
     fs.writeFileSync(file, ["@echo off", "chcp 65001 >nul", ...lineas].join("\r\n"), "utf8");
     return {
-      child: spawn(`"${file}"`, { cwd, shell: true, windowsHide: true, env, stdio: STDIO }),
+      child: spawn(`"${file}"`, { cwd, shell, windowsHide: true, env, stdio: STDIO }),
       cleanup: () => borrarTemporal(file),
     };
   }
   return {
-    child: spawn(command, { cwd, shell: true, windowsHide: true, env, stdio: STDIO }),
+    child: spawn(command, { cwd, shell, windowsHide: true, env, stdio: STDIO }),
     cleanup: () => {},
   };
 }
@@ -250,6 +252,8 @@ export function lanzarEnFondo(command, opts = {}) {
       return;
     }
     const { child, cleanup } = lanzado;
+    let notificarFin;
+    const finalizado = new Promise((resolve) => { notificarFin = resolve; });
     const salida = crearSalida(maxBytes);
     const decodificadorOut = new TextDecoder();
     const decodificadorErr = new TextDecoder();
@@ -277,16 +281,18 @@ export function lanzarEnFondo(command, opts = {}) {
       salida.take(decodificadorErr.decode());
       const vivo = code === null;
       if (!vivo) parar();
-      resolve({ vivo, code, output: salida.texto().trim() || "(sin salida todavía)", pid: child.pid || 0, parar });
+      resolve({ vivo, code, output: salida.texto().trim() || "(sin salida todavía)", pid: child.pid || 0, parar, finalizado, estado: () => ({ vivo: code === null && !parado, code, output: salida.texto().trim() || "(sin salida todavía)" }) });
     };
     child.on("close", (c) => {
       code = c ?? 1;
       responder();
+      notificarFin();
     });
     child.on("error", (err) => {
       salida.take(`\n${err.message}`);
       code = 1;
       responder();
+      notificarFin();
     });
     setTimeout(responder, esperaMs);
   });

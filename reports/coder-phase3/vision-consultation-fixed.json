@@ -1,0 +1,222 @@
+{
+  "createdAt": "2026-10-29T11:32:23.507Z",
+  "context": 16384,
+  "model": "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Ornith-1.5-9B-Q4_K_M.gguf",
+  "app": "C:\\Users\\user\\Documents\\prject_local_AI\\chat",
+  "ocr": false,
+  "checks": [
+    {
+      "kind": "short-vision",
+      "ok": true,
+      "checks": {
+        "finished": true,
+        "imagesSent": true,
+        "noPersistedPixels": true,
+        "imageRead": true,
+        "noTools": true,
+        "noEdits": true
+      },
+      "error": null,
+      "expectedPin": "8234",
+      "answer": "{\"pin\":\"8234\"}",
+      "promptTokens": 1220,
+      "completionMs": 1263,
+      "requests": [
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "0bb369a78a56b3487f5d3c5929186fd4d894e4faf185594d5039dd57e711021e"
+            }
+          ],
+          "toolChoice": "none",
+          "maxTokens": 1536,
+          "cachePrompt": true,
+          "visibleContent": "{\"pin\":\"8234\"}",
+          "reasoningCharacters": 0,
+          "toolCalls": [],
+          "finishReason": "stop",
+          "usage": {
+            "completion_tokens": 9,
+            "prompt_tokens": 644,
+            "total_tokens": 653,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "kind": "long-vision",
+      "ok": true,
+      "checks": {
+        "finished": true,
+        "imagesSent": true,
+        "noPersistedPixels": true,
+        "imageRead": true,
+        "noTools": true,
+        "noEdits": true,
+        "longContext": true,
+        "recall": true
+      },
+      "error": null,
+      "expectedPin": "5728",
+      "answer": "```json\n{\n  \"pin\": \"5728\",\n  \"inicio\": \"ALFA_371\",\n  \"centro\": \"BETA_824\",\n  \"fin\": \"OMEGA_592\"\n}\n```",
+      "promptTokens": 11450,
+      "completionMs": 7540,
+      "requests": [
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "3f8e92126dadc1cf5d891f1cb05b67a52562360c9a4a1180c8794523c0fcf547"
+            }
+          ],
+          "toolChoice": "none",
+          "maxTokens": 1536,
+          "cachePrompt": true,
+          "visibleContent": "```json\n{\n  \"pin\": \"5728\",\n  \"inicio\": \"ALFA_371\",\n  \"centro\": \"BETA_824\",\n  \"fin\": \"OMEGA_592\"\n}\n```",
+          "reasoningCharacters": 0,
+          "toolCalls": [],
+          "finishReason": "stop",
+          "usage": {
+            "completion_tokens": 60,
+            "prompt_tokens": 10874,
+            "total_tokens": 10934,
+            "prompt_tokens_details": {
+              "cached_tokens": 82
+            }
+          }
+        }
+      ]
+    },
+    {
+      "kind": "vision-coding",
+      "ok": true,
+      "checks": {
+        "finished": true,
+        "imagesSent": true,
+        "noPersistedPixels": true,
+        "correctPatch": true,
+        "originalTestsPreserved": true,
+        "imagePinnedAcrossSteps": true,
+        "hostVerified": true
+      },
+      "error": null,
+      "expectedPin": "3475",
+      "answer": "Todo verificado. La tarea está completa.\n\n**Resumen:**\n- La imagen mostraba las cifras **3475**.\n- Edité únicamente `getPin` en `src/pin.mjs`, cambiando `return \"0000\"` por `return \"3475\"`.\n- No toqué los tests.\n- La suite `test/pin.test.mjs` pasa: **1 pass, 0 fail**.\n\nNo hay cambios pendientes.",
+      "promptTokens": 3379,
+      "completionMs": 10700,
+      "requests": [
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "maxTokens": 1536,
+          "cachePrompt": true,
+          "visibleContent": "Voy a leer el archivo para confirmar el texto exacto antes de editarlo.\n\n",
+          "reasoningCharacters": 0,
+          "toolCalls": [
+            "leer"
+          ],
+          "finishReason": "tool_calls",
+          "usage": {
+            "completion_tokens": 49,
+            "prompt_tokens": 2318,
+            "total_tokens": 2367,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          }
+        },
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "maxTokens": 1536,
+          "cachePrompt": true,
+          "visibleContent": "La imagen muestra las cifras **3475**. Voy a editar `getPin` para devolver exactamente esas cuatro cifras.\n\n",
+          "reasoningCharacters": 0,
+          "toolCalls": [
+            "reemplazar"
+          ],
+          "finishReason": "tool_calls",
+          "usage": {
+            "completion_tokens": 94,
+            "prompt_tokens": 2416,
+            "total_tokens": 2510,
+            "prompt_tokens_details": {
+              "cached_tokens": 2228
+            }
+          }
+        },
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "maxTokens": 1536,
+          "cachePrompt": true,
+          "visibleContent": "El archivo fue editado y los tests focalizados pasaron. Verifico ejecutando la suite para confirmar.\n\n",
+          "reasoningCharacters": 0,
+          "toolCalls": [
+            "ejecutar"
+          ],
+          "finishReason": "tool_calls",
+          "usage": {
+            "completion_tokens": 68,
+            "prompt_tokens": 2605,
+            "total_tokens": 2673,
+            "prompt_tokens_details": {
+              "cached_tokens": 2326
+            }
+          }
+        },
+        {
+          "images": [
+            {
+              "index": 1,
+              "role": "user",
+              "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+            }
+          ],
+          "toolChoice": "auto",
+          "maxTokens": 1536,
+          "cachePrompt": true,
+          "visibleContent": "Todo verificado. La tarea está completa.\n\n**Resumen:**\n- La imagen mostraba las cifras **3475**.\n- Edité únicamente `getPin` en `src/pin.mjs`, cambiando `return \"0000\"` por `return \"3475\"`.\n- No toqué los tests.\n- La suite `test/pin.test.mjs` pasa: **1 pass, 0 fail**.\n\nNo hay cambios pendientes.",
+          "reasoningCharacters": 0,
+          "toolCalls": [],
+          "finishReason": "stop",
+          "usage": {
+            "completion_tokens": 101,
+            "prompt_tokens": 2803,
+            "total_tokens": 2904,
+            "prompt_tokens_details": {
+              "cached_tokens": 2474
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "peakVramMiB": 6715,
+  "minFreeVramMiB": 1242,
+  "ok": true
+}

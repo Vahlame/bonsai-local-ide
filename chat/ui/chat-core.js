@@ -704,7 +704,12 @@
         pre.classList.toggle("hits", asSearch);
         if (asSearch) {
           pre.replaceChildren();
-          for (const block of detail.split(/\n\n+/)) {
+          let blocks = detail.split(/\n\n+/);
+          try {
+            const data = JSON.parse(detail);
+            if (Array.isArray(data.resultados)) blocks = data.resultados.map((r) => [r.titulo, r.url, r.resumen].filter(Boolean).join("\n"));
+          } catch { /* formato de búsquedas anteriores */ }
+          for (const block of blocks) {
             const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
             if (!lines.length) continue;
             const hit = document.createElement("div");
@@ -957,6 +962,16 @@
     /**
      * @param {{turns?: Array<{role?: string, content?: string, actions?: Array<object>}>, files?: Array<{rel: string, url: string, bytes?: number}>}} data
      */
+    function addReasoning(text, before = null) {
+      const panel=document.createElement("details");panel.className="reasoning-panel";
+      panel.open=localStorage.getItem("bonsai-ver-pensamiento")!=="0";
+      const summary=document.createElement("summary");summary.textContent="Pensamiento del modelo";
+      const pre=document.createElement("pre");pre.append(document.createTextNode(String(text||"")));
+      panel.append(summary,pre);
+      if(before?.isConnected)before.before(panel);else log.append(panel);
+      return panel;
+    }
+
     function paintConversation(data) {
       log.replaceChildren();
       const turns = data.turns || [];
@@ -972,6 +987,7 @@
           if (turn.content) addMessage(turn.content, "user");
           continue;
         }
+        if (turn.reasoning) addReasoning(turn.reasoning);
         if (turn.content) addMessage(turn.content, "assistant");
         for (const action of turn.actions || []) paintAction(/** @type {{id?: string, kind?: string, title?: string, state?: string, detail?: string, code?: number}} */ (action));
       }
@@ -1213,6 +1229,7 @@
       /** @type {HTMLElement | null} */
       let progreso = null;
       bubble = addMessage("", "assistant");
+      let reasoningPanel=null;
       current = new AbortController();
       // Agrupa el analisis del texto y los diffs: hacerlo por CADA token bloqueaba
       // el hilo del navegador en respuestas largas y la caja dejaba de responder.
@@ -1270,6 +1287,12 @@
               if (!bubble || !bubble.isConnected) bubble = addMessage("", "assistant");
               rawTurn += event.text || "";
               if (!liveTimer) liveTimer = window.setTimeout(flushLive, 120);
+            } else if (event.type === "reasoning") {
+              phase="Pensando";showActivity();
+              if(!reasoningPanel)reasoningPanel=addReasoning("",bubble);
+              const pre=reasoningPanel.querySelector("pre");
+              pre.firstChild.appendData(String(event.text||""));
+              if(log.scrollTop+log.clientHeight>=log.scrollHeight-120)log.scrollTop=log.scrollHeight;
             } else if (event.type === "status") {
               phase = event.text || "Trabajando";
               showActivity();
@@ -1291,6 +1314,7 @@
             else if (event.type === "usage") paintUsage(event);
             else if (event.type === "speed") paintSpeed(event);
             else if (event.type === "action") {
+              reasoningPanel=null;
               if (liveTimer) flushLive();
               if (progreso) {
                 progreso.remove();

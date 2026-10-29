@@ -100,6 +100,7 @@ import { EventEmitter } from "node:events";
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { shellPredeterminada } from "./entorno.mjs";
 
 /** Tope de salida por defecto de cada sesión, en caracteres. */
 export const MAX_BUFFER_POR_DEFECTO = 200_000;
@@ -253,12 +254,12 @@ function mezclarEnv(extra) {
 function definirShell() {
   if (ES_WINDOWS) {
     return {
-      archivo: process.env.ComSpec || "cmd.exe",
+      archivo: shellPredeterminada(),
       args: ["/d", "/q"],
       descripcion: "cmd.exe /d /q",
     };
   }
-  const archivo = process.env.SHELL || "/bin/sh";
+  const archivo = shellPredeterminada();
   return { archivo, args: [], descripcion: `${archivo} (tuberías)` };
 }
 
@@ -446,6 +447,7 @@ export class Terminales extends GestorProcesos {
    */
   constructor(opciones = {}) {
     super({ root: opciones.root, maxBuffer: opciones.maxBuffer, prefijo: "t", etiqueta: "terminal" });
+    this.env = opciones.env || process.env;
   }
 
   /**
@@ -461,7 +463,7 @@ export class Terminales extends GestorProcesos {
     try {
       hijo = spawn(shell.archivo, shell.args, {
         cwd,
-        env: { ...process.env },
+        env: { ...this.env },
         windowsHide: true,
         stdio: ["pipe", "pipe", "pipe"],
         // POSIX: grupo propio para poder matar el árbol con kill(-pid).
@@ -560,7 +562,7 @@ export class Fondo extends GestorProcesos {
     let hijo;
     try {
       if (ES_WINDOWS) {
-        const archivo = process.env.ComSpec || "cmd.exe";
+        const archivo = shellPredeterminada();
         // /s /c + comando entre comillas + windowsVerbatimArguments: cmd recibe la línea
         // tal cual (nada de reinterpretar comillas ni inyectar argumentos extra).
         hijo = spawn(archivo, ["/d", "/s", "/c", `"${comando}"`], {
@@ -571,7 +573,7 @@ export class Fondo extends GestorProcesos {
           stdio: ["ignore", "pipe", "pipe"],
         });
       } else {
-        const shell = process.env.SHELL || "/bin/sh";
+        const shell = shellPredeterminada();
         hijo = spawn(shell, ["-c", comando], {
           cwd,
           env,

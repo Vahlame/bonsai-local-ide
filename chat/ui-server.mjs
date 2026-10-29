@@ -11,21 +11,24 @@ import { execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { aplicarReemplazo, commandAllowed, commandKey, esCharla, extractCommands, trozoParecido, extractReads, extractSearches, extractWrites, impliedAction, indexScope, inventedToolResult, nativeToolEffects, resolveInside, stripCommands, stripFakeToolText, stripFileBlocks, stripIndex, stripReads, stripSearches, unifiedDiff, writeOutputs } from "./actions.mjs";
 import { dialectoDe, llamadasCrudas } from "./adaptadores.mjs";
-import { BonsaiChat } from "./bonsai-chat.mjs";
+import { BonsaiChat, metadatosSesion } from "./bonsai-chat.mjs";
 import { MODELO, muestreo, pensarDe, perfilAgente, presupuestoPensar } from "./modelo.mjs";
 import { DEFAULT_HISTORY_CAP, RULES_CAP_TOKENS, estimateTokens, takeHeadByTokens, turnoInterno } from "./context.mjs";
 import { aplicarRespuesta, construirMensajes, contarLineas, recorteLineas } from "./editar.mjs";
 import { revisarPeticion } from "./guardia.mjs";
 import { ejecutarComando, lanzarEnFondo, matarArbol, recortarCentro } from "./procesos.mjs";
 import { NavegadorLocal } from "./navegador.mjs";
+import { buscarWeb, leerWeb } from "./investigacion.mjs";
 import { cambiarConRecuperacion } from "./cambio-modelo.mjs";
 import { ocrLocal } from "./ocr.mjs";
 import { analizarEstadoGit, elegirRutasGit } from "./git-seguro.mjs";
-import { rutaSegura, escribirAtomico } from "./archivos-seguros.mjs";
+import { rutaSegura, rutaProyecto, escribirAtomico } from "./archivos-seguros.mjs";
 import { LIMITE_TEXTO, decodificarRecorteUtf8, describirLectura, leerPrimerosBytes, leerTextoAcotado, parseLectura } from "./lecturas.mjs";
 import { crearHistorial } from "./historial.mjs";
 import { Terminales } from "./terminal.mjs";
 import { buscarDefinicion, diagnosticarArchivo, diagnosticarTexto, indiceSimbolos, simbolos } from "./diagnosticos.mjs";
+import { CoderTask, CODER_CONFIG, coderOptions, runCheck } from "./coder-harness.mjs";
+import { ENGINE_PROFILES, engineProfile } from "./engine-profiles.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT = path.dirname(HERE);
@@ -59,7 +62,7 @@ let indiceCacheTs = 0;
 function sesionesTerminal() {
   if (!terminales || terminales.root !== workspaceRoot) {
     try { terminales?.cerrarTodo(); } catch { /* sin sesiones */ }
-    terminales = new Terminales({ root: workspaceRoot });
+    terminales = new Terminales({ root: workspaceRoot, env: shellEnv });
   }
   return terminales;
 }
@@ -68,6 +71,9 @@ function sesionesTerminal() {
 for (const evento of ["exit", "SIGINT", "SIGTERM"]) {
   process.once(evento, () => {
     try { terminales?.cerrarTodo(); } catch { /* ya cerrado */ }
+    for (const p of procesosFondoVivos.values()) { try { p.parar(); } catch { /* ya terminó */ } }
+    procesosFondoVivos.clear();
+    if (evento !== "exit") process.exit(0);
   });
 }
 
@@ -84,6 +90,8 @@ function indiceProyecto() {
 }
 /** Procesos en segundo plano del agente que SOBREVIVEN al turno hasta que se paren. */
 const procesosFondoVivos = new Map();
+/** Salida final de los últimos 50 procesos; permite comprobar builds asíncronos. */
+const procesosFondoTerminados = new Map();
 
 /**
  * Texto del plan persistente (checklist) para el mensaje de sistema.
@@ -133,7 +141,7 @@ function descartarUndo(id, bolsa) {
   }
 }
 
-const PROTEGIDOS = new Set(["bin", "models", ".git", "node_modules", "logs"]);
+const PROTEGIDOS = new Set([".git"]);
 function enCarpetaProtegida(rel) {
   const partes = String(rel).replace(/\\/g, "/").split("/").map((parte) => parte.replace(/[. ]+$/, "").toLowerCase()).filter(Boolean);
   return partes.some((parte) => PROTEGIDOS.has(parte));
@@ -280,14 +288,15 @@ const UI_SERVIDOS = new Set([".js", ".mjs", ".css", ".html", ".svg", ".json", ".
  */
 function parseArgs(argv) {
   // think = presupuesto de razonamiento en tokens; 0 (por defecto) = APAGADO.
-  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 8192, open: false, think: 0, perfil: "codigo" };
+  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 8192, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo" };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--host") out.host = argv[++i] ?? out.host;
     else if (arg === "--port") out.port = Number(argv[++i]);
     else if (arg === "--llama-port") out.llamaPort = Number(argv[++i]);
     else if (arg === "--prompt-cap") out.historyCap = Number(argv[++i]);
-    else if (arg === "--think") out.think = Number(argv[++i]);
+    else if (arg === "--think") {out.think = Number(argv[++i]);out.thinkProvided=true;}
+    else if (arg === "--engine-preset") {out.enginePreset=argv[++i];engineProfile(out.enginePreset);}
     else if (arg === "--perfil") out.perfil = argv[++i] ?? out.perfil;
     else if (arg === "--open") out.open = true;
     else throw new Error(`Argumento desconocido: ${arg}`);
@@ -397,10 +406,11 @@ function listWorkspace(root, rel, out, depth, limit = 400) {
  * @returns {string}
  */
 function repoIndex(scope) {
-  const rootRel = scope.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
-  if (rootRel.split("/").some((part) => part === ".." || part === ".")) return "Ruta no permitida.";
-  if (rootRel.split("/").some((part) => SKIP_DIR.has(part))) {
-    return `${rootRel} está en el repo y no se lista archivo por archivo.`;
+  const destino = rutaProyecto(workspaceRoot, scope || ".", { permitirRaiz: true });
+  if (!destino) return "Ruta no permitida: usa una carpeta dentro del proyecto seleccionado.";
+  const rootRel = path.relative(workspaceRoot, destino).replace(/\\/g, "/");
+  if (rootRel.split("/").some((part) => part.toLowerCase() === ".git")) {
+    return "Usa git para inspeccionar sus metadatos.";
   }
   if (rootRel && !fileInside(workspaceRoot, rootRel)) return "Ruta no permitida.";
   const base = rootRel ? path.join(workspaceRoot, rootRel) : workspaceRoot;
@@ -786,7 +796,7 @@ function pdfReady(output) {
  */
 function runCommand(command, signal) {
   const text = command.trim();
-  if (!text || text.length > 16000) return Promise.resolve({ code: 1, output: "Comando vacío o demasiado largo." });
+  if (!text || text.length > 32768) return Promise.resolve({ code: 1, output: "Comando vacío o demasiado largo (máximo 32768 caracteres)." });
   const before = snapshotFiles(workspaceRoot);
   return ejecutarComando(text, { cwd: workspaceRoot, env: shellEnv, signal, timeoutMs: comandoTimeoutMs }).then((result) => {
     const files = fileDelta(before, snapshotFiles(workspaceRoot));
@@ -813,63 +823,11 @@ function clipText(text, max = 1600) {
 }
 
 /**
- * @param {string} text
- * @returns {string}
- */
-function decodeHtml(text) {
-  return text
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, "\"")
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/**
- * @param {string} href
- * @returns {string}
- */
-function resultUrl(href) {
-  const raw = href.replace(/&amp;/g, "&");
-  try {
-    const abs = new URL(raw, "https://duckduckgo.com");
-    return abs.searchParams.get("uddg") || abs.href;
-  } catch {
-    return raw;
-  }
-}
-
-/**
  * @param {string} query
  * @returns {Promise<string>}
  */
-async function webSearch(query) {
-  const q = query.trim().slice(0, 200);
-  if (!q) return "Consulta vacía.";
-  const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`, {
-    headers: { "User-Agent": "Mozilla/5.0" },
-    signal: AbortSignal.timeout(12000),
-  });
-  if (!res.ok) throw new Error(`La búsqueda falló (${res.status}).`);
-  const html = await res.text();
-  /** @type {string[]} */
-  const hits = [];
-  const re = /class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
-  for (const match of html.matchAll(re)) {
-    if (hits.length >= 5) break;
-    const title = decodeHtml(match[2] || "");
-    const url = resultUrl(match[1] || "");
-    const after = html.slice(match.index || 0, (match.index || 0) + 1500);
-    const snip = after.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i);
-    const text = snip ? decodeHtml(snip[1] || "") : "";
-    if (!title || !url) continue;
-    hits.push([title, url, text].filter(Boolean).join("\n"));
-  }
-  return hits.length ? hits.join("\n\n") : "Sin resultados.";
+async function webSearch(query, signal, blockedPorts) {
+  return buscarWeb(query, { signal, blockedPorts });
 }
 
 /**
@@ -926,7 +884,7 @@ let gpuCache = { at: 0, data: { ok: false } };
 function readGpu() {
   if (Date.now() - gpuCache.at < 900) return Promise.resolve(gpuCache.data);
   return new Promise((resolve) => {
-    const fields = "name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw,enforced.power.limit,clocks.sm,clocks.max.sm,pstate,power.default_limit";
+    const fields = "name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw,enforced.power.limit,clocks.sm,clocks.max.sm,pstate,power.default_limit,memory.free";
     execFile("nvidia-smi", [`--query-gpu=${fields}`, "--format=csv,noheader,nounits"], { timeout: 3000, windowsHide: true }, (err, stdout) => {
       const mem = { ramFreeMiB: Math.round(os.freemem() / 1048576), ramTotalMiB: Math.round(os.totalmem() / 1048576) };
       let data = { ok: false, ...mem };
@@ -934,7 +892,7 @@ function readGpu() {
         const p = String(stdout).trim().split("\n")[0].split(",").map((s) => s.trim());
         const n = (i) => (Number.isFinite(Number(p[i])) ? Number(p[i]) : null);
         if (p.length >= 10) {
-          data = { ok: true, name: p[0], util: n(1), vramUsedMiB: n(2), vramTotalMiB: n(3), temp: n(4), watts: n(5), wattsLimit: n(6), mhz: n(7), mhzMax: n(8), pstate: p[9], wattsDefault: n(10), ...mem };
+          data = { ok: true, name: p[0], util: n(1), vramUsedMiB: n(2), vramTotalMiB: n(3), temp: n(4), watts: n(5), wattsLimit: n(6), mhz: n(7), mhzMax: n(8), pstate: p[9], wattsDefault: n(10), vramFreeMiB:n(11), visionReserveMiB:400, ...mem };
         }
       }
       gpuCache = { at: Date.now(), data };
@@ -1257,7 +1215,10 @@ async function main(args) {
     } catch {
       /* sin registro: se lanza igual */
     }
-    if (configuracion ? configuracion.vision : mmprojDisponible(clave)) args.push("-Vision");
+    const preset = configuracion ? configuracion.enginePreset || "" : leerAjustes().enginePreset || "";
+    if (preset) { engineProfile(preset); args.push("-EnginePreset", preset); }
+    if (configuracion ? configuracion.vision : preset ? engineProfile(preset).vision : mmprojDisponible(clave)) args.push("-Vision");
+    else args.push("-SinVision");
     if (configuracion) args.push("-ContextSize", String(configuracion.contexto), "-KVCacheType", configuracion.kv, "-DormirSeg", String(configuracion.dormir), "-HostIP", configuracion.hostIP);
     // Siempre explícito: el razonamiento que pidió el usuario si ESE modelo lo admite, o 0.
     // (Antes se pasaba el del modelo que se iba a descargar.)
@@ -1311,7 +1272,8 @@ async function main(args) {
           !Number.isInteger(datos.pensar) || datos.pensar < 0 || datos.pensar > 65536 ||
           !Number.isInteger(datos.dormir) || datos.dormir < 0 || datos.dormir > 86400 ||
           !["127.0.0.1", "localhost", "::1"].includes(datos.hostIP)) throw new Error("datos incompletos");
-      return { clave: datos.modelo, contexto: datos.contexto, kv: datos.kv, vision: datos.vision, pensar: datos.pensar, dormir: datos.dormir, hostIP: datos.hostIP };
+      if (datos.enginePreset) engineProfile(datos.enginePreset);
+      return { clave: datos.modelo, contexto: datos.contexto, kv: datos.kv, vision: datos.vision, pensar: datos.pensar, dormir: datos.dormir, hostIP: datos.hostIP, enginePreset: datos.enginePreset || "" };
     } catch {
       // Un arranque de una versión anterior no guardaba estos parámetros.
       return { error: "no se guardó la configuración anterior; reinicia el IDE manualmente" };
@@ -1378,6 +1340,7 @@ async function main(args) {
       turns: Array.isArray(raw.turns) ? raw.turns : [],
       draft: "",
       files: Array.isArray(raw.files) ? raw.files : [],
+      ...metadatosSesion(raw),
     };
     chat.tighten = 0;
     chat.saveSession();
@@ -1616,12 +1579,18 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const AJUSTES_DEFECTO = { tema: "dark", perfil: "codigo", pensar: 0, reglas: true, historial: DEFAULT_HISTORY_CAP, continuarAuto: true, saltosTope: 192, comandoSegundos: 180 };
+  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: DEFAULT_HISTORY_CAP, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy" };
   // Los ajustes guardados en la interfaz (perfil de muestreo, tope de historial, pensar)
   // mandan sobre los valores por defecto de la línea de comandos. Va AQUÍ y no al principio
   // de main(): `AJUSTES_DEFECTO` es un `const` y llamarlo antes revienta el arranque con
   // "Cannot access 'AJUSTES_DEFECTO' before initialization".
-  aplicarAjustesAlChat(leerAjustes());
+  let inicial=leerAjustes();
+  if(args.enginePreset){
+    const p=engineProfile(args.enginePreset);
+    if(chat.nCtx!==p.context||chat.vision!==Boolean(p.vision))throw new Error("El motor en ejecución no coincide con el perfil solicitado; vuelve a iniciarlo desde el lanzador.");
+    inicial=guardarAjustes({enginePreset:args.enginePreset,coderContextTokens:p.context,historial:p.context,...(args.thinkProvided?{pensar:args.think}:{})});
+  }else if(args.thinkProvided)inicial=guardarAjustes({pensar:args.think});
+  aplicarAjustesAlChat(inicial);
 
   /** @returns {Record<string, unknown>} */
   function leerAjustes() {
@@ -1649,6 +1618,10 @@ async function main(args) {
    * @param {Record<string, unknown>} ajustes
    */
   function aplicarAjustesAlChat(ajustes) {
+    const agentProfile = ajustes.agentePerfil || process.env.BONSAI_AGENT_PROFILE;
+    if (["legacy", "small-local-coder"].includes(agentProfile)) chat.agentProfile = agentProfile;
+    const engine = ajustes.enginePreset && Object.hasOwn(ENGINE_PROFILES, ajustes.enginePreset) ? engineProfile(ajustes.enginePreset) : null;
+    chat.coderConfig = { ...CODER_CONFIG, ...(engine ? { contextTokens:engine.context, ...(engine.coderOutputTokens ? {outputTokens:engine.coderOutputTokens} : {}), ...(engine.thinkingTokens ? {thinkingTokens:engine.thinkingTokens} : {}) } : {}), ...coderOptions(process.env.BONSAI_CODER_OPTIONS), ...(ajustes.coderContextTokens ? { contextTokens: ajustes.coderContextTokens } : {}) };
     const perfil = typeof ajustes.perfil === "string" ? ajustes.perfil : "";
     if (perfil && MODELO.muestreo[perfil]) chat.perfil = perfil;
     const tope = Number(ajustes.historial);
@@ -1678,7 +1651,7 @@ async function main(args) {
   function infoPensar() {
     const clave = modeloActualClave();
     const { compatible, presupuesto } = pensarDe(clave);
-    return { modelo: clave, compatible, recomendado: presupuesto, efectivo: chat.thinkBudget, servidor: pensarServidor };
+    return { modelo: clave, compatible, recomendado: presupuesto, efectivo: chat.effectiveThinkingBudget(), solicitado: chat.thinkBudget, limiteCoding: chat.thinkingLimit(), servidor: pensarServidor };
   }
 
   const server = http.createServer(async (req, res) => {
@@ -1734,7 +1707,7 @@ async function main(args) {
         const root = fromProject ? workspaceRoot : SALIDA;
         let rel = rawPath;
         try { rel = decodeURIComponent(rawPath); } catch { rel = rawPath; }
-        if (fromProject && rel.split("/").map((part) => part.replace(/[. ]+$/, "").toLowerCase()).some((part) => SKIP_DIR.has(part))) {
+        if (fromProject && rel.split("/").map((part) => part.replace(/[. ]+$/, "").toLowerCase()).some((part) => part === ".git" || part.startsWith(".env"))) {
           res.writeHead(404).end("no está");
           return;
         }
@@ -1765,6 +1738,9 @@ async function main(args) {
           memory: estimateTokens(chat.session.memory),
         };
         res.end(JSON.stringify({
+          agentProfile: chat.agentProfile,
+          busy,
+          taskState: chat.session.taskState || null,
           nCtx: chat.nCtx,
           historyCap: chat.historyCap(),
           // Presupuesto real de contexto: ventana del servidor, tope pedido por el usuario,
@@ -1777,11 +1753,19 @@ async function main(args) {
           turns: chat.session.turns.filter((turn) => !hiddenTurn(turn)).map((turn) => ({
             role: turn.role,
             content: typeof turn.shown === "string" ? turn.shown : turn.content,
+            ...(typeof turn.reasoning === "string" ? {reasoning:turn.reasoning} : {}),
             actions: Array.isArray(turn.actions) ? turn.actions : [],
           })),
           files,
         }));
         return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/agent-trace") {
+        const id = String(url.searchParams.get("id") || "");
+        if (!/^\d+-[a-f0-9]{8}$/.test(id)) { res.writeHead(400).end("id de tarea inválido"); return; }
+        const abs = path.join(STATE,"agent-traces",`${id}.jsonl`);
+        if (!fs.existsSync(abs)) { res.writeHead(404).end("trace no encontrado"); return; }
+        res.writeHead(200,{"Content-Type":"application/x-ndjson","Cache-Control":"no-store"}); fs.createReadStream(abs).pipe(res); return;
       }
       if (req.method === "GET" && url.pathname === "/api/stats") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -2272,6 +2256,9 @@ async function main(args) {
       if (req.method === "POST" && url.pathname === "/api/modelos") {
         const raw = JSON.parse(await readBody(req));
         const clave = raw && typeof raw.clave === "string" ? raw.clave.trim() : "";
+        if (raw.enginePreset !== undefined && !Object.hasOwn(ENGINE_PROFILES, raw.enginePreset)) {
+          res.writeHead(400).end("Perfil de motor desconocido"); return;
+        }
         const item = catalogoModelos().find((m) => m.clave === clave);
         if (!item) {
           res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end(`modelo desconocido: ${clave}`);
@@ -2287,7 +2274,7 @@ async function main(args) {
         }
         // `recargar`: el mismo modelo, reiniciado (p. ej. para encender el razonamiento, que
         // se fija al arrancar llama-server).
-        if (modeloActualClave() === clave && raw.recargar !== true) {
+        if (modeloActualClave() === clave && raw.recargar !== true && raw.enginePreset === undefined) {
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ ok: true, cambiado: false, clave, nombre: item.nombre, nCtx: chat.nCtx, vision: Boolean(chat.vision) }));
           return;
@@ -2309,7 +2296,9 @@ async function main(args) {
               if (restaurar?.error) throw new Error(restaurar.error);
               const objetivo = restaurar?.clave || clave;
               chat.note(restaurar ? "recuperando el modelo anterior…" : `cambiando de modelo: ${item.nombre}…`);
-              const hijo = lanzarServidorLlama(objetivo, restaurar || null);
+              const p = raw.enginePreset ? engineProfile(raw.enginePreset) : null;
+              const solicitado = p ? { enginePreset:raw.enginePreset, contexto:p.context, kv:p.kv, vision:p.vision, dormir:0, hostIP:"127.0.0.1", pensar:presupuestoPensar(clave, Number(p.thinkingTokens ?? leerAjustes().pensar)) } : anterior?.enginePreset ? { ...anterior, pensar:presupuestoPensar(clave, Number(leerAjustes().pensar)) } : null;
+              const hijo = lanzarServidorLlama(objetivo, restaurar || solicitado);
               if (!(await esperarEncendido(90000, hijo))) throw new Error(`el modelo ${objetivo} no arrancó; revisa logs/arranque-modelo.log`);
               await chat.connect();
               if (modeloActualClave() !== objetivo) throw new Error("el servidor respondió con un modelo diferente del solicitado");
@@ -2320,6 +2309,10 @@ async function main(args) {
               aplicarAjustesAlChat(leerAjustes());
             },
           });
+          if (raw.enginePreset) {
+            const p = engineProfile(raw.enginePreset);
+            aplicarAjustesAlChat(guardarAjustes({ enginePreset:raw.enginePreset, coderContextTokens:p.context, historial:p.context, ...(p.thinkingTokens ? {pensar:p.thinkingTokens} : {}) }));
+          }
           // Aquí es donde consta que el modelo nuevo contesta: se guarda la elección para
           // que el próximo arranque (start-ui.ps1, start-chat.ps1 o start-server.ps1) use
           // este y no el predeterminado del catálogo.
@@ -2353,7 +2346,7 @@ async function main(args) {
       // --------------------------------------------------------------- ajustes
       if (req.method === "GET" && url.pathname === "/api/settings") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
-        res.end(JSON.stringify({ ...leerAjustes(), pensarInfo: infoPensar() }));
+        res.end(JSON.stringify({ ...leerAjustes(), pensarInfo: infoPensar(), engineProfiles: ENGINE_PROFILES }));
         return;
       }
       if (req.method === "POST" && url.pathname === "/api/settings") {
@@ -2362,10 +2355,23 @@ async function main(args) {
           res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("cuerpo no valido");
           return;
         }
-        const permitidas = ["tema", "perfil", "pensar", "reglas", "historial"];
+        const permitidas = ["tema", "perfil", "pensar", "verPensamiento", "reglas", "historial", "continuarAuto", "saltosTope", "comandoSegundos", "agentePerfil", "coderContextTokens", "modoRespuesta"];
         /** @type {Record<string, unknown>} */
         const limpio = {};
         for (const k of permitidas) if (k in raw) limpio[k] = raw[k];
+        if ("tema" in limpio && !["dark","light","slate","ocean","forest","sand"].includes(limpio.tema)) {res.writeHead(400).end("Tema inválido");return;}
+        if ("verPensamiento" in limpio && typeof limpio.verPensamiento!=="boolean") {res.writeHead(400).end("Preferencia de pensamiento inválida");return;}
+        if ("modoRespuesta" in limpio && !["agente","consulta"].includes(limpio.modoRespuesta)) {
+          res.writeHead(400).end("Modo de respuesta inválido"); return;
+        }
+        if ("coderContextTokens" in limpio && ![4096,8192,16384,32768,36864,39936].includes(limpio.coderContextTokens)) {
+          res.writeHead(400).end("Contexto coding inválido"); return;
+        }
+        if ("agentePerfil" in limpio && !["legacy", "small-local-coder"].includes(limpio.agentePerfil)) {
+          res.writeHead(400).end("agentePerfil debe ser legacy o small-local-coder"); return;
+        }
+        if ("saltosTope" in limpio) limpio.saltosTope = Math.max(24, Math.min(400, Math.round(Number(limpio.saltosTope) || 192)));
+        if ("comandoSegundos" in limpio) limpio.comandoSegundos = Math.max(10, Math.min(1800, Math.round(Number(limpio.comandoSegundos) || 180)));
         const mezcla = guardarAjustes(limpio);
         // Y SE APLICAN: antes se guardaban y no los leía nadie, así que elegir "Modo
         // razonamiento" o "Perfil de muestreo" no cambiaba nada y la interfaz decía que sí.
@@ -2442,6 +2448,14 @@ async function main(args) {
       }
       // ------------------------------------------ procesos en segundo plano
       if (req.method === "GET" && url.pathname === "/api/procesos") {
+        if (url.searchParams.has("id")) {
+          const id = url.searchParams.get("id");
+          const p = procesosFondoVivos.get(id);
+          const estado = p ? { id, ...p.estado() } : procesosFondoTerminados.get(id);
+          if (!estado) { res.writeHead(404).end("ese proceso no existe"); return; }
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" }).end(JSON.stringify(estado));
+          return;
+        }
         const lista = [...procesosFondoVivos.values()].map((p) => ({ id: p.id, pid: p.pid, comando: p.comando, inicio: p.inicio, segundos: Math.round((Date.now() - p.inicio) / 1000) }));
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
         res.end(JSON.stringify({ procesos: lista }));
@@ -2577,6 +2591,8 @@ async function main(args) {
         const attached = Array.isArray(raw.files) ? raw.files : [];
         const snippets = Array.isArray(raw.snippets) ? raw.snippets : [];
         const imagenes = Array.isArray(raw.imagenes) ? raw.imagenes : [];
+        if (raw.modo !== undefined && !["agente","consulta"].includes(raw.modo)) { res.writeHead(400).end("Modo inválido"); return; }
+        const consulta = (raw.modo || leerAjustes().modoRespuesta) === "consulta";
         if (!text) {
           res.writeHead(400).end("falta el texto");
           return;
@@ -2604,7 +2620,22 @@ async function main(args) {
         let send = () => {};
         /** @type {NodeJS.Timeout | null} */
         let latido = null;
+        let coderTimer = null;
+        let motivoParada = "completed";
+        let saltosUsados = 0;
+        chat.coderTask = null;
         try {
+          const activePreset=leerAjustes().enginePreset;
+          if(imagenes.length&&chat.vision&&activePreset&&Object.hasOwn(ENGINE_PROFILES,activePreset)){
+            gpuCache.at=0;
+            const gpu=await readGpu(),margin=Math.max(400,engineProfile(activePreset).marginMiB||0);
+            // The measured image transient is 46 MiB; allow 64 MiB above the minimum.
+            if(!gpu.ok||gpu.vramFreeMiB==null||gpu.vramFreeMiB<margin+64){
+              finished=true;
+              res.writeHead(409,{"Content-Type":"text/plain; charset=utf-8"}).end(`No hay suficiente VRAM libre para conservar ${margin} MiB durante la imagen. Libera memoria GPU o selecciona un perfil menor; se requieren al menos ${margin+64} MiB libres antes de procesarla.`);
+              return;
+            }
+          }
           req.on("close", () => {
             if (!finished) ac.abort();
           });
@@ -2625,7 +2656,7 @@ async function main(args) {
           }, Number(process.env.BONSAI_LATIDO_MS) || 15000);
           chat.push = (event) => send(event);
           const named = attached.length ? attached : (snippets.length ? [] : filesNamedIn(text));
-          let prompt = named.length ? attachFiles(text, named) : (snippets.length ? text : withCurrentFile(text));
+          let prompt = chat.agentProfile === "small-local-coder" ? (attached.length ? attachFiles(text, attached) : text) : (named.length ? attachFiles(text, named) : (snippets.length ? text : withCurrentFile(text)));
           if (snippets.length) prompt = attachSnippets(prompt, snippets);
           // Imágenes: con visión viajan como partes `image_url`; sin ella solo se avisa.
           const imagenesData = chat.vision ? imagenesParaModelo(imagenes) : [];
@@ -2655,7 +2686,17 @@ async function main(args) {
           chat.rules = leerAjustes().reglas === false ? "" : reglasParaModelo();
           // Plan persistente: viaja en el mensaje de sistema para que el modelo sepa en qué
           // paso va aunque el turno de antes se haya cerrado (o haya continuado solo).
-          chat.rules = [chat.rules, textoPlan(chat.session.plan)].filter(Boolean).join("\n\n");
+          if (chat.agentProfile !== "small-local-coder") chat.rules = [chat.rules, textoPlan(chat.session.plan)].filter(Boolean).join("\n\n");
+          if (chat.agentProfile === "small-local-coder" && !consulta && !esCharla(text)) {
+            const previous = chat.session.taskState;
+            const currentFile = chat.session.files?.at(-1)?.rel || "";
+            chat.coderTask = await new CoderTask({root:workspaceRoot,goal:prompt,currentFile,config:chat.coderConfig,traceDir:path.join(STATE,"agent-traces"),signal:ac.signal,emit:send}).start();
+            if (previous?.root === path.resolve(workspaceRoot) && text.length < 600 && /\b(eso|anterior|ahora|contin[uú]a|tambi[eé]n|lo mismo)\b/i.test(text)) {
+              chat.coderTask.state.previousTask = {goal:previous.goal.slice(0,600),modified:previous.modified?.slice(0,12),errors:previous.errors?.slice(0,3)};
+            }
+            chat.coderTask.startTurnIndex = chat.session.turns.length;
+            coderTimer = setTimeout(() => ac.abort(new Error("Tiempo máximo del agente agotado")), chat.coderTask.config.timeoutMs);
+          }
           let step = 0;
           // Los ids de acción empezaban en "a1" en CADA turno: la interfaz reutilizaba
           // la tarjeta del turno anterior y el nuevo diff se pintaba encima. Con el
@@ -2677,13 +2718,15 @@ async function main(args) {
           let ultimoFallo = false;
           let xmlTold = false;
           /** Motivo real por el que termina el turno (viaja en el evento `done`). */
-          let motivoParada = "completed";
           /** ¿El último paso produjo información o acciones nuevas? (detección de atasco) */
           let progresoPaso = false;
           /** Caché de lecturas del turno: clave → {version, texto}. Permite releer sin bloquear. */
           const CACHE_LECTURAS_MAX = 100;
           /** @type {Map<string, {version: string, texto: string}>} */
           const cacheLecturas = new Map();
+          // Releer o volver a capturar lo mismo no convierte una tanda en progreso.
+          // No bloquea la herramienta: la evidencia sigue llegando al modelo.
+          const evidenciasVistas = new Set();
           /** Tipo de acción del último paso ("read" | "write" | "cmd" | …), para la fase. */
           let accionPaso = "";
           /**
@@ -2754,7 +2797,11 @@ async function main(args) {
             // sigue con las heurísticas de siempre.
             const crudas = calls.length ? [] : llamadasCrudas(raw, dialectoDe(modeloActualClave(), MODELO.catalogo));
             const usadas = calls.length ? calls : crudas;
-            const effects = usadas.length ? nativeToolEffects(usadas) : null;
+            const coder = chat.coderTask;
+            const checked = coder ? coder.accept(usadas) : {valid:usadas,errors:[]};
+            const specialized = coder ? checked.valid.filter(c=>["leer","indice","buscar_codigo","simbolo","git_diff"].includes(c.name)) : [];
+            const normal = coder ? checked.valid.filter(c=>!specialized.includes(c)) : usadas;
+            const effects = normal.length ? nativeToolEffects(normal) : null;
             // Llamadas NATIVAS: cada resultado vuelve a su llamada (mismo id que le pone
             // apiTurn al reenviarla). Las crudas (XML en el texto) no tienen tool_calls en el
             // historial y siguen viajando como mensaje del usuario.
@@ -2768,14 +2815,14 @@ async function main(args) {
             // archivo) eran para modelos sin tool calls: con estos solo añadían saltos y archivos
             // que nadie pidió (corrida 7, json-resumen: releyó ventas.json y creó
             // `lee-ventas-json.json` tras la respuesta final). Su XML crudo ya lo cubre `crudas`.
-            const nativos = Boolean(dialectoDe(modeloActualClave(), MODELO.catalogo));
+            const nativos = Boolean(coder || dialectoDe(modeloActualClave(), MODELO.catalogo));
             const reads = (effects ? effects.reads : nativos ? [] : extractReads(raw))
               .map((rel) => rel.replace(/\\/g, "/"))
               .filter((rel, index, all) => all.indexOf(rel) === index);
             let scope = effects ? effects.scope : nativos ? null : indexScope(raw);
             const requested = effects ? effects.commands : nativos ? [] : extractCommands(raw);
             // Sus cercas de código son para ENSEÑAR, no para guardar (solo cuenta un ```archivo explícito).
-            const writes = effects ? effects.writes : extractWrites(raw, text, { soloExplicitas: nativos });
+            const writes = effects ? effects.writes : coder ? [] : extractWrites(raw, text, { soloExplicitas: nativos });
             const searches = effects ? effects.searches : nativos ? [] : extractSearches(raw);
             const prior = chat.session.turns[chat.session.turns.length - 2];
             const opening = !prior || !hiddenTurn(prior);
@@ -3045,7 +3092,7 @@ async function main(args) {
             });
             // ---- proceso: listar o detener procesos en segundo plano que sobreviven al turno ----
             (effects?.procesos || []).forEach((pedido) => {
-              const clave = `proc:${pedido.accion}`;
+              const clave = pedido.accion === "listar" ? "proc:listar" : `proc:${pedido.accion}:${pedido.id}`;
               if (pedido.accion === "listar") {
                 const vivos = [...procesosFondoVivos.values()];
                 const texto = vivos.length
@@ -3054,6 +3101,12 @@ async function main(args) {
                 const row = showAction("cmd", "procesos en segundo plano", "run");
                 finishAction(row, "done", clipText(texto));
                 poner(clave, `Procesos en segundo plano:\n${texto}`);
+              } else if (pedido.accion === "leer") {
+                const vivo = procesosFondoVivos.get(pedido.id);
+                const estado = vivo ? { id: pedido.id, ...vivo.estado() } : procesosFondoTerminados.get(pedido.id);
+                const detalle = estado ? JSON.stringify(estado, null, 2) : `No hay registro de ${pedido.id}. Usa proceso listar para ver los ids.`;
+                showAction("cmd", `leer proceso ${pedido.id}`, estado ? "done" : "denied", detalle);
+                poner(clave, detalle);
               } else {
                 const vivo = procesosFondoVivos.get(pedido.id);
                 if (!vivo) {
@@ -3091,6 +3144,7 @@ async function main(args) {
              * @param {string} texto
              */
             const ponerEn = (id, texto) => {
+              if (coder && estimateTokens(texto) > coder.config.toolResultTokens) texto = takeHeadByTokens(texto,coder.config.toolResultTokens,estimateTokens) + "\n[resultado recortado; el registro completo se conserva fuera del prompt]";
               pieces.push(texto);
               if (!nativa) return;
               porLlamada.get(porLlamada.has(id) ? id : ultimaId)?.push(texto);
@@ -3108,6 +3162,21 @@ async function main(args) {
               wrote = true;
               ultimoFallo = true;
             });
+            for (const failure of checked.errors) {
+              showAction("deny", "tool inválida", "denied", failure.error);
+              ponerEn(failure.id, failure.error); wrote = true; ultimoFallo = true;
+            }
+            for (const call of specialized) {
+              const row = showAction("read", call.name, "run");
+              try {
+                const detail = await coder.special(call);
+                ponerEn(call.id, detail); finishAction(row,"done",clipText(detail));
+                progresoPaso = true; accionPaso = "read";
+              } catch (err) {
+                ponerEn(call.id, err.message); finishAction(row,"denied",err.message); ultimoFallo = true;
+              }
+              wrote = true;
+            }
             for (const file of savedNow) {
               const origen = writes.find((item) => relCanonica(String(item.rel || "")) === file.rel.replace(/\\/g, "/"));
               poner(`write:${origen?.rel ?? file.rel}`, sinCambiosAhora.has(file.rel)
@@ -3161,7 +3230,7 @@ async function main(args) {
               /** @type {Array<{clave: string, abs: string | null, version: string}>} */
               const porLeer = [];
               for (const clave of reads) {
-                const abs = fileInside(workspaceRoot, parseLectura(clave).rel);
+                const abs = rutaProyecto(workspaceRoot, parseLectura(clave).rel, { permitirRaiz: true });
                 const version = abs ? versionDe(abs) : "";
                 const guardada = cacheLecturas.get(clave.toLowerCase());
                 if (abs && version && guardada && guardada.version === version) {
@@ -3241,7 +3310,7 @@ async function main(args) {
               if (/^\.venv[\\/]+scripts[\\/]+python(\.exe)?(?=\s|$)/i.test(command) && !fs.existsSync(path.join(workspaceRoot, ".venv", "Scripts", "python.exe"))) {
                 command = command.replace(/^\.venv[\\/]+scripts[\\/]+python(\.exe)?/i, "python");
               }
-              if (/\/home\/|\|\s*tail\b|\bbash\b/i.test(command)) {
+              if (permitMode !== "all" && /\/home\/|\|\s*tail\b|\bbash\b/i.test(command)) {
                 const py = command.match(/[A-Za-z0-9_./\\-]+\.py\b/);
                 const fixed = py ? `${chat.pythonCmd} ${py[0].replace(/\\/g, "/")}` : "";
                 if (!fixed) {
@@ -3260,15 +3329,17 @@ async function main(args) {
               // C:\Windows sin que nada la mirara (el permiso en "ask" era la única red, y
               // puede estar en "all"). Se comprueba aquí, antes de lanzar: la tarjeta sale
               // en rojo y el modelo recibe el motivo en vez de la salida.
-              if (!commandAllowed(command)) {
+              if (!commandAllowed(command, { trusted: permitMode === "all" })) {
                 showAction("cmd", command, "denied", "Comando no permitido en este equipo.");
                 log.push(`bloqueado: ${command}`);
-                poner(`cmd:${rawCommand}`, `No se lanzó «${command}»: comando no permitido. Nada de rutas absolutas fuera del proyecto, apagados, formateos, edición del registro ni comandos de más de 500 caracteres. Escribe un archivo dentro de la carpeta y ejecútalo.`);
+                poner(`cmd:${rawCommand}`, `No se lanzó «${command}»: ${permitMode === "all" ? "comando vacío, demasiado largo (máx. 32768 caracteres), NUL u operación destructiva del sistema" : "el modo de confirmación limita rutas externas y operaciones destructivas; usa las herramientas de archivos del proyecto o activa el modo autónomo desde Permisos"}. No intentes eludir este bloqueo con un script.`);
                 ranCommand = true;
                 ultimoFallo = true;
                 continue;
               }
               const key = commandKey(command);
+              // Una prueba de red/procesos depende del estado externo, no del mtime.
+              const nuevaComprobacion = effects?.repetir?.has(rawCommand) || /https?:\/\/|\b(?:curl(?:\.exe)?|netstat|tasklist|ping)\b/i.test(command);
               if (launched.has(key)) continue;
               launched.add(key);
               const same = pastCmds.filter((action) => commandKey(String(action.title || "")) === key);
@@ -3279,14 +3350,14 @@ async function main(args) {
               const priorOk = realSame.filter((action) => action.code === 0).pop();
               const lastRun = realSame[realSame.length - 1];
               const fails = realSame.filter((action) => action.code !== 0).length;
-              if (priorOk && lastRun === priorOk && !cambioDesde(key, priorOk)) {
+              if (!nuevaComprobacion && priorOk && lastRun === priorOk && !cambioDesde(key, priorOk)) {
                 const repeated = `Ya se ejecutó. No se volvió a lanzar.\n${priorOk.detail || "(sin salida)"}`;
                 showAction("cmd", command, "done", repeated, priorOk.code);
                 poner(`cmd:${rawCommand}`, `${repeated}\nNo lo repitas. Responde con esta salida. Si cambias algún archivo, el comando sí se vuelve a lanzar.`);
                 ranCommand = true;
                 continue;
               }
-              if (fails >= 2) {
+              if (!nuevaComprobacion && fails >= 2) {
                 const lastFail = realSame.filter((action) => action.code !== 0).pop();
                 if (!lastFail || (lastRun === lastFail && !cambioDesde(key, lastFail))) {
                   // Antes esto CERRABA el turno («stopFollow»). Ahora se le devuelve el último
@@ -3319,28 +3390,29 @@ async function main(args) {
               } else {
                 row = showAction("cmd", command, "run");
               }
-              // Servidor o proceso que no termina solo: en segundo plano hasta el final del turno.
+              // El registro vive fuera del turno; solo detener/cerrar IDE lo finaliza.
               if (effects?.enFondo?.has(rawCommand)) {
                 const fondo = await lanzarEnFondo(command, { cwd: workspaceRoot, env: shellEnv });
+                let idFondo = "";
                 if (fondo.vivo) {
-                  const idFondo = `bg${Date.now().toString(36)}${Math.floor(Math.random() * 90 + 10)}`;
-                  procesosFondoVivos.set(idFondo, { id: idFondo, comando: command, pid: fondo.pid, inicio: Date.now(), parar: fondo.parar, output: fondo.output || "" });
-                  poner(`cmd:${rawCommand}`, `Corriendo en segundo plano (id ${idFondo}, pid ${fondo.pid}). SOBREVIVE al turno: ya está escuchando/servido. No lo relaunces. Para pararlo, revisa el panel Terminal o pide que se detenga.\n${recortarCentro(fondo.output || "", 1200)}`);
-                  finishAction(row, "done", `En segundo plano (id ${idFondo}, pid ${fondo.pid}); no se cierra al acabar el turno.`, 0);
-                } else {
-                  poner(`cmd:${rawCommand}`, `Terminó enseguida (código ${fondo.code}).\n${recortarCentro(fondo.output || "", 3000)}`);
-                  finishAction(row, "done", recortarCentro(`Terminó enseguida (código ${fondo.code}).\n${fondo.output || ""}`, 1600), fondo.code ?? 1);
+                  idFondo = `bg${Date.now().toString(36)}${Math.floor(Math.random() * 90 + 10)}`;
+                  procesosFondoVivos.set(idFondo, { id: idFondo, comando: command, pid: fondo.pid, inicio: Date.now(), parar: fondo.parar, estado: fondo.estado });
+                  fondo.finalizado.then(() => {
+                    procesosFondoTerminados.set(idFondo, { id: idFondo, ...fondo.estado() });
+                    procesosFondoVivos.delete(idFondo);
+                    while (procesosFondoTerminados.size > 50) procesosFondoTerminados.delete(procesosFondoTerminados.keys().next().value);
+                  });
                 }
                 lanzadosAhora.add(key);
                 progresoPaso = true;
                 const detalleFondo = fondo.vivo
-                  ? `En segundo plano (pid ${fondo.pid}); se cierra al acabar el turno.\n${fondo.output}`
+                  ? `En segundo plano (id ${idFondo}, pid ${fondo.pid}); sobrevive al turno. Comprueba HTTP antes de darlo por listo.\n${fondo.output}`
                   : `Terminó enseguida (código ${fondo.code}).\n${fondo.output}`;
                 finishAction(row, "done", recortarCentro(detalleFondo, 1600), fondo.vivo ? 0 : fondo.code ?? 1);
                 log.push(`ejecutar en segundo plano: ${command}\n${detalleFondo}`);
                 if (!fondo.vivo && fondo.code !== 0) ultimoFallo = true;
                 poner(`cmd:${rawCommand}`, fondo.vivo
-                  ? `Lanzado en segundo plano: ${command} (sigue corriendo hasta el final del turno; no lo vuelvas a lanzar). Primera salida:\n${recortarCentro(fondo.output, 2000)}`
+                  ? `Lanzado en segundo plano: ${command} (id ${idFondo}, pid ${fondo.pid}). Sobrevive al turno; proceso listar/detener lo gestiona. Verifica su URL antes de afirmar que está listo. Primera salida:\n${recortarCentro(fondo.output, 2000)}`
                   : `${command} no se quedó corriendo: terminó con código ${fondo.code}.\n${recortarCentro(fondo.output, 3000)}`);
                 ranCommand = true;
                 continue;
@@ -3356,10 +3428,10 @@ async function main(args) {
               // Tiempo agotado: el modelo no sabía qué había pasado (lanzaba servidores en primer
               // plano una y otra vez, e incluso el `timeout` de Linux).
               const agotado = /\(tiempo agotado\)\s*$/.test(result.output)
-                ? "\nEse comando no terminó en 60 s y se cortó: se quedó esperando (un servidor, una entrada o un bucle). Si es un servidor, lánzalo con ejecutar y segundo_plano: true y pruébalo después con otro comando. Aquí no existe el `timeout` de Linux."
+                ? `\nEse comando no terminó en ${Math.round(comandoTimeoutMs / 1000)} s y se cortó. Si es un servidor, usa segundo_plano: true y comprueba después su URL.`
                 : "";
               const failed = result.code !== 0
-                ? `${agotado}\nEse comando falló en Windows. Corrige el archivo con el error de arriba. No uses cd /home, bash, tail ni tuberías. Después vuelve a lanzar el mismo comando.`
+                ? `${agotado}\nEl comando falló. Revisa la salida y la sintaxis de la shell anunciada; corrige la causa antes de reintentar. Si dependía de un servidor que ahora está listo, usa repetir: true.`
                 : "";
               if (result.code !== 0) ultimoFallo = true;
               poner(`cmd:${rawCommand}`, `Salida de ${command} (código ${result.code}):\n${recortarCentro(result.output, 3000)}${ready ? `\n${ready}` : ""}${failed}`);
@@ -3369,7 +3441,7 @@ async function main(args) {
               const row = showAction("search", query, "run");
               let detail = "Sin resultados.";
               try {
-                detail = clipText(await webSearch(query), 4000);
+                detail = await webSearch(query, ac.signal, [args.port, new URL(chat.base).port]);
               } catch (err) {
                 detail = err instanceof Error ? err.message : String(err);
               }
@@ -3377,6 +3449,22 @@ async function main(args) {
               log.push(`buscar: ${query}\n${detail}`);
               poner(`search:${query}`, `Búsqueda «${query}»:\n${detail}`);
               progresoPaso = true;
+            }
+            for (const [i, argsWeb] of (effects?.webs || []).entries()) {
+              ac.signal.throwIfAborted();
+              const row = showAction("read", String(argsWeb.url), "run");
+              try {
+                const detail = await leerWeb(argsWeb, { signal: ac.signal, blockedPorts: [args.port, new URL(chat.base).port] });
+                finishAction(row, "done", detail);
+                poner(`web:${i}`, detail);
+                progresoPaso = true;
+              } catch (err) {
+                if (ac.signal.aborted) throw err;
+                const detail = `leer_web: ${err.message}`;
+                finishAction(row, "denied", detail);
+                poner(`web:${i}`, detail);
+                ultimoFallo = true;
+              }
             }
             const imagenesPorLlamada = new Map();
             for (const [i, argsNav] of (effects?.navegaciones || []).entries()) {
@@ -3411,6 +3499,41 @@ async function main(args) {
             }
             current.shown = prose;
             current.actions = actions;
+            if (coder) {
+              if (effects?.plan) { coder.state.plan = effects.plan; coder.state.phase = "EDIT"; }
+              const mutations = actions.some(a=>a.state === "done" && (a.kind === "write" || (a.kind === "cmd" && a.code !== undefined)));
+              if (mutations || !usadas.length) {
+                const verification = await coder.verify({ final: !usadas.length, run: async (file, argv, options) => {
+                  const title = [file,...argv].join(" ");
+                  const row = showAction("cmd",title,permitMode === "ask" ? "permit" : "run");
+                  if (permitMode === "ask" && !await waitPermit(row.id,ac.signal)) {
+                    finishAction(row,"denied","Verificación no autorizada");
+                    return {command:title,code:-1,output:"Verificación no autorizada"};
+                  }
+                  const result = await runCheck(file,argv,options);
+                  finishAction(row,"done",clipText(result.output),result.code); return result;
+                }});
+                if (verification.changed) {
+                  ponerEn(ultimaId, `Verificación automática:\n${verification.summary}`);
+                  wrote = true; progresoPaso = true;
+                }
+                if (!verification.ok) { ultimoFallo = true; wrote = true; }
+                if (!usadas.length && !verification.ok && !verification.changed) coder.stopped = "unresolved_verification";
+              }
+              coder.state.actions = actions.map(a=>({kind:a.kind,title:a.title,state:a.state,code:a.code}));
+              chat.session.taskState = coder.state;
+            }
+            let nuevaEvidencia = false;
+            for (const a of actions) {
+              if (a.state !== "done" || a.sinCambios) continue;
+              if (/^(Ya se ejecutó|Falló \d+ veces|Misma versión ya leída)/.test(a.detail || "")) continue;
+              const detalle = String(a.detail || "").replace(/navegador-\d+-\d+\.png/g, "navegador.png");
+              const huella = JSON.stringify([a.kind, a.title, a.code, detalle]);
+              if (evidenciasVistas.has(huella)) continue;
+              evidenciasVistas.add(huella);
+              nuevaEvidencia = true;
+            }
+            progresoPaso = progresoPaso && nuevaEvidencia;
             if (savedNow.length || editadosAhora.length || (effects?.borrados || []).length || (effects?.movidos || []).length) indiceCache = null;
             current.content = prose;
             delete current.cortadas;
@@ -3428,7 +3551,9 @@ async function main(args) {
             // Aunque no se siga (tope, repetición), quedan para el cierre: así ninguna llamada
             // del historial se queda sin su respuesta.
             resultadosPendientes = resultados;
-            const work = scope !== null || reads.length > 0 || ranCommand || searches.length > 0 || wrote || effects?.navegaciones?.length > 0;
+            const work = scope !== null || reads.length > 0 || ranCommand || searches.length > 0 || wrote || effects?.navegaciones?.length > 0 || effects?.webs?.length > 0;
+            if (coder?.stopped) return null;
+            if (coder && !usadas.length && !coder.state.errors.length) { coder.state.phase = "DONE"; coder.trace("done",{tests:coder.state.tests}); return null; }
             if (follow && work) {
               if (nativa) return { texto: "", resultados };
               return { texto: [AVISO_SEGUIR, ...pieces].join("\n\n"), resultados: null, imagenes: [...imagenesPorLlamada.values()].flat() };
@@ -3460,19 +3585,22 @@ async function main(args) {
            */
           const enviar = async (paso, imagenes = []) => {
             resultadosPendientes = null;
+            chat.entornoAgente = { root: workspaceRoot, permiso: permitMode, timeoutMs: comandoTimeoutMs };
             await chat.runTurn(paso.texto, ac.signal, [...imagenes, ...(paso.imagenes || [])], paso.resultados ? { resultados: paso.resultados } : {});
           };
           // Pregunta de conversación pura («explica qué es…», sin archivos ni nada que hacer):
           // un solo salto SIN herramientas (tool_choice "none": siguen definidas, así que el
           // prompt y la caché no cambian). El modelo abliterado creaba y ejecutaba archivos
           // para explicar una closure (tarea solo-chat del evaluador, corridas 2 y 6).
-          const soloCharla = !imagenes.length && !attached.length && !snippets.length && esCharla(text);
+          const soloCharla = consulta || (!attached.length && !snippets.length && esCharla(text));
           if (soloCharla) {
+            chat.consultation = true;
             chat.toolChoice = "none";
             chat.pensarEsteSalto = true;
             try {
-              await enviar(siguiente, []);
+              await enviar(siguiente, imagenesData);
             } finally {
+              chat.consultation = false;
               chat.toolChoice = "auto";
             }
             const respuesta = chat.session.turns[chat.session.turns.length - 1];
@@ -3491,10 +3619,10 @@ async function main(args) {
           // trabajo avance; si una tanda entera no produce nada nuevo se declara atasco en
           // vez de fingir que terminó. El tope global sigue existiendo (contra bucles).
           const saltosTanda = Math.max(8, agente.saltos);
-          const saltosMaximos = Math.max(saltosTanda, Math.min(agente.saltos * 8, saltosTope));
+          const saltosMaximos = chat.coderTask ? Math.min(chat.coderTask.config.maxSteps,saltosTope) : Math.max(saltosTanda, Math.min(agente.saltos * 8, saltosTope));
           // Procesos del agente en segundo plano: viven fuera del turno (no se matan al cerrarlo).
           // Se listan y se paran desde el panel Terminal o con `proceso` del propio agente.
-          let saltosUsados = 0;
+          let pasosSinEvidencia = 0;
           /** @type {{texto: string, resultados: Array<{toolCallId: string, content: string}> | null} | null} */
           let pendienteCierre = null;
           try {
@@ -3519,15 +3647,19 @@ async function main(args) {
                   break;
                 }
                 const next = await present(current, true);
+                if (chat.coderTask?.stopped) motivoParada = chat.coderTask.stopped;
                 if (progresoPaso) progresoTanda = true;
+                pasosSinEvidencia = progresoPaso ? 0 : pasosSinEvidencia + 1;
                 if (!next) {
                   pendienteCierre = null;
                   break;
                 }
                 siguiente = next;
                 pendienteCierre = next;
+                if (pasosSinEvidencia >= 8) { motivoParada = "stalled"; break; }
               }
               if (!pendienteCierre) break;
+              if (motivoParada === "stalled") break;
               if (!progresoTanda) {
                 motivoParada = "stalled";
                 break;
@@ -3552,7 +3684,7 @@ async function main(args) {
           }
           // Si terminó sin llamada y la última prosa solo ANUNCIA una acción futura, no se
           // puede presentar como trabajo terminado: se marca como atasco y se avisa.
-          if (motivoParada === "completed" && !soloCharla) {
+          if (motivoParada === "completed" && !soloCharla && chat.coderTask?.state.phase !== "DONE") {
             const ultimo = chat.session.turns[chat.session.turns.length - 1];
             const dicho = String(ultimo?.content || "").trim();
             const anuncia = dicho.length > 0 && dicho.length < 320 && /\b(voy a|ahora |siguiente|leer[eé]|ejecutar[eé]|escribir[eé]|buscar[eé]|d[eé]jame|procedo a)\b/i.test(dicho);
@@ -3640,6 +3772,7 @@ async function main(args) {
           // El motivo real de la parada viaja a la interfaz: antes un `done` sin más no
           // distinguía una tarea terminada de una que se quedó sin pasos.
           chat.session.lastStop = { motivo: motivoParada, saltos: saltosUsados, completo: motivoParada === "completed", ts: Date.now() };
+          if (chat.coderTask) { chat.session.taskState = chat.coderTask.state; chat.saveSession(); }
           send({ type: "done", motivo: motivoParada, saltos: saltosUsados, incompleto: motivoParada !== "completed" });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
@@ -3649,6 +3782,10 @@ async function main(args) {
         } finally {
           finished = true;
           if (latido) clearInterval(latido);
+          if (coderTimer) clearTimeout(coderTimer);
+          chat.coderTask?.dispose();
+          chat.coderTask = null;
+          chat.pendingImageTokens = 0;
           await navegador?.close().catch(() => {});
           // Ningún servidor del agente sobrevive a su turno (ni deja un puerto ocupado).
           for (const parar of procesosFondo) {

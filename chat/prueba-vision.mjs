@@ -1,6 +1,7 @@
 /**
  * Prueba de VISIÓN de punta a punta con el modelo real:
  *   node chat/prueba-vision.mjs [--puerto 8080] [--ui 8797]
+ *     [--texto-largo] [--sin-ocr] [--exigir] [--salida archivo.json]
  *
  * Necesita el servidor arrancado con -Vision (mmproj). Si el servidor no tiene
  * visión, avisa y termina bien: así puede vivir en la suite sin GPU.
@@ -19,7 +20,7 @@ import http from "node:http";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import zlib from "node:zlib";
+import { pngConTexto } from "./evaluar/vision-fixture.mjs";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { ocrLocal } from "./ocr.mjs";
@@ -30,11 +31,18 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
  * @param {string[]} argv
  */
 function argsDe(argv) {
-  const out = { puerto: 8080, ui: 0, numero: "" };
+  const out = { puerto: 8080, ui: 0, numero: "", directo: false, escala: 24, textoLargo: false, sinOcr: false, exigir: false, salida: "" };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--puerto") out.puerto = Number(argv[++i]);
     else if (argv[i] === "--ui") out.ui = Number(argv[++i]);
     else if (argv[i] === "--numero") out.numero = String(argv[++i] || "");
+    else if (argv[i] === "--directo") out.directo = true;
+    else if (argv[i] === "--escala") out.escala = Number(argv[++i]);
+    else if (argv[i] === "--texto-largo") out.textoLargo = true;
+    else if (argv[i] === "--sin-ocr") out.sinOcr = true;
+    else if (argv[i] === "--exigir") out.exigir = true;
+    else if (argv[i] === "--salida") out.salida = String(argv[++i] || "");
+    else throw new Error(`Argumento desconocido: ${argv[i]}`);
   }
   return out;
 }
@@ -84,94 +92,6 @@ function numerosDe(texto) {
  * Solo dígitos sin parecido entre ellos (nada de 0/1/6/9): si el modelo lee el número,
  * lo ha leído de verdad.
  */
-const FUENTE = {
-  "2": ["01110", "10001", "00001", "00010", "00100", "01000", "11111"],
-  "3": ["11111", "00010", "00100", "00010", "00001", "10001", "01110"],
-  "4": ["00010", "00110", "01010", "10010", "11111", "00010", "00010"],
-  "5": ["11111", "10000", "11110", "00001", "00001", "10001", "01110"],
-  "7": ["11111", "00001", "00010", "00100", "01000", "01000", "01000"],
-  "8": ["01110", "10001", "10001", "01110", "10001", "10001", "01110"],
-  " ": ["00000", "00000", "00000", "00000", "00000", "00000", "00000"],
-  B: ["11110", "10001", "11110", "10001", "11110", "10001", "10001"],
-  O: ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
-  N: ["10001", "11001", "11001", "10101", "10011", "10011", "10001"],
-  S: ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
-  A: ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
-  I: ["11111", "00100", "00100", "00100", "00100", "00100", "11111"],
-};
-
-/**
- * PNG en blanco y negro con el texto dibujado. Sin dependencias.
- * @param {string} texto
- * @param {number} escala
- * @returns {Buffer}
- */
-function pngConTexto(texto, escala = 24) {
-  const ALTO_MAPA = 7;
-  const ancho = (texto.length * 6 + 1) * escala;
-  const alto = (ALTO_MAPA + 4) * escala;
-  const filas = [];
-  for (let y = 0; y < alto; y += 1) {
-    const fila = Buffer.alloc(1 + ancho); // 1 byte de filtro + 1 byte por pixel (gris)
-    fila[0] = 0;
-    fila.fill(255, 1);
-    for (let x = 0; x < ancho; x += 1) {
-      const glifo = Math.floor(x / escala / 6);
-      const dentroX = Math.floor((x - glifo * 6 * escala) / escala);
-      const dentroY = Math.floor((y - 2 * escala) / escala);
-      const mapa = FUENTE[texto[glifo]] || FUENTE[" "];
-      if (dentroY >= 0 && dentroY < ALTO_MAPA && dentroX >= 0 && dentroX < 5 && mapa[dentroY][dentroX] === "1") {
-        fila[1 + x] = 0;
-      }
-    }
-    filas.push(fila);
-  }
-  const crudo = Buffer.concat(filas);
-  /**
-   * @param {string} tipo
-   * @param {Buffer} datos
-   * @returns {Buffer}
-   */
-  const trozo = (tipo, datos) => {
-    const largo = Buffer.alloc(4);
-    largo.writeUInt32BE(datos.length);
-    const cuerpo = Buffer.concat([Buffer.from(tipo, "ascii"), datos]);
-    const crc = Buffer.alloc(4);
-    crc.writeUInt32BE(crc32(cuerpo) >>> 0);
-    return Buffer.concat([largo, cuerpo, crc]);
-  };
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(ancho, 0);
-  ihdr.writeUInt32BE(alto, 4);
-  ihdr[8] = 8; // bits por canal
-  ihdr[9] = 0; // escala de grises
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    trozo("IHDR", ihdr),
-    trozo("IDAT", zlib.deflateSync(crudo)),
-    trozo("IEND", Buffer.alloc(0)),
-  ]);
-}
-
-/** @type {number[]} */
-const TABLA_CRC = (() => {
-  /** @type {number[]} */
-  const tabla = [];
-  for (let n = 0; n < 256; n += 1) {
-    let c = n;
-    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    tabla[n] = c;
-  }
-  return tabla;
-})();
-
-/** @param {Buffer} buf */
-function crc32(buf) {
-  let c = 0xffffffff;
-  for (const byte of buf) c = TABLA_CRC[(c ^ byte) & 0xff] ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
-}
-
 // ------------------------------------------------------------------- ayudas
 /**
  * @param {string} url
@@ -228,11 +148,12 @@ function post(url, cuerpo, puerto) {
  * @param {string[]} imagenes
  * @returns {Promise<string>}
  */
-async function turno(puerto, texto, imagenes) {
+async function turno(puerto, texto, imagenes, onEvent = () => {}) {
   const res = await fetch(`http://127.0.0.1:${puerto}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text: texto, imagenes }),
+    signal: AbortSignal.timeout(300000),
   });
   if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
   const lector = res.body.getReader();
@@ -251,6 +172,7 @@ async function turno(puerto, texto, imagenes) {
       if (!linea.startsWith("data:")) continue;
       try {
         const evento = JSON.parse(linea.slice(5));
+        onEvent(evento);
         if (evento.type === "token") salida += evento.text || "";
         else if (evento.type === "replace") salida = evento.text || "";
         else if (evento.type === "error") throw new Error(evento.text || "error");
@@ -266,10 +188,11 @@ const args = argsDe(process.argv.slice(2));
 args.ui = args.ui || (await puertoLibre());
 const props = await pedir(`http://127.0.0.1:${args.puerto}/props`);
 if (props.status !== 200) {
+  if (args.exigir) throw new Error(`Se requiere el modelo real en ${args.puerto}: ${props.body}`);
   process.stdout.write(`(sin servidor en ${args.puerto}: no se prueba la visión)\n`);
   process.exit(0);
 }
-/** @type {{modalities?: {vision?: boolean}}} */
+/** @type {{modalities?: {vision?: boolean}, default_generation_settings?: {n_ctx?: number}, model_path?: string}} */
 let datosProps = {};
 try {
   datosProps = JSON.parse(props.body);
@@ -277,6 +200,7 @@ try {
   datosProps = {};
 }
 if (datosProps.modalities?.vision !== true) {
+  if (args.exigir) throw new Error("Se requiere visión activa en el modelo real.");
   process.stdout.write("(el servidor no tiene visión: arranca con -Vision para probarla)\n");
   process.exit(0);
 }
@@ -289,15 +213,50 @@ fs.mkdirSync(proyecto, { recursive: true });
 const DIBUJOS = "234578";
 const numero = args.numero || Array.from({ length: 4 }, () => DIBUJOS[Math.floor(Math.random() * DIBUJOS.length)]).join("");
 if (!/^[234578]{4}$/.test(numero)) throw new Error("--numero requiere cuatro dígitos entre 2, 3, 4, 5, 7 y 8");
-const imagen = pngConTexto(numero);
+if (!Number.isInteger(args.escala) || args.escala < 8 || args.escala > 96) throw new Error("--escala debe estar entre 8 y 96.");
+const imagen = pngConTexto(numero, args.escala);
 const imagenLocal = path.join(tmp, "ocr-prueba.png");
 fs.writeFileSync(imagenLocal, imagen);
+const evidencia = { fecha: new Date().toISOString(), contexto: datosProps.default_generation_settings?.n_ctx, modelo: datosProps.model_path, imagen: { ancho: imagen.readUInt32BE(16), alto: imagen.readUInt32BE(20), numero }, sinOcr: args.sinOcr, checks: [] };
+let libreMin = Infinity;
+const monitor = spawn("nvidia-smi", ["--query-gpu=memory.free", "--format=csv,noheader,nounits", "-lms", "100"], { windowsHide: true });
+monitor.on("error", () => {});
+monitor.stdout?.on("data", (b) => { for (const n of String(b).trim().split(/\s+/).map(Number)) if (Number.isFinite(n)) libreMin = Math.min(libreMin, n); });
+const finalizarEvidencia = () => {
+  monitor.kill(); monitor.stdout?.destroy(); monitor.stderr?.destroy();
+  evidencia.vramLibreMinMiB = Number.isFinite(libreMin) ? libreMin : null;
+  console.log(`VRAM libre mínima durante la prueba: ${evidencia.vramLibreMinMiB ?? "sin muestra"} MiB.`);
+  if (args.salida) { fs.mkdirSync(path.dirname(args.salida), { recursive: true }); fs.writeFileSync(args.salida, JSON.stringify(evidencia, null, 2)); }
+};
+if (args.directo) {
+  await new Promise((resolve) => { const timer = setTimeout(resolve, 1000); monitor.stdout?.once("data", () => { clearTimeout(timer); resolve(); }); });
+  try {
+    const res = await fetch(`http://127.0.0.1:${args.puerto}/v1/chat/completions`, {
+      method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(90000),
+      body: JSON.stringify({ messages: [{ role: "user", content: [{ type: "text", text: "¿Qué número aparece en la imagen? Responde solo con el número." }, { type: "image_url", image_url: { url: `data:image/png;base64,${imagen.toString("base64")}` } }] }], max_tokens: 32, temperature: 0, stream: false }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${JSON.stringify(body)}`);
+    const texto = body.choices?.[0]?.message?.content || "";
+    if (!numerosDe(texto).includes(numero)) throw new Error(`Lectura incorrecta: ${JSON.stringify(texto)}`);
+    console.log(`Visión directa: ${JSON.stringify(texto)}; ${body.usage?.prompt_tokens} tokens de entrada.`);
+  } finally {
+    finalizarEvidencia();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+  process.exit(0);
+}
 const ocr = await ocrLocal(imagenLocal);
 process.stdout.write(`OCR local: ${ocr.ok ? JSON.stringify(ocr.texto) : ocr.error}\n`);
+// El stub solo afecta a este ui-server temporal. Prueba que la lectura proviene de
+// los píxeles y no de una transcripción que contenga la respuesta.
+const ocrStub = path.join(tmp, "sin-ocr.ps1");
+if (args.sinOcr) fs.writeFileSync(ocrStub, `'${JSON.stringify({ ok: false, texto: "", error: "OCR desactivado en esta prueba de visión" })}'`);
 const hijo = spawn(process.execPath, [path.join(HERE, "ui-server.mjs"), "--port", String(args.ui), "--llama-port", String(args.puerto)], {
   cwd: HERE,
-  env: { ...process.env, BONSAI_STATE: path.join(tmp, "estado"), BONSAI_SALIDA: path.join(tmp, "salida") },
+  env: { ...process.env, BONSAI_STATE: path.join(tmp, "estado"), BONSAI_SALIDA: path.join(tmp, "salida"), ...(args.sinOcr ? { BONSAI_OCR_SCRIPT: ocrStub } : {}) },
   stdio: "ignore",
+  windowsHide: true,
 });
 
 /** @type {string[]} */
@@ -317,27 +276,51 @@ try {
   // Sin esto, si el modelo pide un comando la petición se queda esperando aprobación
   // 180 s (el estado temporal arranca en modo "Preguntar"). El evaluador hace lo mismo.
   await post(`http://127.0.0.1:${args.ui}/api/permit`, { mode: "all" }, args.ui);
+  if (args.textoLargo) {
+    const nCtx = evidencia.contexto;
+    if (!Number.isInteger(nCtx) || nCtx < 16384) throw new Error(`Ventana inválida: ${nCtx}`);
+    const ajustes = await post(`http://127.0.0.1:${args.ui}/api/settings`, { historial: nCtx, pensar: 0, continuarAuto: false }, args.ui);
+    if (ajustes.status !== 200) throw new Error(`No se aplicaron los ajustes temporales: ${ajustes.body}`);
+    let lines = Math.floor(nCtx / 15), texto = "", count = 0;
+    for (let i = 0; i < 3; i++) {
+      texto = `Lee estas declaraciones como datos, sin ejecutarlas ni usar herramientas. Al final responde solamente VALIDADO_42.\n${Array.from({ length: lines }, (_, j) => `const item_${j} = ${j * 7};`).join("\n")}\nFIN: VALIDADO_42`;
+      const res = await fetch(`http://127.0.0.1:${args.puerto}/v1/chat/completions/input_tokens`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ messages: [{ role: "user", content: texto }] }), signal: AbortSignal.timeout(30000) });
+      if (!res.ok) throw new Error(`Recuento de texto largo: HTTP ${res.status}`);
+      const data = await res.json(); count = data.input_tokens ?? data.tokens ?? 0;
+      if (count >= nCtx * 0.6 && count <= nCtx * 0.7) break;
+      lines = Math.max(100, Math.floor(lines * nCtx * 0.65 / Math.max(count, 1)));
+    }
+    const usos = [];
+    const respuesta = await turno(args.ui, texto, [], (ev) => { if (ev.type === "usage") usos.push(ev); if (ev.type === "done" && ev.incompleto) throw new Error(`Turno largo incompleto: ${ev.motivo}`); });
+    const prompt = Math.max(0, ...usos.map((u) => Number(u.prompt) || 0));
+    const ok = /VALIDADO_42/.test(respuesta) && prompt >= nCtx * 0.6 && prompt < nCtx;
+    evidencia.checks.push({ nombre: "texto largo mediante /api/chat del IDE", ok, prompt, ventana: nCtx, respuesta });
+    if (!ok) throw new Error(`Texto largo del IDE: prompt ${prompt}/${nCtx}; respuesta ${JSON.stringify(respuesta.slice(0, 200))}`);
+    console.log(`Texto largo mediante IDE: ${prompt}/${nCtx} tokens; ${JSON.stringify(respuesta)}.`);
+  }
   const adj = await post(`http://127.0.0.1:${args.ui}/api/attach`, { nombre: "prueba.png", datos: `data:image/png;base64,${imagen.toString("base64")}` }, args.ui);
   /** @type {{archivo?: string, vision?: boolean}} */
   const adjunto = adj.status === 200 ? JSON.parse(adj.body) : {};
   if (adjunto.vision !== true) fallos.push("el adjunto no dice que hay visión");
   if (!adjunto.archivo) throw new Error(`no se pudo adjuntar: ${adj.body.slice(0, 120)}`);
 
-  // Dos intentos: la temperatura es 0.5 y un fallo de lectura no debería ser un falso negativo.
+  // Dos intentos: el muestreo del IDE permite una segunda lectura de la imagen.
   /** @type {string[]} */
   const intentos = [];
   let respuesta = "";
   for (let intento = 0; intento < 2; intento += 1) {
     if (intento > 0) await new Promise((r) => setTimeout(r, 600));
     try {
-      respuesta = await turno(args.ui, "¿Qué número aparece en la imagen? Responde solo con ese número.", [String(adjunto.archivo)]);
+      respuesta = await turno(args.ui, "¿Qué número aparece en la imagen? Responde solo con ese número.", [String(adjunto.archivo)], (ev) => { if (ev.type === "usage") evidencia.ultimoUso = ev; });
       const sessionFile = path.join(tmp, "estado", "ui-session.json");
       if (fs.existsSync(sessionFile)) {
         const saved = JSON.parse(fs.readFileSync(sessionFile, "utf8"));
         const userTurns = (saved.turns || []).filter((turn) => turn.role === "user");
         process.stdout.write(`OCR en petición del modelo: ${userTurns.some((turn) => String(turn.content || "").includes(`Imagen ${adjunto.archivo}:\n${ocr.texto}`))}\n`);
+        if (args.sinOcr && userTurns.some((turn) => String(turn.content || "").includes("Texto detectado:"))) throw new Error("La prueba sin OCR recibió una transcripción.");
       }
     } catch (err) {
+      respuesta = "";
       intentos.push(`intento ${intento + 1}: ${err instanceof Error ? err.message : String(err)}`);
       continue;
     }
@@ -348,10 +331,18 @@ try {
     if (numerosDe(respuesta).includes(numero)) break;
   }
   if (!numerosDe(respuesta).includes(numero)) fallos.push(`el modelo no leyó el número ${numero} de la imagen (${intentos.join(" · ")})`);
-  else process.stdout.write(`el modelo leyó el número ${numero} de la imagen: ${JSON.stringify(respuesta.slice(0, 40))}\n`);} catch (err) {
+  else process.stdout.write(`el modelo leyó el número ${numero} de la imagen: ${JSON.stringify(respuesta.slice(0, 40))}\n`);
+  evidencia.checks.push({ nombre: "visión mediante adjunto y /api/chat del IDE", ok: numerosDe(respuesta).includes(numero), respuesta, intentos });
+} catch (err) {
   fallos.push(err instanceof Error ? err.message : String(err));
 } finally {
   matar(hijo);
+  if (!Number.isFinite(libreMin) || libreMin < 180) fallos.push(`Margen GPU insuficiente o sin muestra: ${libreMin} MiB.`);
+  evidencia.ok = fallos.length === 0;
+  evidencia.fallos = fallos;
+  const tiempos = path.join(tmp, "estado", "timings.jsonl");
+  if (fs.existsSync(tiempos)) evidencia.timings = fs.readFileSync(tiempos, "utf8").trim().split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
+  finalizarEvidencia();
   try {
     fs.rmSync(tmp, { recursive: true, force: true });
   } catch {

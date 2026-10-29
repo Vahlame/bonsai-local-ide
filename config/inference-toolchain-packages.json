@@ -1,0 +1,51 @@
+{
+  "cudaVersion": "12.9.1",
+  "packages": [
+    {
+      "name": "cuda_nvcc",
+      "group": "cuda",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_nvcc/windows-x86_64/cuda_nvcc-windows-x86_64-12.9.86-archive.zip",
+      "sha256": "227b109663b5e57d2718bcabb24a4ba0d9d4e52d958e327dc476f7c28691be85",
+      "size": 126917884
+    },
+    {
+      "name": "cuda_cudart",
+      "group": "cuda",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_cudart/windows-x86_64/cuda_cudart-windows-x86_64-12.9.79-archive.zip",
+      "sha256": "179e9c43b0735ffe67207b3da556eb5a0c50f3047961882b7657d3b822d34ef8",
+      "size": 3521238
+    },
+    {
+      "name": "cuda_cccl",
+      "group": "cuda",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/cuda_cccl/windows-x86_64/cuda_cccl-windows-x86_64-12.9.27-archive.zip",
+      "sha256": "17aaa7c6b8f94a417d8f3261780b7e34b9cbdfab7513bce86768623b06aa28b5",
+      "size": 3127658
+    },
+    {
+      "name": "libcublas",
+      "group": "cuda",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/libcublas/windows-x86_64/libcublas-windows-x86_64-12.9.1.4-archive.zip",
+      "sha256": "d534d98b0b453a98914dbf3adf47d7e84b55037abf02f87466439e1dcef581ed",
+      "size": 549755186
+    },
+    {
+      "name": "nsight_compute",
+      "group": "compute",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/nsight_compute/windows-x86_64/nsight_compute-windows-x86_64-2026.3.0.13-archive.zip",
+      "sha256": "9467f08354c93868aed67c32acad6f5811af46b769f4c5117b3e9210a76f9837",
+      "size": 486746334
+    },
+    {
+      "name": "nsight_systems",
+      "group": "systems",
+      "url": "https://developer.download.nvidia.com/compute/cuda/redist/nsight_systems/windows-x86_64/nsight_systems-windows-x86_64-2026.3.2.313-archive.zip",
+      "sha256": "2d53bf878bf827cdd4fd9b075278149601ff969e36501c74da4c152afdb497f7",
+      "size": 649479751
+    }
+  ],
+  "sources": [
+    "https://developer.download.nvidia.com/compute/cuda/redist/redistrib_12.9.1.json",
+    "https://developer.download.nvidia.com/compute/cuda/redist/redistrib_13.4.1.json"
+  ]
+}

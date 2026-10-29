@@ -1,0 +1,1633 @@
+{
+  "generatedAt": "2026-10-29T07:05:57.721Z",
+  "engines": [
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "f16-ctx2048",
+      "context": 2048,
+      "peakVramMiB": 5083,
+      "minFreeVramMiB": 2874,
+      "peakRamMiB": 5407.12890625,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 573.6135000000013,
+        "warmTtftMs": 60.17249999999876,
+        "coldPromptMs": 571.239,
+        "warmPromptMs": 57.827,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1674.948721052339,
+          "generationTokensPerSecond": 42.07880137855583,
+          "ttftMs": 307.84550000000036,
+          "latencyMs": 1041.6162999999997,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "q8_0-ctx2048",
+      "context": 2048,
+      "peakVramMiB": 5053,
+      "minFreeVramMiB": 2904,
+      "peakRamMiB": 5413.84765625,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 631.6731999999975,
+        "warmTtftMs": 75.4974000000002,
+        "coldPromptMs": 567.685,
+        "warmPromptMs": 71.759,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1643.9499751159917,
+          "generationTokensPerSecond": 41.85670963055378,
+          "ttftMs": 313.67369999999937,
+          "latencyMs": 1054.2173999999977,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "q4_0-ctx2048",
+      "context": 2048,
+      "peakVramMiB": 5037,
+      "minFreeVramMiB": 2920,
+      "peakRamMiB": 5413.859375,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 624.1964000000007,
+        "warmTtftMs": 55.218300000000454,
+        "coldPromptMs": 567.606,
+        "warmPromptMs": 52.744,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1666.3086706632037,
+          "generationTokensPerSecond": 41.72487960353289,
+          "ttftMs": 310.6992999999966,
+          "latencyMs": 1051.8261999999995,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "f16-ctx4096",
+      "context": 4096,
+      "peakVramMiB": 5149,
+      "minFreeVramMiB": 2808,
+      "peakRamMiB": 5409.19140625,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 564.5755999999965,
+        "warmTtftMs": 64.50699999999779,
+        "coldPromptMs": 562.365,
+        "warmPromptMs": 61.149,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1656.6898560103543,
+          "generationTokensPerSecond": 41.95238269234152,
+          "ttftMs": 311.00279999999475,
+          "latencyMs": 1049.2345999999961,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1893.5138828406778,
+          "generationTokensPerSecond": 41.90160710809625,
+          "ttftMs": 1084.2647999999972,
+          "latencyMs": 4115.703499999996,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "q8_0-ctx4096",
+      "context": 4096,
+      "peakVramMiB": 5089,
+      "minFreeVramMiB": 2868,
+      "peakRamMiB": 5414.828125,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 575.102899999998,
+        "warmTtftMs": 58.361699999994016,
+        "coldPromptMs": 572.994,
+        "warmPromptMs": 56.233,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1637.0065799991046,
+          "generationTokensPerSecond": 41.80613282482691,
+          "ttftMs": 314.5939999999973,
+          "latencyMs": 1053.7122000000018,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1873.9803140564077,
+          "generationTokensPerSecond": 41.74421119546874,
+          "ttftMs": 1095.6517000000022,
+          "latencyMs": 4146.768799999998,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "q4_0-ctx4096",
+      "context": 4096,
+      "peakVramMiB": 5057,
+      "minFreeVramMiB": 2900,
+      "peakRamMiB": 5416.05859375,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 582.2981999999902,
+        "warmTtftMs": 65.92110000000685,
+        "coldPromptMs": 580.181,
+        "warmPromptMs": 63.866,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1638.7146332095763,
+          "generationTokensPerSecond": 41.60805746743834,
+          "ttftMs": 315.0313000000024,
+          "latencyMs": 1059.8027000000002,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1869.2254123385305,
+          "generationTokensPerSecond": 41.61942152281203,
+          "ttftMs": 1098.4867999999988,
+          "latencyMs": 4150.085599999991,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "f16-ctx8192",
+      "context": 8192,
+      "peakVramMiB": 5279,
+      "minFreeVramMiB": 2678,
+      "peakRamMiB": 5412.3671875,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 576.7241000000067,
+        "warmTtftMs": 58.85779999999795,
+        "coldPromptMs": 574.539,
+        "warmPromptMs": 55.179,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1653.2821849157374,
+          "generationTokensPerSecond": 41.782410683358066,
+          "ttftMs": 312.0228000000061,
+          "latencyMs": 1051.1275000000023,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1872.618081005362,
+          "generationTokensPerSecond": 41.93067307974851,
+          "ttftMs": 1096.3248999999923,
+          "latencyMs": 4128.797499999986,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "q8_0-ctx8192",
+      "context": 8192,
+      "peakVramMiB": 5175,
+      "minFreeVramMiB": 2782,
+      "peakRamMiB": 5418.14453125,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 575.3757000000041,
+        "warmTtftMs": 52.93309999999474,
+        "coldPromptMs": 571.568,
+        "warmPromptMs": 50.678,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1647.3457463409297,
+          "generationTokensPerSecond": 41.76563550456256,
+          "ttftMs": 312.7039999999979,
+          "latencyMs": 1053.7680999999866,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1861.8554189265603,
+          "generationTokensPerSecond": 41.804671458074516,
+          "ttftMs": 1103.815900000016,
+          "latencyMs": 4143.1050000000105,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "q4_0-ctx8192",
+      "context": 8192,
+      "peakVramMiB": 5111,
+      "minFreeVramMiB": 2846,
+      "peakRamMiB": 5418.046875,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 582.0464999999967,
+        "warmTtftMs": 54.31280000001425,
+        "coldPromptMs": 578.759,
+        "warmPromptMs": 51.289,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1667.9317320754349,
+          "generationTokensPerSecond": 41.750279457515724,
+          "ttftMs": 310.06769999998505,
+          "latencyMs": 1049.6805999999924,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1860.056201307489,
+          "generationTokensPerSecond": 41.63149570163002,
+          "ttftMs": 1105.2000000000116,
+          "latencyMs": 4174.864900000015,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "f16-ctx16384",
+      "context": 16384,
+      "peakVramMiB": 5539,
+      "minFreeVramMiB": 2418,
+      "peakRamMiB": 5415.3046875,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 572.1162999999942,
+        "warmTtftMs": 58.19010000000708,
+        "coldPromptMs": 568.585,
+        "warmPromptMs": 56.016,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1650.963169333359,
+          "generationTokensPerSecond": 42.05516824102224,
+          "ttftMs": 312.2433000000019,
+          "latencyMs": 1050.8622000000032,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1866.2309697748951,
+          "generationTokensPerSecond": 41.93734692455603,
+          "ttftMs": 1100.4230999999854,
+          "latencyMs": 4128.955099999992,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "q8_0-ctx16384",
+      "context": 16384,
+      "peakVramMiB": 5347,
+      "minFreeVramMiB": 2610,
+      "peakRamMiB": 5422.28125,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 579.3824000000022,
+        "warmTtftMs": 57.853000000002794,
+        "coldPromptMs": 577.037,
+        "warmPromptMs": 55.435,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1613.416567141133,
+          "generationTokensPerSecond": 41.73015932844058,
+          "ttftMs": 320.7329000000027,
+          "latencyMs": 1059.624199999991,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1867.0969741724327,
+          "generationTokensPerSecond": 41.751786614837464,
+          "ttftMs": 1099.6428000000014,
+          "latencyMs": 4144.946800000005,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-context-kv-original.json",
+      "label": "q4_0-ctx16384",
+      "context": 16384,
+      "peakVramMiB": 5219,
+      "minFreeVramMiB": 2738,
+      "peakRamMiB": 5422.21875,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 573.7669999999925,
+        "warmTtftMs": 58.43650000001071,
+        "coldPromptMs": 571.461,
+        "warmPromptMs": 55.011,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1636.1800309340288,
+          "generationTokensPerSecond": 41.826269865791645,
+          "ttftMs": 316.0891999999876,
+          "latencyMs": 1056.2392999999865,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1861.46111973067,
+          "generationTokensPerSecond": 41.6695922876475,
+          "ttftMs": 1102.6502000000037,
+          "latencyMs": 4155.13949999999,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-new-quality.json",
+      "label": "f16-ctx4096",
+      "context": 4096,
+      "peakVramMiB": 5149,
+      "minFreeVramMiB": 2808,
+      "peakRamMiB": 5516.515625,
+      "startupMs": 4121.8809,
+      "coding": {
+        "success": 8,
+        "total": 10,
+        "completionMs": 200161,
+        "promptTokens": 138817,
+        "seeds": [
+          42
+        ],
+        "reports": [
+          "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\engine-new-quality\\f16-ctx4096\\seed-42\\informe.json"
+        ],
+        "taskIds": [
+          "single-bug",
+          "discover",
+          "cross-file",
+          "failing-test",
+          "existing-api",
+          "compatibility",
+          "repair-patch",
+          "wide-headers",
+          "python-api",
+          "typescript-api"
+        ]
+      },
+      "cache": {
+        "coldTtftMs": 565.7849000000024,
+        "warmTtftMs": 60.31880000000092,
+        "coldPromptMs": 563.483,
+        "warmPromptMs": 57.513,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1678.1933200039334,
+          "generationTokensPerSecond": 41.84027004520099,
+          "ttftMs": 307.14020000000073,
+          "latencyMs": 1046.3136999999997,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1900.8883497263296,
+          "generationTokensPerSecond": 41.980306938848905,
+          "ttftMs": 1080.3823000000011,
+          "latencyMs": 4110.929899999999,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-new-quality.json",
+      "label": "f16-ctx8192",
+      "context": 8192,
+      "peakVramMiB": 5279,
+      "minFreeVramMiB": 2678,
+      "peakRamMiB": 5517.86328125,
+      "startupMs": 4113.266700000007,
+      "coding": {
+        "success": 10,
+        "total": 10,
+        "completionMs": 226166,
+        "promptTokens": 176138,
+        "seeds": [
+          42
+        ],
+        "reports": [
+          "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\engine-new-quality\\f16-ctx8192\\seed-42\\informe.json"
+        ],
+        "taskIds": [
+          "single-bug",
+          "discover",
+          "cross-file",
+          "failing-test",
+          "existing-api",
+          "compatibility",
+          "repair-patch",
+          "wide-headers",
+          "python-api",
+          "typescript-api"
+        ]
+      },
+      "cache": {
+        "coldTtftMs": 569.5152999999991,
+        "warmTtftMs": 64.78689999997732,
+        "coldPromptMs": 567.337,
+        "warmPromptMs": 61.989,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1667.5786237265172,
+          "generationTokensPerSecond": 41.9373429040663,
+          "ttftMs": 310.0751000000164,
+          "latencyMs": 1049.601800000004,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1864.6320811406306,
+          "generationTokensPerSecond": 41.985108840609314,
+          "ttftMs": 1101.9922000000079,
+          "latencyMs": 4126.715599999996,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-new-quality.json",
+      "label": "q8_0-ctx8192",
+      "context": 8192,
+      "peakVramMiB": 5175,
+      "minFreeVramMiB": 2782,
+      "peakRamMiB": 5526.26953125,
+      "startupMs": 4362.949099999969,
+      "coding": {
+        "success": 10,
+        "total": 10,
+        "completionMs": 242100,
+        "promptTokens": 175886,
+        "seeds": [
+          42
+        ],
+        "reports": [
+          "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\engine-new-quality\\q8_0-ctx8192\\seed-42\\informe.json"
+        ],
+        "taskIds": [
+          "single-bug",
+          "discover",
+          "cross-file",
+          "failing-test",
+          "existing-api",
+          "compatibility",
+          "repair-patch",
+          "wide-headers",
+          "python-api",
+          "typescript-api"
+        ]
+      },
+      "cache": {
+        "coldTtftMs": 579.0421000000206,
+        "warmTtftMs": 67.1304999999702,
+        "coldPromptMs": 575.414,
+        "warmPromptMs": 55.127,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1624.272725542323,
+          "generationTokensPerSecond": 41.0120721018687,
+          "ttftMs": 317.27919999998994,
+          "latencyMs": 1074.5136000000057,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1847.9951778875825,
+          "generationTokensPerSecond": 41.852545244413925,
+          "ttftMs": 1111.9151999999885,
+          "latencyMs": 4152.267599999963,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-new-quality.json",
+      "label": "q4_0-ctx8192",
+      "context": 8192,
+      "peakVramMiB": 5111,
+      "minFreeVramMiB": 2846,
+      "peakRamMiB": 5527.61328125,
+      "startupMs": 4099.300500000012,
+      "coding": {
+        "success": 10,
+        "total": 10,
+        "completionMs": 200954,
+        "promptTokens": 145502,
+        "seeds": [
+          42
+        ],
+        "reports": [
+          "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\engine-new-quality\\q4_0-ctx8192\\seed-42\\informe.json"
+        ],
+        "taskIds": [
+          "single-bug",
+          "discover",
+          "cross-file",
+          "failing-test",
+          "existing-api",
+          "compatibility",
+          "repair-patch",
+          "wide-headers",
+          "python-api",
+          "typescript-api"
+        ]
+      },
+      "cache": {
+        "coldTtftMs": 581.1337999999523,
+        "warmTtftMs": 85.39350000000559,
+        "coldPromptMs": 578.737,
+        "warmPromptMs": 55.845,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1594.7522683170691,
+          "generationTokensPerSecond": 41.54682863675474,
+          "ttftMs": 323.06810000003316,
+          "latencyMs": 1073.8057000000263,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1853.7375712236205,
+          "generationTokensPerSecond": 41.662470348294974,
+          "ttftMs": 1108.4565000000875,
+          "latencyMs": 4157.183700000052,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-new-quality.json",
+      "label": "f16-ctx16384",
+      "context": 16384,
+      "peakVramMiB": 5539,
+      "minFreeVramMiB": 2418,
+      "peakRamMiB": 5522.73046875,
+      "startupMs": 3843.231700000004,
+      "coding": {
+        "success": 10,
+        "total": 10,
+        "completionMs": 211094,
+        "promptTokens": 162297,
+        "seeds": [
+          42
+        ],
+        "reports": [
+          "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\engine-new-quality\\f16-ctx16384\\seed-42\\informe.json"
+        ],
+        "taskIds": [
+          "single-bug",
+          "discover",
+          "cross-file",
+          "failing-test",
+          "existing-api",
+          "compatibility",
+          "repair-patch",
+          "wide-headers",
+          "python-api",
+          "typescript-api"
+        ]
+      },
+      "cache": {
+        "coldTtftMs": 572.2140000000363,
+        "warmTtftMs": 113.34880000003614,
+        "coldPromptMs": 569.696,
+        "warmPromptMs": 64.026,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1650.5533544595564,
+          "generationTokensPerSecond": 41.50360880572696,
+          "ttftMs": 312.2267999999458,
+          "latencyMs": 1058.7804999999935,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1860.828559357069,
+          "generationTokensPerSecond": 41.55968592658138,
+          "ttftMs": 1104.4172000000253,
+          "latencyMs": 4160.971499999985,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-runtime-options-clean.json",
+      "label": "balanced",
+      "context": 8192,
+      "peakVramMiB": 5279,
+      "minFreeVramMiB": 2678,
+      "peakRamMiB": 5518.62890625,
+      "startupMs": 4372.1505,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 569.5249000000003,
+        "warmTtftMs": 56.40820000000167,
+        "coldPromptMs": 565.643,
+        "warmPromptMs": 53.812,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1651.5223358719038,
+          "generationTokensPerSecond": 42.03292941044071,
+          "ttftMs": 313.1354999999994,
+          "latencyMs": 1048.7392999999993,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1884.3828094233863,
+          "generationTokensPerSecond": 41.902892850343655,
+          "ttftMs": 1091.124899999999,
+          "latencyMs": 4124.7215000000015,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-runtime-options-clean.json",
+      "label": "no-graphs",
+      "context": 8192,
+      "peakVramMiB": 5271,
+      "minFreeVramMiB": 2686,
+      "peakRamMiB": 5506.21875,
+      "startupMs": 4107.282800000001,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 579.143799999998,
+        "warmTtftMs": 56.27440000000206,
+        "coldPromptMs": 575.09,
+        "warmPromptMs": 54.092,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1661.5230844618384,
+          "generationTokensPerSecond": 38.20368727201025,
+          "ttftMs": 309.97060000000056,
+          "latencyMs": 1121.9346000000005,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1880.7435916508944,
+          "generationTokensPerSecond": 38.20185378255505,
+          "ttftMs": 1092.8614000000016,
+          "latencyMs": 4434.8505000000005,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-runtime-options-clean.json",
+      "label": "backend-sampling",
+      "context": 8192,
+      "peakVramMiB": 5315,
+      "minFreeVramMiB": 2642,
+      "peakRamMiB": 5589.65625,
+      "startupMs": 4350.547299999998,
+      "coding": null,
+      "cache": {
+        "coldTtftMs": 585.0104999999894,
+        "warmTtftMs": 67.94629999999597,
+        "coldPromptMs": 582.57,
+        "warmPromptMs": 65.075,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1600.5201690549427,
+          "generationTokensPerSecond": 42.28202931917749,
+          "ttftMs": 322.8675000000003,
+          "latencyMs": 1056.3870000000024,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1859.7285232229965,
+          "generationTokensPerSecond": 42.402321911082666,
+          "ttftMs": 1105.2154999999984,
+          "latencyMs": 4107.444400000008,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "engine-native-final.json",
+      "label": "f16-ctx8192",
+      "context": 8192,
+      "peakVramMiB": 5279,
+      "minFreeVramMiB": 2678,
+      "peakRamMiB": 5519.4453125,
+      "agentPeakRamMiB": 5697.4375,
+      "agentPeakVramMiB": 5281,
+      "agentMinFreeVramMiB": 2676,
+      "startupMs": 4127.0486,
+      "coding": {
+        "success": 20,
+        "total": 20,
+        "completionMs": 500075,
+        "promptTokens": 412083,
+        "seeds": [
+          42,
+          43
+        ],
+        "reports": [
+          "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\engine-native-final\\f16-ctx8192\\seed-42\\informe.json",
+          "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\engine-native-final\\f16-ctx8192\\seed-43\\informe.json"
+        ],
+        "taskIds": [
+          "single-bug",
+          "discover",
+          "cross-file",
+          "failing-test",
+          "existing-api",
+          "compatibility",
+          "repair-patch",
+          "wide-headers",
+          "python-api",
+          "typescript-api"
+        ]
+      },
+      "cache": {
+        "coldTtftMs": 573.8928999999916,
+        "warmTtftMs": 61.12720000000263,
+        "coldPromptMs": 571.544,
+        "warmPromptMs": 59.056,
+        "reusedTokens": 1020,
+        "identicalOutput": true
+      },
+      "matrix": [
+        {
+          "prompt": 512,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1649.5323640182864,
+          "generationTokensPerSecond": 41.24814217037079,
+          "ttftMs": 312.60159999999996,
+          "latencyMs": 1061.5676999999996,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 1024,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1793.4643636529227,
+          "generationTokensPerSecond": 41.646515127089046,
+          "ttftMs": 573.5290999999997,
+          "latencyMs": 1322.508099999999,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 2048,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1871.4578912836482,
+          "generationTokensPerSecond": 41.04916365639467,
+          "ttftMs": 1096.9298,
+          "latencyMs": 1853.8189999999995,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 4096,
+          "generated": 32,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1904.3598496225222,
+          "generationTokensPerSecond": 41.0152735586439,
+          "ttftMs": 2155.8688,
+          "latencyMs": 2916.696,
+          "hashes": [
+            "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+          ]
+        },
+        {
+          "prompt": 512,
+          "generated": 128,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1626.0885583073434,
+          "generationTokensPerSecond": 42.34071473126816,
+          "ttftMs": 318.5269999999982,
+          "latencyMs": 3346.5077999999994,
+          "hashes": [
+            "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+          ]
+        },
+        {
+          "prompt": 512,
+          "generated": 256,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1621.9264177600944,
+          "generationTokensPerSecond": 42.39011070302087,
+          "ttftMs": 318.3582999999999,
+          "latencyMs": 6334.368900000001,
+          "hashes": [
+            "efb5b109ca259b734931b4c47129595fbafa01d9b250441d66f165fed48df3f3"
+          ]
+        },
+        {
+          "prompt": 512,
+          "generated": 512,
+          "repetitions": 3,
+          "promptTokensPerSecond": 1633.1634247947381,
+          "generationTokensPerSecond": 42.37280756998914,
+          "ttftMs": 315.91330000000016,
+          "latencyMs": 12375.709300000002,
+          "hashes": [
+            "b0f67ec3458205eb66a1b517d5927d63e1ac7f28eafc9555957704d18ca4336c"
+          ]
+        }
+      ]
+    }
+  ],
+  "coding": [
+    {
+      "report": "runs/engine-native-final/f16-ctx8192/seed-42/informe.json",
+      "profile": "small-local-coder",
+      "suite": "extended",
+      "seed": 42,
+      "ablation": null,
+      "context": 8192,
+      "success": 10,
+      "total": 10,
+      "codeFingerprint": "960f8419d702831c31188bfd3ecad77ba6958e3b2e72f71751ed6f8ca3110ba9",
+      "fixtureFingerprint": "16c446abcf24623490e5f79a7f8892905ee542850510160fb328ce671980f300",
+      "workspaceRoot": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\fixed-workspace",
+      "completionMs": 297594,
+      "llmCalls": 91,
+      "promptTokens": 250998,
+      "generatedTokens": 8787,
+      "cachedTokens": 145863,
+      "evaluatedTokens": 105135,
+      "promptEvaluationMs": 64306.00699999998,
+      "toolCalls": 81,
+      "schemaFailures": 2,
+      "parseFailures": 0,
+      "patchFailures": 1,
+      "repairAttempts": 1,
+      "medianFirstUsefulActionMs": 3067,
+      "peakVramMiB": 5281,
+      "minFreeVramMiB": 2676,
+      "failed": []
+    },
+    {
+      "report": "runs/engine-native-final/f16-ctx8192/seed-43/informe.json",
+      "profile": "small-local-coder",
+      "suite": "extended",
+      "seed": 43,
+      "ablation": null,
+      "context": 8192,
+      "success": 10,
+      "total": 10,
+      "codeFingerprint": "960f8419d702831c31188bfd3ecad77ba6958e3b2e72f71751ed6f8ca3110ba9",
+      "fixtureFingerprint": "16c446abcf24623490e5f79a7f8892905ee542850510160fb328ce671980f300",
+      "workspaceRoot": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\fixed-workspace",
+      "completionMs": 202481,
+      "llmCalls": 64,
+      "promptTokens": 161085,
+      "generatedTokens": 5972,
+      "cachedTokens": 102209,
+      "evaluatedTokens": 58876,
+      "promptEvaluationMs": 37563.046,
+      "toolCalls": 54,
+      "schemaFailures": 0,
+      "parseFailures": 0,
+      "patchFailures": 1,
+      "repairAttempts": 1,
+      "medianFirstUsefulActionMs": 3305,
+      "peakVramMiB": 5281,
+      "minFreeVramMiB": 2676,
+      "failed": []
+    },
+    {
+      "report": "runs/engine-new-quality/f16-ctx16384/seed-42/informe.json",
+      "profile": "small-local-coder",
+      "suite": "extended",
+      "seed": 42,
+      "ablation": null,
+      "context": 16384,
+      "success": 10,
+      "total": 10,
+      "codeFingerprint": "0cafde03e468a0cdd7bab28691c817aa4aaafdd0356ed71a5c7b5ff1755e37d3",
+      "fixtureFingerprint": "16c446abcf24623490e5f79a7f8892905ee542850510160fb328ce671980f300",
+      "workspaceRoot": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\fixed-workspace",
+      "completionMs": 211094,
+      "llmCalls": 64,
+      "promptTokens": 162297,
+      "generatedTokens": 6207,
+      "cachedTokens": 102311,
+      "evaluatedTokens": 59986,
+      "promptEvaluationMs": 37943.949,
+      "toolCalls": 54,
+      "schemaFailures": 0,
+      "parseFailures": 0,
+      "patchFailures": 0,
+      "repairAttempts": 2,
+      "medianFirstUsefulActionMs": 3744,
+      "peakVramMiB": 5541,
+      "minFreeVramMiB": 2416,
+      "failed": []
+    },
+    {
+      "report": "runs/engine-new-quality/f16-ctx4096/seed-42/informe.json",
+      "profile": "small-local-coder",
+      "suite": "extended",
+      "seed": 42,
+      "ablation": null,
+      "context": 4096,
+      "success": 8,
+      "total": 10,
+      "codeFingerprint": "0cafde03e468a0cdd7bab28691c817aa4aaafdd0356ed71a5c7b5ff1755e37d3",
+      "fixtureFingerprint": "16c446abcf24623490e5f79a7f8892905ee542850510160fb328ce671980f300",
+      "workspaceRoot": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\fixed-workspace",
+      "completionMs": 200161,
+      "llmCalls": 62,
+      "promptTokens": 138817,
+      "generatedTokens": 6068,
+      "cachedTokens": 90182,
+      "evaluatedTokens": 48635,
+      "promptEvaluationMs": 31761.361000000004,
+      "toolCalls": 53,
+      "schemaFailures": 0,
+      "parseFailures": 0,
+      "patchFailures": 1,
+      "repairAttempts": 3,
+      "medianFirstUsefulActionMs": 3665,
+      "peakVramMiB": 5151,
+      "minFreeVramMiB": 2806,
+      "failed": [
+        {
+          "id": "discover",
+          "stop": "error",
+          "error": null,
+          "log": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ '  -  '\n- 'hello-world'\n\n    at file:///C:/Users/user/Documents/prject_local_AI/reports/coder-phase2/runs/fixed-workspace/discover/test/slug.test.mjs:2:47\n    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)\n    at async node:internal/modules/esm/loader:642:26\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: '  -  ',\n  ex"
+        },
+        {
+          "id": "cross-file",
+          "stop": "repair_limit",
+          "error": null,
+          "log": "file:///C:/Users/user/Documents/prject_local_AI/reports/coder-phase2/runs/fixed-workspace/cross-file/src/index.mjs:3\nexport {fahrenheitToCelsius} from './units.mjs';\n        ^^^^^^^^^^^^^^^^^^^\n\nSyntaxError: Duplicate export of 'fahrenheitToCelsius'\n    at compileSourceTextModule (node:internal/modules/esm/utils:354:16)\n    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:91:18)\n    at #translate (node:internal/modules/esm/loader:454:20)\n    at afterLoad (node:internal/modules/esm/loader:510:29)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:515:12)"
+        }
+      ]
+    },
+    {
+      "report": "runs/engine-new-quality/f16-ctx8192/seed-42/informe.json",
+      "profile": "small-local-coder",
+      "suite": "extended",
+      "seed": 42,
+      "ablation": null,
+      "context": 8192,
+      "success": 10,
+      "total": 10,
+      "codeFingerprint": "0cafde03e468a0cdd7bab28691c817aa4aaafdd0356ed71a5c7b5ff1755e37d3",
+      "fixtureFingerprint": "16c446abcf24623490e5f79a7f8892905ee542850510160fb328ce671980f300",
+      "workspaceRoot": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\fixed-workspace",
+      "completionMs": 226166,
+      "llmCalls": 68,
+      "promptTokens": 176138,
+      "generatedTokens": 6685,
+      "cachedTokens": 109083,
+      "evaluatedTokens": 67055,
+      "promptEvaluationMs": 42067.81599999999,
+      "toolCalls": 58,
+      "schemaFailures": 0,
+      "parseFailures": 0,
+      "patchFailures": 0,
+      "repairAttempts": 2,
+      "medianFirstUsefulActionMs": 3649,
+      "peakVramMiB": 5281,
+      "minFreeVramMiB": 2676,
+      "failed": []
+    },
+    {
+      "report": "runs/engine-new-quality/q4_0-ctx8192/seed-42/informe.json",
+      "profile": "small-local-coder",
+      "suite": "extended",
+      "seed": 42,
+      "ablation": null,
+      "context": 8192,
+      "success": 10,
+      "total": 10,
+      "codeFingerprint": "0cafde03e468a0cdd7bab28691c817aa4aaafdd0356ed71a5c7b5ff1755e37d3",
+      "fixtureFingerprint": "16c446abcf24623490e5f79a7f8892905ee542850510160fb328ce671980f300",
+      "workspaceRoot": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\fixed-workspace",
+      "completionMs": 200954,
+      "llmCalls": 58,
+      "promptTokens": 145502,
+      "generatedTokens": 6054,
+      "cachedTokens": 96303,
+      "evaluatedTokens": 49199,
+      "promptEvaluationMs": 32185.051000000003,
+      "toolCalls": 48,
+      "schemaFailures": 0,
+      "parseFailures": 0,
+      "patchFailures": 0,
+      "repairAttempts": 2,
+      "medianFirstUsefulActionMs": 3969,
+      "peakVramMiB": 5197,
+      "minFreeVramMiB": 2760,
+      "failed": []
+    },
+    {
+      "report": "runs/engine-new-quality/q8_0-ctx8192/seed-42/informe.json",
+      "profile": "small-local-coder",
+      "suite": "extended",
+      "seed": 42,
+      "ablation": null,
+      "context": 8192,
+      "success": 10,
+      "total": 10,
+      "codeFingerprint": "0cafde03e468a0cdd7bab28691c817aa4aaafdd0356ed71a5c7b5ff1755e37d3",
+      "fixtureFingerprint": "16c446abcf24623490e5f79a7f8892905ee542850510160fb328ce671980f300",
+      "workspaceRoot": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\fixed-workspace",
+      "completionMs": 242100,
+      "llmCalls": 69,
+      "promptTokens": 175886,
+      "generatedTokens": 7472,
+      "cachedTokens": 110933,
+      "evaluatedTokens": 64953,
+      "promptEvaluationMs": 41614.96000000001,
+      "toolCalls": 59,
+      "schemaFailures": 0,
+      "parseFailures": 0,
+      "patchFailures": 0,
+      "repairAttempts": 0,
+      "medianFirstUsefulActionMs": 4066,
+      "peakVramMiB": 5177,
+      "minFreeVramMiB": 2780,
+      "failed": []
+    },
+    {
+      "report": "runs/final-functional/informe.json",
+      "profile": "small-local-coder",
+      "suite": "extended",
+      "seed": 42,
+      "ablation": null,
+      "context": 8192,
+      "success": 1,
+      "total": 1,
+      "codeFingerprint": "3970dd08ff1aceae3843269dacff182cf7ac4b9709afea041a2dbb518b4e2816",
+      "fixtureFingerprint": "9aab8623abd594e385d11cb7b920deb0e3b3f6eec314e81f23c157d3c0e49ce6",
+      "workspaceRoot": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase2\\runs\\fixed-workspace",
+      "completionMs": 10314,
+      "llmCalls": 3,
+      "promptTokens": 6235,
+      "generatedTokens": 307,
+      "cachedTokens": 3715,
+      "evaluatedTokens": 2520,
+      "promptEvaluationMs": 1855.218,
+      "toolCalls": 2,
+      "schemaFailures": 0,
+      "parseFailures": 0,
+      "patchFailures": 0,
+      "repairAttempts": 0,
+      "medianFirstUsefulActionMs": 5528,
+      "peakVramMiB": 5281,
+      "minFreeVramMiB": 2676,
+      "failed": []
+    }
+  ],
+  "greedyBuildComparison": [],
+  "profile": {
+    "workload": "Original binary; pg512/tg128 x3 including process startup/warmup. Kernel counters: six matching launches from a separate x1 run.",
+    "totalGpuKernelNs": 9732988233,
+    "quantizedMatrixVectorPct": 84.72671639569216,
+    "topKernels": [
+      {
+        "name": "void mul_mat_vec_q<(ggml_type)12, (int)1, (bool)1, (bool)1, (bool)0, (bool)0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+        "gpuTimePct": 31.4,
+        "totalNs": 3054012033,
+        "instances": 12320
+      },
+      {
+        "name": "void mul_mat_vec_q<(ggml_type)14, (int)1, (bool)0, (bool)0, (bool)0, (bool)0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+        "gpuTimePct": 19.3,
+        "totalNs": 1876345186,
+        "instances": 6549
+      },
+      {
+        "name": "void mul_mat_vec_q<(ggml_type)12, (int)1, (bool)0, (bool)0, (bool)0, (bool)0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+        "gpuTimePct": 14.6,
+        "totalNs": 1417331513,
+        "instances": 49280
+      },
+      {
+        "name": "void mul_mat_vec_q<(ggml_type)14, (int)1, (bool)1, (bool)0, (bool)0, (bool)0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+        "gpuTimePct": 10.8,
+        "totalNs": 1055705746,
+        "instances": 6160
+      },
+      {
+        "name": "void mul_mat_vec_q<(ggml_type)12, (int)1, (bool)1, (bool)0, (bool)0, (bool)0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+        "gpuTimePct": 8.7,
+        "totalNs": 843046859,
+        "instances": 9240
+      },
+      {
+        "name": "void mul_mat_q<(ggml_type)12, (int)128, (bool)0>(const char *, const int *, const int *, const int *, float *, float *, const float *, uint3, int, int, int, int, int, uint3, uint3, int, int, int, uint3, uint3, int, int, int, uint3)",
+        "gpuTimePct": 5.8,
+        "totalNs": 567938273,
+        "instances": 1344
+      },
+      {
+        "name": "void gated_delta_net_cuda<(int)128, (bool)0, (bool)0, (bool)1, (bool)0>(const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *, long long, long long, long long, long long, long long, long long, long long, long long, long long, long long, long long, long long, uint3, uint3, float, long long, int)",
+        "gpuTimePct": 1.7,
+        "totalNs": 169911952,
+        "instances": 9432
+      },
+      {
+        "name": "void mul_mat_q<(ggml_type)14, (int)128, (bool)0>(const char *, const int *, const int *, const int *, float *, float *, const float *, uint3, int, int, int, int, int, uint3, uint3, int, int, int, uint3, uint3, int, int, int, uint3)",
+        "gpuTimePct": 1.5,
+        "totalNs": 144029200,
+        "instances": 256
+      }
+    ],
+    "apiCalls": [
+      {
+        "name": "cudaStreamSynchronize",
+        "count": 7891,
+        "totalNs": 9566649856
+      },
+      {
+        "name": "cudaMemcpyAsync",
+        "count": 3562,
+        "totalNs": 4043428315
+      },
+      {
+        "name": "cudaGraphLaunch",
+        "count": 381,
+        "totalNs": 775054796
+      },
+      {
+        "name": "cuMemAddressFree",
+        "count": 1,
+        "totalNs": 470250950
+      },
+      {
+        "name": "cudaLaunchKernel",
+        "count": 15040,
+        "totalNs": 191299028
+      },
+      {
+        "name": "cudaMemGetInfo",
+        "count": 5,
+        "totalNs": 113146578
+      },
+      {
+        "name": "cudaFree",
+        "count": 4,
+        "totalNs": 44829783
+      },
+      {
+        "name": "cuMemAddressReserve",
+        "count": 1,
+        "totalNs": 14588168
+      },
+      {
+        "name": "cudaMalloc",
+        "count": 4,
+        "totalNs": 10633226
+      },
+      {
+        "name": "cudaGraphInstantiate",
+        "count": 1,
+        "totalNs": 7349528
+      },
+      {
+        "name": "cudaFreeHost",
+        "count": 2,
+        "totalNs": 2529268
+      },
+      {
+        "name": "cudaMallocHost",
+        "count": 2,
+        "totalNs": 2462619
+      },
+      {
+        "name": "cudaGraphDestroy",
+        "count": 3,
+        "totalNs": 1174502
+      },
+      {
+        "name": "cudaMemsetAsync",
+        "count": 2,
+        "totalNs": 1052724
+      },
+      {
+        "name": "cudaGraphExecUpdate",
+        "count": 3,
+        "totalNs": 970921
+      },
+      {
+        "name": "cuMemUnmap",
+        "count": 1,
+        "totalNs": 785057
+      },
+      {
+        "name": "cudaGraphExecDestroy",
+        "count": 1,
+        "totalNs": 642114
+      },
+      {
+        "name": "cuMemCreate",
+        "count": 3,
+        "totalNs": 454212
+      },
+      {
+        "name": "cudaStreamBeginCapture",
+        "count": 3,
+        "totalNs": 338855
+      },
+      {
+        "name": "cudaStreamCreateWithFlags",
+        "count": 1,
+        "totalNs": 288841
+      },
+      {
+        "name": "cudaStreamDestroy",
+        "count": 1,
+        "totalNs": 187411
+      },
+      {
+        "name": "cudaStreamEndCapture",
+        "count": 3,
+        "totalNs": 143228
+      },
+      {
+        "name": "cuMemSetAccess",
+        "count": 3,
+        "totalNs": 86802
+      },
+      {
+        "name": "cuMemMap",
+        "count": 3,
+        "totalNs": 30106
+      },
+      {
+        "name": "cuModuleGetLoadingMode",
+        "count": 1,
+        "totalNs": 25578
+      },
+      {
+        "name": "cuCtxSynchronize",
+        "count": 1,
+        "totalNs": 12504
+      },
+      {
+        "name": "cudaGetDeviceProperties",
+        "count": 3,
+        "totalNs": 6973
+      },
+      {
+        "name": "cuMemGetAllocationGranularity",
+        "count": 1,
+        "totalNs": 5450
+      },
+      {
+        "name": "cuMemRelease",
+        "count": 3,
+        "totalNs": 1331
+      },
+      {
+        "name": "cuDeviceGetLuid",
+        "count": 1,
+        "totalNs": 1172
+      }
+    ],
+    "copies": [
+      {
+        "kind": 1,
+        "count": 3173,
+        "bytes": 5088119384,
+        "durationNs": 3718739643
+      },
+      {
+        "kind": 2,
+        "count": 389,
+        "bytes": 386385920,
+        "durationNs": 30439342
+      }
+    ],
+    "kernelCounters": [
+      {
+        "id": 0,
+        "kernel": "void mul_mat_vec_q<14, 1, 0, 0, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+        "grid": "(8192, 1, 1)",
+        "durationUs": 125.632,
+        "dramThroughputPct": 95.318995,
+        "smThroughputPct": 47.783703,
+        "activeWarpsPct": 94.190371,
+        "registersPerThread": 40
+      },
+      {
+        "id": 1,
+        "kernel": "void mul_mat_vec_q<12, 1, 0, 0, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+        "grid": "(32, 1, 1)",
+        "durationUs": 2.944,
+        "dramThroughputPct": 11.044034,
+        "smThroughputPct": 7.227375,
+        "activeWarpsPct": 10.380344,
+        "registersPerThread": 39
+      },
+      {
+        "id": 2,
+        "kernel": "void mul_mat_vec_q<12, 1, 0, 0, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+        "grid": "(32, 1, 1)",
+        "durationUs": 3.008,
+        "dramThroughputPct": 10.798611,
+        "smThroughputPct": 7.332402,
+        "activeWarpsPct": 10.313044,
+        "registersPerThread": 39
+      },
+      {
+        "id": 3,
+        "kernel": "void mul_mat_vec_q<12, 1, 0, 0, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+        "grid": "(4096, 1, 1)",
+        "durationUs": 41.056,
+        "dramThroughputPct": 91.703958,
+        "smThroughputPct": 79.517392,
+        "activeWarpsPct": 83.811952,
+        "registersPerThread": 39
+      },
+      {
+        "id": 4,
+        "kernel": "void mul_mat_vec_q<12, 1, 0, 0, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+        "grid": "(4096, 1, 1)",
+        "durationUs": 41.184,
+        "dramThroughputPct": 91.430412,
+        "smThroughputPct": 79.58021,
+        "activeWarpsPct": 83.801891,
+        "registersPerThread": 39
+      },
+      {
+        "id": 5,
+        "kernel": "void mul_mat_vec_q<12, 1, 1, 1, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+        "grid": "(12288, 1, 1)",
+        "durationUs": 257.056,
+        "dramThroughputPct": 95.800198,
+        "smThroughputPct": 29.431682,
+        "activeWarpsPct": 71.130156,
+        "registersPerThread": 56
+      }
+    ],
+    "interpretation": [
+      "Quantized matrix-vector kernels dominate this trace; the large fused Q4_K launch reports high DRAM activity relative to SM throughput, consistent with memory pressure.",
+      "API synchronization time includes waiting for GPU work; it is not evidence that removing synchronization is correct or beneficial.",
+      "Host-to-device totals include loading model weights. Do not attribute all transfers to token generation.",
+      "cudaGraphLaunch and graph-instantiation counts document existing graph reuse, not a new optimization.",
+      "Nsight replay and instrumentation alter latency. Use separate unprofiled engine and coding benchmarks for performance decisions.",
+      "Counters were captured without locking clocks or flushing caches; they describe sampled launches and do not establish an absolute optimization ceiling."
+    ]
+  },
+  "exclusions": [
+    "engine-runtime-options.json was interrupted because unit tests overlapped. Only engine-runtime-options-clean.json is used for timing decisions."
+  ],
+  "limitations": [
+    "Synthetic tasks and a small number of seeds; no confidence interval or real-repository quality guarantee.",
+    "The native matrix uses candidate-v2-app. candidate-final-app preserves small-state formatting, adds duplicate/pre-existing TypeScript error accounting and an explicit diagnostic-overflow warning. The final code passed 34 suites and one real-model integration task; its full matrix remains pending.",
+    "The remaining native 16k agent run was stopped; incomplete evaluations are not scored.",
+    "Profiler timings and replay throughput are excluded from speed claims.",
+    "No other weight quantizations, forced MMQ/CUBLAS builds, LTO or custom CUDA kernels were evaluated."
+  ]
+}

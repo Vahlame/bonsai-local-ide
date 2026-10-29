@@ -258,12 +258,12 @@ export function selfTest() {
   // (8 capas de atención completa, no las 16 del Bonsai histórico de `modelo`).
   check("KV f16 de Ornith = 32 KiB por token (8 capas)", kvBytesPorToken("f16", "ornith9b") === 32 * 1024);
   check("KV q8_0 de Ornith a 32768 = 544 MiB", kvMiB(32768, "q8_0", "ornith9b") === 544);
-  // Tabla del informe (presupuesto conservador con visión): pesos 5513 + KV + 864 de reserva + 900 de visión.
-  const tablaOrnith = [[16384, "f16", 7789], [24576, "f16", 8045], [32768, "f16", 8301], [32768, "q8_0", 7821], [32768, "q4_0", 7565]];
+  // Presupuesto calibrado: pesos 5513 + KV + 620 de reserva de arranque + 900 de visión.
+  const tablaOrnith = [[16384, "f16", 7545], [24576, "f16", 7801], [32768, "f16", 8057], [32768, "q8_0", 7577], [32768, "q4_0", 7321], [39936, "q8_0", 7696], [39936, "q4_0", 7384], [53248, "q8_0", 7917]];
   for (const [ctx, kv, esperado] of tablaOrnith) {
     check(`VRAM de Ornith con visión (${ctx}/${kv} = ${esperado} MiB)`, estimarVramMiB({ clave: "ornith9b", ctx, kv, vision: true }) === esperado);
   }
-  check("VRAM de Ornith sin visión (32768/f16 = 7401 MiB)", estimarVramMiB({ clave: "ornith9b", ctx: 32768, kv: "f16" }) === 7401);
+  check("VRAM de Ornith sin visión (32768/f16 = 7157 MiB)", estimarVramMiB({ clave: "ornith9b", ctx: 32768, kv: "f16" }) === 7157);
   check("la cuenta global del Bonsai no cambia sin clave", estimarVramMiB({ ctx: 65536, kv: "q4_0" }) === 7163);
   let rejectedClave = false;
   try {
