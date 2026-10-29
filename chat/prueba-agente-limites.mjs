@@ -177,8 +177,8 @@ try {
   // ---------- 20: línea gigante avisa y su sufijo se puede pedir ----------
   const gigante = await integracion(
     "linea-gigante",
-    (n) => (n === 1 ? tool("r1", "leer", { ruta: "larga.txt" }) : n === 2 ? tool("r2", "leer", { ruta: "larga.txt:1:c6001-9017" }) : n === 3 ? tool("w1", "archivo", { ruta: "resultado.txt", contenido: "SUFIJO_ENCONTRADO" }) : { content: "Completado." }),
-    (work) => fs.writeFileSync(path.join(work, "larga.txt"), `${"A".repeat(9000)}SUFIJO_NO_VISIBLE`),
+    (n) => (n === 1 ? tool("r1", "leer", { ruta: "larga.txt" }) : n === 2 ? tool("r2", "leer", { ruta: "larga.txt:1:c27001-30017" }) : n === 3 ? tool("w1", "archivo", { ruta: "resultado.txt", contenido: "SUFIJO_ENCONTRADO" }) : { content: "Completado." }),
+    (work) => fs.writeFileSync(path.join(work, "larga.txt"), `${"A".repeat(30000)}SUFIJO_NO_VISIBLE`),
   );
   const lecturaLarga = gigante.resultadosHerramienta.find((t) => t.startsWith("Archivo larga.txt) ") || t.startsWith("Archivo larga.txt ")) || "";
   check("20: la primera lectura avisa del recorte dentro de la línea", /recorte dentro de la línea 1/.test(lecturaLarga), lecturaLarga.slice(0, 240));

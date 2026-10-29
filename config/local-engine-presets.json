@@ -7,7 +7,7 @@
     "ubatch": 256,
     "flash": "on",
     "spec": "none",
-    "marginMiB": 400,
+    "marginMiB": 0,
     "vision": true,
     "coderOutputTokens": 6144,
     "thinkingTokens": 4096
@@ -20,7 +20,7 @@
     "ubatch": 256,
     "flash": "on",
     "spec": "none",
-    "marginMiB": 400,
+    "marginMiB": 0,
     "vision": true,
     "coderOutputTokens": 6144,
     "thinkingTokens": 4096
@@ -33,7 +33,7 @@
     "ubatch": 256,
     "flash": "on",
     "spec": "none",
-    "marginMiB": 768,
+    "marginMiB": 0,
     "vision": true
   },
   "8GB-VISION-CONTEXT": {
@@ -44,7 +44,7 @@
     "ubatch": 256,
     "flash": "on",
     "spec": "none",
-    "marginMiB": 768,
+    "marginMiB": 0,
     "vision": true
   },
   "8GB-SAFE": {
@@ -54,8 +54,8 @@
     "ubatch": 128,
     "flash": "on",
     "spec": "none",
-    "marginMiB": 1024,
-    "vision": false
+    "marginMiB": 0,
+    "vision": true
   },
   "8GB-BALANCED": {
     "context": 8192,
@@ -64,8 +64,8 @@
     "ubatch": 256,
     "flash": "on",
     "spec": "none",
-    "marginMiB": 768,
-    "vision": false
+    "marginMiB": 0,
+    "vision": true
   },
   "8GB-MAX-SPEED": {
     "context": 8192,
@@ -74,8 +74,8 @@
     "ubatch": 512,
     "flash": "on",
     "spec": "none",
-    "marginMiB": 768,
-    "vision": false
+    "marginMiB": 0,
+    "vision": true
   },
   "8GB-CONTEXT": {
     "context": 16384,
@@ -84,7 +84,7 @@
     "ubatch": 256,
     "flash": "on",
     "spec": "none",
-    "marginMiB": 768,
-    "vision": false
+    "marginMiB": 0,
+    "vision": true
   }
 }

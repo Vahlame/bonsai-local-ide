@@ -268,10 +268,12 @@ export class BonsaiChat {
    */
   aplicarImagenes(messages, imagenes, toolCallId = "") {
     if (!this.vision || !Array.isArray(imagenes) || imagenes.length === 0) return messages;
+    const original = !toolCallId ? messages.findIndex(msg => msg.role === "user" && typeof msg.content === "string" && /\(Adjuntos?: /.test(msg.content)) : -1;
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       const msg = messages[i];
       if (typeof msg.content !== "string") continue;
       if (toolCallId ? msg.role !== "tool" || msg.tool_call_id !== toolCallId : msg.role !== "user") continue;
+      if (original >= 0 && i !== original) continue;
       // El OCR se sitúa después de los píxeles: el modelo recibe la transcripción
       // junto a la imagen y puede contrastarla sin dar preferencia automática a su visión.
       const marker = toolCallId ? "\nOCR local (" : "\n\nPara transcribir texto o cifras";
@@ -365,7 +367,9 @@ export class BonsaiChat {
    * @returns {number}
    */
   reservaSalida() {
-    if (this.agentProfile === "small-local-coder") { const c = this.coderTask?.config || this.coderConfig || CODER_CONFIG; return Math.min(c.outputTokens, Math.floor((this.nCtx || c.contextTokens) / 3)); }
+    if (Number.isFinite(this.overrideOutputReservation)) return this.overrideOutputReservation;
+    if (this.consultation) return Math.min(SLICE_TOKENS + 512, Math.floor((this.nCtx || 8192) / 2));
+    if (this.agentProfile === "small-local-coder") { const c = this.coderTask?.config || this.coderConfig || CODER_CONFIG; return Math.min(c.outputTokens, Math.max(256, Math.floor((this.nCtx || c.contextTokens) / 2) - 128)); }
     const fase = this.faseSalto;
     const conHerramientas = this.actOnPc && this.toolChoice !== "none";
     const reservaFase = conHerramientas
@@ -390,8 +394,8 @@ export class BonsaiChat {
    *  - ventana: `n_ctx` que cargó el servidor (0 si aún no se sabe).
    *  - solicitado: tope de historial que pidió el usuario (configuredCap).
    *  - efectivo: historial que de verdad se puede mandar ahora (historyCap()).
-   *  - reservaSalida: hueco real que queda para la respuesta (ventana - efectivo); si la
-   *    ventana aún no se conoce, la reserva nominal de la fase.
+   *  - reservaSalida: presupuesto para la generación; el espacio restante también puede
+   *    incluir el margen de 128 tokens, imágenes y capacidad no solicitada.
    * @returns {{ventana: number, solicitado: number, efectivo: number, reservaSalida: number}}
    */
   presupuestoContexto() {
@@ -401,7 +405,7 @@ export class BonsaiChat {
       ventana,
       solicitado: this.configuredCap,
       efectivo,
-      reservaSalida: ventana > 0 ? Math.max(0, ventana - efectivo) : this.reservaSalida(),
+      reservaSalida: this.reservaSalida(),
     };
   }
 
@@ -538,9 +542,10 @@ export class BonsaiChat {
   }
 
   effectiveThinkingBudget() {
-    return this.agentProfile === "small-local-coder"
-      ? Math.min(this.thinkBudget, this.thinkingLimit())
-      : this.thinkBudget;
+    const taskCap = this.consultation || this.faseSalto === "charla" ? 256
+      : this.coderTask?.state.phase === "REPAIR" ? 4096 : 1024;
+    const editLimit = this.agentProfile === "small-local-coder" ? this.thinkingLimit() : Math.max(0, this.reservaSalida() - 256);
+    return Math.max(0, Math.min(this.thinkBudget, taskCap, editLimit));
   }
 
   /**
@@ -569,7 +574,10 @@ export class BonsaiChat {
    */
   async postChat(body, signal) {
     try {
-      return await this.postJson("/v1/chat/completions", { ...body, ...this.templateFields() }, signal);
+      const fields = this.templateFields(this.thinkBudget > 0);
+      if (typeof fields.thinking_budget_tokens === "number" && Number.isFinite(Number(body.max_tokens)))
+        fields.thinking_budget_tokens = Math.min(fields.thinking_budget_tokens, Math.max(1, Math.floor(Number(body.max_tokens) / 3)));
+      return await this.postJson("/v1/chat/completions", { ...body, ...fields }, signal);
     } catch (err) {
       if (this.allowThinkingKw && err instanceof Error && /enable_thinking/i.test(err.message)) {
         this.allowThinkingKw = false;
@@ -610,22 +618,24 @@ export class BonsaiChat {
    */
   async countPrompt(messages, continueFinal) {
     /** @type {Record<string, unknown>} */
-    const body = { model: this.model, messages, ...this.templateFields(), ...this.toolFields() };
-    const fallbackCount = () => this.agentProfile === "small-local-coder"
-      ? Buffer.byteLength(JSON.stringify(messages), "utf8") + Buffer.byteLength(JSON.stringify(this.toolFields()), "utf8")
-      : this.estimateMessages(messages);
+    const body = { model: this.model, messages, ...this.templateFields(this.thinkBudget > 0), ...this.toolFields() };
+    const fallbackCount = () => {
+      this.lastCountMethod = "estimación: conteo del servidor no disponible";
+      this.note("No se pudo contar con el tokenizer del servidor; se usa una estimación con margen.");
+      return Math.ceil((this.estimateMessages(messages) + estimateTokens(JSON.stringify(this.toolFields()))) * 1.15);
+    };
     if (continueFinal) {
       body.continue_final_message = true;
       body.add_generation_prompt = false;
     }
     // Bounded exact-count cache. Includes model, template and tools, so changes invalidate it.
     const countKey = this.agentProfile === "small-local-coder" ? JSON.stringify(body) : "";
-    if (countKey && this.promptCountCache.has(countKey)) return this.promptCountCache.get(countKey);
+    if (countKey && this.promptCountCache.has(countKey)) { this.lastCountMethod = "conteo exacto cacheado"; return this.promptCountCache.get(countKey); }
     const remember = (n) => { if (countKey) { this.promptCountCache.set(countKey, n); while (this.promptCountCache.size > 8) this.promptCountCache.delete(this.promptCountCache.keys().next().value); } return n; };
     try {
       const data = await this.postJson("/v1/chat/completions/input_tokens", body);
       const n = readTokenCount(data);
-      if (n !== null) return remember(n);
+      if (n !== null) { this.lastCountMethod = "llama-server input_tokens"; return remember(n); }
     } catch (err) {
       if (this.active?.signal.aborted || (err instanceof Error && err.name === "AbortError")) throw err;
       if (isContextError(err)) {
@@ -646,7 +656,8 @@ export class BonsaiChat {
       if (typeof prompt !== "string") return fallbackCount();
       const tokens = await this.postJson("/tokenize", { content: prompt, add_special: false });
       const n = readTokenCount(tokens);
-      return n !== null ? remember(n) : fallbackCount();
+      if (n !== null) { this.lastCountMethod = "llama-server apply-template/tokenize"; return remember(n); }
+      return fallbackCount();
     } catch (err) {
       if (this.active?.signal.aborted || (err instanceof Error && err.name === "AbortError")) throw err;
       if (isContextError(err)) {
@@ -844,6 +855,17 @@ export class BonsaiChat {
 
   async packHistory() {
     if (this.agentProfile === "small-local-coder" && this.coderTask) return this.packCoderHistory();
+    const previousMemory = this.session.memory, previousFolded = this.session.folded;
+    // Primero probar el historial completo con el tokenizer real. La estimación por
+    // caracteres puede sobrestimar código y plegar una solicitud que sí cabe.
+    const all = this.session.turns.slice(this.session.folded).map(turn => this.modelTurn(turn));
+    if (all.length) {
+      const candidate = selectContext({ turns:all, memory:this.session.memory, historyCap:Number.MAX_SAFE_INTEGER, countText:estimateTokens, rules:this.rules, agent:this.agentRules(), pinned:this.pinnedRequest() });
+      if (candidate.messages) {
+        const actual = await this.countPrompt(candidate.messages, false);
+        if (actual <= this.historyCap()) return { messages:candidate.messages, promptTokens:actual, changed:false, anchorClipped:false };
+      }
+    }
     let clipAnchor = false;
     let changed = false;
     for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -869,10 +891,12 @@ export class BonsaiChat {
       }
       if (plan.overflow === "memory") {
         const before = this.session.memory;
-        const shrunk = await this.summarize(before, [], "", 80);
+        const target = Math.max(256, Math.floor(estimateTokens(before) / 2));
+        const shrunk = await this.summarize(before, [], "", target);
         this.session.memory = shrunk.length < before.length
           ? shrunk
-          : takeHeadByTokens(before, 80, estimateTokens);
+          : takeHeadByTokens(before, target, estimateTokens);
+        this.note(`Memoria compactada por falta de espacio: objetivo ${target} tokens.`);
         changed = true;
         continue;
       }
@@ -888,35 +912,16 @@ export class BonsaiChat {
       this.tighten += real - this.historyCap() + 64;
       changed = true;
     }
-    this.session.folded = Math.max(0, this.session.turns.length - 1);
-    this.session.memory = takeHeadByTokens(this.session.memory, 80, estimateTokens);
     this.tighten = 0;
-    const ultimoTurno = this.session.turns[this.session.turns.length - 1];
-    let last = this.modelTurn(ultimoTurno);
-    if (last.role === "tool") {
-      // La salida de emergencia conservaba SOLO el último mensaje: si era un resultado de
-      // herramienta quedaba un `tool` sin la llamada que lo explica (hallazgo 18). Se
-      // convierte en una nota explícita: no se inventa una llamada ni se deja un id huérfano.
-      last = /** @type {any} */ (notaDeResultado(ultimoTurno));
-    }
-    const solo = selectContext({
-      turns: [{ ...last, content: takeHeadByTokens(last.content, Math.max(256, this.historyCap() - 400), estimateTokens) }],
-      memory: this.session.memory,
-      historyCap: this.historyCap(),
-      countText: estimateTokens,
-      rules: this.rules,
-      agent: this.agentRules(),
-      pinned: last.role === "user" && !turnoInterno(last) ? null : { ...(this.pinnedRequest() || { content: "" }), index: -1 },
-      clipAnchor: true,
-    });
-    if (!solo.messages) throw new Error("No pude meter el historial en el tope de contexto");
-    return { messages: solo.messages, promptTokens: estimateTokens(solo.messages.map((msg) => msg.content).join("\n")), changed: true, anchorClipped: true };
+    this.session.memory = previousMemory;
+    this.session.folded = previousFolded;
+    throw new Error("No se pudo ajustar el historial a la ventana. La conversación se conserva; aumenta el contexto o reduce la solicitud.");
   }
 
   /** Keep instructions + original requirements intact; discard complete stale tool groups first. */
   async packCoderHistory() {
     const task = this.coderTask;
-    task.stateBudget = Math.max(180, Math.min(600, Math.floor(this.historyCap() * 0.12)));
+    task.stateBudget = Math.max(180, Math.min(1800, Math.floor(this.historyCap() * 0.12)));
     task.contextHint = "";
     const system = [CODER_SYSTEM, contextoEntorno({root:task.root,python:this.pythonCmd,...this.entornoAgente}), this.rules ? `PROJECT RULES:\n${this.rules}` : "", task.projectMetadata ? `PROJECT METADATA:\n${takeHeadByTokens(task.projectMetadata,250,estimateTokens)}` : ""].filter(Boolean).join("\n\n");
     const turns = this.session.turns.slice(task.startTurnIndex || 0);
@@ -925,16 +930,29 @@ export class BonsaiChat {
       if (turn.role === "tool" && groups.length) groups.at(-1).push(turn);
       else groups.push([turn]);
     }
-    let recent = groups.slice(task.invalid ? -1 : -4), map = task.invalid ? "" : task.initialMap, snippets = task.invalid ? "" : task.initialSnippets;
+    let recent = groups, map = task.initialMap, snippets = task.initialSnippets;
+    const earlier = this.session.turns.slice(0, task.startTurnIndex || 0)
+      .filter(t => (t.role === "user" && !turnoInterno(t)) || (t.role === "assistant" && !t.toolCalls?.length && t.content))
+      .map(t => ({ role: t.role, content: t.content }));
+    let previous = earlier;
     const convert = (t) => ({role:t.role,content:typeof t.content === "string" ? t.content : "",...(t.role === "tool" ? {tool_call_id:t.toolCallId} : {}),...(t.toolCalls?.length ? {tool_calls:t.toolCalls.map((c,i)=>({id:c.id||`call_${i}`,type:"function",function:{name:c.name,arguments:typeof c.arguments === "string" ? c.arguments : JSON.stringify(c.arguments)}}))} : {})});
-    for (let attempt = 0; attempt < 12; attempt++) {
-      const messages = [{role:"system",content:system},{role:"user",content:[task.state.goal,map?`MAPA (solo metadatos):\n${map}`:"",snippets?`CONTEXTO SELECCIONADO:\n${snippets}`:""].filter(Boolean).join("\n\n")},...recent.flat().map(convert),{role:"user",content:task.dynamic()}];
+    for (let attempt = 0; attempt < groups.length + earlier.length + 12; attempt++) {
+      const messages = [{role:"system",content:system},{role:"user",content:[task.state.goal,map?`MAPA (solo metadatos):\n${map}`:"",snippets?`CONTEXTO SELECCIONADO:\n${snippets}`:""].filter(Boolean).join("\n\n")},...previous,...recent.flat().map(convert),{role:"user",content:task.dynamic()}];
       const count = await this.countPrompt(messages,false);
+      if (count > this.historyCap() && count <= this.configuredCap && !Number.isFinite(this.overrideOutputReservation)) {
+        const available = this.nCtx - count - 128 - (this.pendingImageTokens || 0);
+        if (available >= 2048 && available < this.reservaSalida()) {
+          this.overrideOutputReservation = available;
+          task.trace("output_reservation_reduced", { from:this.coderConfig?.outputTokens, to:available, reason:"conservar contexto útil" });
+        }
+      }
       if (count <= this.historyCap()) {
         task.sentContext = true;
-        task.trace("llm_request",{promptTokens:count,outputReserved:this.reservaSalida(),mapTokens:estimateTokens(map),filesSelected:task.state.inspected});
+        this.contextDiagnostics = { model:this.model, contextWindow:this.nCtx, inputTokens:count, countMethod:this.lastCountMethod || "caché", maxOutput:this.reservaSalida(), systemTokensEstimate:estimateTokens(system), historyTokensEstimate:estimateTokens(JSON.stringify([...previous,...recent.flat()])), toolDefinitionTokensEstimate:estimateTokens(JSON.stringify(this.toolFields())), toolResultTokensEstimate:estimateTokens(recent.flat().filter(t=>t.role === "tool").map(t=>t.content).join("\n")), imageTokensReserved:this.pendingImageTokens || 0, remainingContext:Math.max(0,this.nCtx-count-this.reservaSalida()-(this.pendingImageTokens || 0)), discardedGroups:groups.length-recent.length, discardedConversation:earlier.length-previous.length, compaction:(groups.length !== recent.length || earlier.length !== previous.length) ? "grupos antiguos omitidos por presupuesto; estado conservado" : "ninguna" };
+        task.trace("llm_request",{...this.contextDiagnostics,mapTokens:estimateTokens(map),filesSelected:task.state.inspected});
         return {messages,promptTokens:count,changed:false,anchorClipped:false};
       }
+      if (previous.length) { previous.shift(); continue; }
       if (recent.length > 1) { recent.shift(); continue; }
       if (map) { map=""; continue; }
       if (snippets) { snippets=""; if (!task.sentContext) task.state.inspected=[]; continue; }
@@ -966,7 +984,7 @@ export class BonsaiChat {
     let firstUsefulDelta = null;
     // El razonamiento (si está encendido) solo acompaña a una generación nueva: una
     // continuación ya viene con el bloque de pensamiento cerrado en la plantilla.
-    const think = !continueFinal && this.pensarEsteSalto !== false;
+    const think = !continueFinal && this.thinkBudget > 0;
     /** @type {Record<string, unknown>} */
     const body = {
       model: this.model,
@@ -979,6 +997,11 @@ export class BonsaiChat {
       ...this.templateFields(think),
       ...this.toolFields(),
     };
+    if (this.contextDiagnostics) {
+      this.contextDiagnostics.maxOutput = body.max_tokens;
+      this.contextDiagnostics.thinkingBudget = think ? this.effectiveThinkingBudget() : 0;
+      this.contextDiagnostics.thinkingIncludedInOutput = true;
+    }
     if (continueFinal) {
       body.continue_final_message = true;
       body.add_generation_prompt = false;
@@ -1102,7 +1125,9 @@ export class BonsaiChat {
     }
     // Un trozo de continuación puede venir SIN `name` (solo `arguments`): si se tirara aquí,
     // la llamada se quedaría cortada para siempre. Vale con que traiga nombre o argumentos.
-    this.coderTask?.trace("llm_result", {latencyMs:performance.now()-requestStarted,ttftMs:firstUsefulDelta === null ? null : firstUsefulDelta-requestStarted,promptTokens:usage?.prompt_tokens,generatedTokens:usage?.completion_tokens,timings});
+    const latencyMs = performance.now() - requestStarted, ttftMs = firstUsefulDelta === null ? null : firstUsefulDelta - requestStarted;
+    if (this.contextDiagnostics) Object.assign(this.contextDiagnostics, { latencyMs, ttftMs });
+    this.coderTask?.trace("llm_result", {latencyMs,ttftMs,promptTokens:usage?.prompt_tokens,generatedTokens:usage?.completion_tokens,timings});
     return { chunk, reason, toolCalls: [...calls.values()].filter((call) => call.name || call.arguments), timings, usage, completo: cierre.completo, motivo: cierre.motivo };
   }
 
@@ -1116,6 +1141,14 @@ export class BonsaiChat {
   recordTimings(timings, usage, continued) {
     if (!timings) return;
     this.lastTimings = timings;
+    if (this.contextDiagnostics) {
+      this.contextDiagnostics.promptTokensReported = usage?.prompt_tokens ?? null;
+      this.contextDiagnostics.generatedTokens = usage?.completion_tokens ?? timings.predicted_n ?? null;
+      this.contextDiagnostics.promptMs = timings.prompt_ms ?? null;
+      this.contextDiagnostics.generationMs = timings.predicted_ms ?? null;
+      this.contextDiagnostics.promptTokensPerSecond = timings.prompt_per_second ?? null;
+      this.contextDiagnostics.generationTokensPerSecond = timings.predicted_per_second ?? null;
+    }
     const round = (n) => (typeof n === "number" ? Math.round(n * 10) / 10 : undefined);
     const row = {
       t: new Date().toISOString(),
@@ -1153,10 +1186,12 @@ export class BonsaiChat {
    */
   async runTurn(userText, signal, imagenes = [], opts = {}) {
     this.currentReasoning = "";
+    this.contextDiagnostics = null;
+    this.overrideOutputReservation = undefined;
     const text = String(userText || "").trim();
     const resultados = Array.isArray(opts.resultados) ? opts.resultados.filter((r) => r && typeof r.toolCallId === "string") : [];
     if (this.vision && this.coderTask && imagenes.length) this.coderTask.images = [...imagenes];
-    const taskImages = this.coderTask?.images || imagenes;
+    const taskImages = this.coderTask?.images || this.turnImages || imagenes;
     this.pendingImageTokens = this.vision ? (taskImages.length + resultados.reduce((n,r)=>n+(r.imagenes?.length || 0),0)) * (this.imageMaxTokens + 64) : 0;
     // Las imágenes de herramientas se adjuntan solo a SU resultado y solo en este salto.
     // No se guardan data URLs en el historial ni se atribuyen al pedido del usuario.
@@ -1204,7 +1239,7 @@ export class BonsaiChat {
     // Con herramientas se empieza ya con hueco para un archivo grande: con 2048 tokens un
     // HTML mediano no cabía, y cada intento tirado eran 1-4 minutos de generación perdida.
     // El tope real lo pone igualmente `room` (lo que queda en la ventana).
-    let sliceCap = this.actOnPc && this.toolChoice !== "none" ? AGENT_SLICE_TOKENS : SLICE_TOKENS;
+    let sliceCap = this.actOnPc && this.toolChoice !== "none" ? Math.max(AGENT_SLICE_TOKENS, this.reservaSalida()) : SLICE_TOKENS;
     let escalados = 0;
     /**
      * ¿Los `arguments` de esta llamada llegaron cortados? (JSON que no cierra)
@@ -1226,6 +1261,10 @@ export class BonsaiChat {
       history = base.messages;
       historyTokens = base.promptTokens;
       historyTokens += adjuntar(history);
+      if (!this.contextDiagnostics) {
+        const textOf = m => typeof m.content === "string" ? m.content : (Array.isArray(m.content) ? m.content.map(p => p.text || "").join("\n") : "");
+        this.contextDiagnostics = { model:this.model, contextWindow:this.nCtx, inputTokens:base.promptTokens, countMethod:this.lastCountMethod || "estimación", maxOutput:this.reservaSalida(), systemTokensEstimate:estimateTokens(history.filter(m=>m.role === "system").map(textOf).join("\n")), historyTokensEstimate:estimateTokens(history.filter(m=>m.role !== "system" && m.role !== "tool").map(textOf).join("\n")), toolDefinitionTokensEstimate:estimateTokens(JSON.stringify(this.toolFields())), toolResultTokensEstimate:estimateTokens(history.filter(m=>m.role === "tool").map(textOf).join("\n")), imageTokensReserved:this.pendingImageTokens || 0, remainingContext:Math.max(0,this.nCtx-historyTokens-this.reservaSalida()), compaction:base.changed ? "historial compactado por presupuesto" : "ninguna", foldedMessages:this.session.folded };
+      }
       if (base.changed) this.note(`[memoria al día · historial ${historyTokens} tok]`);
       if (base.anchorClipped) this.note("[tu mensaje no cabía entero; envié los extremos]");
       if (!this.silent) process.stdout.write("\x1b[33mbonsai>\x1b[0m ");
@@ -1300,7 +1339,7 @@ export class BonsaiChat {
           break;
         }
         // Con razonamiento (opt-in), la primera tanda lleva además el presupuesto para pensar.
-        const thinkRoom = slice === 0 && this.thinkBudget > 0 && this.pensarEsteSalto !== false ? this.thinkBudget : 0;
+        const thinkRoom = slice === 0 && this.thinkBudget > 0 ? this.effectiveThinkingBudget() : 0;
         const maxTokens = Math.min(sliceCap + thinkRoom, room);
         this.livePrompt = historyTokens;
         this.liveGenerated = estimateTokens(draft);

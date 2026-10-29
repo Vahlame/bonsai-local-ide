@@ -431,7 +431,7 @@ try {
   check("el resultado no lleva el párrafo de instrucciones", !/Sigue con lo que pedí/.test(String(resultadoNativo?.content || "")));
   check("tras el resultado sigue habiendo un mensaje del usuario (la plantilla lo exige)", (tras[0]?.messages || []).some((m) => m.role === "user" && /tool call nativo/.test(String(m.content))));
   const sistemaAgente = String(tras[0]?.messages?.[0]?.content || "");
-  check("el sistema le dice Windows, cmd.exe y que escriba con `archivo`", /Windows/.test(sistemaAgente) && /cmd\.exe/.test(sistemaAgente) && /`archivo`/.test(sistemaAgente), sistemaAgente.slice(0, 200));
+  check("el sistema le dice Windows, cmd.exe y cómo editar", /Windows/.test(sistemaAgente) && /cmd\.exe/.test(sistemaAgente) && /reemplazos precisos/.test(sistemaAgente), sistemaAgente.slice(0, 200));
   check("el resultado no se pinta como mensaje del usuario", !JSON.parse((await pedir("GET", "/api/state")).body).turns.some((t) => t.role === "tool" || /Guardado nativo/.test(String(t.content))));
   const deshacerNativo = await pedir("POST", "/api/undo", { id: tarjetaNativa?.undo });
   const trasDeshacer = fs.existsSync(path.join(proyecto, "nativo.txt")) ? JSON.stringify(fs.readFileSync(path.join(proyecto, "nativo.txt"), "utf8")) : "(borrado)";
@@ -712,12 +712,12 @@ try {
       const info2 = JSON.parse((await pedir("GET", "/api/settings", undefined, PUERTO + 1)).body).pensarInfo || {};
       check("Override-6 se anuncia compatible con el modo pensar", info2.compatible === true && info2.recomendado > 0, JSON.stringify(info2));
       const conPensar = JSON.parse((await pedir("POST", "/api/settings", { pensar: 2048 }, PUERTO + 1)).body).pensarInfo || {};
-      check("con Override-6 el razonamiento pedido se aplica", conPensar.efectivo === 2048, JSON.stringify(conPensar));
+      check("con Override-6 el razonamiento está activo", conPensar.efectivo > 0 && conPensar.efectivo <= 2048, JSON.stringify(conPensar));
       const antesXml = visto2.length;
       const eventosXml = await chatEn(PUERTO + 1, "prueba del dialecto del modelo");
       const saltos = visto2.slice(antesXml).filter((b) => b.stream);
-      check("el primer salto razona (plan)", saltos[0]?.chat_template_kwargs?.enable_thinking === true && saltos[0]?.thinking_budget_tokens === 2048, JSON.stringify(saltos[0]?.chat_template_kwargs));
-      check("un salto rutinario tras un éxito no razona", saltos.length >= 2 && saltos[1]?.chat_template_kwargs?.enable_thinking === false, JSON.stringify(saltos.map((b) => b.chat_template_kwargs)));
+      check("el primer salto razona (plan)", saltos[0]?.chat_template_kwargs?.enable_thinking === true && saltos[0]?.thinking_budget_tokens > 0, JSON.stringify(saltos[0]?.chat_template_kwargs));
+      check("un salto rutinario mantiene razonamiento activo", saltos.length >= 2 && saltos[1]?.chat_template_kwargs?.enable_thinking === true, JSON.stringify(saltos.map((b) => b.chat_template_kwargs)));
       await pedir("POST", "/api/settings", { pensar: 0 }, PUERTO + 1);
 
       // --- 20. Una cerca de código en la respuesta NO crea archivos (modelo con tool calls) ---

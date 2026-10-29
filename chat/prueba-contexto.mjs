@@ -115,7 +115,7 @@ const hayTool = (messages) => messages.some((msg) => msg.role === "tool");
   const plan = selectContext({
     turns: turnos,
     memory: "",
-    historyCap: 1600,
+    historyCap: 1800,
     countText: estimateTokens,
     pinned: { index: 0, content: "crea y comprueba" },
   });
@@ -252,17 +252,10 @@ const hayTool = (messages) => messages.some((msg) => msg.role === "tool");
       draft: "",
       files: [],
     };
-    const plan = await chat.packHistory();
-    const mensajes = plan.messages || [];
-    check("packHistory emergencia: devuelve mensajes", mensajes.length > 0, JSON.stringify(mensajes.length));
-    check("packHistory emergencia: no deja un tool huérfano", !hayTool(mensajes) && sinHuerfanos(mensajes), JSON.stringify(mensajes.map((m) => m.role)));
-    check(
-      "packHistory emergencia: conserva el resultado como nota identificada",
-      mensajes.some((m) => String(m.content || "").includes("Resultado de la herramienta c1")),
-      JSON.stringify(mensajes.map((m) => String(m.content).slice(0, 60))),
-    );
-    check("packHistory emergencia: marca que hubo recorte de emergencia", plan.anchorClipped === true && plan.changed === true);
-    check("packHistory emergencia: la sesión queda plegada al último turno", chat.session.folded === 2, String(chat.session.folded));
+    let error = "";
+    try { await chat.packHistory(); } catch (err) { error = err.message; }
+    check("packHistory informa cuando no puede contar el contexto", /no se pudo ajustar/i.test(error), error);
+    check("packHistory conserva el historial al fallar", chat.session.folded === 0 && chat.session.turns.length === 3 && chat.session.memory === "notas anteriores");
   } finally {
     servidor.closeAllConnections?.();
     await new Promise((resolve) => servidor.close(() => resolve(undefined)));
@@ -340,7 +333,7 @@ const hayTool = (messages) => messages.some((msg) => msg.role === "tool");
       check(`presupuesto ${fase}: claves exactas`, Object.keys(presupuesto).join(",") === "ventana,solicitado,efectivo,reservaSalida", Object.keys(presupuesto).join(","));
       check(`presupuesto ${fase}: ventana y solicitado`, presupuesto.ventana === nCtx && presupuesto.solicitado === 32768, JSON.stringify(presupuesto));
       check(`presupuesto ${fase}: efectivo = historyCap()`, presupuesto.efectivo === cap, `${presupuesto.efectivo} vs ${cap}`);
-      check(`presupuesto ${fase}: reserva de salida no negativa y real`, presupuesto.reservaSalida >= 0 && presupuesto.reservaSalida === nCtx - cap, JSON.stringify(presupuesto));
+      check(`presupuesto ${fase}: salida y margen caben en la ventana`, presupuesto.reservaSalida >= 0 && presupuesto.reservaSalida === chat.reservaSalida() && cap + presupuesto.reservaSalida + 128 <= nCtx, JSON.stringify(presupuesto));
     }
   }
   for (const fase of fases) {

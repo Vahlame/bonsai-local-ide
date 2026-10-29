@@ -19,7 +19,7 @@ param (
     [int]$Pensar = -1,               # -1 = auto: lo del ajuste "Modo razonamiento" de la interfaz SI el modelo lo admite (catalogo.<clave>.pensar). 0 = apagado. N>0 = tope de N tokens
     [int]$Threads = 8,
     [int]$UBatch = 512,
-    [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG")][string]$EnginePreset = "",
+    [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG", "CUSTOM")][string]$EnginePreset = "",
     [int]$DormirSeg = 0,             # libera la VRAM tras N s sin peticiones (0 = nunca)
     [string]$Modelo = "",            # clave de un perfil verificado de GPU completa en chat\modelo.json
     [string]$Log = "",               # guarda todo lo que dice este script en ese archivo (lo usa el cambio de modelo)
@@ -103,7 +103,7 @@ $pensarOrigen = "explicito"
 if ($Pensar -lt 0) {
     # Auto: lo que diga el ajuste "Modo razonamiento" de la interfaz (chat\ui-settings.json).
     $pensarOrigen = "ajuste de la interfaz"
-    $Pensar = 0
+    $Pensar = if ($pensarCompatible) { [int]$pensarCat.presupuesto } else { 0 }
     $ajustesPath = Join-Path $RootDir "chat\ui-settings.json"
     if (Test-Path $ajustesPath) {
         try {
@@ -114,13 +114,15 @@ if ($Pensar -lt 0) {
         }
     }
 }
+if ($pensarCompatible -and $Pensar -le 0) { $Pensar = [int]$pensarCat.presupuesto; Write-Host "Razonamiento activo con el presupuesto del modelo: $Pensar tokens." }
 if ($Pensar -gt 0 -and -not $pensarCompatible) {
     Write-Host ("Aviso: {0} no admite el modo razonamiento (ver chat\modelo.json); se arranca sin el." -f $(if ($claveModelo) { $claveModelo } else { $ModelFile })) -ForegroundColor Yellow
     $Pensar = 0
 }
 
 if ($claveModelo -and $M.catalogo.$claveModelo.servidor.tipo -eq "gpu-completa") {
-    if ($EnginePreset -and -not $PSBoundParameters.ContainsKey('Vision') -and -not $PSBoundParameters.ContainsKey('VisionGpu')) {
+    # CUSTOM no tiene preset de referencia: el contexto/KV/vision llegan como parametros.
+    if ($EnginePreset -and $EnginePreset -ne 'CUSTOM' -and -not $PSBoundParameters.ContainsKey('Vision') -and -not $PSBoundParameters.ContainsKey('VisionGpu')) {
         $Vision = [bool](Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json).$EnginePreset.vision
     }
     if ($SinVision) { $Vision = $false; $VisionGpu = $false }

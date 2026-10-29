@@ -39,6 +39,8 @@
         "imageMaxTokens": 512,
         "reservaMiB": 900,
         "contexto": 39936,
+        "contextoMaximoManual": 43008,
+        "contextoMaximoManualNota": "Uso elegido explícitamente: 43008/F16 y visión pasó tres pruebas de contexto largo, pero el mínimo muestreado fue 106 MiB; 44032 falló por memoria CUDA. El perfil automático conserva el techo anterior.",
         "vramLibreMinMiBMedida": 426,
         "validacionIDE": {
           "textoLargoPromptTokens": 28057,

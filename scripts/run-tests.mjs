@@ -49,6 +49,7 @@ const AISLADAS = [
   { archivo: "chat/prueba-markdown-seguro.mjs" },
   { archivo: "chat/prueba-navegador-rutas.mjs" },
   { archivo: "chat/prueba-archivos-seguros.mjs" },
+  { archivo: "chat/prueba-escritura-incremental.mjs" },
   { archivo: "chat/prueba-git-seguro.mjs" },
   { archivo: "chat/prueba-procesos.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-seguridad.mjs" },

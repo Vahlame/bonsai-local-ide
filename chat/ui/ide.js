@@ -102,8 +102,8 @@
       vramVal.textContent = `${fmtGb(g.vramUsedMiB)}/${fmtGb(g.vramTotalMiB)} GB`;
       const free=g.vramFreeMiB==null?NaN:Number(g.vramFreeMiB);
       vramFree.textContent=Number.isFinite(free)?`${Math.round(free)} MiB libres`:"Libre: sin dato";
-      vramFree.classList.toggle("low",Number.isFinite(free)&&free<400);
-      cVram.title="Memoria libre medida por NVIDIA. Margen mínimo para imágenes: 400 MiB.";
+      vramFree.classList.toggle("low",Number.isFinite(free)&&free<(g.visionTransientMiB || 64));
+      cVram.title="Memoria libre medida por NVIDIA. La comprobación de imágenes usa un margen transitorio medido de 64 MiB.";
       vramBar.firstElementChild.style.width = `${pct.toFixed(0)}%`;
       level(vramBar, pct >= 97 ? "hot" : pct >= 92 ? "warn" : "");
       tempVal.textContent = `${g.temp ?? "—"}°C`;
@@ -136,7 +136,7 @@
       row("Uso ahora / media 60 s", `${g.util}% / ${media}%`);
       row("Tiempo ≥ 85 % (60 s)", `${alto}%`);
       row("VRAM usada / libre", `${fmtGb(g.vramUsedMiB)} GiB / ${g.vramFreeMiB==null?"sin dato":`${Math.round(g.vramFreeMiB)} MiB`}`);
-      row("Margen para imágenes", "400 MiB libres como mínimo");
+      row("Margen transitorio de imagen", `${g.visionTransientMiB || 64} MiB`);
       row("Temperatura", `${g.temp}°C`);
       row("Potencia / límite", `${Math.round(g.watts)} / ${Math.round(g.wattsLimit || 0)} W`);
       if (g.wattsDefault > 0) row("Límite habitual", `${Math.round(g.wattsDefault)} W`);

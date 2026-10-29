@@ -1309,6 +1309,7 @@
         efectivo: Number.isFinite(Number(p.efectivo)) ? Number(p.efectivo) : Number(p.ventana),
         reservaSalida: Number.isFinite(Number(p.reservaSalida)) ? Number(p.reservaSalida) : null,
         historial: datos.historial && typeof datos.historial === "object" ? datos.historial : null,
+        diagnostico: datos.contextDiagnostics || null,
       };
     } catch {
       return null;
@@ -1378,6 +1379,12 @@
       error.style.cssText = "color:var(--danger);font-size:12px;margin:6px 0 0;line-height:1.5";
       error.textContent = datos.historial.error;
       contenedor.append(error);
+    }
+    if (datos.diagnostico) {
+      const detalle = el("details"), titulo = el("summary", "", "Diagnóstico de la última petición"), pre = el("pre");
+      pre.style.cssText = "white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;max-height:240px;overflow:auto";
+      pre.textContent = JSON.stringify(datos.diagnostico, null, 2);
+      detalle.append(titulo, pre); contenedor.append(detalle);
     }
   }
 
@@ -1470,16 +1477,23 @@
     const motorCaja=el("div"); motorCaja.style.cssText="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end";
     const motor=el("select");
     motor.setAttribute("aria-label","Perfil de motor");
-    const actual=el("option","","Mantener perfil actual"); actual.value=""; motor.append(actual);
+    const actualOpt=el("option","","Mantener perfil actual"); actualOpt.value=""; motor.append(actualOpt);
     for(const [name,p] of Object.entries(ajustes.engineProfiles || {})) {
       const option=el("option","",p.label || `${name} · ${p.context/1024}k`); option.value=name; option.selected=ajustes.enginePreset===name; motor.append(option);
+    }
+    // Show "CUSTOM" if active preset is custom (historial ≠ full context)
+    if(ajustes.enginePreset==="CUSTOM"||(!ajustes.enginePreset&&ajustes.historial&&ajustes.coderContextTokens&&Number(ajustes.historial)!==Number(ajustes.coderContextTokens))){
+      const customOpt=el("option","","Personalizado (historial ajustado)"); customOpt.value="CUSTOM"; customOpt.selected=true; motor.append(customOpt);
     }
     const aplicarMotor=el("button","","Aplicar perfil"); aplicarMotor.type="button";
     aplicarMotor.addEventListener("click",async()=>{
       const clave=estadoModelos.actual;
       if(!motor.value || !clave) { avisar("Selecciona un perfil y un modelo disponible.","warn"); return; }
       aplicarMotor.disabled=true;
-      try { await recargarModelo(clave,motor.value); } finally { aplicarMotor.disabled=false; motor.value=ajustes.enginePreset || ""; }
+      try {
+        const historialActual = motor.value === "CUSTOM" ? Number(ajustes.historial) : undefined;
+        await recargarModelo(clave, motor.value, historialActual);
+      } finally { aplicarMotor.disabled=false; motor.value=ajustes.enginePreset || ""; }
     });
     motorCaja.append(motor,aplicarMotor);
 
@@ -1488,10 +1502,10 @@
     // reiniciarlo; apagarlo no (cada petición dice si razona).
     const infoPensar = ajustes.pensarInfo || { compatible: true, recomendado: 2048 };
     const pensar = el("select");
-    for (const [v, t] of [[0, "Apagado"], [512, "512 tokens"], [1024, "1024 tokens"], [2048, `2048 tokens${infoPensar.recomendado === 2048 ? " (recomendado)" : ""}`], [4096, "4096 tokens"], [8192, "8192 tokens (lento)"]]) {
+    for (const [v, t] of [[512, "512 tokens"], [1024, "1024 tokens"], [2048, `2048 tokens${infoPensar.recomendado === 2048 ? " (recomendado)" : ""}`], [4096, "4096 tokens"], [8192, "8192 tokens (lento)"]]) {
       const o = el("option", "", t);
       o.value = String(v);
-      if (Number(ajustes.pensar) === v) o.selected = true;
+      if (Number(ajustes.pensar || infoPensar.recomendado) === v) o.selected = true;
       pensar.append(o);
     }
     pensar.addEventListener("change", async () => {
@@ -1532,7 +1546,7 @@
     // una PETICIÓN al servidor; el tope real lo recorta historyCap() según la ventana que
     // arrancó llama-server (por eso abajo se enseñan los cuatro valores reales).
     const historial = el("select");
-    const topes = [[8192, "8192 tokens"], [16384, "16384 tokens"], [32768, "32768 tokens"], [36864, "36864 tokens"], [39936, "39936 tokens"]];
+    const topes = [[8192, "8192 tokens"], [16384, "16384 tokens"], [32768, "32768 tokens"], [36864, "36864 tokens"], [39936, "39936 tokens"], [43008, "43008 tokens"]];
     if (Number.isFinite(Number(ajustes.historial)) && !topes.some(([v]) => v === Number(ajustes.historial))) topes.push([Number(ajustes.historial), `${ajustes.historial} tokens`]);
     for (const [v, t] of topes) {
       const o = el("option", "", String(t));
@@ -1541,7 +1555,17 @@
       historial.append(o);
     }
     historial.addEventListener("change", async () => {
-      await guardarAjustes({ historial: Number(historial.value) });
+      const nuevoHistorial = Number(historial.value);
+      const ctx = Number(ajustes.coderContextTokens) || 0;
+      // If historial < context window, mark preset as CUSTOM so the chip reflects it
+      const presetResultante = (ctx > 0 && nuevoHistorial < ctx) ? "CUSTOM" : (ajustes.enginePreset || "");
+      await guardarAjustes({ historial: nuevoHistorial, ...(presetResultante !== ajustes.enginePreset ? { enginePreset: presetResultante } : {}) });
+      // Update motor dropdown to show CUSTOM if needed
+      if (presetResultante === "CUSTOM") {
+        const existing = Array.from(motor.options).find(o => o.value === "CUSTOM");
+        if (!existing) { const co=el("option","","Personalizado (historial ajustado)"); co.value="CUSTOM"; motor.append(co); }
+        motor.value = "CUSTOM";
+      }
       // El historial efectivo puede cambiar: se vuelven a leer los valores reales.
       void pintarPresupuestoEn(presupuestoCaja);
       void actualizarChipPresupuesto();
@@ -1959,17 +1983,21 @@
    * @param {string} nombre
    */
   /**
-   * Reinicia el MISMO modelo (p. ej. para encender el razonamiento, que se fija al arrancar).
+   * Reinicia el MISMO modelo (p. ej. para encender el razonamiento o cambiar el preset de motor).
    * @param {string} clave
+   * @param {string} [enginePreset]   preset nombrado o "CUSTOM"
+   * @param {number} [historial]      tope de historial explícito (solo para CUSTOM)
    */
-  async function recargarModelo(clave, enginePreset) {
+  async function recargarModelo(clave, enginePreset, historial) {
     const fila = estadoModelos.modelos.find((m) => m.clave === clave);
     const nombre = fila?.nombre || clave;
     const cerrar = avisar(`Reiniciando ${nombre}…`, "warn", 0);
     cargandoModelo = nombre;
     pintarChipModelo();
+    const cuerpo = { clave, recargar: true, ...(enginePreset ? {enginePreset} : {}) };
+    if (historial !== undefined) cuerpo.historial = historial;
     try {
-      const r = await api("/api/modelos", { cuerpo: { clave, recargar: true, ...(enginePreset ? {enginePreset} : {}) } });
+      const r = await api("/api/modelos", { cuerpo });
       cargandoModelo = "";
       cerrar();
       avisar(`${r.nombre} listo${r.pensar ? ` · razona con hasta ${r.pensar} tokens` : ""}`, "ok", 6000);

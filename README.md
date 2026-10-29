@@ -1,15 +1,24 @@
 # Bonsai Local IDE
 
+**Actualización de contexto y agente:** el prompt de sistema distingue conversación y
+trabajo sobre el proyecto; el historial se conserva mientras quepa y el conteo usa el
+tokenizer de llama-server cuando está disponible. El perfil local configurado en esta
+máquina utiliza Ornith con visión, pensamiento y 43.008 tokens de ventana. Las métricas,
+límites y pasos de diagnóstico están en [contexto y diagnósticos](docs/CONTEXTO-Y-DIAGNOSTICO.md).
+La configuración local se guarda fuera de Git: una instalación nueva no hereda esos ajustes.
+La [auditoría y hoja de ruta](docs/AUDITORIA-PROFUNDA-2026-10-29.md) recoge riesgos y trabajo pendiente.
+Las cifras y recomendaciones históricas de las secciones siguientes pueden corresponder a
+perfiles anteriores.
+
 **Coding con contexto selectivo:** `small-local-coder` añade Tree-sitter en CPU,
-mapa selectivo, nueve herramientas con validación de schema, estado externo y
+mapa selectivo, catorce herramientas con validación de schema, estado externo y
 verificación/reparación automática. Se selecciona en Ajustes → Agente o con
 `scripts/start-ui.ps1 -AgentProfile small-local-coder -EnginePreset 8GB-BALANCED`.
-BALANCED usa texto, 34/34 capas en GPU y colocación estándar de tensores, incluyendo
-un buffer CPU_Mapped. En Ajustes → Motor también están los perfiles de visión:
-16k F16, 32k Q8 y **32k/36k F16 con pensamiento**. El perfil activo
-`8GB-VISION-LONG` usa **36.864 tokens, KV F16 y 4.096 de presupuesto de razonamiento**,
-con 2.048 adicionales para responder/editar y un mínimo de **400 MiB libres**.
-La ventana incluye entrada, imágenes y salida; no son 36k de entrada más 4k aparte.
+Los perfiles actuales admiten visión cuando el modelo y su proyector lo permiten;
+incluyen opciones de 16k F16, 32k Q8 y **32k/36k F16**. El ajuste personalizado
+de esta máquina usa 43.008 tokens, KV F16 y visión; alcanzó solo 106 MiB libres
+en pruebas y no garantiza estabilidad bajo todas las cargas. No existe una reserva
+obligatoria de 400 MiB. Entrada, imágenes y generación comparten la ventana.
 El modo Consulta permite combinar
 imágenes y texto sin editar el proyecto. El modo Agente conserva la imagen durante
 las ediciones y reparaciones. La selección se guarda después de cargar correctamente.

@@ -14,34 +14,60 @@ param (
     [int]$PromptCap = 8192,
     [int]$Pensar = -1,            # -1 = auto (ajuste "Modo razonamiento" de la interfaz, solo si el modelo lo admite). 0 = apagado. N>0 = tope de N tokens
     [ValidateSet("", "legacy", "small-local-coder")][string]$AgentProfile = "",
-    [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG")][string]$EnginePreset = "",
+    [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG", "CUSTOM")][string]$EnginePreset = "",
     [switch]$SinVision,           # por defecto la vision se enciende sola si el proyector esta descargado
     [switch]$NoBrowser
 )
 
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
-if (-not $EnginePreset) {
-    $SettingsPath=Join-Path $RootDir 'chat\ui-settings.json'
-    if (Test-Path -LiteralPath $SettingsPath) {
-        $SavedPreset=(Get-Content -LiteralPath $SettingsPath -Raw | ConvertFrom-Json).enginePreset
-        if ($SavedPreset) {
-            $KnownPresets=Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json
-            if (-not $KnownPresets.PSObject.Properties[$SavedPreset]) { throw 'El perfil de motor guardado no existe' }
-            $EnginePreset=[string]$SavedPreset
-        }
+$SettingsPath = Join-Path $RootDir 'chat\ui-settings.json'
+$SavedSettings = $null
+if (Test-Path -LiteralPath $SettingsPath) {
+    try { $SavedSettings = Get-Content -LiteralPath $SettingsPath -Raw | ConvertFrom-Json } catch { $SavedSettings = $null }
+}
+# Un preset guardado "CUSTOM" no tiene ficha en local-engine-presets.json: la ventana y el
+# historial los fijo el usuario en la interfaz y viven en ui-settings.json.
+if (-not $EnginePreset -and $SavedSettings -and $SavedSettings.enginePreset) {
+    $SavedPreset = [string]$SavedSettings.enginePreset
+    if ($SavedPreset -eq 'CUSTOM') {
+        $EnginePreset = 'CUSTOM'
+    } else {
+        $KnownPresets = Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json
+        if (-not $KnownPresets.PSObject.Properties[$SavedPreset]) { throw 'El perfil de motor guardado no existe' }
+        $EnginePreset = [string]$SavedPreset
     }
 }
+$SavedContext = 0
+$SavedHistorial = 0
+if ($SavedSettings) {
+    [void][int]::TryParse([string]$SavedSettings.coderContextTokens, [ref]$SavedContext)
+    [void][int]::TryParse([string]$SavedSettings.historial, [ref]$SavedHistorial)
+}
+if ($SavedContext -lt 4096 -or $SavedContext -gt 65536) { $SavedContext = 0 }
+if ($SavedHistorial -lt 512) { $SavedHistorial = 0 }
+if ($EnginePreset -eq 'CUSTOM' -and $ContextSize -eq 'auto' -and $SavedContext -gt 0) {
+    # El servidor tiene que arrancar con la misma ventana que el perfil personalizado.
+    $ContextSize = [string]$SavedContext
+}
 if ($AgentProfile) { $env:BONSAI_AGENT_PROFILE = $AgentProfile }
-if ($EnginePreset -and -not $PSBoundParameters.ContainsKey('SinVision')) {
+if ($EnginePreset -and $EnginePreset -ne 'CUSTOM' -and -not $PSBoundParameters.ContainsKey('SinVision')) {
     $SinVision = -not [bool](Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json).$EnginePreset.vision
 }
 if ($EnginePreset -and $AgentProfile -eq 'small-local-coder') {
-    $EngineOptions = (Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json).$EnginePreset
+    if ($EnginePreset -eq 'CUSTOM') {
+        $CoderContext = if ($SavedContext -gt 0) { $SavedContext } else { 16384 }
+        $ExplicitContext = 0
+        if ($ContextSize -ne 'auto' -and [int]::TryParse([string]$ContextSize, [ref]$ExplicitContext) -and $ExplicitContext -ge 4096) { $CoderContext = $ExplicitContext }
+    } else {
+        $CoderContext = [int]((Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json).$EnginePreset.context)
+    }
     $CoderOptions = if ($env:BONSAI_CODER_OPTIONS) { $env:BONSAI_CODER_OPTIONS | ConvertFrom-Json } else { [pscustomobject]@{} }
-    $CoderOptions | Add-Member -NotePropertyName contextTokens -NotePropertyValue ([int]$EngineOptions.context) -Force
+    $CoderOptions | Add-Member -NotePropertyName contextTokens -NotePropertyValue $CoderContext -Force
     $env:BONSAI_CODER_OPTIONS = $CoderOptions | ConvertTo-Json -Compress
-    if (-not $PSBoundParameters.ContainsKey('PromptCap')) { $PromptCap = [int]$EngineOptions.context }
+    if (-not $PSBoundParameters.ContainsKey('PromptCap')) {
+        $PromptCap = if ($EnginePreset -eq 'CUSTOM' -and $SavedHistorial -gt 0) { [Math]::Min($SavedHistorial, $CoderContext) } else { $CoderContext }
+    }
 }
 $Server = Join-Path $RootDir "chat\ui-server.mjs"
 

@@ -6,10 +6,11 @@
 import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
+import crypto from "node:crypto";
 import path from "node:path";
 import { execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { aplicarReemplazo, commandAllowed, commandKey, esCharla, extractCommands, trozoParecido, extractReads, extractSearches, extractWrites, impliedAction, indexScope, inventedToolResult, nativeToolEffects, resolveInside, stripCommands, stripFakeToolText, stripFileBlocks, stripIndex, stripReads, stripSearches, unifiedDiff, writeOutputs } from "./actions.mjs";
+import { aplicarReemplazo, commandAllowed, commandKey, esCharla, extractCommands, trozoParecido, extractReads, extractSearches, extractWrites, impliedAction, indexScope, inventedToolResult, nativeToolEffects, resolveInside, stripCommands, stripFakeToolText, stripFileBlocks, stripIndex, stripReads, stripSearches, unifiedDiff, writeNewOutput, writeOutputs } from "./actions.mjs";
 import { dialectoDe, llamadasCrudas } from "./adaptadores.mjs";
 import { BonsaiChat, metadatosSesion } from "./bonsai-chat.mjs";
 import { MODELO, muestreo, pensarDe, perfilAgente, presupuestoPensar } from "./modelo.mjs";
@@ -28,7 +29,8 @@ import { crearHistorial } from "./historial.mjs";
 import { Terminales } from "./terminal.mjs";
 import { buscarDefinicion, diagnosticarArchivo, diagnosticarTexto, indiceSimbolos, simbolos } from "./diagnosticos.mjs";
 import { CoderTask, CODER_CONFIG, coderOptions, runCheck } from "./coder-harness.mjs";
-import { ENGINE_PROFILES, engineProfile } from "./engine-profiles.mjs";
+import { ENGINE_PROFILES, engineProfile, isNamedEnginePreset, configMotor, CUSTOM_ENGINE } from "./engine-profiles.mjs";
+import { EscrituraIncremental } from "./escritura-incremental.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT = path.dirname(HERE);
@@ -43,6 +45,36 @@ const UNDO_DIR = path.join(STATE, "undo");
 /** Adjuntos (imágenes pegadas o arrastradas) fuera del proyecto del usuario. */
 const ADJUNTOS_DIR = path.join(SALIDA, "adjuntos");
 const startedAt = Date.now();
+const REGISTROS_DIR = path.join(STATE, "salidas-agente");
+function crearRegistroSalida() {
+  fs.mkdirSync(REGISTROS_DIR, { recursive: true });
+  const id = crypto.randomBytes(16).toString("hex"), archivo = path.join(REGISTROS_DIR, `${id}.log`);
+  fs.writeFileSync(archivo, "", { flag: "wx" });
+  let bytes = 0, incompleto = false;
+  return { id, guardar(texto) {
+    if (incompleto) return;
+    try {
+      const fragmento = Buffer.from(String(texto), "utf8");
+      if (bytes + fragmento.length > 64 * 1024 * 1024) {
+        fs.appendFileSync(archivo, "\n[Registro incompleto: límite de 64 MiB alcanzado.]\n");
+        incompleto = true; return;
+      }
+      fs.appendFileSync(archivo, fragmento); bytes += fragmento.length;
+    } catch (err) { incompleto = true; process.stderr.write(`[salida-agente] No se pudo guardar ${id}: ${err.message}\n`); }
+  } };
+}
+function consultarRegistroSalida(id, desde = 1, consulta = "") {
+  if (!/^[a-f0-9]{32}$/.test(String(id))) throw new Error("Identificador de registro inválido");
+  const archivo = path.join(REGISTROS_DIR, `${id}.log`);
+  const lineas = fs.readFileSync(archivo, "utf8").split(/\r?\n/);
+  const inicio = Math.max(1, Number.isInteger(desde) ? desde : 1);
+  const filtro = String(consulta || "").toLowerCase();
+  const encontrados = [];
+  for (let i = inicio - 1; i < lineas.length && encontrados.length < 80; i++) {
+    if (!filtro || lineas[i].toLowerCase().includes(filtro)) encontrados.push(`${i + 1}: ${lineas[i].slice(0, 500)}`);
+  }
+  return `Registro ${id}; ${lineas.length} líneas. ${encontrados.length ? encontrados.join("\n") : "Sin coincidencias."}\nPara continuar usa desde con la línea siguiente.`;
+}
 /** @type {string} */
 let workspaceRoot = PROJECT;
 
@@ -296,7 +328,7 @@ function parseArgs(argv) {
     else if (arg === "--llama-port") out.llamaPort = Number(argv[++i]);
     else if (arg === "--prompt-cap") out.historyCap = Number(argv[++i]);
     else if (arg === "--think") {out.think = Number(argv[++i]);out.thinkProvided=true;}
-    else if (arg === "--engine-preset") {out.enginePreset=argv[++i];engineProfile(out.enginePreset);}
+    else if (arg === "--engine-preset") {out.enginePreset=argv[++i];if (isNamedEnginePreset(out.enginePreset)) engineProfile(out.enginePreset);}
     else if (arg === "--perfil") out.perfil = argv[++i] ?? out.perfil;
     else if (arg === "--open") out.open = true;
     else throw new Error(`Argumento desconocido: ${arg}`);
@@ -794,11 +826,11 @@ function pdfReady(output) {
  * @param {AbortSignal} [signal] se cancela cuando el usuario cierra la pestaña o el turno
  * @returns {Promise<{code: number, output: string}>}
  */
-function runCommand(command, signal) {
+function runCommand(command, signal, onOutput) {
   const text = command.trim();
   if (!text || text.length > 32768) return Promise.resolve({ code: 1, output: "Comando vacío o demasiado largo (máximo 32768 caracteres)." });
   const before = snapshotFiles(workspaceRoot);
-  return ejecutarComando(text, { cwd: workspaceRoot, env: shellEnv, signal, timeoutMs: comandoTimeoutMs }).then((result) => {
+  return ejecutarComando(text, { cwd: workspaceRoot, env: shellEnv, signal, timeoutMs: comandoTimeoutMs, onOutput }).then((result) => {
     const files = fileDelta(before, snapshotFiles(workspaceRoot));
     const body = result.output.trim();
     // Recorte por el MEDIO: el final (traceback, FAILED) es lo que el modelo necesita.
@@ -892,7 +924,7 @@ function readGpu() {
         const p = String(stdout).trim().split("\n")[0].split(",").map((s) => s.trim());
         const n = (i) => (Number.isFinite(Number(p[i])) ? Number(p[i]) : null);
         if (p.length >= 10) {
-          data = { ok: true, name: p[0], util: n(1), vramUsedMiB: n(2), vramTotalMiB: n(3), temp: n(4), watts: n(5), wattsLimit: n(6), mhz: n(7), mhzMax: n(8), pstate: p[9], wattsDefault: n(10), vramFreeMiB:n(11), visionReserveMiB:400, ...mem };
+          data = { ok: true, name: p[0], util: n(1), vramUsedMiB: n(2), vramTotalMiB: n(3), temp: n(4), watts: n(5), wattsLimit: n(6), mhz: n(7), mhzMax: n(8), pstate: p[9], wattsDefault: n(10), vramFreeMiB:n(11), visionTransientMiB:64, ...mem };
         }
       }
       gpuCache = { at: Date.now(), data };
@@ -1216,10 +1248,20 @@ async function main(args) {
       /* sin registro: se lanza igual */
     }
     const preset = configuracion ? configuracion.enginePreset || "" : leerAjustes().enginePreset || "";
-    if (preset) { engineProfile(preset); args.push("-EnginePreset", preset); }
-    if (configuracion ? configuracion.vision : preset ? engineProfile(preset).vision : mmprojDisponible(clave)) args.push("-Vision");
+    if (preset && isNamedEnginePreset(preset)) {
+      args.push("-EnginePreset", preset);
+    } else if (preset === "CUSTOM") {
+      args.push("-EnginePreset", "CUSTOM");
+    }
+    const conVision = configuracion ? Boolean(configuracion.vision) : (preset && isNamedEnginePreset(preset)) ? Boolean(engineProfile(preset).vision) : mmprojDisponible(clave);
+    if (conVision) args.push("-Vision");
     else args.push("-SinVision");
-    if (configuracion) args.push("-ContextSize", String(configuracion.contexto), "-KVCacheType", configuracion.kv, "-DormirSeg", String(configuracion.dormir), "-HostIP", configuracion.hostIP);
+    if (configuracion) {
+      args.push("-ContextSize", String(configuracion.contexto), "-KVCacheType", configuracion.kv, "-DormirSeg", String(configuracion.dormir), "-HostIP", configuracion.hostIP);
+    } else {
+      const aj = leerAjustes();
+      if (aj.coderContextTokens) args.push("-ContextSize", String(aj.coderContextTokens));
+    }
     // Siempre explícito: el razonamiento que pidió el usuario si ESE modelo lo admite, o 0.
     // (Antes se pasaba el del modelo que se iba a descargar.)
     const pensar = configuracion ? configuracion.pensar : presupuestoPensar(clave, Number(leerAjustes().pensar));
@@ -1272,7 +1314,7 @@ async function main(args) {
           !Number.isInteger(datos.pensar) || datos.pensar < 0 || datos.pensar > 65536 ||
           !Number.isInteger(datos.dormir) || datos.dormir < 0 || datos.dormir > 86400 ||
           !["127.0.0.1", "localhost", "::1"].includes(datos.hostIP)) throw new Error("datos incompletos");
-      if (datos.enginePreset) engineProfile(datos.enginePreset);
+      if (datos.enginePreset && isNamedEnginePreset(datos.enginePreset)) engineProfile(datos.enginePreset);
       return { clave: datos.modelo, contexto: datos.contexto, kv: datos.kv, vision: datos.vision, pensar: datos.pensar, dormir: datos.dormir, hostIP: datos.hostIP, enginePreset: datos.enginePreset || "" };
     } catch {
       // Un arranque de una versión anterior no guardaba estos parámetros.
@@ -1585,11 +1627,15 @@ async function main(args) {
   // de main(): `AJUSTES_DEFECTO` es un `const` y llamarlo antes revienta el arranque con
   // "Cannot access 'AJUSTES_DEFECTO' before initialization".
   let inicial=leerAjustes();
-  if(args.enginePreset){
-    const p=engineProfile(args.enginePreset);
-    if(chat.nCtx!==p.context||chat.vision!==Boolean(p.vision))throw new Error("El motor en ejecución no coincide con el perfil solicitado; vuelve a iniciarlo desde el lanzador.");
-    inicial=guardarAjustes({enginePreset:args.enginePreset,coderContextTokens:p.context,historial:p.context,...(args.thinkProvided?{pensar:args.think}:{})});
-  }else if(args.thinkProvided)inicial=guardarAjustes({pensar:args.think});
+  if (args.enginePreset) {
+    if (args.enginePreset === "CUSTOM") {
+      inicial = guardarAjustes({ enginePreset: "CUSTOM", ...(args.thinkProvided ? { pensar: args.think } : {}) });
+    } else if (isNamedEnginePreset(args.enginePreset)) {
+      const p = engineProfile(args.enginePreset);
+      if (chat.nCtx !== p.context || chat.vision !== Boolean(p.vision)) throw new Error("El motor en ejecución no coincide con el perfil solicitado; vuelve a iniciarlo desde el lanzador.");
+      inicial = guardarAjustes({ enginePreset: args.enginePreset, coderContextTokens: p.context, historial: p.context, ...(args.thinkProvided ? { pensar: args.think } : {}) });
+    }
+  } else if (args.thinkProvided) inicial = guardarAjustes({ pensar: args.think });
   aplicarAjustesAlChat(inicial);
 
   /** @returns {Record<string, unknown>} */
@@ -1620,15 +1666,21 @@ async function main(args) {
   function aplicarAjustesAlChat(ajustes) {
     const agentProfile = ajustes.agentePerfil || process.env.BONSAI_AGENT_PROFILE;
     if (["legacy", "small-local-coder"].includes(agentProfile)) chat.agentProfile = agentProfile;
-    const engine = ajustes.enginePreset && Object.hasOwn(ENGINE_PROFILES, ajustes.enginePreset) ? engineProfile(ajustes.enginePreset) : null;
-    chat.coderConfig = { ...CODER_CONFIG, ...(engine ? { contextTokens:engine.context, ...(engine.coderOutputTokens ? {outputTokens:engine.coderOutputTokens} : {}), ...(engine.thinkingTokens ? {thinkingTokens:engine.thinkingTokens} : {}) } : {}), ...coderOptions(process.env.BONSAI_CODER_OPTIONS), ...(ajustes.coderContextTokens ? { contextTokens: ajustes.coderContextTokens } : {}) };
+    const engine = (ajustes.enginePreset && isNamedEnginePreset(ajustes.enginePreset)) ? engineProfile(ajustes.enginePreset) : null;
+    const ctxTokens = Number(ajustes.coderContextTokens) || engine?.context || chat.nCtx || 16384;
+    const histTokens = Number(ajustes.historial) || ctxTokens;
+    const salidaTokens = histTokens >= ctxTokens ? Math.min(18000, Math.max(256, Math.floor(ctxTokens / 2) - 128)) : Math.max(256, ctxTokens - histTokens);
+    const outTokens = engine && histTokens === ctxTokens ? (engine.coderOutputTokens || salidaTokens) : salidaTokens;
+    chat.coderConfig = { ...CODER_CONFIG, contextTokens: ctxTokens, outputTokens: outTokens, toolResultTokens: Math.max(1000, Math.min(6000, Math.floor(ctxTokens / 10))), thinkingTokens: Number(ajustes.pensar) > 0 ? Number(ajustes.pensar) : 2048, ...(engine?.thinkingTokens ? {thinkingTokens:engine.thinkingTokens} : {}), ...coderOptions(process.env.BONSAI_CODER_OPTIONS), ...(ajustes.coderContextTokens ? { contextTokens: ajustes.coderContextTokens } : {}) };
+    chat.imageMaxTokens = Number(MODELO.catalogo?.[modeloActualClave()]?.vision?.imageMaxTokens) || 1024;
     const perfil = typeof ajustes.perfil === "string" ? ajustes.perfil : "";
     if (perfil && MODELO.muestreo[perfil]) chat.perfil = perfil;
     const tope = Number(ajustes.historial);
     if (Number.isFinite(tope) && tope >= 512) chat.configuredCap = tope;
     // Razonamiento: el que pidió el usuario, pero SOLO si el modelo cargado lo admite
     // (catalogo.<clave>.pensar). Con bolding_v1 se queda apagado aunque esté pedido.
-    chat.thinkBudget = presupuestoPensar(modeloActualClave(), Number(ajustes.pensar));
+    const capacidadPensar = pensarDe(modeloActualClave());
+    chat.thinkBudget = presupuestoPensar(modeloActualClave(), Number(ajustes.pensar) > 0 ? Number(ajustes.pensar) : capacidadPensar.presupuesto);
     // Tope de pasos del agente y tope de tiempo por comando: configurables con límites sanos.
     const topePasos = Number(ajustes.saltosTope);
     if (Number.isFinite(topePasos)) saltosTope = Math.max(24, Math.min(400, Math.round(topePasos)));
@@ -1741,7 +1793,9 @@ async function main(args) {
           agentProfile: chat.agentProfile,
           busy,
           taskState: chat.session.taskState || null,
+          contextDiagnostics: chat.contextDiagnostics ? { ...chat.contextDiagnostics, gpu: await readGpu() } : null,
           nCtx: chat.nCtx,
+          capabilities: { contextWindow: chat.nCtx, modelContextWindow: MODELO.catalogo?.[modeloActualClave()]?.ctxNativo ?? null, vision: chat.vision, reasoning: pensarDe(modeloActualClave()).compatible, tools: chat.props?.chat_template_caps?.supports_tools ?? null, template: chat.props?.chat_template_caps || null, projector: MODELO.catalogo?.[modeloActualClave()]?.vision?.archivo || null },
           historyCap: chat.historyCap(),
           // Presupuesto real de contexto: ventana del servidor, tope pedido por el usuario,
           // historial efectivo y reserva de salida. La UI no debe prometer más de lo que hay.
@@ -2256,7 +2310,7 @@ async function main(args) {
       if (req.method === "POST" && url.pathname === "/api/modelos") {
         const raw = JSON.parse(await readBody(req));
         const clave = raw && typeof raw.clave === "string" ? raw.clave.trim() : "";
-        if (raw.enginePreset !== undefined && !Object.hasOwn(ENGINE_PROFILES, raw.enginePreset)) {
+        if (raw.enginePreset !== undefined && raw.enginePreset !== "CUSTOM" && raw.enginePreset !== "" && !isNamedEnginePreset(raw.enginePreset)) {
           res.writeHead(400).end("Perfil de motor desconocido"); return;
         }
         const item = catalogoModelos().find((m) => m.clave === clave);
@@ -2274,7 +2328,7 @@ async function main(args) {
         }
         // `recargar`: el mismo modelo, reiniciado (p. ej. para encender el razonamiento, que
         // se fija al arrancar llama-server).
-        if (modeloActualClave() === clave && raw.recargar !== true && raw.enginePreset === undefined) {
+        if (modeloActualClave() === clave && raw.recargar !== true && raw.enginePreset === undefined && raw.contexto === undefined) {
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ ok: true, cambiado: false, clave, nombre: item.nombre, nCtx: chat.nCtx, vision: Boolean(chat.vision) }));
           return;
@@ -2287,6 +2341,8 @@ async function main(args) {
         try {
           const anterior = await configuracionAnterior();
           if (anterior?.error) throw new Error(`No se puede cambiar sin una configuración anterior recuperable: ${anterior.error}`);
+          const actualAjustes = leerAjustes();
+          const cfg = configMotor(raw, actualAjustes, anterior);
           await cambiarConRecuperacion({
             anterior,
             liberar: async (alDetener) => {
@@ -2296,9 +2352,18 @@ async function main(args) {
               if (restaurar?.error) throw new Error(restaurar.error);
               const objetivo = restaurar?.clave || clave;
               chat.note(restaurar ? "recuperando el modelo anterior…" : `cambiando de modelo: ${item.nombre}…`);
-              const p = raw.enginePreset ? engineProfile(raw.enginePreset) : null;
-              const solicitado = p ? { enginePreset:raw.enginePreset, contexto:p.context, kv:p.kv, vision:p.vision, dormir:0, hostIP:"127.0.0.1", pensar:presupuestoPensar(clave, Number(p.thinkingTokens ?? leerAjustes().pensar)) } : anterior?.enginePreset ? { ...anterior, pensar:presupuestoPensar(clave, Number(leerAjustes().pensar)) } : null;
-              const hijo = lanzarServidorLlama(objetivo, restaurar || solicitado);
+              const p = (cfg.enginePreset && isNamedEnginePreset(cfg.enginePreset)) ? engineProfile(cfg.enginePreset) : null;
+              const pensar = presupuestoPensar(objetivo, Number(p?.thinkingTokens ?? (raw.pensar ?? actualAjustes.pensar)));
+              const solicitado = restaurar || {
+                enginePreset: cfg.enginePreset,
+                contexto: cfg.contexto,
+                kv: cfg.kv,
+                vision: cfg.vision,
+                dormir: cfg.dormir,
+                hostIP: cfg.hostIP,
+                pensar,
+              };
+              const hijo = lanzarServidorLlama(objetivo, solicitado);
               if (!(await esperarEncendido(90000, hijo))) throw new Error(`el modelo ${objetivo} no arrancó; revisa logs/arranque-modelo.log`);
               await chat.connect();
               if (modeloActualClave() !== objetivo) throw new Error("el servidor respondió con un modelo diferente del solicitado");
@@ -2309,10 +2374,13 @@ async function main(args) {
               aplicarAjustesAlChat(leerAjustes());
             },
           });
-          if (raw.enginePreset) {
-            const p = engineProfile(raw.enginePreset);
-            aplicarAjustesAlChat(guardarAjustes({ enginePreset:raw.enginePreset, coderContextTokens:p.context, historial:p.context, ...(p.thinkingTokens ? {pensar:p.thinkingTokens} : {}) }));
-          }
+          const nuevosAjustes = {
+            enginePreset: cfg.enginePreset,
+            coderContextTokens: cfg.contexto,
+            historial: cfg.historial,
+            ...(cfg.thinkingTokens ? { pensar: cfg.thinkingTokens } : {}),
+          };
+          aplicarAjustesAlChat(guardarAjustes(nuevosAjustes));
           // Aquí es donde consta que el modelo nuevo contesta: se guarda la elección para
           // que el próximo arranque (start-ui.ps1, start-chat.ps1 o start-server.ps1) use
           // este y no el predeterminado del catálogo.
@@ -2355,7 +2423,7 @@ async function main(args) {
           res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("cuerpo no valido");
           return;
         }
-        const permitidas = ["tema", "perfil", "pensar", "verPensamiento", "reglas", "historial", "continuarAuto", "saltosTope", "comandoSegundos", "agentePerfil", "coderContextTokens", "modoRespuesta"];
+        const permitidas = ["tema", "perfil", "pensar", "verPensamiento", "reglas", "historial", "continuarAuto", "saltosTope", "comandoSegundos", "agentePerfil", "coderContextTokens", "modoRespuesta", "enginePreset"];
         /** @type {Record<string, unknown>} */
         const limpio = {};
         for (const k of permitidas) if (k in raw) limpio[k] = raw[k];
@@ -2364,8 +2432,11 @@ async function main(args) {
         if ("modoRespuesta" in limpio && !["agente","consulta"].includes(limpio.modoRespuesta)) {
           res.writeHead(400).end("Modo de respuesta inválido"); return;
         }
-        if ("coderContextTokens" in limpio && ![4096,8192,16384,32768,36864,39936].includes(limpio.coderContextTokens)) {
+        if ("coderContextTokens" in limpio && ![4096,8192,16384,32768,36864,39936,43008].includes(limpio.coderContextTokens)) {
           res.writeHead(400).end("Contexto coding inválido"); return;
+        }
+        if ("enginePreset" in limpio && limpio.enginePreset !== "CUSTOM" && limpio.enginePreset !== "" && !isNamedEnginePreset(limpio.enginePreset)) {
+          res.writeHead(400).end("Perfil de motor inválido"); return;
         }
         if ("agentePerfil" in limpio && !["legacy", "small-local-coder"].includes(limpio.agentePerfil)) {
           res.writeHead(400).end("agentePerfil debe ser legacy o small-local-coder"); return;
@@ -2625,16 +2696,17 @@ async function main(args) {
         let saltosUsados = 0;
         chat.coderTask = null;
         try {
-          const activePreset=leerAjustes().enginePreset;
-          if(imagenes.length&&chat.vision&&activePreset&&Object.hasOwn(ENGINE_PROFILES,activePreset)){
+          if(imagenes.length&&chat.vision){
             gpuCache.at=0;
-            const gpu=await readGpu(),margin=Math.max(400,engineProfile(activePreset).marginMiB||0);
-            // The measured image transient is 46 MiB; allow 64 MiB above the minimum.
-            if(!gpu.ok||gpu.vramFreeMiB==null||gpu.vramFreeMiB<margin+64){
+            const gpu=await readGpu(), transientMiB=64;
+            // La validación local midió 46 MiB transitorios por imagen; no se añade
+            // una reserva fija de 400 MiB al modelo ya cargado.
+            if(gpu.ok && gpu.vramFreeMiB != null && gpu.vramFreeMiB<transientMiB){
               finished=true;
-              res.writeHead(409,{"Content-Type":"text/plain; charset=utf-8"}).end(`No hay suficiente VRAM libre para conservar ${margin} MiB durante la imagen. Libera memoria GPU o selecciona un perfil menor; se requieren al menos ${margin+64} MiB libres antes de procesarla.`);
+              res.writeHead(409,{"Content-Type":"text/plain; charset=utf-8"}).end(`No se puede verificar el margen transitorio de imagen (${transientMiB} MiB); libera VRAM o selecciona un contexto menor.`);
               return;
             }
+            if (!gpu.ok || gpu.vramFreeMiB == null) process.stderr.write("[visión] No se pudo medir la VRAM antes de enviar la imagen.\n");
           }
           req.on("close", () => {
             if (!finished) ac.abort();
@@ -2660,6 +2732,14 @@ async function main(args) {
           if (snippets.length) prompt = attachSnippets(prompt, snippets);
           // Imágenes: con visión viajan como partes `image_url`; sin ella solo se avisa.
           const imagenesData = chat.vision ? imagenesParaModelo(imagenes) : [];
+          chat.turnImages = imagenesData;
+          if (imagenes.length && chat.vision && imagenesData.length !== imagenes.length) {
+            const aviso = `Solo se pudieron adjuntar ${imagenesData.length} de ${imagenes.length} imágenes; revisa los archivos y los límites de tamaño.`;
+            send({ type: "status", text: aviso });
+            prompt += `\n\n${aviso} No supongas el contenido de las imágenes omitidas.`;
+          } else if (imagenes.length && !chat.vision) {
+            send({ type: "status", text: "El modelo cargado no tiene visión activa; no recibe las imágenes." });
+          }
           if (imagenes.length) {
             if (imagenesData.length) {
               const nombres = imagenes.filter((rel) => typeof rel === "string").slice(0, 6).join(", ");
@@ -2799,8 +2879,8 @@ async function main(args) {
             const usadas = calls.length ? calls : crudas;
             const coder = chat.coderTask;
             const checked = coder ? coder.accept(usadas) : {valid:usadas,errors:[]};
-            const specialized = coder ? checked.valid.filter(c=>["leer","indice","buscar_codigo","simbolo","git_diff"].includes(c.name)) : [];
-            const normal = coder ? checked.valid.filter(c=>!specialized.includes(c)) : usadas;
+            const specialized = (coder ? checked.valid : usadas).filter(c=>["escribir_partes","consultar_salida"].includes(c.name) || (coder && ["leer","indice","buscar_codigo","simbolo","git_diff"].includes(c.name)));
+            const normal = (coder ? checked.valid : usadas).filter(c=>!specialized.includes(c));
             const effects = normal.length ? nativeToolEffects(normal) : null;
             // Llamadas NATIVAS: cada resultado vuelve a su llamada (mismo id que le pone
             // apiTurn al reenviarla). Las crudas (XML en el texto) no tienen tool_calls en el
@@ -3144,7 +3224,10 @@ async function main(args) {
              * @param {string} texto
              */
             const ponerEn = (id, texto) => {
-              if (coder && estimateTokens(texto) > coder.config.toolResultTokens) texto = takeHeadByTokens(texto,coder.config.toolResultTokens,estimateTokens) + "\n[resultado recortado; el registro completo se conserva fuera del prompt]";
+              if (coder && estimateTokens(texto) > coder.config.toolResultTokens) {
+                const registro = crearRegistroSalida(); registro.guardar(texto);
+                texto = recortarCentro(texto, coder.config.toolResultTokens * 3) + `\n[Resultado recortado. Registro ${registro.id}: usa consultar_salida.]`;
+              }
               pieces.push(texto);
               if (!nativa) return;
               porLlamada.get(porLlamada.has(id) ? id : ultimaId)?.push(texto);
@@ -3169,9 +3252,31 @@ async function main(args) {
             for (const call of specialized) {
               const row = showAction("read", call.name, "run");
               try {
-                const detail = await coder.special(call);
+                let detail;
+                if (call.name === "consultar_salida") {
+                  const a = typeof call.arguments === "string" ? JSON.parse(call.arguments) : call.arguments;
+                  detail = consultarRegistroSalida(a.id, a.desde, a.consulta);
+                } else if (call.name === "escribir_partes") {
+                  const a = typeof call.arguments === "string" ? JSON.parse(call.arguments) : call.arguments;
+                  const store = new EscrituraIncremental(workspaceRoot, path.join(STATE, "escrituras-pendientes"));
+                  if (a.accion === "iniciar") detail = JSON.stringify(store.iniciar(a.ruta));
+                  else if (a.accion === "continuar") detail = JSON.stringify(store.continuar(a.id, a.offset, a.contenido));
+                  else if (a.accion === "finalizar") {
+                    const pending = store.preparar(a.id, a.offset);
+                    const undoId = guardarUndo({ tipo: "texto", rel: pending.rel, antes: null, despues: pending.contenido }, undoDelTurno);
+                    if (!undoId) throw new Error("No se pudo preparar deshacer; no se guardó el archivo");
+                    let saved;
+                    try { saved = writeNewOutput(workspaceRoot, pending.rel, pending.contenido); }
+                    catch (err) { descartarUndo(undoId, undoDelTurno); throw err; }
+                    store.borrar(a.id);
+                    send({ type: "file", rel: saved.rel, url: saved.url, bytes: saved.bytes });
+                    row.kind = "write"; row.undo = undoId;
+                    detail = JSON.stringify({ id:a.id, ruta:saved.rel, bytes:saved.bytes, siguiente:saved.bytes, terminado:true });
+                    progresoPaso = true; accionPaso = "write";
+                  } else throw new Error("Acción desconocida; usa iniciar, continuar o finalizar");
+                } else detail = await coder.special(call);
                 ponerEn(call.id, detail); finishAction(row,"done",clipText(detail));
-                progresoPaso = true; accionPaso = "read";
+                progresoPaso = true; if (accionPaso !== "write") accionPaso = "read";
               } catch (err) {
                 ponerEn(call.id, err.message); finishAction(row,"denied",err.message); ultimoFallo = true;
               }
@@ -3243,7 +3348,8 @@ async function main(args) {
               if (porLeer.length) {
                 const title = porLeer.map((clave) => clave.clave).join(", ");
                 const row = showAction("read", title, "run");
-                const cuerpos = porLeer.map((item) => describirLectura({ root: workspaceRoot, clave: item.clave, skipExt: SKIP_EXT }));
+                const presupuestoLectura = Math.max(512, Math.min(6000, Math.floor(chat.historyCap() / Math.max(4, porLeer.length * 2))));
+                const cuerpos = porLeer.map((item) => describirLectura({ root: workspaceRoot, clave: item.clave, skipExt: SKIP_EXT, presupuestoTokens: presupuestoLectura }));
                 const body = cuerpos.join("\n\n");
                 finishAction(row, "done", clipText(body));
                 log.push(`leer: ${title}\n${clipText(body)}`);
@@ -3392,7 +3498,8 @@ async function main(args) {
               }
               // El registro vive fuera del turno; solo detener/cerrar IDE lo finaliza.
               if (effects?.enFondo?.has(rawCommand)) {
-                const fondo = await lanzarEnFondo(command, { cwd: workspaceRoot, env: shellEnv });
+                const registro = crearRegistroSalida();
+                const fondo = await lanzarEnFondo(command, { cwd: workspaceRoot, env: shellEnv, onOutput: registro.guardar });
                 let idFondo = "";
                 if (fondo.vivo) {
                   idFondo = `bg${Date.now().toString(36)}${Math.floor(Math.random() * 90 + 10)}`;
@@ -3412,12 +3519,13 @@ async function main(args) {
                 log.push(`ejecutar en segundo plano: ${command}\n${detalleFondo}`);
                 if (!fondo.vivo && fondo.code !== 0) ultimoFallo = true;
                 poner(`cmd:${rawCommand}`, fondo.vivo
-                  ? `Lanzado en segundo plano: ${command} (id ${idFondo}, pid ${fondo.pid}). Sobrevive al turno; proceso listar/detener lo gestiona. Verifica su URL antes de afirmar que está listo. Primera salida:\n${recortarCentro(fondo.output, 2000)}`
-                  : `${command} no se quedó corriendo: terminó con código ${fondo.code}.\n${recortarCentro(fondo.output, 3000)}`);
+                  ? `Lanzado en segundo plano: ${command} (id ${idFondo}, pid ${fondo.pid}). Sobrevive al turno. Registro ${registro.id}, consultar_salida para buscar o paginar. Primera salida:\n${recortarCentro(fondo.output, 2000)}`
+                  : `${command} terminó con código ${fondo.code}. Registro ${registro.id}: consultar_salida.\n${recortarCentro(fondo.output, 3000)}`);
                 ranCommand = true;
                 continue;
               }
-              const result = await runCommand(command, ac.signal);
+              const registro = crearRegistroSalida();
+              const result = await runCommand(command, ac.signal, registro.guardar);
               lanzadosAhora.add(key);
               progresoPaso = true;
               // Cabeza y COLA: el traceback y el `FAILED` van al final (antes se cortaba la cola).
@@ -3434,7 +3542,7 @@ async function main(args) {
                 ? `${agotado}\nEl comando falló. Revisa la salida y la sintaxis de la shell anunciada; corrige la causa antes de reintentar. Si dependía de un servidor que ahora está listo, usa repetir: true.`
                 : "";
               if (result.code !== 0) ultimoFallo = true;
-              poner(`cmd:${rawCommand}`, `Salida de ${command} (código ${result.code}):\n${recortarCentro(result.output, 3000)}${ready ? `\n${ready}` : ""}${failed}`);
+              poner(`cmd:${rawCommand}`, `Salida de ${command} (código ${result.code}; registro ${registro.id}, consulta con consultar_salida):\n${recortarCentro(result.output, 3000)}${ready ? `\n${ready}` : ""}${failed}`);
               ranCommand = true;
             }
             for (const query of searches) {
@@ -3594,6 +3702,7 @@ async function main(args) {
           // para explicar una closure (tarea solo-chat del evaluador, corridas 2 y 6).
           const soloCharla = consulta || (!attached.length && !snippets.length && esCharla(text));
           if (soloCharla) {
+            chat.faseSalto = "charla";
             chat.consultation = true;
             chat.toolChoice = "none";
             chat.pensarEsteSalto = true;
@@ -3785,6 +3894,7 @@ async function main(args) {
           if (coderTimer) clearTimeout(coderTimer);
           chat.coderTask?.dispose();
           chat.coderTask = null;
+          chat.turnImages = null;
           chat.pendingImageTokens = 0;
           await navegador?.close().catch(() => {});
           // Ningún servidor del agente sobrevive a su turno (ni deja un puerto ocupado).

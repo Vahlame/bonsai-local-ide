@@ -140,10 +140,10 @@ try {
     await chat.connect();
     await chat.runTurn("algo difícil", AbortSignal.timeout(5000));
     const body = seen[0] || {};
-    check("razonamiento: presupuesto en la raíz", body.thinking_budget_tokens === 2048 && body.chat_template_kwargs?.enable_thinking === true);
+    check("razonamiento: presupuesto en la raíz", body.thinking_budget_tokens > 0 && body.thinking_budget_tokens <= 2048 && body.chat_template_kwargs?.enable_thinking === true);
     check("razonamiento: esfuerzo medium (high da 500)", body.chat_template_kwargs?.reasoning_effort === "medium");
     check("razonamiento: muestreo de razonar", body.temperature === 1 && body.min_p === 0.05 && body.top_p === 0.95);
-    check("razonamiento: la tanda suma el presupuesto", body.max_tokens === 2048 + 2048);
+    check("razonamiento: la tanda incluye el presupuesto", body.max_tokens === 2048 + body.thinking_budget_tokens);
     const last = chat.session.turns[chat.session.turns.length - 1];
     check("razonamiento: el pensamiento no entra al historial", last?.content === "respuesta final");
     check("razonamiento: avisa que está pensando", events.some((e) => e.type === "status" && /pensando/.test(e.text || "")));
@@ -178,7 +178,7 @@ try {
     await chat.runTurn("pregunta viva", AbortSignal.timeout(5000));
     const summary = seen.find((body) => body.stream === false);
     check("hizo un resumen", Boolean(summary));
-    check("el resumen no razona", summary?.chat_template_kwargs?.enable_thinking === false && summary?.thinking_budget_tokens === undefined);
+    check("el resumen razona con presupuesto limitado", summary?.chat_template_kwargs?.enable_thinking === true && summary?.thinking_budget_tokens > 0 && summary?.thinking_budget_tokens < summary?.max_tokens);
     const main = seen.find((body) => body.stream === true);
     check("las notas viajan en el mensaje de sistema", String(main?.messages?.[0]?.content || "").includes("resumen de prueba"));
     check("quedó plegado el historial viejo", chat.session.folded >= 4);

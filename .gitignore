@@ -13,6 +13,9 @@ chat/modelo-activo.json.tmp
 chat/.shims/
 chat/timings.jsonl
 chat/agent-traces/
+chat/escrituras-pendientes/
+chat/salidas-agente/
+**/.dsh-ops-update-*.lock
 logs/
 config/optimo.json
 config/inference-toolchain.local.json

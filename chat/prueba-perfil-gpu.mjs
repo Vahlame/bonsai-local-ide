@@ -89,7 +89,17 @@ function perfilDryRun({ libre, vision = false, puerto, contexto, kv }) {
 }
 
 assert.equal(MODELO.catalogo.ornith9b.vision.contexto, 39936, "el techo de visión coincide con el perfil final validado");
+assert.equal(MODELO.catalogo.ornith9b.vision.contextoMaximoManual, 43008, "el techo manual debe ser el probado a petición del usuario");
 assert.equal(MODELO.catalogo.ornith9b.servidor.capasAtencionCompleta, 8, "Ornith debe usar 8 capas de atención completa");
+
+const manual = await puertoLibre();
+try {
+  const elegido = perfilDryRun({ libre: 9000, vision: true, puerto: manual, contexto: 43008, kv: "f16" });
+  assert.equal(elegido.codigo, 0, elegido.salida);
+  assert.equal(elegido.contexto, 43008);
+  const excesivo = perfilDryRun({ libre: 9000, vision: true, puerto: manual, contexto: 44032, kv: "f16" });
+  assert.notEqual(excesivo.codigo, 0, "44032 debe seguir rechazado después del fallo CUDA medido");
+} finally { borrarPerfil(manual); }
 
 // A) Techo exacto de visión: 39936/q8_0; no se redondea a 36864.
 const p1 = await puertoLibre();

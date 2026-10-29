@@ -6,7 +6,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { CodeContext, parseCode, projectFiles } from "./code-context.mjs";
 import { rutaProyecto } from "./archivos-seguros.mjs";
 import { diagnosticarArchivo } from "./diagnosticos.mjs";
-import { estimateTokens, takeHeadByTokens } from "./context.mjs";
+import { SYSTEM_RULES, estimateTokens, takeHeadByTokens } from "./context.mjs";
 import { PC_TOOLS, unifiedDiff } from "./actions.mjs";
 import { matarArbol } from "./procesos.mjs";
 import { verificationCommands } from "./project-verification.mjs";
@@ -111,16 +111,21 @@ export const CODER_TOOLS = [
   base("reemplazar"),
   tool(
     "archivo",
-    "Crea texto o reemplaza un archivo pequeño ya inspeccionado. Para modificar usa reemplazar.",
+    "Crea o reemplaza texto; para cambios localizados usa reemplazar y para archivos nuevos grandes escribir_partes.",
     { ruta: str, contenido: str },
     ["ruta", "contenido"],
   ),
+  base("escribir_partes"),
+  base("consultar_salida"),
   tool(
     "ejecutar",
     "Ejecuta un comando de desarrollo o tests en la shell del proyecto; salida acotada.",
-    { comando: str },
+    { comando: str, segundo_plano: { type: "boolean" } },
     ["comando"],
   ),
+  base("proceso"),
+  base("borrar"),
+  base("mover"),
   tool("git_diff", "Diff actual de Git (incluye cambios preexistentes).", {
     ruta: str,
   }),
@@ -135,7 +140,7 @@ export const CODER_TOOLS = [
 }));
 
 export const CODER_SYSTEM =
-  "Eres un agente de programación local. Usa herramientas para comprobar rutas, símbolos e imports. Lee el fragmento mínimo necesario. Conserva APIs y abstracciones existentes. Prefiere reemplazar con texto exacto único. No cambies archivos ajenos ni reformatees código sin necesidad. El host verifica cambios y comunica fallos: repáralos antes de cerrar. No repitas llamadas idénticas sin nueva evidencia. No inventes resultados. Cuando todo esté comprobado, resume brevemente y termina.";
+  SYSTEM_RULES + " Prefiere cambios precisos, conserva las APIs y evita repetir acciones sin nueva evidencia. Verifica los cambios antes de terminar.";
 export const PHASE_PROMPTS = Object.freeze({
   DISCOVER: "Localiza archivos y símbolos reales. Pide contexto solo si falta.",
   PLAN: "Usa plan con cambios mínimos, archivos/símbolos y verificación. Solo decisiones operativas breves.",
@@ -158,10 +163,11 @@ export function validateCall(call, tools = CODER_TOOLS) {
     };
   let args;
   try {
-    args =
-      typeof call.arguments === "string"
-        ? JSON.parse(call.arguments)
-        : call.arguments;
+    if (typeof call.arguments === "string") {
+      const text = call.arguments.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i, "$1");
+      args = JSON.parse(text);
+      if (typeof args === "string" && /^\s*\{/.test(args)) args = JSON.parse(args);
+    } else args = call.arguments;
   } catch {
     return {
       ok: false,
@@ -404,14 +410,6 @@ export class CoderTask {
         if (["archivo", "reemplazar"].includes(call.name)) {
           if (!abs) error = "ruta: fuera del proyecto o enlace no permitido";
           else if (
-            call.name === "archivo" &&
-            (Buffer.byteLength(a.contenido) > this.config.wholeFileMaxBytes ||
-              (fs.existsSync(abs) &&
-                fs.statSync(abs).size > this.config.wholeFileMaxBytes))
-          )
-            error =
-              "archivo: máximo 12000 bytes; usa reemplazar con un anchor único";
-          else if (
             fs.existsSync(abs) &&
             !this.state.inspected.includes(
               path.relative(this.root, abs).replace(/\\/g, "/"),
@@ -449,7 +447,7 @@ export class CoderTask {
       }
     }
     this.invalid = errors.length ? this.invalid + 1 : 0;
-    if (this.invalid > 1) {
+    if (this.invalid > 4) {
       this.stopped = "invalid_tool_limit";
       this.state.errors = errors.map((e) => e.error);
     }
