@@ -143,7 +143,11 @@ Write-Host "Abriendo http://127.0.0.1:$UiPort" -ForegroundColor Gray
 Write-Host "Los archivos que pidas se guardan en la carpeta salida." -ForegroundColor Gray
 Write-Host ""
 
-$UiEngineArgs = if ($EnginePreset) { @('--engine-preset', $EnginePreset) } else { @() }
-$BrowserArgs = if ($NoBrowser) { @() } else { @('--open') }
+# Keep arrays even for a single value: PowerShell 5.1 splats a scalar string
+# character by character into native commands ("--open" became "-", "-", "o", ...).
+[string[]]$UiEngineArgs = @()
+if ($EnginePreset) { $UiEngineArgs = @('--engine-preset', $EnginePreset) }
+[string[]]$BrowserArgs = @()
+if (-not $NoBrowser) { $BrowserArgs = @('--open') }
 & node $Server --port $UiPort --llama-port $Port --prompt-cap $PromptCap @ThinkArgs @UiEngineArgs @BrowserArgs
 exit $LASTEXITCODE
