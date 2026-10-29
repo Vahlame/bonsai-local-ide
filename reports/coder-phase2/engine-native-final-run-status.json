@@ -1,0 +1,12 @@
+{
+  "stoppedAt": "2026-10-29T07:00:09.755Z",
+  "reason": "Completed native 8k two-seed prototype evaluation; stopped the remaining 16k agent run to validate the finalized harness on the production runtime. Raw complete reports are preserved; an unfinished 16k run must not be scored.",
+  "completed": [
+    {
+      "label": "f16-ctx8192",
+      "success": 20,
+      "total": 20
+    }
+  ],
+  "unfinished": []
+}

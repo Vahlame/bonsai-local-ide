@@ -1,0 +1,10 @@
+report,context,thinking,seed,ablation,success,total,completionMs,promptTokens,generatedTokens,reasoningCharacters,llmCalls,toolCalls,schemaFailures,repairAttempts,peakVramMiB,minFreeVramMiB
+"runs/engine-final-thinking/8GB-VISION-QUALITY/seed-42/informe.json",32768,1024,42,"",10,10,258053,161596,8542,7092,62,52,0,1,7235,722
+"runs/engine-final-thinking/8GB-VISION-QUALITY/seed-43/informe.json",32768,1024,43,"",9,10,342774,204561,11398,12045,74,64,0,4,7235,722
+"runs/engine-quality-thinking/8GB-VISION-QUALITY/seed-42/informe.json",32768,1024,42,"",10,10,222217,141436,7399,6976,59,49,0,1,7235,722
+"runs/engine-quality-thinking/8GB-VISION-QUALITY/seed-43/informe.json",32768,1024,43,"",1,2,194601,82203,5861,3487,26,24,2,1,7235,722
+"runs/final-control/seed-42/informe.json",32768,0,42,"",10,10,254279,203785,7673,0,73,63,0,2,7191,766
+"runs/final-control/seed-43/informe.json",32768,0,43,"",9,10,306318,224365,9548,0,80,70,2,3,7191,766
+"runs/final-reasoning/seed-42/informe.json",32768,1024,42,"",9,10,267866,171875,8783,6512,65,55,0,1,7191,766
+"runs/final-reasoning/seed-43/informe.json",32768,1024,43,"",9,10,386021,232765,12777,12420,83,73,3,4,7191,766
+"runs/final-repair-pilot/seed-43/informe.json",32768,1024,43,"",1,2,106022,45723,3658,6013,16,14,0,2,7191,766

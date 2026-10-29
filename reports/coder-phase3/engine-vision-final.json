@@ -1,0 +1,1768 @@
+{
+  "createdAt": "2026-10-29T11:22:12.086Z",
+  "binary": "C:\\Users\\user\\Documents\\prject_local_AI\\bin\\llama-server.exe",
+  "engineVersion": "version: 0.2.0-dev (build 10743, commit adfffbe41)\r\nbuilt with MSVC 19.44.35229.0 for Windows AMD64",
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "driver": "617.14",
+    "totalMiB": 8188,
+    "usedMiB": 0,
+    "freeMiB": 7956,
+    "gpuUtil": 0,
+    "memoryUtil": 0,
+    "clockMHz": 2235,
+    "powerLimitW": null,
+    "temperatureC": 40
+  },
+  "computeCapability": "8.9",
+  "toolkit": "nvcc: NVIDIA (R) Cuda compiler driver\r\nCopyright (c) 2005-2025 NVIDIA Corporation\r\nBuilt on Tue_May_27_02:24:01_Pacific_Daylight_Time_2025\r\nCuda compilation tools, release 12.9, V12.9.86\r\nBuild cuda_12.9.r12.9/compiler.36037853_0",
+  "profilers": {
+    "nsys": "NVIDIA Nsight Systems version 2026.3.2.313-263238521929v0",
+    "ncu": "NVIDIA (R) Nsight Compute Command Line Profiler\r\nCopyright (c) 2018-2026 NVIDIA Corporation\r\nVersion 2026.3.0.0 (build 38525999) (public-release)"
+  },
+  "buildFlags": null,
+  "results": [
+    {
+      "label": "8GB-VISION",
+      "configuration": {
+        "label": "Coding y visión · 16k F16",
+        "context": 16384,
+        "kv": "f16",
+        "batch": 512,
+        "ubatch": 256,
+        "flash": "on",
+        "spec": "none",
+        "marginMiB": 768,
+        "vision": true,
+        "model": "ornith9b",
+        "budget": {
+          "weightsMiB": 4864,
+          "kvMiB": 512,
+          "computeAndRuntimeReserveMiB": 620,
+          "safetyMarginMiB": 768,
+          "visionMiB": 900,
+          "totalRequiredMiB": 7664,
+          "estimated": true
+        },
+        "command": [
+          "-m",
+          "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Ornith-1.5-9B-Q4_K_M.gguf",
+          "-c",
+          "16384",
+          "-ctk",
+          "f16",
+          "-ctv",
+          "f16",
+          "-b",
+          "512",
+          "-ub",
+          "256",
+          "-ngl",
+          "all",
+          "--fit",
+          "off",
+          "-np",
+          "1",
+          "--flash-attn",
+          "on",
+          "--spec-type",
+          "none",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "8080",
+          "--jinja",
+          "--metrics",
+          "-lv",
+          "4",
+          "--mmproj",
+          "C:\\Users\\user\\Documents\\prject_local_AI\\models\\mmproj-Ornith-1.5-9B-BF16.gguf",
+          "--mmproj-offload",
+          "--mmproj-device",
+          "CUDA0",
+          "--image-max-tokens",
+          "512",
+          "--reasoning",
+          "off",
+          "--cache-ram",
+          "0",
+          "--no-context-shift",
+          "-t",
+          "4"
+        ]
+      },
+      "props": {
+        "default_generation_settings": {
+          "params": {
+            "seed": 4294967295,
+            "temperature": 0.800000011920929,
+            "dynatemp_range": 0,
+            "dynatemp_exponent": 1,
+            "top_k": 40,
+            "top_p": 0.949999988079071,
+            "min_p": 0.05000000074505806,
+            "top_n_sigma": -1,
+            "xtc_probability": 0,
+            "xtc_threshold": 0.10000000149011612,
+            "typical_p": 1,
+            "repeat_last_n": 64,
+            "repeat_penalty": 1,
+            "presence_penalty": 0,
+            "frequency_penalty": 0,
+            "dry_multiplier": 0,
+            "dry_base": 1.75,
+            "dry_allowed_length": 2,
+            "dry_penalty_last_n": 64,
+            "mirostat": 0,
+            "mirostat_tau": 5,
+            "mirostat_eta": 0.10000000149011612,
+            "adaptive_target": -1,
+            "adaptive_decay": 0.8999999761581421,
+            "max_tokens": -1,
+            "n_predict": -1,
+            "n_keep": 0,
+            "n_discard": 0,
+            "ignore_eos": false,
+            "stream": false,
+            "n_probs": 0,
+            "min_keep": 0,
+            "chat_format": "Content-only",
+            "reasoning_format": "none",
+            "reasoning_in_content": false,
+            "generation_prompt": "",
+            "samplers": [
+              "penalties",
+              "dry",
+              "top_n_sigma",
+              "top_k",
+              "typ_p",
+              "top_p",
+              "min_p",
+              "xtc",
+              "temperature"
+            ],
+            "speculative.types": "none",
+            "timings_per_token": false,
+            "post_sampling_probs": false,
+            "backend_sampling": false,
+            "lora": []
+          },
+          "n_ctx": 16384
+        },
+        "total_slots": 1,
+        "model_alias": "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Ornith-1.5-9B-Q4_K_M.gguf",
+        "model_ftype": "Q4_K - Medium",
+        "model_path": "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Ornith-1.5-9B-Q4_K_M.gguf",
+        "modalities": {
+          "vision": true,
+          "video": true,
+          "audio": false
+        },
+        "media_marker": "<__media_bhgWQl2c3TN8PGYr5lbO79yI5QOHxVc0__>",
+        "endpoint_slots": true,
+        "endpoint_props": false,
+        "endpoint_metrics": true,
+        "ui": true,
+        "ui_settings": {},
+        "chat_template": "{%- set image_count = namespace(value=0) %}\n{%- set video_count = namespace(value=0) %}\n{%- macro render_content(content, do_vision_count, is_system_content=false) %}\n    {%- if content is string %}\n        {{- content }}\n    {%- elif content is iterable and content is not mapping %}\n        {%- for item in content %}\n            {%- if 'image' in item or 'image_url' in item or item.type == 'image' %}\n                {%- if is_system_content %}\n                    {{- raise_exception('System message cannot contain images.') }}\n                {%- endif %}\n                {%- if do_vision_count %}\n                    {%- set image_count.value = image_count.value + 1 %}\n                {%- endif %}\n                {%- if add_vision_id %}\n                    {{- 'Picture ' ~ image_count.value ~ ': ' }}\n                {%- endif %}\n                {{- '<|vision_start|><|image_pad|><|vision_end|>' }}\n            {%- elif 'video' in item or item.type == 'video' %}\n                {%- if is_system_content %}\n                    {{- raise_exception('System message cannot contain videos.') }}\n                {%- endif %}\n                {%- if do_vision_count %}\n                    {%- set video_count.value = video_count.value + 1 %}\n                {%- endif %}\n                {%- if add_vision_id %}\n                    {{- 'Video ' ~ video_count.value ~ ': ' }}\n                {%- endif %}\n                {{- '<|vision_start|><|video_pad|><|vision_end|>' }}\n            {%- elif 'text' in item %}\n                {{- item.text }}\n            {%- else %}\n                {{- raise_exception('Unexpected item type in content.') }}\n            {%- endif %}\n        {%- endfor %}\n    {%- elif content is none or content is undefined %}\n        {{- '' }}\n    {%- else %}\n        {{- raise_exception('Unexpected content type.') }}\n    {%- endif %}\n{%- endmacro %}\n{%- if not messages %}\n    {{- raise_exception('No messages provided.') }}\n{%- endif %}\n{%- set num_sys = 0 %}\n{%- set merged_system = '' %}\n{%- if messages[0].role == 'system' or messages[0].role == 'developer' %}\n    {%- set first = render_content(messages[0].content, false, true)|trim %}\n    {%- if messages|length > 1 and (messages[1].role == 'system' or messages[1].role == 'developer') %}\n        {%- set second = render_content(messages[1].content, false, true)|trim %}\n        {%- set merged_system = first + '\\n' + second %}\n        {%- set num_sys = 2 %}\n    {%- else %}\n        {%- set merged_system = first %}\n        {%- set num_sys = 1 %}\n    {%- endif %}\n{%- endif %}\n{%- if tools and tools is iterable and tools is not mapping %}\n    {{- '<|im_start|>system\\n' }}\n    {{- \"# Tools\\n\\nYou have access to the following functions:\\n\\n<tools>\" }}\n    {%- for tool in tools %}\n        {{- \"\\n\" }}\n        {{- tool | tojson }}\n    {%- endfor %}\n    {{- \"\\n</tools>\" }}\n    {{- '\\n\\nIf you choose to call a function ONLY reply in the following format with NO suffix:\\n\\n<tool_call>\\n<function=example_function_name>\\n<parameter=example_parameter_1>\\nvalue_1\\n</parameter>\\n<parameter=example_parameter_2>\\nThis is the value for the second parameter\\nthat can span\\nmultiple lines\\n</parameter>\\n</function>\\n</tool_call>\\n\\n<IMPORTANT>\\nReminder:\\n- Function calls MUST follow the specified format: an inner <function=...></function> block must be nested within <tool_call></tool_call> XML tags\\n- Required parameters MUST be specified\\n- You may provide optional reasoning for your function call in natural language BEFORE the function call, but NOT after\\n- If there is no function call available, answer the question like normal with your current knowledge and do not tell the user about function calls\\n</IMPORTANT>' }}\n    {%- if merged_system %}\n        {{- '\\n\\n' + merged_system }}\n    {%- endif %}\n    {{- '<|im_end|>\\n' }}\n{%- else %}\n    {%- if merged_system %}\n        {{- '<|im_start|>system\\n' + merged_system + '<|im_end|>\\n' }}\n    {%- endif %}\n{%- endif %}\n{%- set ns = namespace(multi_step_tool=true, last_query_index=messages|length - 1) %}\n{%- for message in messages[::-1] %}\n    {%- set index = (messages|length - 1) - loop.index0 %}\n    {%- if ns.multi_step_tool and message.role == \"user\" %}\n        {%- set content = render_content(message.content, false)|trim %}\n        {%- if not(content.startswith('<tool_response>') and content.endswith('</tool_response>')) %}\n            {%- set ns.multi_step_tool = false %}\n            {%- set ns.last_query_index = index %}\n        {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- for message in messages %}\n    {%- if loop.index0 >= num_sys and message.role != \"system\" and message.role != \"developer\" %}\n    {%- set content = render_content(message.content, true)|trim %}\n    {%- if message.role == \"user\" %}\n        {{- '<|im_start|>' + message.role + '\\n' + content + '<|im_end|>' + '\\n' }}\n    {%- elif message.role == \"assistant\" %}\n        {%- set reasoning_content = '' %}\n        {%- if message.reasoning_content is string %}\n            {%- set reasoning_content = message.reasoning_content %}\n        {%- else %}\n            {%- if '</think>' in content %}\n                {%- set reasoning_content = content.split('</think>')[0].rstrip('\\n').split('<think>')[-1].lstrip('\\n') %}\n                {%- set content = content.split('</think>')[-1].lstrip('\\n') %}\n            {%- endif %}\n        {%- endif %}\n        {%- set reasoning_content = reasoning_content|trim %}\n        {{- '<|im_start|>' + message.role + '\\n<think>\\n' + reasoning_content + '\\n</think>\\n\\n' + content }}\n        {%- if message.tool_calls and message.tool_calls is iterable and message.tool_calls is not mapping %}\n            {%- for tool_call in message.tool_calls %}\n                {%- if tool_call.function is defined %}\n                    {%- set tool_call = tool_call.function %}\n                {%- endif %}\n                {%- if loop.first %}\n                    {%- if content|trim %}\n                        {{- '\\n\\n<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                    {%- else %}\n                        {{- '<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                    {%- endif %}\n                {%- else %}\n                    {{- '\\n<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                {%- endif %}\n                {%- if tool_call.arguments is mapping %}\n                    {%- for args_name in tool_call.arguments %}\n                        {%- set args_value = tool_call.arguments[args_name] %}\n                        {{- '<parameter=' + args_name + '>\\n' }}\n                        {%- set args_value = args_value | tojson | safe if args_value is mapping or (args_value is sequence and args_value is not string) else args_value | string %}\n                        {{- args_value }}\n                        {{- '\\n</parameter>\\n' }}\n                    {%- endfor %}\n                {%- endif %}\n                {{- '</function>\\n</tool_call>' }}\n            {%- endfor %}\n        {%- endif %}\n        {{- '<|im_end|>\\n' }}\n    {%- elif message.role == \"tool\" %}\n        {%- if loop.previtem and loop.previtem.role != \"tool\" %}\n            {{- '<|im_start|>user' }}\n        {%- endif %}\n        {{- '\\n<tool_response>\\n' }}\n        {{- content }}\n        {{- '\\n</tool_response>' }}\n        {%- if not loop.last and loop.nextitem.role != \"tool\" %}\n            {{- '<|im_end|>\\n' }}\n        {%- elif loop.last %}\n            {{- '<|im_end|>\\n' }}\n        {%- endif %}\n    {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '<|im_start|>assistant\\n' }}\n    {%- if enable_thinking is defined and enable_thinking is false %}\n        {{- '<think>\\n\\n</think>\\n\\n' }}\n    {%- else %}\n        {{- '<think>\\n' }}\n    {%- endif %}\n{%- endif %}\n{#- Unsloth fixes - developer role, tool calling #}",
+        "chat_template_caps": {
+          "supports_object_arguments": true,
+          "supports_parallel_tool_calls": true,
+          "supports_preserve_reasoning": true,
+          "supports_reasoning_effort": false,
+          "supports_string_content": true,
+          "supports_system_role": true,
+          "supports_tool_calls": true,
+          "supports_tools": true,
+          "supports_typed_content": false
+        },
+        "bos_token": ",",
+        "eos_token": "<|im_end|>",
+        "build_info": "b10743-adfffbe41",
+        "is_sleeping": false,
+        "cors_proxy_enabled": false
+      },
+      "startGpu": {
+        "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+        "driver": "617.14",
+        "totalMiB": 8188,
+        "usedMiB": 6665,
+        "freeMiB": 1292,
+        "gpuUtil": 34,
+        "memoryUtil": 33,
+        "clockMHz": 2235,
+        "powerLimitW": null,
+        "temperatureC": 41
+      },
+      "samples": [
+        {
+          "promptTokens": 512,
+          "generatedTokens": 32,
+          "runs": [
+            {
+              "promptRequested": 512,
+              "generationRequested": 32,
+              "cache": false,
+              "ttftMs": 304.6404999999995,
+              "latencyMs": 1044.7847999999994,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 512,
+                "prompt_ms": 303.112,
+                "prompt_per_token_ms": 0.592015625,
+                "prompt_per_second": 1689.1446066140568,
+                "predicted_n": 32,
+                "predicted_ms": 740.287,
+                "predicted_per_token_ms": 23.880225806451612,
+                "predicted_per_second": 41.875650929977155
+              },
+              "tokensEvaluated": 512,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 512,
+              "nativeTokensCached": 543,
+              "draftAccepted": null,
+              "outputHash": "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+            },
+            {
+              "promptRequested": 512,
+              "generationRequested": 32,
+              "cache": false,
+              "ttftMs": 310.2008999999998,
+              "latencyMs": 1051.9614999999994,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 512,
+                "prompt_ms": 307.79,
+                "prompt_per_token_ms": 0.60115234375,
+                "prompt_per_second": 1663.4718476883588,
+                "predicted_n": 32,
+                "predicted_ms": 741.332,
+                "predicted_per_token_ms": 23.91393548387097,
+                "predicted_per_second": 41.81662197234168
+              },
+              "tokensEvaluated": 512,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 512,
+              "nativeTokensCached": 543,
+              "draftAccepted": null,
+              "outputHash": "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+            },
+            {
+              "promptRequested": 512,
+              "generationRequested": 32,
+              "cache": false,
+              "ttftMs": 324.8651000000009,
+              "latencyMs": 1060.4477000000006,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 512,
+                "prompt_ms": 316.411,
+                "prompt_per_token_ms": 0.617990234375,
+                "prompt_per_second": 1618.1485473008208,
+                "predicted_n": 32,
+                "predicted_ms": 739.953,
+                "predicted_per_token_ms": 23.869451612903227,
+                "predicted_per_second": 41.89455276213489
+              },
+              "tokensEvaluated": 512,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 512,
+              "nativeTokensCached": 543,
+              "draftAccepted": null,
+              "outputHash": "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+            }
+          ],
+          "median": {
+            "promptTokensPerSecond": 1663.4718476883588,
+            "generationTokensPerSecond": 41.875650929977155,
+            "ttftMs": 310.2008999999998,
+            "latencyMs": 1051.9614999999994
+          }
+        },
+        {
+          "promptTokens": 2048,
+          "generatedTokens": 128,
+          "runs": [
+            {
+              "promptRequested": 2048,
+              "generationRequested": 128,
+              "cache": false,
+              "ttftMs": 1077.5707999999995,
+              "latencyMs": 4106.717999999999,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 2048,
+                "prompt_ms": 1073.581,
+                "prompt_per_token_ms": 0.52420947265625,
+                "prompt_per_second": 1907.6343564202423,
+                "predicted_n": 128,
+                "predicted_ms": 3029.081,
+                "predicted_per_token_ms": 23.851031496062994,
+                "predicted_per_second": 41.926907864134364
+              },
+              "tokensEvaluated": 2048,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 2048,
+              "nativeTokensCached": 2175,
+              "draftAccepted": null,
+              "outputHash": "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+            },
+            {
+              "promptRequested": 2048,
+              "generationRequested": 128,
+              "cache": false,
+              "ttftMs": 1069.6910000000007,
+              "latencyMs": 4098.993200000001,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 2048,
+                "prompt_ms": 1066.74,
+                "prompt_per_token_ms": 0.520869140625,
+                "prompt_per_second": 1919.8680090743762,
+                "predicted_n": 128,
+                "predicted_ms": 3029.323,
+                "predicted_per_token_ms": 23.852937007874015,
+                "predicted_per_second": 41.92355849805386
+              },
+              "tokensEvaluated": 2048,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 2048,
+              "nativeTokensCached": 2175,
+              "draftAccepted": null,
+              "outputHash": "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+            },
+            {
+              "promptRequested": 2048,
+              "generationRequested": 128,
+              "cache": false,
+              "ttftMs": 1076.1588999999985,
+              "latencyMs": 4094.6656000000003,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 2048,
+                "prompt_ms": 1073.304,
+                "prompt_per_token_ms": 0.52407421875,
+                "prompt_per_second": 1908.1266817229787,
+                "predicted_n": 128,
+                "predicted_ms": 3018.141,
+                "predicted_per_token_ms": 23.76488976377953,
+                "predicted_per_second": 42.0788823318725
+              },
+              "tokensEvaluated": 2048,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 2048,
+              "nativeTokensCached": 2175,
+              "draftAccepted": null,
+              "outputHash": "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+            }
+          ],
+          "median": {
+            "promptTokensPerSecond": 1908.1266817229787,
+            "generationTokensPerSecond": 41.926907864134364,
+            "ttftMs": 1076.1588999999985,
+            "latencyMs": 4098.993200000001
+          }
+        }
+      ],
+      "skipped": [],
+      "cache": {
+        "cold": {
+          "promptRequested": 1024,
+          "generationRequested": 32,
+          "cache": false,
+          "ttftMs": 566.5907000000007,
+          "latencyMs": 1309.7141999999985,
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 1024,
+            "prompt_ms": 563.773,
+            "prompt_per_token_ms": 0.5505595703125,
+            "prompt_per_second": 1816.3338790612534,
+            "predicted_n": 32,
+            "predicted_ms": 742.801,
+            "predicted_per_token_ms": 23.961322580645163,
+            "predicted_per_second": 41.73392335228412
+          },
+          "tokensEvaluated": 1024,
+          "tokensCached": 0,
+          "nativeTokensEvaluated": 1024,
+          "nativeTokensCached": 1055,
+          "draftAccepted": null,
+          "outputHash": "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+        },
+        "warm": {
+          "promptRequested": 1024,
+          "generationRequested": 32,
+          "cache": true,
+          "ttftMs": 63.06680000000051,
+          "latencyMs": 802.4171999999999,
+          "timings": {
+            "cache_n": 1020,
+            "prompt_n": 4,
+            "prompt_ms": 60.723,
+            "prompt_per_token_ms": 15.18075,
+            "prompt_per_second": 65.87289824284044,
+            "predicted_n": 32,
+            "predicted_ms": 738.835,
+            "predicted_per_token_ms": 23.833387096774196,
+            "predicted_per_second": 41.957947308939076
+          },
+          "tokensEvaluated": 4,
+          "tokensCached": 1020,
+          "nativeTokensEvaluated": 1024,
+          "nativeTokensCached": 1055,
+          "draftAccepted": null,
+          "outputHash": "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+        },
+        "identicalOutput": true
+      },
+      "peakVramMiB": 6669,
+      "minFreeVramMiB": 1288,
+      "gpuSamples": [
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 91,
+          "memoryUtil": 100,
+          "clockMHz": 2535,
+          "powerLimitW": null,
+          "temperatureC": 49
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 98,
+          "memoryUtil": 100,
+          "clockMHz": 2535,
+          "powerLimitW": null,
+          "temperatureC": 52
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 92,
+          "memoryUtil": 35,
+          "clockMHz": 2415,
+          "powerLimitW": null,
+          "temperatureC": 54
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 91,
+          "memoryUtil": 33,
+          "clockMHz": 2385,
+          "powerLimitW": null,
+          "temperatureC": 53
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2550,
+          "powerLimitW": null,
+          "temperatureC": 53
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 99,
+          "memoryUtil": 38,
+          "clockMHz": 2445,
+          "powerLimitW": null,
+          "temperatureC": 56
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 88,
+          "memoryUtil": 57,
+          "clockMHz": 2655,
+          "powerLimitW": null,
+          "temperatureC": 53
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 96,
+          "memoryUtil": 100,
+          "clockMHz": 2550,
+          "powerLimitW": null,
+          "temperatureC": 54
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2505,
+          "powerLimitW": null,
+          "temperatureC": 54
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2475,
+          "powerLimitW": null,
+          "temperatureC": 54
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 96,
+          "memoryUtil": 100,
+          "clockMHz": 2655,
+          "powerLimitW": null,
+          "temperatureC": 54
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 99,
+          "memoryUtil": 38,
+          "clockMHz": 2445,
+          "powerLimitW": null,
+          "temperatureC": 57
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 92,
+          "memoryUtil": 34,
+          "clockMHz": 2400,
+          "powerLimitW": null,
+          "temperatureC": 58
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 96,
+          "memoryUtil": 100,
+          "clockMHz": 2415,
+          "powerLimitW": null,
+          "temperatureC": 55
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2520,
+          "powerLimitW": null,
+          "temperatureC": 56
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 96,
+          "memoryUtil": 100,
+          "clockMHz": 2505,
+          "powerLimitW": null,
+          "temperatureC": 56
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 96,
+          "memoryUtil": 100,
+          "clockMHz": 2475,
+          "powerLimitW": null,
+          "temperatureC": 55
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 100,
+          "memoryUtil": 38,
+          "clockMHz": 2400,
+          "powerLimitW": null,
+          "temperatureC": 59
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2535,
+          "powerLimitW": null,
+          "temperatureC": 57
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2400,
+          "powerLimitW": null,
+          "temperatureC": 56
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2415,
+          "powerLimitW": null,
+          "temperatureC": 56
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2505,
+          "powerLimitW": null,
+          "temperatureC": 57
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 100,
+          "memoryUtil": 38,
+          "clockMHz": 2400,
+          "powerLimitW": null,
+          "temperatureC": 59
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2505,
+          "powerLimitW": null,
+          "temperatureC": 57
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2595,
+          "powerLimitW": null,
+          "temperatureC": 55
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6669,
+          "freeMiB": 1288,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2505,
+          "powerLimitW": null,
+          "temperatureC": 57
+        }
+      ],
+      "ram": {
+        "pid": 12064,
+        "workingSetMiB": 5419.80078125,
+        "peakWorkingSetMiB": 5419.8046875,
+        "privateMiB": 7742.59375,
+        "source": "Windows process counters; includes shared/mapped resident pages; peak since process start"
+      },
+      "codingSuccess": null,
+      "qualityStatus": "not evaluated by throughput benchmark",
+      "startupMs": 4871.0195,
+      "visionCheck": {
+        "exitCode": 1,
+        "reportFile": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase3\\runs\\engine-vision-final\\8GB-VISION\\vision.json",
+        "createdAt": "2026-10-29T11:22:37.246Z",
+        "context": 16384,
+        "model": "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Ornith-1.5-9B-Q4_K_M.gguf",
+        "app": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase3\\candidate-v3-app",
+        "ocr": false,
+        "checks": [
+          {
+            "kind": "short-vision",
+            "ok": true,
+            "checks": {
+              "finished": true,
+              "imagesSent": true,
+              "noPersistedPixels": true,
+              "imageRead": true,
+              "noTools": true,
+              "noEdits": true
+            },
+            "error": null,
+            "expectedPin": "8234",
+            "answer": "{\"pin\": \"8234\"}",
+            "promptTokens": 3300,
+            "completionMs": 2317,
+            "requests": [
+              {
+                "images": [
+                  {
+                    "index": 1,
+                    "role": "user",
+                    "hash": "0bb369a78a56b3487f5d3c5929186fd4d894e4faf185594d5039dd57e711021e"
+                  }
+                ],
+                "toolChoice": "none",
+                "maxTokens": 1536
+              }
+            ]
+          },
+          {
+            "kind": "long-vision",
+            "ok": false,
+            "checks": {
+              "finished": true,
+              "imagesSent": true,
+              "noPersistedPixels": true,
+              "imageRead": false,
+              "noTools": true,
+              "noEdits": true,
+              "longContext": true,
+              "recall": false
+            },
+            "error": null,
+            "expectedPin": "5728",
+            "answer": "No tengo una respuesta para eso.",
+            "promptTokens": 13530,
+            "completionMs": 6560,
+            "requests": [
+              {
+                "images": [
+                  {
+                    "index": 1,
+                    "role": "user",
+                    "hash": "3f8e92126dadc1cf5d891f1cb05b67a52562360c9a4a1180c8794523c0fcf547"
+                  }
+                ],
+                "toolChoice": "none",
+                "maxTokens": 1536
+              }
+            ]
+          },
+          {
+            "kind": "vision-coding",
+            "ok": true,
+            "checks": {
+              "finished": true,
+              "imagesSent": true,
+              "noPersistedPixels": true,
+              "correctPatch": true,
+              "originalTestsPreserved": true,
+              "imagePinnedAcrossSteps": true,
+              "hostVerified": true
+            },
+            "error": null,
+            "expectedPin": "3475",
+            "answer": "The edit is complete and the host already ran the test, which passed with code 0 and no errors. The function now returns \"3475\", matching the four digits in the image, and satisfies both test assertions (`/^\\d{4}$/` and `notEqual('0000')`).\n\nNo changes are needed. The task is done: `getPin` returns exactly the four digits shown in the image (3475), the tests pass, and I only modified `src/pin.mjs`.",
+            "promptTokens": 3229,
+            "completionMs": 10128,
+            "requests": [
+              {
+                "images": [
+                  {
+                    "index": 1,
+                    "role": "user",
+                    "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+                  }
+                ],
+                "toolChoice": "auto",
+                "maxTokens": 1536
+              },
+              {
+                "images": [
+                  {
+                    "index": 1,
+                    "role": "user",
+                    "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+                  }
+                ],
+                "toolChoice": "auto",
+                "maxTokens": 1536
+              },
+              {
+                "images": [
+                  {
+                    "index": 1,
+                    "role": "user",
+                    "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+                  }
+                ],
+                "toolChoice": "auto",
+                "maxTokens": 1536
+              }
+            ]
+          }
+        ],
+        "peakVramMiB": 6715,
+        "minFreeVramMiB": 1242,
+        "ok": false
+      }
+    },
+    {
+      "label": "8GB-VISION",
+      "configuration": {
+        "label": "Coding y visión · 16k F16",
+        "context": 16384,
+        "kv": "f16",
+        "batch": 512,
+        "ubatch": 256,
+        "flash": "on",
+        "spec": "none",
+        "marginMiB": 768,
+        "vision": true
+      },
+      "error": "Vision validation failed: C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase3\\runs\\engine-vision-final\\8GB-VISION\\vision.json"
+    },
+    {
+      "label": "8GB-VISION-CONTEXT",
+      "configuration": {
+        "label": "Coding y visión · 32k Q8",
+        "context": 32768,
+        "kv": "q8_0",
+        "batch": 512,
+        "ubatch": 256,
+        "flash": "on",
+        "spec": "none",
+        "marginMiB": 768,
+        "vision": true,
+        "model": "ornith9b",
+        "budget": {
+          "weightsMiB": 4864,
+          "kvMiB": 544,
+          "computeAndRuntimeReserveMiB": 620,
+          "safetyMarginMiB": 768,
+          "visionMiB": 900,
+          "totalRequiredMiB": 7696,
+          "estimated": true
+        },
+        "command": [
+          "-m",
+          "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Ornith-1.5-9B-Q4_K_M.gguf",
+          "-c",
+          "32768",
+          "-ctk",
+          "q8_0",
+          "-ctv",
+          "q8_0",
+          "-b",
+          "512",
+          "-ub",
+          "256",
+          "-ngl",
+          "all",
+          "--fit",
+          "off",
+          "-np",
+          "1",
+          "--flash-attn",
+          "on",
+          "--spec-type",
+          "none",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "8080",
+          "--jinja",
+          "--metrics",
+          "-lv",
+          "4",
+          "--mmproj",
+          "C:\\Users\\user\\Documents\\prject_local_AI\\models\\mmproj-Ornith-1.5-9B-BF16.gguf",
+          "--mmproj-offload",
+          "--mmproj-device",
+          "CUDA0",
+          "--image-max-tokens",
+          "512",
+          "--reasoning",
+          "off",
+          "--cache-ram",
+          "0",
+          "--no-context-shift",
+          "-t",
+          "4"
+        ]
+      },
+      "props": {
+        "default_generation_settings": {
+          "params": {
+            "seed": 4294967295,
+            "temperature": 0.800000011920929,
+            "dynatemp_range": 0,
+            "dynatemp_exponent": 1,
+            "top_k": 40,
+            "top_p": 0.949999988079071,
+            "min_p": 0.05000000074505806,
+            "top_n_sigma": -1,
+            "xtc_probability": 0,
+            "xtc_threshold": 0.10000000149011612,
+            "typical_p": 1,
+            "repeat_last_n": 64,
+            "repeat_penalty": 1,
+            "presence_penalty": 0,
+            "frequency_penalty": 0,
+            "dry_multiplier": 0,
+            "dry_base": 1.75,
+            "dry_allowed_length": 2,
+            "dry_penalty_last_n": 64,
+            "mirostat": 0,
+            "mirostat_tau": 5,
+            "mirostat_eta": 0.10000000149011612,
+            "adaptive_target": -1,
+            "adaptive_decay": 0.8999999761581421,
+            "max_tokens": -1,
+            "n_predict": -1,
+            "n_keep": 0,
+            "n_discard": 0,
+            "ignore_eos": false,
+            "stream": false,
+            "n_probs": 0,
+            "min_keep": 0,
+            "chat_format": "Content-only",
+            "reasoning_format": "none",
+            "reasoning_in_content": false,
+            "generation_prompt": "",
+            "samplers": [
+              "penalties",
+              "dry",
+              "top_n_sigma",
+              "top_k",
+              "typ_p",
+              "top_p",
+              "min_p",
+              "xtc",
+              "temperature"
+            ],
+            "speculative.types": "none",
+            "timings_per_token": false,
+            "post_sampling_probs": false,
+            "backend_sampling": false,
+            "lora": []
+          },
+          "n_ctx": 32768
+        },
+        "total_slots": 1,
+        "model_alias": "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Ornith-1.5-9B-Q4_K_M.gguf",
+        "model_ftype": "Q4_K - Medium",
+        "model_path": "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Ornith-1.5-9B-Q4_K_M.gguf",
+        "modalities": {
+          "vision": true,
+          "video": true,
+          "audio": false
+        },
+        "media_marker": "<__media_v2jz1gyFDYnjr7KQp0TfSVXp8M5LinIt__>",
+        "endpoint_slots": true,
+        "endpoint_props": false,
+        "endpoint_metrics": true,
+        "ui": true,
+        "ui_settings": {},
+        "chat_template": "{%- set image_count = namespace(value=0) %}\n{%- set video_count = namespace(value=0) %}\n{%- macro render_content(content, do_vision_count, is_system_content=false) %}\n    {%- if content is string %}\n        {{- content }}\n    {%- elif content is iterable and content is not mapping %}\n        {%- for item in content %}\n            {%- if 'image' in item or 'image_url' in item or item.type == 'image' %}\n                {%- if is_system_content %}\n                    {{- raise_exception('System message cannot contain images.') }}\n                {%- endif %}\n                {%- if do_vision_count %}\n                    {%- set image_count.value = image_count.value + 1 %}\n                {%- endif %}\n                {%- if add_vision_id %}\n                    {{- 'Picture ' ~ image_count.value ~ ': ' }}\n                {%- endif %}\n                {{- '<|vision_start|><|image_pad|><|vision_end|>' }}\n            {%- elif 'video' in item or item.type == 'video' %}\n                {%- if is_system_content %}\n                    {{- raise_exception('System message cannot contain videos.') }}\n                {%- endif %}\n                {%- if do_vision_count %}\n                    {%- set video_count.value = video_count.value + 1 %}\n                {%- endif %}\n                {%- if add_vision_id %}\n                    {{- 'Video ' ~ video_count.value ~ ': ' }}\n                {%- endif %}\n                {{- '<|vision_start|><|video_pad|><|vision_end|>' }}\n            {%- elif 'text' in item %}\n                {{- item.text }}\n            {%- else %}\n                {{- raise_exception('Unexpected item type in content.') }}\n            {%- endif %}\n        {%- endfor %}\n    {%- elif content is none or content is undefined %}\n        {{- '' }}\n    {%- else %}\n        {{- raise_exception('Unexpected content type.') }}\n    {%- endif %}\n{%- endmacro %}\n{%- if not messages %}\n    {{- raise_exception('No messages provided.') }}\n{%- endif %}\n{%- set num_sys = 0 %}\n{%- set merged_system = '' %}\n{%- if messages[0].role == 'system' or messages[0].role == 'developer' %}\n    {%- set first = render_content(messages[0].content, false, true)|trim %}\n    {%- if messages|length > 1 and (messages[1].role == 'system' or messages[1].role == 'developer') %}\n        {%- set second = render_content(messages[1].content, false, true)|trim %}\n        {%- set merged_system = first + '\\n' + second %}\n        {%- set num_sys = 2 %}\n    {%- else %}\n        {%- set merged_system = first %}\n        {%- set num_sys = 1 %}\n    {%- endif %}\n{%- endif %}\n{%- if tools and tools is iterable and tools is not mapping %}\n    {{- '<|im_start|>system\\n' }}\n    {{- \"# Tools\\n\\nYou have access to the following functions:\\n\\n<tools>\" }}\n    {%- for tool in tools %}\n        {{- \"\\n\" }}\n        {{- tool | tojson }}\n    {%- endfor %}\n    {{- \"\\n</tools>\" }}\n    {{- '\\n\\nIf you choose to call a function ONLY reply in the following format with NO suffix:\\n\\n<tool_call>\\n<function=example_function_name>\\n<parameter=example_parameter_1>\\nvalue_1\\n</parameter>\\n<parameter=example_parameter_2>\\nThis is the value for the second parameter\\nthat can span\\nmultiple lines\\n</parameter>\\n</function>\\n</tool_call>\\n\\n<IMPORTANT>\\nReminder:\\n- Function calls MUST follow the specified format: an inner <function=...></function> block must be nested within <tool_call></tool_call> XML tags\\n- Required parameters MUST be specified\\n- You may provide optional reasoning for your function call in natural language BEFORE the function call, but NOT after\\n- If there is no function call available, answer the question like normal with your current knowledge and do not tell the user about function calls\\n</IMPORTANT>' }}\n    {%- if merged_system %}\n        {{- '\\n\\n' + merged_system }}\n    {%- endif %}\n    {{- '<|im_end|>\\n' }}\n{%- else %}\n    {%- if merged_system %}\n        {{- '<|im_start|>system\\n' + merged_system + '<|im_end|>\\n' }}\n    {%- endif %}\n{%- endif %}\n{%- set ns = namespace(multi_step_tool=true, last_query_index=messages|length - 1) %}\n{%- for message in messages[::-1] %}\n    {%- set index = (messages|length - 1) - loop.index0 %}\n    {%- if ns.multi_step_tool and message.role == \"user\" %}\n        {%- set content = render_content(message.content, false)|trim %}\n        {%- if not(content.startswith('<tool_response>') and content.endswith('</tool_response>')) %}\n            {%- set ns.multi_step_tool = false %}\n            {%- set ns.last_query_index = index %}\n        {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- for message in messages %}\n    {%- if loop.index0 >= num_sys and message.role != \"system\" and message.role != \"developer\" %}\n    {%- set content = render_content(message.content, true)|trim %}\n    {%- if message.role == \"user\" %}\n        {{- '<|im_start|>' + message.role + '\\n' + content + '<|im_end|>' + '\\n' }}\n    {%- elif message.role == \"assistant\" %}\n        {%- set reasoning_content = '' %}\n        {%- if message.reasoning_content is string %}\n            {%- set reasoning_content = message.reasoning_content %}\n        {%- else %}\n            {%- if '</think>' in content %}\n                {%- set reasoning_content = content.split('</think>')[0].rstrip('\\n').split('<think>')[-1].lstrip('\\n') %}\n                {%- set content = content.split('</think>')[-1].lstrip('\\n') %}\n            {%- endif %}\n        {%- endif %}\n        {%- set reasoning_content = reasoning_content|trim %}\n        {{- '<|im_start|>' + message.role + '\\n<think>\\n' + reasoning_content + '\\n</think>\\n\\n' + content }}\n        {%- if message.tool_calls and message.tool_calls is iterable and message.tool_calls is not mapping %}\n            {%- for tool_call in message.tool_calls %}\n                {%- if tool_call.function is defined %}\n                    {%- set tool_call = tool_call.function %}\n                {%- endif %}\n                {%- if loop.first %}\n                    {%- if content|trim %}\n                        {{- '\\n\\n<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                    {%- else %}\n                        {{- '<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                    {%- endif %}\n                {%- else %}\n                    {{- '\\n<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                {%- endif %}\n                {%- if tool_call.arguments is mapping %}\n                    {%- for args_name in tool_call.arguments %}\n                        {%- set args_value = tool_call.arguments[args_name] %}\n                        {{- '<parameter=' + args_name + '>\\n' }}\n                        {%- set args_value = args_value | tojson | safe if args_value is mapping or (args_value is sequence and args_value is not string) else args_value | string %}\n                        {{- args_value }}\n                        {{- '\\n</parameter>\\n' }}\n                    {%- endfor %}\n                {%- endif %}\n                {{- '</function>\\n</tool_call>' }}\n            {%- endfor %}\n        {%- endif %}\n        {{- '<|im_end|>\\n' }}\n    {%- elif message.role == \"tool\" %}\n        {%- if loop.previtem and loop.previtem.role != \"tool\" %}\n            {{- '<|im_start|>user' }}\n        {%- endif %}\n        {{- '\\n<tool_response>\\n' }}\n        {{- content }}\n        {{- '\\n</tool_response>' }}\n        {%- if not loop.last and loop.nextitem.role != \"tool\" %}\n            {{- '<|im_end|>\\n' }}\n        {%- elif loop.last %}\n            {{- '<|im_end|>\\n' }}\n        {%- endif %}\n    {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '<|im_start|>assistant\\n' }}\n    {%- if enable_thinking is defined and enable_thinking is false %}\n        {{- '<think>\\n\\n</think>\\n\\n' }}\n    {%- else %}\n        {{- '<think>\\n' }}\n    {%- endif %}\n{%- endif %}\n{#- Unsloth fixes - developer role, tool calling #}",
+        "chat_template_caps": {
+          "supports_object_arguments": true,
+          "supports_parallel_tool_calls": true,
+          "supports_preserve_reasoning": true,
+          "supports_reasoning_effort": false,
+          "supports_string_content": true,
+          "supports_system_role": true,
+          "supports_tool_calls": true,
+          "supports_tools": true,
+          "supports_typed_content": false
+        },
+        "bos_token": ",",
+        "eos_token": "<|im_end|>",
+        "build_info": "b10743-adfffbe41",
+        "is_sleeping": false,
+        "cors_proxy_enabled": false
+      },
+      "startGpu": {
+        "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+        "driver": "617.14",
+        "totalMiB": 8188,
+        "usedMiB": 6817,
+        "freeMiB": 1140,
+        "gpuUtil": 28,
+        "memoryUtil": 20,
+        "clockMHz": 2235,
+        "powerLimitW": null,
+        "temperatureC": 48
+      },
+      "samples": [
+        {
+          "promptTokens": 512,
+          "generatedTokens": 32,
+          "runs": [
+            {
+              "promptRequested": 512,
+              "generationRequested": 32,
+              "cache": false,
+              "ttftMs": 307.07890000000043,
+              "latencyMs": 1060.7299000000057,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 512,
+                "prompt_ms": 305.145,
+                "prompt_per_token_ms": 0.595986328125,
+                "prompt_per_second": 1677.890838781563,
+                "predicted_n": 32,
+                "predicted_ms": 753.668,
+                "predicted_per_token_ms": 24.311870967741935,
+                "predicted_per_second": 41.13216960253055
+              },
+              "tokensEvaluated": 512,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 512,
+              "nativeTokensCached": 543,
+              "draftAccepted": null,
+              "outputHash": "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+            },
+            {
+              "promptRequested": 512,
+              "generationRequested": 32,
+              "cache": false,
+              "ttftMs": 308.5228000000061,
+              "latencyMs": 1050.6988000000056,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 512,
+                "prompt_ms": 305.547,
+                "prompt_per_token_ms": 0.596771484375,
+                "prompt_per_second": 1675.683282768281,
+                "predicted_n": 32,
+                "predicted_ms": 742.319,
+                "predicted_per_token_ms": 23.945774193548385,
+                "predicted_per_second": 41.76102187873408
+              },
+              "tokensEvaluated": 512,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 512,
+              "nativeTokensCached": 543,
+              "draftAccepted": null,
+              "outputHash": "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+            },
+            {
+              "promptRequested": 512,
+              "generationRequested": 32,
+              "cache": false,
+              "ttftMs": 305.4167000000016,
+              "latencyMs": 1044.9010999999955,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 512,
+                "prompt_ms": 303.551,
+                "prompt_per_token_ms": 0.592873046875,
+                "prompt_per_second": 1686.7017403994716,
+                "predicted_n": 32,
+                "predicted_ms": 739.086,
+                "predicted_per_token_ms": 23.841483870967743,
+                "predicted_per_second": 41.94369802702256
+              },
+              "tokensEvaluated": 512,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 512,
+              "nativeTokensCached": 543,
+              "draftAccepted": null,
+              "outputHash": "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+            }
+          ],
+          "median": {
+            "promptTokensPerSecond": 1677.890838781563,
+            "generationTokensPerSecond": 41.76102187873408,
+            "ttftMs": 307.07890000000043,
+            "latencyMs": 1050.6988000000056
+          }
+        },
+        {
+          "promptTokens": 2048,
+          "generatedTokens": 128,
+          "runs": [
+            {
+              "promptRequested": 2048,
+              "generationRequested": 128,
+              "cache": false,
+              "ttftMs": 1092.8698999999979,
+              "latencyMs": 4125.8403000000035,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 2048,
+                "prompt_ms": 1088.944,
+                "prompt_per_token_ms": 0.5317109375,
+                "prompt_per_second": 1880.72113901174,
+                "predicted_n": 128,
+                "predicted_ms": 3033.026,
+                "predicted_per_token_ms": 23.882094488188976,
+                "predicted_per_second": 41.87237432188184
+              },
+              "tokensEvaluated": 2048,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 2048,
+              "nativeTokensCached": 2175,
+              "draftAccepted": null,
+              "outputHash": "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+            },
+            {
+              "promptRequested": 2048,
+              "generationRequested": 128,
+              "cache": false,
+              "ttftMs": 1091.4222000000009,
+              "latencyMs": 4127.333899999998,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 2048,
+                "prompt_ms": 1088.66,
+                "prompt_per_token_ms": 0.531572265625,
+                "prompt_per_second": 1881.211764922014,
+                "predicted_n": 128,
+                "predicted_ms": 3035.734,
+                "predicted_per_token_ms": 23.903417322834645,
+                "predicted_per_second": 41.835022436089595
+              },
+              "tokensEvaluated": 2048,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 2048,
+              "nativeTokensCached": 2175,
+              "draftAccepted": null,
+              "outputHash": "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+            },
+            {
+              "promptRequested": 2048,
+              "generationRequested": 128,
+              "cache": false,
+              "ttftMs": 1093.9853999999978,
+              "latencyMs": 4139.357499999998,
+              "timings": {
+                "cache_n": 0,
+                "prompt_n": 2048,
+                "prompt_ms": 1090.398,
+                "prompt_per_token_ms": 0.5324208984375,
+                "prompt_per_second": 1878.213276253258,
+                "predicted_n": 128,
+                "predicted_ms": 3045.373,
+                "predicted_per_token_ms": 23.97931496062992,
+                "predicted_per_second": 41.70260917135602
+              },
+              "tokensEvaluated": 2048,
+              "tokensCached": 0,
+              "nativeTokensEvaluated": 2048,
+              "nativeTokensCached": 2175,
+              "draftAccepted": null,
+              "outputHash": "de4569f66705c779e9ec7bd05d2f3b31412754c2059d5a01cc73c7ac27b786a9"
+            }
+          ],
+          "median": {
+            "promptTokensPerSecond": 1880.72113901174,
+            "generationTokensPerSecond": 41.835022436089595,
+            "ttftMs": 1092.8698999999979,
+            "latencyMs": 4127.333899999998
+          }
+        }
+      ],
+      "skipped": [],
+      "cache": {
+        "cold": {
+          "promptRequested": 1024,
+          "generationRequested": 32,
+          "cache": false,
+          "ttftMs": 571.9309000000067,
+          "latencyMs": 1321.244399999996,
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 1024,
+            "prompt_ms": 569.51,
+            "prompt_per_token_ms": 0.556162109375,
+            "prompt_per_second": 1798.0369089217047,
+            "predicted_n": 32,
+            "predicted_ms": 749.221,
+            "predicted_per_token_ms": 24.16841935483871,
+            "predicted_per_second": 41.376309526828535
+          },
+          "tokensEvaluated": 1024,
+          "tokensCached": 0,
+          "nativeTokensEvaluated": 1024,
+          "nativeTokensCached": 1055,
+          "draftAccepted": null,
+          "outputHash": "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+        },
+        "warm": {
+          "promptRequested": 1024,
+          "generationRequested": 32,
+          "cache": true,
+          "ttftMs": 62.37639999999374,
+          "latencyMs": 804.3796999999904,
+          "timings": {
+            "cache_n": 1020,
+            "prompt_n": 4,
+            "prompt_ms": 59.066,
+            "prompt_per_token_ms": 14.7665,
+            "prompt_per_second": 67.72085463718552,
+            "predicted_n": 32,
+            "predicted_ms": 741.756,
+            "predicted_per_token_ms": 23.927612903225807,
+            "predicted_per_second": 41.79271889947638
+          },
+          "tokensEvaluated": 4,
+          "tokensCached": 1020,
+          "nativeTokensEvaluated": 1024,
+          "nativeTokensCached": 1055,
+          "draftAccepted": null,
+          "outputHash": "3c6695d52f3eab5da22cec8ab3643b4b898dbc8aba5f04df157a77832c7db19a"
+        },
+        "identicalOutput": true
+      },
+      "peakVramMiB": 6821,
+      "minFreeVramMiB": 1136,
+      "gpuSamples": [
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 95,
+          "memoryUtil": 100,
+          "clockMHz": 2535,
+          "powerLimitW": null,
+          "temperatureC": 55
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2475,
+          "powerLimitW": null,
+          "temperatureC": 58
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 100,
+          "memoryUtil": 39,
+          "clockMHz": 2190,
+          "powerLimitW": null,
+          "temperatureC": 59
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2445,
+          "powerLimitW": null,
+          "temperatureC": 58
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2460,
+          "powerLimitW": null,
+          "temperatureC": 59
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 99,
+          "memoryUtil": 38,
+          "clockMHz": 2355,
+          "powerLimitW": null,
+          "temperatureC": 61
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 83,
+          "memoryUtil": 85,
+          "clockMHz": 2535,
+          "powerLimitW": null,
+          "temperatureC": 60
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 96,
+          "memoryUtil": 100,
+          "clockMHz": 2505,
+          "powerLimitW": null,
+          "temperatureC": 59
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2430,
+          "powerLimitW": null,
+          "temperatureC": 59
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 96,
+          "memoryUtil": 100,
+          "clockMHz": 2490,
+          "powerLimitW": null,
+          "temperatureC": 59
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2430,
+          "powerLimitW": null,
+          "temperatureC": 59
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 99,
+          "memoryUtil": 38,
+          "clockMHz": 2370,
+          "powerLimitW": null,
+          "temperatureC": 62
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 100,
+          "memoryUtil": 38,
+          "clockMHz": 2295,
+          "powerLimitW": null,
+          "temperatureC": 60
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2400,
+          "powerLimitW": null,
+          "temperatureC": 59
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2490,
+          "powerLimitW": null,
+          "temperatureC": 60
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2430,
+          "powerLimitW": null,
+          "temperatureC": 59
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 96,
+          "memoryUtil": 100,
+          "clockMHz": 2445,
+          "powerLimitW": null,
+          "temperatureC": 60
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 99,
+          "memoryUtil": 38,
+          "clockMHz": 2385,
+          "powerLimitW": null,
+          "temperatureC": 63
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2505,
+          "powerLimitW": null,
+          "temperatureC": 61
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 98,
+          "memoryUtil": 100,
+          "clockMHz": 2400,
+          "powerLimitW": null,
+          "temperatureC": 60
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 96,
+          "memoryUtil": 100,
+          "clockMHz": 2445,
+          "powerLimitW": null,
+          "temperatureC": 60
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2490,
+          "powerLimitW": null,
+          "temperatureC": 60
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 98,
+          "memoryUtil": 100,
+          "clockMHz": 2430,
+          "powerLimitW": null,
+          "temperatureC": 60
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 96,
+          "memoryUtil": 100,
+          "clockMHz": 2490,
+          "powerLimitW": null,
+          "temperatureC": 61
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2460,
+          "powerLimitW": null,
+          "temperatureC": 61
+        },
+        {
+          "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+          "driver": "617.14",
+          "totalMiB": 8188,
+          "usedMiB": 6821,
+          "freeMiB": 1136,
+          "gpuUtil": 97,
+          "memoryUtil": 100,
+          "clockMHz": 2490,
+          "powerLimitW": null,
+          "temperatureC": 61
+        }
+      ],
+      "ram": {
+        "pid": 5824,
+        "workingSetMiB": 5435.46875,
+        "peakWorkingSetMiB": 5435.47265625,
+        "privateMiB": 7914.15625,
+        "source": "Windows process counters; includes shared/mapped resident pages; peak since process start"
+      },
+      "codingSuccess": null,
+      "qualityStatus": "not evaluated by throughput benchmark",
+      "startupMs": 4918.5916,
+      "visionCheck": {
+        "exitCode": 1,
+        "reportFile": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase3\\runs\\engine-vision-final\\8GB-VISION-CONTEXT\\vision.json",
+        "createdAt": "2026-10-29T11:23:21.235Z",
+        "context": 32768,
+        "model": "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Ornith-1.5-9B-Q4_K_M.gguf",
+        "app": "C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase3\\candidate-v3-app",
+        "ocr": false,
+        "checks": [
+          {
+            "kind": "short-vision",
+            "ok": true,
+            "checks": {
+              "finished": true,
+              "imagesSent": true,
+              "noPersistedPixels": true,
+              "imageRead": true,
+              "noTools": true,
+              "noEdits": true
+            },
+            "error": null,
+            "expectedPin": "8234",
+            "answer": "```json\n{\"pin\": \"8234\"}\n```",
+            "promptTokens": 3299,
+            "completionMs": 2354,
+            "requests": [
+              {
+                "images": [
+                  {
+                    "index": 1,
+                    "role": "user",
+                    "hash": "0bb369a78a56b3487f5d3c5929186fd4d894e4faf185594d5039dd57e711021e"
+                  }
+                ],
+                "toolChoice": "none",
+                "maxTokens": 1536
+              }
+            ]
+          },
+          {
+            "kind": "long-vision",
+            "ok": false,
+            "checks": {
+              "finished": true,
+              "imagesSent": true,
+              "noPersistedPixels": true,
+              "imageRead": false,
+              "noTools": true,
+              "noEdits": true,
+              "longContext": true,
+              "recall": false
+            },
+            "error": null,
+            "expectedPin": "5728",
+            "answer": "No tengo una respuesta para eso.",
+            "promptTokens": 23675,
+            "completionMs": 12760,
+            "requests": [
+              {
+                "images": [
+                  {
+                    "index": 1,
+                    "role": "user",
+                    "hash": "3f8e92126dadc1cf5d891f1cb05b67a52562360c9a4a1180c8794523c0fcf547"
+                  }
+                ],
+                "toolChoice": "none",
+                "maxTokens": 1536
+              }
+            ]
+          },
+          {
+            "kind": "vision-coding",
+            "ok": true,
+            "checks": {
+              "finished": true,
+              "imagesSent": true,
+              "noPersistedPixels": true,
+              "correctPatch": true,
+              "originalTestsPreserved": true,
+              "imagePinnedAcrossSteps": true,
+              "hostVerified": true
+            },
+            "error": null,
+            "expectedPin": "3475",
+            "answer": "Ya verifiqué: la imagen muestra **3475**, edité `src/pin.mjs` y el host ejecutó los tests con resultado **code 0** (sin errores). El cambio es exactamente el esperado.\n\nResumen:\n- **Inspeccionado:** `src/pin.mjs` y `test/pin.test.mjs`.\n- **Editado:** solo `getPin` en `src/pin.mjs`, de `\"0000\"` a `\"3475\"` (las cuatro cifras de la imagen).\n- **Tests:** pasaron (code 0), sin tocar los tests.\n\nTarea completada.",
+            "promptTokens": 3288,
+            "completionMs": 10854,
+            "requests": [
+              {
+                "images": [
+                  {
+                    "index": 1,
+                    "role": "user",
+                    "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+                  }
+                ],
+                "toolChoice": "auto",
+                "maxTokens": 1536
+              },
+              {
+                "images": [
+                  {
+                    "index": 1,
+                    "role": "user",
+                    "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+                  }
+                ],
+                "toolChoice": "auto",
+                "maxTokens": 1536
+              },
+              {
+                "images": [
+                  {
+                    "index": 1,
+                    "role": "user",
+                    "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+                  }
+                ],
+                "toolChoice": "auto",
+                "maxTokens": 1536
+              },
+              {
+                "images": [
+                  {
+                    "index": 1,
+                    "role": "user",
+                    "hash": "aa6f575e82b191bfc3af33c3527f08f0f7805c85fde62811ab69ccb602c67e08"
+                  }
+                ],
+                "toolChoice": "auto",
+                "maxTokens": 1536
+              }
+            ]
+          }
+        ],
+        "peakVramMiB": 6867,
+        "minFreeVramMiB": 1090,
+        "ok": false
+      }
+    },
+    {
+      "label": "8GB-VISION-CONTEXT",
+      "configuration": {
+        "label": "Coding y visión · 32k Q8",
+        "context": 32768,
+        "kv": "q8_0",
+        "batch": 512,
+        "ubatch": 256,
+        "flash": "on",
+        "spec": "none",
+        "marginMiB": 768,
+        "vision": true
+      },
+      "error": "Vision validation failed: C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-phase3\\runs\\engine-vision-final\\8GB-VISION-CONTEXT\\vision.json"
+    }
+  ],
+  "recommendations": {}
+}

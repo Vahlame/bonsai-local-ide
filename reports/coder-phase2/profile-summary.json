@@ -1,0 +1,291 @@
+{
+  "workload": "Original binary; pg512/tg128 x3 including process startup/warmup. Kernel counters: six matching launches from a separate x1 run.",
+  "totalGpuKernelNs": 9732988233.0,
+  "quantizedMatrixVectorPct": 84.72671639569216,
+  "topKernels": [
+    {
+      "name": "void mul_mat_vec_q<(ggml_type)12, (int)1, (bool)1, (bool)1, (bool)0, (bool)0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+      "gpuTimePct": 31.4,
+      "totalNs": 3054012033.0,
+      "instances": 12320
+    },
+    {
+      "name": "void mul_mat_vec_q<(ggml_type)14, (int)1, (bool)0, (bool)0, (bool)0, (bool)0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+      "gpuTimePct": 19.3,
+      "totalNs": 1876345186.0,
+      "instances": 6549
+    },
+    {
+      "name": "void mul_mat_vec_q<(ggml_type)12, (int)1, (bool)0, (bool)0, (bool)0, (bool)0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+      "gpuTimePct": 14.6,
+      "totalNs": 1417331513.0,
+      "instances": 49280
+    },
+    {
+      "name": "void mul_mat_vec_q<(ggml_type)14, (int)1, (bool)1, (bool)0, (bool)0, (bool)0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+      "gpuTimePct": 10.8,
+      "totalNs": 1055705746.0,
+      "instances": 6160
+    },
+    {
+      "name": "void mul_mat_vec_q<(ggml_type)12, (int)1, (bool)1, (bool)0, (bool)0, (bool)0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+      "gpuTimePct": 8.7,
+      "totalNs": 843046859.0,
+      "instances": 9240
+    },
+    {
+      "name": "void mul_mat_q<(ggml_type)12, (int)128, (bool)0>(const char *, const int *, const int *, const int *, float *, float *, const float *, uint3, int, int, int, int, int, uint3, uint3, int, int, int, uint3, uint3, int, int, int, uint3)",
+      "gpuTimePct": 5.8,
+      "totalNs": 567938273.0,
+      "instances": 1344
+    },
+    {
+      "name": "void gated_delta_net_cuda<(int)128, (bool)0, (bool)0, (bool)1, (bool)0>(const float *, const float *, const float *, const float *, const float *, const float *, const float *, const float *, float *, float *, long long, long long, long long, long long, long long, long long, long long, long long, long long, long long, long long, long long, uint3, uint3, float, long long, int)",
+      "gpuTimePct": 1.7,
+      "totalNs": 169911952.0,
+      "instances": 9432
+    },
+    {
+      "name": "void mul_mat_q<(ggml_type)14, (int)128, (bool)0>(const char *, const int *, const int *, const int *, float *, float *, const float *, uint3, int, int, int, int, int, uint3, uint3, int, int, int, uint3, uint3, int, int, int, uint3)",
+      "gpuTimePct": 1.5,
+      "totalNs": 144029200.0,
+      "instances": 256
+    }
+  ],
+  "apiCalls": [
+    {
+      "name": "cudaStreamSynchronize",
+      "count": 7891,
+      "totalNs": 9566649856.0
+    },
+    {
+      "name": "cudaMemcpyAsync",
+      "count": 3562,
+      "totalNs": 4043428315.0
+    },
+    {
+      "name": "cudaGraphLaunch",
+      "count": 381,
+      "totalNs": 775054796.0
+    },
+    {
+      "name": "cuMemAddressFree",
+      "count": 1,
+      "totalNs": 470250950.0
+    },
+    {
+      "name": "cudaLaunchKernel",
+      "count": 15040,
+      "totalNs": 191299028.0
+    },
+    {
+      "name": "cudaMemGetInfo",
+      "count": 5,
+      "totalNs": 113146578.0
+    },
+    {
+      "name": "cudaFree",
+      "count": 4,
+      "totalNs": 44829783.0
+    },
+    {
+      "name": "cuMemAddressReserve",
+      "count": 1,
+      "totalNs": 14588168.0
+    },
+    {
+      "name": "cudaMalloc",
+      "count": 4,
+      "totalNs": 10633226.0
+    },
+    {
+      "name": "cudaGraphInstantiate",
+      "count": 1,
+      "totalNs": 7349528.0
+    },
+    {
+      "name": "cudaFreeHost",
+      "count": 2,
+      "totalNs": 2529268.0
+    },
+    {
+      "name": "cudaMallocHost",
+      "count": 2,
+      "totalNs": 2462619.0
+    },
+    {
+      "name": "cudaGraphDestroy",
+      "count": 3,
+      "totalNs": 1174502.0
+    },
+    {
+      "name": "cudaMemsetAsync",
+      "count": 2,
+      "totalNs": 1052724.0
+    },
+    {
+      "name": "cudaGraphExecUpdate",
+      "count": 3,
+      "totalNs": 970921.0
+    },
+    {
+      "name": "cuMemUnmap",
+      "count": 1,
+      "totalNs": 785057.0
+    },
+    {
+      "name": "cudaGraphExecDestroy",
+      "count": 1,
+      "totalNs": 642114.0
+    },
+    {
+      "name": "cuMemCreate",
+      "count": 3,
+      "totalNs": 454212.0
+    },
+    {
+      "name": "cudaStreamBeginCapture",
+      "count": 3,
+      "totalNs": 338855.0
+    },
+    {
+      "name": "cudaStreamCreateWithFlags",
+      "count": 1,
+      "totalNs": 288841.0
+    },
+    {
+      "name": "cudaStreamDestroy",
+      "count": 1,
+      "totalNs": 187411.0
+    },
+    {
+      "name": "cudaStreamEndCapture",
+      "count": 3,
+      "totalNs": 143228.0
+    },
+    {
+      "name": "cuMemSetAccess",
+      "count": 3,
+      "totalNs": 86802.0
+    },
+    {
+      "name": "cuMemMap",
+      "count": 3,
+      "totalNs": 30106.0
+    },
+    {
+      "name": "cuModuleGetLoadingMode",
+      "count": 1,
+      "totalNs": 25578.0
+    },
+    {
+      "name": "cuCtxSynchronize",
+      "count": 1,
+      "totalNs": 12504.0
+    },
+    {
+      "name": "cudaGetDeviceProperties",
+      "count": 3,
+      "totalNs": 6973.0
+    },
+    {
+      "name": "cuMemGetAllocationGranularity",
+      "count": 1,
+      "totalNs": 5450.0
+    },
+    {
+      "name": "cuMemRelease",
+      "count": 3,
+      "totalNs": 1331.0
+    },
+    {
+      "name": "cuDeviceGetLuid",
+      "count": 1,
+      "totalNs": 1172.0
+    }
+  ],
+  "copies": [
+    {
+      "kind": 1,
+      "count": 3173,
+      "bytes": 5088119384,
+      "durationNs": 3718739643
+    },
+    {
+      "kind": 2,
+      "count": 389,
+      "bytes": 386385920,
+      "durationNs": 30439342
+    }
+  ],
+  "kernelCounters": [
+    {
+      "id": 0,
+      "kernel": "void mul_mat_vec_q<14, 1, 0, 0, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+      "grid": "(8192, 1, 1)",
+      "durationUs": 125.632,
+      "dramThroughputPct": 95.318995,
+      "smThroughputPct": 47.783703,
+      "activeWarpsPct": 94.190371,
+      "registersPerThread": 40.0
+    },
+    {
+      "id": 1,
+      "kernel": "void mul_mat_vec_q<12, 1, 0, 0, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+      "grid": "(32, 1, 1)",
+      "durationUs": 2.944,
+      "dramThroughputPct": 11.044034,
+      "smThroughputPct": 7.227375,
+      "activeWarpsPct": 10.380344,
+      "registersPerThread": 39.0
+    },
+    {
+      "id": 2,
+      "kernel": "void mul_mat_vec_q<12, 1, 0, 0, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+      "grid": "(32, 1, 1)",
+      "durationUs": 3.008,
+      "dramThroughputPct": 10.798611,
+      "smThroughputPct": 7.332402,
+      "activeWarpsPct": 10.313044,
+      "registersPerThread": 39.0
+    },
+    {
+      "id": 3,
+      "kernel": "void mul_mat_vec_q<12, 1, 0, 0, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+      "grid": "(4096, 1, 1)",
+      "durationUs": 41.056,
+      "dramThroughputPct": 91.703958,
+      "smThroughputPct": 79.517392,
+      "activeWarpsPct": 83.811952,
+      "registersPerThread": 39.0
+    },
+    {
+      "id": 4,
+      "kernel": "void mul_mat_vec_q<12, 1, 0, 0, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+      "grid": "(4096, 1, 1)",
+      "durationUs": 41.184,
+      "dramThroughputPct": 91.430412,
+      "smThroughputPct": 79.58021,
+      "activeWarpsPct": 83.801891,
+      "registersPerThread": 39.0
+    },
+    {
+      "id": 5,
+      "kernel": "void mul_mat_vec_q<12, 1, 1, 1, 0, 0>(const void *, const void *, const int *, ggml_cuda_mm_fusion_args_device, float *, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, uint3, unsigned int, unsigned int, unsigned int, unsigned int)",
+      "grid": "(12288, 1, 1)",
+      "durationUs": 257.056,
+      "dramThroughputPct": 95.800198,
+      "smThroughputPct": 29.431682,
+      "activeWarpsPct": 71.130156,
+      "registersPerThread": 56.0
+    }
+  ],
+  "interpretation": [
+    "Quantized matrix-vector kernels dominate this trace; the large fused Q4_K launch reports high DRAM activity relative to SM throughput, consistent with memory pressure.",
+    "API synchronization time includes waiting for GPU work; it is not evidence that removing synchronization is correct or beneficial.",
+    "Host-to-device totals include loading model weights. Do not attribute all transfers to token generation.",
+    "cudaGraphLaunch and graph-instantiation counts document existing graph reuse, not a new optimization.",
+    "Nsight replay and instrumentation alter latency. Use separate unprofiled engine and coding benchmarks for performance decisions.",
+    "Counters were captured without locking clocks or flushing caches; they describe sampled launches and do not establish an absolute optimization ceiling."
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "createdAt": "2026-10-29T06:03:27.3886228Z",
+  "variant": "Auto",
+  "commit": "adfffbe41b2cabcd51fff326ab045662265062bb",
+  "architecture": "89",
+  "jobs": 4,
+  "source": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\llama.cpp-adfffbe41",
+  "build": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-Auto-sm89",
+  "binary": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-Auto-sm89\\bin\\llama-server.exe",
+  "configuration": [
+    "-S",
+    "C:\\Users\\user\\.local\\opt\\bonsai-inference\\llama.cpp-adfffbe41",
+    "-B",
+    "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-Auto-sm89",
+    "-G",
+    "Ninja",
+    "-DCMAKE_BUILD_TYPE=Release",
+    "-DCMAKE_MAKE_PROGRAM=C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\Ninja\\ninja.exe",
+    "-DCUDAToolkit_ROOT=C:\\Users\\user\\.local\\opt\\bonsai-inference\\cuda-12.9.1",
+    "-DCMAKE_CUDA_ARCHITECTURES=89-real",
+    "-DGGML_CUDA=ON",
+    "-DGGML_NATIVE=ON",
+    "-DGGML_BACKEND_DL=OFF",
+    "-DGGML_CPU_ALL_VARIANTS=OFF",
+    "-DGGML_CUDA_NCCL=OFF",
+    "-DGGML_CUDA_FA_ALL_QUANTS=OFF",
+    "-DCMAKE_CUDA_FLAGS=-lineinfo",
+    "-DLLAMA_OPENSSL=OFF",
+    "-DLLAMA_BUILD_UI=OFF",
+    "-DLLAMA_BUILD_APP=OFF",
+    "-DLLAMA_BUILD_EXAMPLES=OFF",
+    "-DLLAMA_BUILD_TESTS=ON",
+    "-DLLAMA_BUILD_TOOLS=ON",
+    "-DLLAMA_BUILD_SERVER=ON",
+    "-DLLAMA_BUILD_NUMBER=10743",
+    "-DGGML_CUDA_FORCE_MMQ=OFF",
+    "-DGGML_CUDA_FORCE_CUBLAS=OFF",
+    "-DGGML_CUDA_GRAPHS=ON",
+    "-DGGML_LTO=OFF"
+  ],
+  "files": [
+    {
+      "name": "cublas64_12.dll",
+      "bytes": 102518272,
+      "sha256": "90052a83efd1b57a8e3616a6590b335855f81b814a4f16eecb7b5bf6d1b1d4eb"
+    },
+    {
+      "name": "cublasLt64_12.dll",
+      "bytes": 668669952,
+      "sha256": "c3a05ea244c937314afec09f87b91f814c7e27977681f6c67eb51bb06ced3a4a"
+    },
+    {
+      "name": "cudart64_12.dll",
+      "bytes": 583680,
+      "sha256": "760c38928bbe5759f7b31ed6692599eb7ec83cedd5702e84c2b72028a89837e1"
+    },
+    {
+      "name": "ggml-base.dll",
+      "bytes": 674304,
+      "sha256": "4acaef4a6ee14d5af04dadedc53bd896b9b6f88cefcc07ae9d1c6262038d51fb"
+    },
+    {
+      "name": "ggml-cpu.dll",
+      "bytes": 1215488,
+      "sha256": "00420185b643382b3cd8dc3d512ceeac3207eac0da7bb5fc7c297d1913d45512"
+    },
+    {
+      "name": "ggml-cuda.dll",
+      "bytes": 60008448,
+      "sha256": "c44ffa003ed2ec22c58c2bb5eec91620588534d77d152aa835786669334ed925"
+    },
+    {
+      "name": "ggml.dll",
+      "bytes": 67072,
+      "sha256": "f8e7d79a4ee1d9337c2e6e40c4b0fc6ed50f5e2b9959b6fcbbdc2723612b470e"
+    },
+    {
+      "name": "llama-bench-impl.dll",
+      "bytes": 886272,
+      "sha256": "22385dc103db8f822d92e0ec60ed4e4cc729fbbd7d4734de114ad4766796a683"
+    },
+    {
+      "name": "llama-bench.exe",
+      "bytes": 10752,
+      "sha256": "488de87373ffdd6385bb0e9c17c259c4818b2b20d50f41fd941fc87253154f00"
+    },
+    {
+      "name": "llama-common.dll",
+      "bytes": 8321536,
+      "sha256": "2411df6c93f8cc203e04bda352b8daae2e681a43a0d8e184ac5332f865ded795"
+    },
+    {
+      "name": "llama-server-impl.dll",
+      "bytes": 13078528,
+      "sha256": "fe05a017f912be50c4565612f1fbf538430929e15ea37059547188c0580d2726"
+    },
+    {
+      "name": "llama-server.exe",
+      "bytes": 10752,
+      "sha256": "9ea635854dc90c30b164f59343e87ad3d7f8e3f7ca73d14545987c2cdd29e362"
+    },
+    {
+      "name": "llama.dll",
+      "bytes": 2580992,
+      "sha256": "3a17ffc76ba607c6dd87861f79705624d1040a873d0b8e00cd2d48e09a4be529"
+    },
+    {
+      "name": "mtmd.dll",
+      "bytes": 2379776,
+      "sha256": "46dd1aeefb60f58d00d0c10636b6ee5e2ee9adfc0ba92cef7e7e76d93fb11973"
+    },
+    {
+      "name": "test-backend-ops.exe",
+      "bytes": 1008128,
+      "sha256": "426c9132c15e67119b8d86472ffb239399c0a654067b0c78e32f962cb7431bad"
+    }
+  ]
+}
