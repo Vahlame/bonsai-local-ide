@@ -17,6 +17,7 @@
     "benchmark:engine": "node scripts/benchmark-local-engine.mjs",
     "benchmark:rtx4060": "powershell -ExecutionPolicy Bypass -File scripts/benchmark-rtx4060-matrix.ps1",
     "benchmark:quality": "node scripts/bench-model-quality.mjs",
+    "benchmark:sampling": "node scripts/bench-model-quality.mjs --sampling --repeat 2",
     "probe:context": "powershell -ExecutionPolicy Bypass -File scripts/probe-rtx4060-context.ps1",
     "build:rtx4060": "powershell -ExecutionPolicy Bypass -File scripts/build-rtx4060-optimized.ps1",
     "test": "node scripts/run-tests.mjs",
