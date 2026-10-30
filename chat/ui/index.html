@@ -648,7 +648,7 @@
         <div class="msg" id="empty">Escribe el cambio; un clic abre el archivo y el círculo o Adjuntar lo incluye en el mensaje.</div>
       </div>
       <div id="suggest"></div>
-      <div id="error"></div>
+      <div id="error" role="alert" aria-live="assertive"></div>
       <form id="composer">
         <div id="box">
           <div id="attach-menu" hidden>
@@ -715,7 +715,10 @@
   <script src="/ui/chat-core.js"></script>
   <script id="stats-boot">
     const statsLine = document.querySelector("#stats-line");
+    let statsEnCurso = false;
     async function loadStats() {
+      if (statsEnCurso || document.hidden) return;
+      statsEnCurso = true;
       try {
         const res = await fetch("/api/stats");
         if (!res.ok || !statsLine) return;
@@ -727,9 +730,11 @@
         const archivos = data.saved?.count ?? 0;
         statsLine.textContent = `${data.turns ?? 0} turnos · ${archivos} archivos · memoria ${data.memory ?? 0} tok · sesión ${tiempo}`;
       } catch { /* el siguiente intervalo reintenta */ }
+      finally { statsEnCurso = false; }
     }
     loadStats();
     setInterval(loadStats, 5000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) loadStats(); });
   </script>
   <script src="/ui/ide.js"></script>
   <!-- Editor con pestanas, paleta de comandos, busqueda, git y ajustes -->

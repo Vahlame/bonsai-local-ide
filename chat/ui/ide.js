@@ -173,13 +173,17 @@
       if (event.key === "Escape" && !pop.hidden) pop.hidden = true;
     });
 
+    let tickEnCurso = false;
     async function tick() {
-      if (document.hidden) return;
+      if (tickEnCurso || document.hidden) return;
+      tickEnCurso = true;
       try {
         const res = await fetch("/api/gpu", { cache: "no-store" });
         if (res.ok) paint(await res.json());
       } catch {
         /* el servidor de la interfaz no responde: se reintenta */
+      } finally {
+        tickEnCurso = false;
       }
     }
     tick();

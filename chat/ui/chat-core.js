@@ -1222,7 +1222,13 @@
         pumping = false;
         paintQueue();
         if (queue.length) void pump();
-        else input.focus();
+        else {
+          // No robar el cursor si mientras terminaba el turno el usuario se puso a
+          // escribir en el editor, el terminal o cualquier otro panel.
+          const activo = document.activeElement;
+          const compositor = input.closest("form");
+          if (!activo || activo === document.body || compositor?.contains(activo)) input.focus();
+        }
       }
     }
 

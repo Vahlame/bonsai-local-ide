@@ -112,8 +112,6 @@
     return new Promise((resolve) => {
       const fondo = el("div", "dialogo-fondo");
       const caja = el("div", "dialogo");
-      caja.setAttribute("role", "dialog");
-      caja.setAttribute("aria-modal", "true");
       const h = el("h3", "", opciones.titulo);
       caja.append(h);
       if (opciones.texto) caja.append(el("p", "", opciones.texto));
@@ -131,6 +129,7 @@
       caja.append(botones);
       fondo.append(caja);
       document.body.append(fondo);
+      accesibilizarDialogo(fondo, caja, h);
       input.focus();
       input.select();
 
@@ -168,6 +167,69 @@
    */
   let ignorarClicDeApertura = false;
   let dialogoSeq = 0;
+  /** Diálogos abiertos, del más antiguo al más reciente: solo el último atrapa Tab. */
+  const pilaDialogos = [];
+
+  /**
+   * Accesibilidad común de los diálogos: nombre accesible, modal real, foco atrapado
+   * mientras están abiertos y devuelto al cerrarse. No mueve el foco de un panel que
+   * el usuario esté usando al recargar contenido en segundo plano.
+   * @param {HTMLElement} fondo
+   * @param {HTMLElement} caja
+   * @param {HTMLElement} titulo
+   * @param {{onEscape?: () => void}} [opciones]
+   */
+  function accesibilizarDialogo(fondo, caja, titulo, { onEscape } = {}) {
+    const tituloId = `dialogo-titulo-${++dialogoSeq}`;
+    titulo.id = tituloId;
+    caja.setAttribute("role", "dialog");
+    caja.setAttribute("aria-modal", "true");
+    caja.setAttribute("aria-labelledby", tituloId);
+    const previo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const entrada = { fondo };
+    pilaDialogos.push(entrada);
+    const enfocables = () =>
+      [...caja.querySelectorAll("button,[href],input,select,textarea,[tabindex]:not([tabindex='-1'])")]
+        .filter((n) => !n.disabled && !n.hidden && n.getClientRects().length > 0);
+    /** @param {KeyboardEvent} e */
+    const tecla = (e) => {
+      if (pilaDialogos[pilaDialogos.length - 1] !== entrada) return;
+      if (e.key === "Escape" && onEscape) {
+        e.preventDefault();
+        e.stopPropagation();
+        onEscape();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const lista = enfocables();
+      if (!lista.length) {
+        e.preventDefault();
+        return;
+      }
+      const primero = lista[0];
+      const ultimo = lista[lista.length - 1];
+      const activo = document.activeElement;
+      if (e.shiftKey && (activo === primero || !caja.contains(activo))) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && (activo === ultimo || !caja.contains(activo))) {
+        e.preventDefault();
+        primero.focus();
+      }
+    };
+    document.addEventListener("keydown", tecla, true);
+    const observador = new MutationObserver(() => {
+      if (fondo.isConnected) return;
+      observador.disconnect();
+      document.removeEventListener("keydown", tecla, true);
+      const indice = pilaDialogos.indexOf(entrada);
+      if (indice >= 0) pilaDialogos.splice(indice, 1);
+      if (previo?.isConnected) previo.focus();
+    });
+    observador.observe(document.body, { childList: true });
+    const inicial = enfocables()[0];
+    if (inicial) inicial.focus();
+  }
 
   /**
    * Diálogo de sí/no (sin campo de texto), para confirmar borrados.
@@ -182,12 +244,7 @@
     return new Promise((resolve) => {
       const fondo = el("div", "dialogo-fondo");
       const caja = el("div", "dialogo");
-      caja.setAttribute("role", "dialog");
-      caja.setAttribute("aria-modal", "true");
-      const tituloId = `dialogo-titulo-${++dialogoSeq}`;
       const h = el("h3", "", titulo);
-      h.id = tituloId;
-      caja.setAttribute("aria-labelledby", tituloId);
       caja.append(h, el("p", "", texto));
       const botones = el("div", "d-botones");
       const no = el("button", "ghost", "Cancelar");
@@ -198,6 +255,7 @@
       caja.append(botones);
       fondo.append(caja);
       document.body.append(fondo);
+      accesibilizarDialogo(fondo, caja, h);
       const cerrar = (valor) => {
         fondo.remove();
         document.removeEventListener("keydown", tecla, true);
@@ -450,8 +508,8 @@
     if (typeof paintTree === "function") paintTree();
   }
 
-  /** @param {number} i */
-  function mostrarPestana(i) {
+  /** @param {number} i @param {boolean} [enfocar] */
+  function mostrarPestana(i, enfocar = true) {
     if (i < 0 || i >= pestanas.length) return;
     clearTimeout(temporizadorResaltado);
     // Guarda dónde estaba el cursor en la pestaña que se deja.
@@ -468,7 +526,7 @@
     area.classList.toggle("plain", !esEditable(p.rel));
     pintarResaltado(p);
     pintarNota(p);
-    area.focus({ preventScroll: true });
+    if (enfocar) area.focus({ preventScroll: true });
     area.setSelectionRange(Math.min(p.cursor, p.texto.length), Math.min(p.cursor, p.texto.length));
     pintarPestanas();
     if (typeof paintAttached === "function") paintAttached();
@@ -731,7 +789,7 @@
             p.original = crudo;
             p.eol = saltos.eol;
             p.conflicto = null;
-            if (pestanas[activa] === p) mostrarPestana(activa);
+            if (pestanas[activa] === p) mostrarPestana(activa, false);
           },
         });
         return;
@@ -740,7 +798,7 @@
       p.guardado = texto;
       p.original = crudo;
       p.eol = saltos.eol;
-      if (pestanas[activa] === p) mostrarPestana(activa);
+      if (pestanas[activa] === p) mostrarPestana(activa, false);
       avisar(`«${p.rel}» se recargó: el agente lo reescribió.`, "", 2600);
     } catch {
       /* el servidor no responde: se reintenta en el siguiente ciclo */
@@ -972,13 +1030,19 @@
   /** @type {{repo: boolean, rama?: string, archivos?: {estado: string, rel: string}[], ultimo?: {hash: string, asunto: string, cuando: string}}} */
   let estadoGit = { repo: false };
 
+  let gitEnCurso = false;
   async function refrescarGit() {
+    if (gitEnCurso || document.hidden) return;
+    gitEnCurso = true;
     try {
       estadoGit = await api("/api/git");
+      pintarChipGit();
     } catch {
       estadoGit = { repo: false };
+      pintarChipGit();
+    } finally {
+      gitEnCurso = false;
     }
-    pintarChipGit();
   }
 
   function pintarChipGit() {
@@ -1054,7 +1118,8 @@
       const fondo = el("div", "dialogo-fondo");
       const caja = el("div", "dialogo");
       caja.style.width = "min(680px, 94vw)";
-      caja.append(el("h3", "", "Elegir archivos para el commit"));
+      const h = el("h3", "", "Elegir archivos para el commit");
+      caja.append(h);
       caja.append(el("p", "", "Marca solo los archivos que quieres incluir. Revisa especialmente los que contienen datos privados."));
       const lista = el("div");
       lista.style.cssText = "max-height:50vh;overflow:auto;font:12px/1.7 var(--mono);margin-bottom:16px";
@@ -1086,6 +1151,7 @@
       document.addEventListener("keydown", tecla, true);
       botones.append(cancelar, elegir);
       caja.append(botones); fondo.append(caja); document.body.append(fondo);
+      accesibilizarDialogo(fondo, caja, h);
       cancelar.focus();
     });
   }
@@ -1100,7 +1166,8 @@
     const caja = el("div", "dialogo");
     caja.classList.add("settings-dialog");
     caja.style.width = "min(620px, 94vw)";
-    caja.append(el("h3", "", "Cambios pendientes"));
+    const h = el("h3", "", "Cambios pendientes");
+    caja.append(h);
     const lista = el("div");
     lista.style.cssText = "max-height:50vh;overflow:auto;font:12px/1.7 var(--mono);margin-bottom:16px";
     for (const a of estadoGit.archivos) {
@@ -1119,6 +1186,7 @@
     caja.append(botones);
     fondo.append(caja);
     document.body.append(fondo);
+    accesibilizarDialogo(fondo, caja, h, { onEscape: () => fondo.remove() });
     cerrar.focus();
   }
 
@@ -1284,14 +1352,15 @@
     const fondo = el("div", "dialogo-fondo");
     const caja = el("div", "dialogo");
     caja.style.width = "min(680px, 94vw)";
-    caja.append(el("h3", "", "Reglas del proyecto"));
+    const h = el("h3", "", "Convenios del proyecto");
+    caja.append(h);
     caja.append(
       el(
         "p",
         "",
         datos.fuentes.length
-          ? `Se están aplicando ${datos.fuentes.length} archivo(s): ${datos.fuentes.join(", ")}. Se meten en el mensaje de sistema del modelo.`
-          : "No hay ninguna. Crea BONSAI.md, AGENTS.md o .cursor/rules/*.mdc en la carpeta de trabajo y se aplicarán solas.",
+          ? `Se están aplicando ${datos.fuentes.length} archivo(s): ${datos.fuentes.join(", ")}. Son datos de convención del proyecto (no instrucciones nuevas) que se inyectan como referencia.`
+          : "No hay ninguna. Crea BONSAI.md, AGENTS.md o .cursor/rules/*.mdc en la carpeta de trabajo y se usarán como referencia.",
       ),
     );
     if (datos.texto) {
@@ -1308,6 +1377,7 @@
     caja.append(botones);
     fondo.append(caja);
     document.body.append(fondo);
+    accesibilizarDialogo(fondo, caja, h, { onEscape: () => fondo.remove() });
     cerrar.focus();
   }
 
@@ -1325,7 +1395,7 @@
         chip.innerHTML = "";
         chip.append(el("i", "dot"));
         chip.append(el("span", "", d.aplicado === false ? `Reglas: ${d.fuentes.length} (apagadas)` : `Reglas: ${d.fuentes.length}`));
-        chip.title = `${d.fuentes.join("\n")}\n\n${d.aplicado === false ? "No se están aplicando: el ajuste está desactivado." : `Se meten en el mensaje de sistema (tope ${d.topeTokens} tokens).`}`;
+        chip.title = `${d.fuentes.join("\n")}\n\n${d.aplicado === false ? "No se están aplicando: el ajuste está desactivado." : `Son datos de convención inyectados como referencia (tope ${d.topeTokens} tokens).`}`;
       })
       .catch(() => {
         chip.hidden = true;
@@ -1473,7 +1543,8 @@
     const fondo = el("div", "dialogo-fondo");
     const caja = el("div", "dialogo");
     caja.style.cssText = "width:min(760px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;box-sizing:border-box";
-    caja.append(el("h3", "", "Memoria global entre chats"));
+    const h = el("h3", "", "Memoria global entre chats");
+    caja.append(h);
     const estado = el("p");
     estado.style.cssText = "color:var(--muted);font-size:12px;line-height:1.5";
     caja.append(estado);
@@ -1634,13 +1705,15 @@
       clearTimeout(temporizador);
       temporizador = window.setTimeout(cargar, 250);
     });
-    cerrar.addEventListener("click", () => {
+    const cerrarDialogo = () => {
       clearTimeout(temporizador);
       fondo.remove();
-    });
-    fondo.addEventListener("click", (event) => { if (event.target === fondo) fondo.remove(); });
+    };
+    cerrar.addEventListener("click", cerrarDialogo);
+    fondo.addEventListener("click", (event) => { if (event.target === fondo) cerrarDialogo(); });
     fondo.append(caja);
     document.body.append(fondo);
+    accesibilizarDialogo(fondo, caja, h, { onEscape: cerrarDialogo });
     cerrar.focus();
     await cargar();
   }
@@ -1653,7 +1726,8 @@
     const fondo = el("div", "dialogo-fondo");
     const caja = el("div", "dialogo");
     caja.style.cssText="width:min(640px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;box-sizing:border-box";
-    caja.append(el("h3", "", "Ajustes"));
+    const h = el("h3", "", "Ajustes");
+    caja.append(h);
     caja.append(el("p", "", "Tu espacio y tu modelo. Los cambios se guardan automáticamente."));
 
     /** @param {string} etiqueta @param {HTMLElement} control */
@@ -1901,6 +1975,7 @@
     caja.append(botones);
     fondo.append(caja);
     document.body.append(fondo);
+    accesibilizarDialogo(fondo, caja, h, { onEscape: () => fondo.remove() });
     cerrar.focus();
   }
 
@@ -1915,7 +1990,8 @@
       const fondo = el("div", "dialogo-fondo");
       const caja = el("div", "dialogo");
       caja.style.width = "min(780px, 95vw)";
-      caja.append(el("h3", "", r.borra ? `Borrado propuesto en ${r.rel}` : `Cambio propuesto en ${r.rel}`));
+      const h = el("h3", "", r.borra ? `Borrado propuesto en ${r.rel}` : `Cambio propuesto en ${r.rel}`);
+      caja.append(h);
       caja.append(el("p", "", `Se aplicará el rango real de líneas ${r.start}-${r.end}. Nada se guarda hasta que aceptes.`));
       if (r.recortada) {
         const aviso = el(
@@ -1967,6 +2043,7 @@
       caja.append(botones);
       fondo.append(caja);
       document.body.append(fondo);
+      accesibilizarDialogo(fondo, caja, h);
       const cerrar = (valor) => {
         fondo.remove();
         document.removeEventListener("keydown", tecla, true);
@@ -2176,9 +2253,11 @@
   let servidorEncendido = false;
   let cambiandoServidor = false;
 
+  let servidorEnCurso = false;
   async function refrescarServidor() {
     const boton = $("#servidor-toggle");
-    if (!boton || cambiandoServidor) return;
+    if (!boton || cambiandoServidor || servidorEnCurso || document.hidden) return;
+    servidorEnCurso = true;
     try {
       const estado = await api("/api/servidor");
       if (cambiandoServidor) return;
@@ -2187,6 +2266,7 @@
       boton.title = servidorEncendido ? "Apagar el servidor local de IA" : "Encender el servidor local de IA";
       boton.disabled = false;
     } catch { boton.textContent = "IA sin conexión"; boton.disabled = true; }
+    finally { servidorEnCurso = false; }
   }
 
   async function controlarServidor(accion) {
@@ -2216,17 +2296,23 @@
   void refrescarServidor();
   setInterval(() => void refrescarServidor(), 15000);
 
+  let modelosEnCurso = false;
   async function refrescarModelos() {
+    if (modelosEnCurso || document.hidden) return;
+    modelosEnCurso = true;
     const antes = estadoModelos && estadoModelos.actual;
     try {
       estadoModelos = await api("/api/modelos");
+      pintarChipModelo();
+      // Si el modelo cambió por fuera de la app, la ventana (y con ella el presupuesto de
+      // contexto) también: se refresca el chip en vez de enseñar el valor anterior.
+      if (antes !== estadoModelos.actual) void actualizarChipPresupuesto();
     } catch {
       estadoModelos = { actual: "", modelos: [] };
+      pintarChipModelo();
+    } finally {
+      modelosEnCurso = false;
     }
-    pintarChipModelo();
-    // Si el modelo cambió por fuera de la app, la ventana (y con ella el presupuesto de
-    // contexto) también: se refresca el chip en vez de enseñar el valor anterior.
-    if (antes !== estadoModelos.actual) void actualizarChipPresupuesto();
   }
 
   function pintarChipModelo() {
@@ -2530,6 +2616,14 @@
     // El modelo también puede cambiar por fuera de la app (start-server.ps1 -Modelo, otra
     // pestaña): el chip se refresca solo para no enseñar uno que ya no está cargado.
     setInterval(() => void refrescarModelos(), 15000);
+    // Los intervalos no trabajan con la pestaña oculta; al volver se refresca de inmediato.
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) return;
+      void refrescarServidor();
+      void refrescarModelos();
+      refrescarGit();
+      void comprobarCambiosExternos();
+    });
     pintarVacio();
     pintarPestanas();
     // Enlace directo: http://127.0.0.1:8787/#chat/ui/app.js abre ese archivo.
