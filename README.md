@@ -5,17 +5,17 @@ Chat con agente, editor con pestañas, diffs, git, terminal integrado, navegador
 controlado y visión — todo en tu GPU, sin nube.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-1.6.0-cde86e">
+  <img alt="version" src="https://img.shields.io/badge/version-1.6.1-cde86e">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v1.6.0** — **110.592 tokens con visión y KV q8_0** en la RTX 4060 (el proyector
-> de visión pasa a RAM con `--no-mmproj-offload`), reparto de contexto automático
-> estilo frontera (historial = ventana − pensamiento − respuesta) y compactación
-> estructurada. Notas: [RELEASE-1.6.0](docs/RELEASE-1.6.0.md).
+> **v1.6.1** — **110.592 tokens con visión y KV q8_0** en la RTX 4060 (proyector de
+> visión en RAM), reparto de contexto automático estilo frontera, compactación
+> estructurada y un IDE que se abre en **ventana propia sin GPU** (0 MiB de VRAM).
+> Notas: [RELEASE-1.6.1](docs/RELEASE-1.6.1.md).
 
 ---
 
@@ -76,6 +76,12 @@ flowchart LR
 # 2) En la barra superior del IDE elige el preset y pulsa "Iniciar"
 #    (o pulsa "Terminal" para copiar el comando exacto de PowerShell)
 ```
+
+El IDE se abre en una **ventana de aplicación** (sin barra de direcciones) y **sin
+GPU**: `scripts/open-ide.ps1` usa Edge/Chrome con `--disable-gpu` y un perfil aislado,
+así que la NVIDIA queda entera para el modelo. Comprobado con la ventana abierta:
+**0 MiB de VRAM**. La barra de estado muestra «UI · CPU». ¿Prefieres una pestaña
+normal? `.\scripts\open-ide.ps1 -Tab`.
 
 ```mermaid
 flowchart TD
@@ -348,9 +354,9 @@ npm run test:gpu-exclusiva  # calidad KV; exige GPU libre
 node scripts/run-tests.mjs --listar   # ver suites por grupo
 ```
 
-Verificación de la **1.6.0**: `npm test` → **40/40**, preset por defecto
-`8GB-VISION-MAX-Q8-100K` arrancando a 110.592 tokens (q8_0 + visión en CPU + 4.096 de
-pensamiento), retrieval real a 87.433 tokens y 15,4 s por imagen.
+Verificación de la **1.6.1**: `npm test` → **40/40**, `npm run test:navegador` → **5/5**,
+IDE en ventana propia con **0 MiB de VRAM** y capturas revisadas a 1920×1080,
+1600×900, 1366×768 y 1024×768.
 
 Herramientas reproducibles añadidas:
 
@@ -391,6 +397,7 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 
 | Documento | Contenido |
 |---|---|
+| [RELEASE-1.6.1](docs/RELEASE-1.6.1.md) | IDE sin GPU, ventana propia y pulido de interfaz |
 | [RELEASE-1.6.0](docs/RELEASE-1.6.0.md) | 110k con visión, reparto de contexto automático y compactación |
 | [RELEASE-1.5.1](docs/RELEASE-1.5.1.md) | KV preset fix y benchmark de calidad |
 | [RTX4060_OPTIMIZATION_GUIDE](docs/RTX4060_OPTIMIZATION_GUIDE.md) | Ciclo de vida, presets, tuning, troubleshooting |

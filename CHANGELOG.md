@@ -4,6 +4,54 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [1.6.1] - 2026-10-30
+
+### Añadido
+
+- **Ventana de aplicación sin GPU** (`scripts/open-ide.ps1`): Edge/Chrome en modo
+  `--app` con rasterizado por software y perfil aislado. Verificado: 0 MiB de VRAM
+  con el IDE abierto. `-Tab` para pestaña normal con los mismos flags.
+- Cabecera del IDE en una sola línea a 1920×1080, selector de preset compacto y
+  «Iniciar» como acción principal.
+- Burbuja de usuario a la derecha, guía vertical en las respuestas y animación de
+  entrada solo para mensajes nuevos; `prefers-reduced-motion` respetado.
+- Barra de estado con ajuste en varias líneas y medidas de hardware que se ocultan
+  en pantallas estrechas.
+
+### Cambiado
+
+- Tema Arena con acento verde oliva (identidad Bonsai).
+- La UI deja de pintar la pestaña en una ventana de navegador con cromo cuando se
+  lanza desde el acceso directo.
+
+### Corregido
+
+- Sin `backdrop-filter` ni blur: el IDE no pide aceleración por GPU en ningún punto.
+- El texto del resumen de estado ya no se corta en el borde derecho.
+- **Toasts duplicados**: `app.js` creaba un segundo contenedor `.avisos` y los avisos
+  se repartían entre dos cajas; ahora todos usan `#avisos`. Esto además arreglaba la
+  prueba de humo de Ctrl+K, que leía la caja vacía.
+
+## [1.6.0] - 2026-10-30
+
+### Añadido
+
+- **110.592 tokens con visión y KV q8_0** en la RTX 4060: el proyector de visión
+  (879 MiB) pasa a RAM con `--no-mmproj-offload`. Retrieval real a 87.433 tokens.
+- Presets `8GB-VISION-MAX-Q8-100K` (por defecto), `8GB-VISION-MAX-Q4` y
+  `8GB-VISION-MAX-F16`.
+- Reparto de contexto automático (historial = ventana − pensamiento − respuesta) y
+  compactación estructurada con tope del ~6 % de la ventana.
+- Benchmark de proyecto complejo con `node --test` real y gráficas SVG nuevas
+  (`context-kv`, `context-split`, `vision-projector`, `bench-sampling`,
+  `bench-project`).
+
+### Corregido
+
+- El pensamiento ya no se come la respuesta: va dentro de la reserva de salida.
+- `--prompt-cap 0` deja de limitar el historial a 8.192 tokens.
+- Pruebas ajustadas al muestreo y techos medidos (40/40 en verde).
+
 ## [1.5.0] - 2026-10-30
 
 ### Cambiado

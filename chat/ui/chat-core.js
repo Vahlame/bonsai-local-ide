@@ -350,6 +350,9 @@
       if (empty) empty.remove();
       const node = document.createElement("div");
       node.className = `msg ${role}`;
+      // Solo los mensajes nuevos entran animados; al restaurar una sesión no hay ráfaga.
+      node.classList.add("nueva");
+      node.addEventListener("animationend", () => node.classList.remove("nueva"), { once: true });
       if (role === "assistant") {
         const body = document.createElement("div");
         body.className = "body";

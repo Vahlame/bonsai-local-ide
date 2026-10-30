@@ -72,9 +72,9 @@ function perfilDryRun({ libre, vision = false, puerto, contexto, kv, margen }) {
   };
 }
 
-// Los tres scripts que toca esta tarea deben ser PowerShell válido (no se ejecuta nada real).
+// Los scripts que toca esta tarea deben ser PowerShell válido (no se ejecuta nada real).
 {
-  const scripts = ["start-gpu-model.ps1", "stop-managed-server.ps1", "start-ui.ps1"].map((n) => path.join(root, "scripts", n));
+  const scripts = ["start-gpu-model.ps1", "stop-managed-server.ps1", "start-ui.ps1", "open-ide.ps1"].map((n) => path.join(root, "scripts", n));
   const codigo = [
     "$ErrorActionPreference = 'Stop'",
     "foreach ($ruta in @(" + scripts.map((s) => `'${s}'`).join(", ") + ")) {",
@@ -86,7 +86,15 @@ function perfilDryRun({ libre, vision = false, puerto, contexto, kv, margen }) {
   ].join("\n");
   const r = spawnSync("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", codigo], { encoding: "utf8", windowsHide: true, timeout: 60000 });
   assert.equal(r.status, 0, `script de PowerShell inválido: ${r.stdout || ""}${r.stderr || ""}`);
-  console.log("OK: start-gpu-model.ps1, stop-managed-server.ps1 y start-ui.ps1 son PowerShell válido");
+
+  // La ventana del IDE NUNCA debe usar la GPU: si falta --disable-gpu, el navegador
+  // puede acelerar por hardware y competir por VRAM con llama-server.
+  const abridor = fs.readFileSync(path.join(root, "scripts", "open-ide.ps1"), "utf8");
+  assert.match(abridor, /--disable-gpu"/, "open-ide.ps1 debe pasar --disable-gpu");
+  assert.match(abridor, /--disable-gpu-rasterization/, "open-ide.ps1 debe desactivar el rasterizado por GPU");
+  assert.match(abridor, /--app=/, "open-ide.ps1 debe abrir una ventana de aplicacion");
+  assert.match(abridor, /uicpu=1/, "open-ide.ps1 debe avisar a la UI de que corre en CPU");
+  console.log("OK: start-gpu-model.ps1, stop-managed-server.ps1, start-ui.ps1 y open-ide.ps1 son válidos y el IDE va sin GPU");
 }
 
 assert.equal(MODELO.catalogo.ornith9b.vision.contexto, 71680, "el techo de visión medido con q8_0 coincide con el perfil final validado");

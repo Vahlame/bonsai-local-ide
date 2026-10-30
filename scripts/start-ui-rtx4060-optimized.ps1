@@ -46,7 +46,7 @@ try {
 } catch { $yaCorriendo = $false }
 if ($yaCorriendo) {
     Write-Host "La interfaz ya esta en marcha: http://127.0.0.1:$UiPort" -ForegroundColor Green
-    if (-not $NoBrowser) { Start-Process "http://127.0.0.1:$UiPort" }
+    if (-not $NoBrowser) { & (Join-Path $PSScriptRoot "open-ide.ps1") -Port $UiPort }
     exit 0
 }
 

@@ -561,7 +561,7 @@
       white-space: nowrap;
       font: 11px/1 var(--mono);
     }
-    @media (max-width: 980px) {
+    @media (max-width: 1180px) {
       .work { flex-direction: column; }
       aside, #chat { width: auto; max-height: 34vh; flex: none; }
       .gutter { display: none; }
@@ -627,22 +627,22 @@
         <span>Terminal</span>
       </button>
       <select class="server-preset" id="server-preset" title="Preset de motor" aria-label="Preset de motor optimizado">
-        <option value="8GB-VISION-MAX-Q8-100K">🏆 Default: 110k q8_0 + Vision (CPU proyector) + Thinking</option>
-        <option value="8GB-VISION-MAX-Q8">⚡ 71k q8_0 + Vision en GPU (visión rápida)</option>
-        <option value="8GB-VISION-MAX-Q4">🗺️ Max ctx: 110k q4_0 + Vision + Thinking</option>
-        <option value="8GB-VISION-MAX-F16">🎯 Max precision: 43k f16 + Vision + Thinking</option>
-        <option value="8GB-VISION-DEFAULT-F16">✅ Safe: 16k f16 + Vision</option>
-        <option value="8GB-VISION-ULTRA-F16">🔥 Ultra F16: 32k f16 KV + Vision</option>
-        <option value="8GB-VISION-ULTRA">⚡ Ultra: 36k q4_0 + Vision</option>
-        <option value="8GB-VISION-HIGH">🚀 High: 32k q8_0 + Vision</option>
-        <option value="8GB-VISION-BALANCED">⚖️ Balanced: 28k q4_0 + Vision</option>
-        <option value="8GB-VISION-SAFE">🛡️ Safe: 24k q4_0 + Vision</option>
-        <option value="8GB-VISION-QUALITY">🎨 Vision Quality: 32k f16 + Vision</option>
-        <option value="8GB-CODE-MAX">💻 Code Max: 48k q4_0</option>
-        <option value="8GB-CODE-HIGH">💻 Code High: 40k q4_0</option>
-        <option value="8GB-CODE-BALANCED">💻 Code Balanced: 32k q8_0</option>
-        <option value="8GB-CODE-FAST">⚡ Code Fast: 16k f16</option>
-        <option value="8GB-RESEARCH">🔬 Research: 64k q4_0</option>
+        <option value="8GB-VISION-MAX-Q8-100K">🏆 110k · q8_0 · visión CPU</option>
+        <option value="8GB-VISION-MAX-Q8">⚡ 71k · q8_0 · visión GPU</option>
+        <option value="8GB-VISION-MAX-Q4">🗺️ 110k · q4_0 · visión GPU</option>
+        <option value="8GB-VISION-MAX-F16">🎯 43k · f16 · visión GPU</option>
+        <option value="8GB-VISION-DEFAULT-F16">✅ 16k · f16 · visión</option>
+        <option value="8GB-VISION-ULTRA-F16">🔥 32k · f16 · visión</option>
+        <option value="8GB-VISION-ULTRA">⚡ 36k · q4_0 · visión</option>
+        <option value="8GB-VISION-HIGH">🚀 32k · q8_0 · visión</option>
+        <option value="8GB-VISION-BALANCED">⚖️ 28k · q4_0 · visión</option>
+        <option value="8GB-VISION-SAFE">🛡️ 24k · q4_0 · visión</option>
+        <option value="8GB-VISION-QUALITY">🎨 32k · f16 · visión</option>
+        <option value="8GB-CODE-MAX">💻 48k · q4_0 · código</option>
+        <option value="8GB-CODE-HIGH">💻 40k · q4_0 · código</option>
+        <option value="8GB-CODE-BALANCED">💻 32k · q8_0 · código</option>
+        <option value="8GB-CODE-FAST">⚡ 16k · f16 · rápido</option>
+        <option value="8GB-RESEARCH">🔬 64k · q4_0 · research</option>
       </select>
       <span class="server-status" id="server-status" title="Estado del servidor">
         <i class="dot"></i>
@@ -740,7 +740,6 @@
     </div>
   </section>
   <footer class="statusbar">
-    <span class="pill"><i class="dot"></i> UI en gráfica integrada</span>
     <span class="pill"><i class="dot rtx"></i> Modelo en RTX 4060</span>
     <div class="meter" title="Verde: historial enviado. Azul: respuesta."><i id="seg-prompt"></i><i id="seg-gen"></i></div>
     <span id="meter-num">0 / 0</span>

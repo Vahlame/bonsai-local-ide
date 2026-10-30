@@ -13,7 +13,7 @@ try {
         if (-not $UiOwner -or [string]$UiOwner.CommandLine -notlike ("*" + $ExpectedUi + "*")) { throw 'El puerto 8787 pertenece a otra aplicacion.' }
         $UiState = Invoke-RestMethod 'http://127.0.0.1:8787/api/state' -TimeoutSec 5
         if (-not $UiState.nCtx) { throw 'El IDE no informa de un modelo cargado.' }
-        if (-not $NoBrowser) { Start-Process 'http://127.0.0.1:8787' }
+        if (-not $NoBrowser) { & (Join-Path $PSScriptRoot 'open-ide.ps1') -Port 8787 }
         exit 0
     }
     $SavedSettings = $null

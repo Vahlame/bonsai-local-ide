@@ -1077,6 +1077,17 @@ function chatTitle(session) {
 }
 
 function openBrowser(url) {
+  // Ventana de aplicacion SIN GPU (rasterizado por software): la NVIDIA queda libre
+  // para el modelo. Si el script no existe (o no es Windows), se abre el navegador normal.
+  try {
+    const launcher = path.join(PROJECT, "scripts", "open-ide.ps1");
+    const port = new URL(url).port || "8787";
+    if (process.platform === "win32" && fs.existsSync(launcher)) {
+      const child = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", launcher, "-Port", port], { detached: true, stdio: "ignore", windowsHide: true });
+      child.unref();
+      return;
+    }
+  } catch { /* cae al navegador normal */ }
   const child = spawn("cmd", ["/c", "start", "", url], { detached: true, stdio: "ignore", windowsHide: true });
   child.unref();
 }

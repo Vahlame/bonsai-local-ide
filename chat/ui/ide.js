@@ -61,6 +61,18 @@
     hud.append(cGpu, cVram, cTemp, cPow, cTps, cRam);
     bar.prepend(hud);
 
+    // El IDE se abre sin GPU (scripts/open-ide.ps1 añade ?uicpu=1): se dice en la barra.
+    try {
+      if (new URLSearchParams(location.search).get("uicpu") === "1") {
+        const cpu = el("span", "pill");
+        cpu.id = "ui-cpu-chip";
+        cpu.title = "La interfaz se pinta por software: la NVIDIA queda entera para el modelo.";
+        const dot = el("i", "dot");
+        cpu.append(dot, el("span", "", "UI · CPU"));
+        bar.insertBefore(cpu, hud.nextSibling);
+      }
+    } catch { /* sin URL válida */ }
+
     const pop = el("div");
     pop.id = "hud-pop";
     pop.hidden = true;
@@ -376,7 +388,19 @@
   startBtn.addEventListener("click", startServer);
   stopBtn.addEventListener("click", stopServer);
   document.getElementById("server-terminal").addEventListener("click", copyServerCommand);
-  
+
+  // La etiqueta corta del selector se acompaña del preset completo en el tooltip:
+  // en la barra cabe "110k · q8_0 · visión CPU" y al pasar el ratón se ve el detalle.
+  const sincronizarTituloPreset = () => {
+    const texto = presetSelect.options[presetSelect.selectedIndex]?.text || presetSelect.value;
+    presetSelect.title = `${texto}\n${presetSelect.value}`;
+  };
+  presetSelect.addEventListener("change", sincronizarTituloPreset);
+  sincronizarTituloPreset();
+
+  // Ventana sin GPU (scripts/open-ide.ps1 añade ?uicpu=1): el aviso vive en la barra de
+  // estado, dentro del HUD de hardware (ide.js), que es quien reconstruye esa zona.
+
   // Cleanup on page unload
   window.addEventListener("beforeunload", () => {
     if (statusPoll) clearInterval(statusPoll);
