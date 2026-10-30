@@ -19,7 +19,7 @@ param (
     [int]$UiPort = 8787,
     [int]$Port = 8080,
     [int]$PromptCap = 8192,
-    [ValidateSet("", "8GB-VISION-DEFAULT-F16", "8GB-VISION-ULTRA-F16", "8GB-VISION-ULTRA", "8GB-VISION-HIGH", "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
+    [ValidateSet("", "8GB-VISION-MAX-F16", "8GB-VISION-DEFAULT-F16", "8GB-VISION-ULTRA-F16", "8GB-VISION-ULTRA", "8GB-VISION-HIGH", "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
                  "8GB-CODE-MAX", "8GB-CODE-HIGH", "8GB-CODE-BALANCED", "8GB-CODE-FAST",
                  "8GB-RESEARCH", "8GB-VISION-QUALITY", "CUSTOM")][string]$EnginePreset = "",
     [ValidateSet("", "legacy", "small-local-coder", "optimized")][string]$AgentProfile = "optimized",
@@ -56,10 +56,11 @@ if (Test-Path -LiteralPath $SettingsPath) {
     try { $SavedSettings = Get-Content -LiteralPath $SettingsPath -Raw | ConvertFrom-Json } catch { $SavedSettings = $null }
 }
 
-# Preset por defecto: el mas seguro (f16, 16k). El usuario puede cambiarlo en la UI.
+# Preset por defecto: MAXIMO contexto + precision f16 + vision (43k, medido estable).
+# El usuario puede cambiarlo en la UI.
 if (-not $EnginePreset) {
     if ($SavedSettings -and $SavedSettings.enginePreset) { $EnginePreset = [string]$SavedSettings.enginePreset }
-    if (-not $EnginePreset) { $EnginePreset = '8GB-VISION-DEFAULT-F16' }
+    if (-not $EnginePreset) { $EnginePreset = '8GB-VISION-MAX-F16' }
 }
 
 # Argumentos para node
