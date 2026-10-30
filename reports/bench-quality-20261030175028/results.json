@@ -1,0 +1,1227 @@
+{
+  "stamp": "20261030175028",
+  "think": 1024,
+  "maxTokens": 3000,
+  "tasks": [
+    {
+      "id": "coding_impl_chunk",
+      "category": "coding"
+    },
+    {
+      "id": "coding_impl_balanced",
+      "category": "coding"
+    },
+    {
+      "id": "coding_debug_bsearch",
+      "category": "coding"
+    },
+    {
+      "id": "coding_trace",
+      "category": "coding"
+    },
+    {
+      "id": "reasoning_math_train",
+      "category": "reasoning"
+    },
+    {
+      "id": "reasoning_math_prob",
+      "category": "reasoning"
+    },
+    {
+      "id": "logic_boxes",
+      "category": "reasoning"
+    },
+    {
+      "id": "data_sql_result",
+      "category": "data"
+    },
+    {
+      "id": "instruction_json",
+      "category": "instruction"
+    },
+    {
+      "id": "text_transform_reverse",
+      "category": "text"
+    },
+    {
+      "id": "retrieval_needle",
+      "category": "retrieval"
+    },
+    {
+      "id": "spanish_entities",
+      "category": "spanish"
+    },
+    {
+      "id": "coding_hard_calc",
+      "category": "coding"
+    },
+    {
+      "id": "coding_hard_lru",
+      "category": "coding"
+    },
+    {
+      "id": "reasoning_multi_rates",
+      "category": "reasoning"
+    },
+    {
+      "id": "retrieval_two_needles",
+      "category": "retrieval"
+    },
+    {
+      "id": "instruction_nested",
+      "category": "instruction"
+    },
+    {
+      "id": "tool_call_convert",
+      "category": "tools"
+    }
+  ],
+  "presets": [
+    {
+      "preset": "8GB-VISION-MAX-F16",
+      "started": true,
+      "nCtx": 43008,
+      "kv": "f16",
+      "ctx": 43008,
+      "passed": 16,
+      "total": 18,
+      "score": 88.88888888888889,
+      "byCat": {
+        "coding": 0.6666666666666666,
+        "reasoning": 1,
+        "data": 1,
+        "instruction": 1,
+        "text": 1,
+        "retrieval": 1,
+        "spanish": 1,
+        "tools": 1
+      },
+      "avgTps": 42.33638755561478,
+      "seconds": 149
+    },
+    {
+      "preset": "8GB-VISION-HIGH",
+      "started": true,
+      "nCtx": 32768,
+      "kv": "q8_0",
+      "ctx": 32768,
+      "passed": 17,
+      "total": 18,
+      "score": 94.44444444444444,
+      "byCat": {
+        "coding": 0.8333333333333334,
+        "reasoning": 1,
+        "data": 1,
+        "instruction": 1,
+        "text": 1,
+        "retrieval": 1,
+        "spanish": 1,
+        "tools": 1
+      },
+      "avgTps": 42.11823374911395,
+      "seconds": 146
+    },
+    {
+      "preset": "8GB-CODE-BALANCED",
+      "started": true,
+      "nCtx": 32768,
+      "kv": "q8_0",
+      "ctx": 32768,
+      "passed": 16,
+      "total": 18,
+      "score": 88.88888888888889,
+      "byCat": {
+        "coding": 0.6666666666666666,
+        "reasoning": 1,
+        "data": 1,
+        "instruction": 1,
+        "text": 1,
+        "retrieval": 1,
+        "spanish": 1,
+        "tools": 1
+      },
+      "avgTps": 42.12787535268343,
+      "seconds": 146
+    },
+    {
+      "preset": "8GB-VISION-BALANCED",
+      "started": true,
+      "nCtx": 28672,
+      "kv": "q4_0",
+      "ctx": 28672,
+      "passed": 15,
+      "total": 18,
+      "score": 83.33333333333334,
+      "byCat": {
+        "coding": 0.6666666666666666,
+        "reasoning": 1,
+        "data": 1,
+        "instruction": 1,
+        "text": 0,
+        "retrieval": 1,
+        "spanish": 1,
+        "tools": 1
+      },
+      "avgTps": 42.07392084845697,
+      "seconds": 157
+    },
+    {
+      "preset": "8GB-RESEARCH",
+      "started": true,
+      "nCtx": 65536,
+      "kv": "q4_0",
+      "ctx": 65536,
+      "passed": 16,
+      "total": 18,
+      "score": 88.88888888888889,
+      "byCat": {
+        "coding": 0.6666666666666666,
+        "reasoning": 1,
+        "data": 1,
+        "instruction": 1,
+        "text": 1,
+        "retrieval": 1,
+        "spanish": 1,
+        "tools": 1
+      },
+      "avgTps": 42.11639358768529,
+      "seconds": 147
+    }
+  ],
+  "raw": [
+    {
+      "preset": "8GB-VISION-MAX-F16",
+      "started": true,
+      "nCtx": 43008,
+      "kv": "f16",
+      "ctx": 43008,
+      "tasks": [
+        {
+          "id": "coding_impl_chunk",
+          "category": "coding",
+          "ok": true,
+          "detail": "3/3 tests",
+          "ms": 3000,
+          "tps": 42.73397371756387,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction chunk(arr, n) {\n  if (n <= 0) return [];\n  const result = [];\n  for (let i = 0; i < arr.length; i += n) {\n    result.push(arr.slice(i, i + n));\n "
+        },
+        {
+          "id": "coding_impl_balanced",
+          "category": "coding",
+          "ok": true,
+          "detail": "6/6 tests",
+          "ms": 3840,
+          "tps": 42.67181767631014,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction isBalanced(s) {\n  const stack = [];\n  const pairs = { ')': '(', ']': '[', '}': '{' };\n  for (const char of s) {\n    if (char === '(' || char === "
+        },
+        {
+          "id": "coding_debug_bsearch",
+          "category": "coding",
+          "ok": true,
+          "detail": "5/5 tests",
+          "ms": 26555,
+          "tps": 42.347727779731315,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction search(arr, target) {\n  let lo = 0, hi = arr.length;\n  while (lo < hi) {\n    const mid = (lo + hi) >> 1;\n    if (arr[mid] === target) return mid;"
+        },
+        {
+          "id": "coding_trace",
+          "category": "coding",
+          "ok": true,
+          "detail": "respuesta=2-6",
+          "ms": 3634,
+          "tps": 42.380555349146555,
+          "empty": false,
+          "finish": "stop",
+          "preview": "2-6"
+        },
+        {
+          "id": "reasoning_math_train",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "12:00",
+          "ms": 5101,
+          "tps": 42.303429730610965,
+          "empty": false,
+          "finish": "stop",
+          "preview": "12:00"
+        },
+        {
+          "id": "reasoning_math_prob",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "3/10",
+          "ms": 2606,
+          "tps": 42.43869393531232,
+          "empty": false,
+          "finish": "stop",
+          "preview": "3/10"
+        },
+        {
+          "id": "logic_boxes",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "Mezcla=Manzanas",
+          "ms": 14834,
+          "tps": 42.47182781242542,
+          "empty": false,
+          "finish": "stop",
+          "preview": "Mezcla=Manzanas"
+        },
+        {
+          "id": "data_sql_result",
+          "category": "data",
+          "ok": true,
+          "detail": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]",
+          "ms": 4384,
+          "tps": 42.4750738996272,
+          "empty": false,
+          "finish": "stop",
+          "preview": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]"
+        },
+        {
+          "id": "instruction_json",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"name\":\"Ana Ruiz\",\"age\":34,\"skills\":[\"Python\",\"Kubernetes\",\"SQL\"]}",
+          "ms": 2851,
+          "tps": 42.555708307307036,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```json\n{\n  \"name\": \"Ana Ruiz\",\n  \"age\": 34,\n  \"skills\": [\"Python\", \"Kubernetes\", \"SQL\"]\n}\n```"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 9458,
+          "tps": 42.53149142484121,
+          "empty": false,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "retrieval_needle",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419",
+          "ms": 4465,
+          "tps": 41.425091476851485,
+          "empty": false,
+          "finish": "stop",
+          "preview": "QX-7419"
+        },
+        {
+          "id": "spanish_entities",
+          "category": "spanish",
+          "ok": true,
+          "detail": "{\"persona\":\"Marta Lopez\",\"empresa\":\"Acme Iberia\",\"ciudad\":\"Sevilla\"}",
+          "ms": 2655,
+          "tps": 42.527185897355125,
+          "empty": false,
+          "finish": "stop",
+          "preview": "{\"persona\": \"Marta Lopez\", \"empresa\": \"Acme Iberia\", \"ciudad\": \"Sevilla\"}"
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "fallo 2+3*4",
+          "ms": 37002,
+          "tps": 42.359494248222575,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction evaluate(expr) {\n  const tokens = [];\n  let i = 0;\n  while (i < expr.length) {\n    const c = expr[i];\n    if (c >= '0' && c <= '9' || c === '.') "
+        },
+        {
+          "id": "coding_hard_lru",
+          "category": "coding",
+          "ok": false,
+          "detail": "g1=undefined g2=-1 g1b=-1 g3=undefined g4=undefined",
+          "ms": 5864,
+          "tps": 42.50606014971849,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nclass LRUCache {\n  constructor(capacity) {\n    this.capacity = capacity;\n    this.cache = new Map();\n  }\n\n  get(key) {\n    if (!this.cache.has(key)) retur"
+        },
+        {
+          "id": "reasoning_multi_rates",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "3",
+          "ms": 4432,
+          "tps": 42.472695711988955,
+          "empty": false,
+          "finish": "stop",
+          "preview": "3"
+        },
+        {
+          "id": "retrieval_two_needles",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419, ZK-2288",
+          "ms": 4618,
+          "tps": 41.050049606585915,
+          "empty": false,
+          "finish": "stop",
+          "preview": "QX-7419, ZK-2288"
+        },
+        {
+          "id": "instruction_nested",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"pedido\":778,\"cliente\":\"Ana\",\"items\":[{\"producto\":\"Teclado\",\"cantidad\":2,\"precio\":25},{\"producto\":\"Raton\",\"cantidad\":1,",
+          "ms": 4676,
+          "tps": 42.46196226458491,
+          "empty": false,
+          "finish": "stop",
+          "preview": "{\"pedido\":778,\"cliente\":\"Ana\",\"items\":[{\"producto\":\"Teclado\",\"cantidad\":2,\"precio\":25},{\"producto\":\"Raton\",\"cantidad\":1,\"precio\":10}],\"total\":60}"
+        },
+        {
+          "id": "tool_call_convert",
+          "category": "tools",
+          "ok": true,
+          "detail": "{\"monto\":250,\"de\":\"USD\",\"a\":\"EUR\"}",
+          "ms": 2118,
+          "tps": 42.34213701288246,
+          "empty": true,
+          "finish": "tool_calls",
+          "preview": ""
+        }
+      ],
+      "ms": 148680
+    },
+    {
+      "preset": "8GB-VISION-HIGH",
+      "started": true,
+      "nCtx": 32768,
+      "kv": "q8_0",
+      "ctx": 32768,
+      "tasks": [
+        {
+          "id": "coding_impl_chunk",
+          "category": "coding",
+          "ok": true,
+          "detail": "3/3 tests",
+          "ms": 2733,
+          "tps": 42.12763640511366,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction chunk(arr, n) {\n  if (n <= 0) return [];\n  const result = [];\n  for (let i = 0; i < arr.length; i += n) {\n    result.push(arr.slice(i, i + n));\n "
+        },
+        {
+          "id": "coding_impl_balanced",
+          "category": "coding",
+          "ok": true,
+          "detail": "6/6 tests",
+          "ms": 4057,
+          "tps": 42.281488756689896,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction isBalanced(s) {\n  const stack = [];\n  const pairs = { ')': '(', ']': '[', '}': '{' };\n  for (const ch of s) {\n    if (ch === '(' || ch === '[' ||"
+        },
+        {
+          "id": "coding_debug_bsearch",
+          "category": "coding",
+          "ok": true,
+          "detail": "5/5 tests",
+          "ms": 26716,
+          "tps": 42.20389333930619,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction search(arr, target) {\n  let lo = 0, hi = arr.length;\n  while (lo < hi) {\n    const mid = (lo + hi) >> 1;\n    if (arr[mid] === target) return mid;"
+        },
+        {
+          "id": "coding_trace",
+          "category": "coding",
+          "ok": true,
+          "detail": "respuesta=2-6",
+          "ms": 3608,
+          "tps": 42.28386973921783,
+          "empty": false,
+          "finish": "stop",
+          "preview": "2-6"
+        },
+        {
+          "id": "reasoning_math_train",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "12:00",
+          "ms": 3699,
+          "tps": 42.30295019654063,
+          "empty": false,
+          "finish": "stop",
+          "preview": "12:00"
+        },
+        {
+          "id": "reasoning_math_prob",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "3/10",
+          "ms": 2500,
+          "tps": 42.19501862488123,
+          "empty": false,
+          "finish": "stop",
+          "preview": "3/10"
+        },
+        {
+          "id": "logic_boxes",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "<Mezcla>=Manzanas",
+          "ms": 4829,
+          "tps": 42.222030303902656,
+          "empty": false,
+          "finish": "stop",
+          "preview": "<Mezcla>=Manzanas"
+        },
+        {
+          "id": "data_sql_result",
+          "category": "data",
+          "ok": true,
+          "detail": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]",
+          "ms": 4352,
+          "tps": 42.18884247326164,
+          "empty": false,
+          "finish": "stop",
+          "preview": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]"
+        },
+        {
+          "id": "instruction_json",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"name\":\"Ana Ruiz\",\"age\":34,\"skills\":[\"Python\",\"Kubernetes\",\"SQL\"]}",
+          "ms": 3390,
+          "tps": 42.313013275248,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```json\n{\n  \"name\": \"Ana Ruiz\",\n  \"age\": 34,\n  \"skills\": [\"Python\", \"Kubernetes\", \"SQL\"]\n}\n```"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 12616,
+          "tps": 42.27939086287913,
+          "empty": false,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "retrieval_needle",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419",
+          "ms": 4319,
+          "tps": 41.330174079875256,
+          "empty": false,
+          "finish": "stop",
+          "preview": "QX-7419"
+        },
+        {
+          "id": "spanish_entities",
+          "category": "spanish",
+          "ok": true,
+          "detail": "{\"persona\":\"Marta Lopez\",\"empresa\":\"Acme Iberia\",\"ciudad\":\"Sevilla\"}",
+          "ms": 2688,
+          "tps": 42.24398482815108,
+          "empty": false,
+          "finish": "stop",
+          "preview": "{\"persona\": \"Marta Lopez\", \"empresa\": \"Acme Iberia\", \"ciudad\": \"Sevilla\"}"
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": true,
+          "detail": "5/5 tests",
+          "ms": 39077,
+          "tps": 42.16214894875537,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction evaluate(expr) {\n  const tokens = [];\n  let i = 0;\n  const isDigit = c => c >= '0' && c <= '9';\n  const isOperator = c => c === '+' || c === '-' "
+        },
+        {
+          "id": "coding_hard_lru",
+          "category": "coding",
+          "ok": false,
+          "detail": "g1=undefined g2=-1 g1b=-1 g3=undefined g4=undefined",
+          "ms": 5451,
+          "tps": 42.26867434729182,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nclass LRUCache {\n  constructor(capacity) {\n    this.capacity = capacity;\n    this.map = new Map();\n  }\n\n  get(key) {\n    if (!this.map.has(key)) return -1"
+        },
+        {
+          "id": "reasoning_multi_rates",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "3",
+          "ms": 4142,
+          "tps": 42.19837029394536,
+          "empty": false,
+          "finish": "stop",
+          "preview": "3"
+        },
+        {
+          "id": "retrieval_two_needles",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419, ZK-2288",
+          "ms": 4923,
+          "tps": 41.13218737146191,
+          "empty": false,
+          "finish": "stop",
+          "preview": "QX-7419, ZK-2288"
+        },
+        {
+          "id": "instruction_nested",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"pedido\":778,\"cliente\":\"Ana\",\"items\":[{\"producto\":\"Teclado\",\"cantidad\":2,\"precio\":25},{\"producto\":\"Raton\",\"cantidad\":1,",
+          "ms": 5677,
+          "tps": 42.25643588994401,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```json\n{\n  \"pedido\": 778,\n  \"cliente\": \"Ana\",\n  \"items\": [\n    {\"producto\": \"Teclado\", \"cantidad\": 2, \"precio\": 25},\n    {\"producto\": \"Raton\", \"cantidad\": 1, \""
+        },
+        {
+          "id": "tool_call_convert",
+          "category": "tools",
+          "ok": true,
+          "detail": "{\"monto\":250,\"de\":\"USD\",\"a\":\"EUR\"}",
+          "ms": 2149,
+          "tps": 42.13809774758533,
+          "empty": true,
+          "finish": "tool_calls",
+          "preview": ""
+        }
+      ],
+      "ms": 145535
+    },
+    {
+      "preset": "8GB-CODE-BALANCED",
+      "started": true,
+      "nCtx": 32768,
+      "kv": "q8_0",
+      "ctx": 32768,
+      "tasks": [
+        {
+          "id": "coding_impl_chunk",
+          "category": "coding",
+          "ok": true,
+          "detail": "3/3 tests",
+          "ms": 3141,
+          "tps": 42.19946348356915,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction chunk(arr, n) {\n  if (n <= 0) return [];\n  const result = [];\n  for (let i = 0; i < arr.length; i += n) {\n    result.push(arr.slice(i, i + n));\n "
+        },
+        {
+          "id": "coding_impl_balanced",
+          "category": "coding",
+          "ok": true,
+          "detail": "6/6 tests",
+          "ms": 3705,
+          "tps": 42.30424202284877,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction isBalanced(s) {\n  const stack = [];\n  const pairs = { ')': '(', ']': '[', '}': '{' };\n  for (const char of s) {\n    if (char === '(' || char === "
+        },
+        {
+          "id": "coding_debug_bsearch",
+          "category": "coding",
+          "ok": true,
+          "detail": "5/5 tests",
+          "ms": 26685,
+          "tps": 42.23015805654701,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction search(arr, target) {\n  let lo = 0, hi = arr.length;\n  while (lo < hi) {\n    const mid = (lo + hi) >> 1;\n    if (arr[mid] === target) return mid;"
+        },
+        {
+          "id": "coding_trace",
+          "category": "coding",
+          "ok": true,
+          "detail": "respuesta=2-6",
+          "ms": 3606,
+          "tps": 42.291083486051136,
+          "empty": false,
+          "finish": "stop",
+          "preview": "2-6"
+        },
+        {
+          "id": "reasoning_math_train",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "12:00",
+          "ms": 7752,
+          "tps": 42.27344485908305,
+          "empty": false,
+          "finish": "stop",
+          "preview": "12:00"
+        },
+        {
+          "id": "reasoning_math_prob",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "3/10",
+          "ms": 2686,
+          "tps": 42.22494164747647,
+          "empty": false,
+          "finish": "stop",
+          "preview": "3/10"
+        },
+        {
+          "id": "logic_boxes",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "Mezcla=Manzanas",
+          "ms": 7793,
+          "tps": 42.298633049175294,
+          "empty": false,
+          "finish": "stop",
+          "preview": "Mezcla=Manzanas"
+        },
+        {
+          "id": "data_sql_result",
+          "category": "data",
+          "ok": true,
+          "detail": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]",
+          "ms": 4356,
+          "tps": 42.201275426861166,
+          "empty": false,
+          "finish": "stop",
+          "preview": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]"
+        },
+        {
+          "id": "instruction_json",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"name\":\"Ana Ruiz\",\"age\":34,\"skills\":[\"Python\",\"Kubernetes\",\"SQL\"]}",
+          "ms": 3061,
+          "tps": 42.272847366043656,
+          "empty": false,
+          "finish": "stop",
+          "preview": "{\"name\": \"Ana Ruiz\", \"age\": 34, \"skills\": [\"Python\", \"Kubernetes\", \"SQL\"]}"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 13748,
+          "tps": 42.29538834876601,
+          "empty": false,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "retrieval_needle",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419",
+          "ms": 3964,
+          "tps": 41.38899188889153,
+          "empty": false,
+          "finish": "stop",
+          "preview": "QX-7419"
+        },
+        {
+          "id": "spanish_entities",
+          "category": "spanish",
+          "ok": true,
+          "detail": "{\"persona\":\"Marta Lopez\",\"empresa\":\"Acme Iberia\",\"ciudad\":\"Sevilla\"}",
+          "ms": 2685,
+          "tps": 42.276528423723555,
+          "empty": false,
+          "finish": "stop",
+          "preview": "{\"persona\": \"Marta Lopez\", \"empresa\": \"Acme Iberia\", \"ciudad\": \"Sevilla\"}"
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "fallo 2+3*4",
+          "ms": 33383,
+          "tps": 42.18227330102325,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction evaluate(expr) {\n  const tokens = [];\n  for (let j = 0; j < expr.length; j++) {\n    const c = expr[j];\n    if (c === '+' || c === '-' || c === '*"
+        },
+        {
+          "id": "coding_hard_lru",
+          "category": "coding",
+          "ok": false,
+          "detail": "g1=undefined g2=-1 g1b=-1 g3=undefined g4=undefined",
+          "ms": 5556,
+          "tps": 42.21052656802429,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nclass LRUCache {\n  constructor(capacity) {\n    this.capacity = capacity;\n    this.map = new Map();\n  }\n\n  get(key) {\n    if (!this.map.has(key)) return -1"
+        },
+        {
+          "id": "reasoning_multi_rates",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "3",
+          "ms": 4346,
+          "tps": 42.2261332794357,
+          "empty": false,
+          "finish": "stop",
+          "preview": "3"
+        },
+        {
+          "id": "retrieval_two_needles",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419, ZK-2288",
+          "ms": 4697,
+          "tps": 41.08174092680407,
+          "empty": false,
+          "finish": "stop",
+          "preview": "QX-7419, ZK-2288"
+        },
+        {
+          "id": "instruction_nested",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"pedido\":778,\"cliente\":\"Ana\",\"items\":[{\"producto\":\"Teclado\",\"cantidad\":2,\"precio\":25},{\"producto\":\"Raton\",\"cantidad\":1,",
+          "ms": 4680,
+          "tps": 42.23312022471539,
+          "empty": false,
+          "finish": "stop",
+          "preview": "{\"pedido\":778,\"cliente\":\"Ana\",\"items\":[{\"producto\":\"Teclado\",\"cantidad\":2,\"precio\":25},{\"producto\":\"Raton\",\"cantidad\":1,\"precio\":10}],\"total\":60}"
+        },
+        {
+          "id": "tool_call_convert",
+          "category": "tools",
+          "ok": true,
+          "detail": "{\"monto\":250,\"de\":\"USD\",\"a\":\"EUR\"}",
+          "ms": 2151,
+          "tps": 42.11096398926224,
+          "empty": true,
+          "finish": "tool_calls",
+          "preview": ""
+        }
+      ],
+      "ms": 145591
+    },
+    {
+      "preset": "8GB-VISION-BALANCED",
+      "started": true,
+      "nCtx": 28672,
+      "kv": "q4_0",
+      "ctx": 28672,
+      "tasks": [
+        {
+          "id": "coding_impl_chunk",
+          "category": "coding",
+          "ok": true,
+          "detail": "3/3 tests",
+          "ms": 3307,
+          "tps": 42.20095510500085,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction chunk(arr, n) {\n  if (n <= 0) return [];\n  const result = [];\n  for (let i = 0; i < arr.length; i += n) {\n    result.push(arr.slice(i, i + n));\n "
+        },
+        {
+          "id": "coding_impl_balanced",
+          "category": "coding",
+          "ok": true,
+          "detail": "6/6 tests",
+          "ms": 4080,
+          "tps": 42.27463883662219,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction isBalanced(s) {\n  const stack = [];\n  const pairs = { ')': '(', ']': '[', '}': '{' };\n  for (const char of s) {\n    if (char === '(' || char === "
+        },
+        {
+          "id": "coding_debug_bsearch",
+          "category": "coding",
+          "ok": true,
+          "detail": "5/5 tests",
+          "ms": 26883,
+          "tps": 42.156162675015935,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction search(arr, target) {\n  let lo = 0, hi = arr.length - 1;\n  while (lo <= hi) {\n    const mid = (lo + hi) >> 1;\n    if (arr[mid] === target) return"
+        },
+        {
+          "id": "coding_trace",
+          "category": "coding",
+          "ok": true,
+          "detail": "respuesta=2-6",
+          "ms": 3421,
+          "tps": 42.26171310742472,
+          "empty": false,
+          "finish": "stop",
+          "preview": "2-6"
+        },
+        {
+          "id": "reasoning_math_train",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "12:00",
+          "ms": 4045,
+          "tps": 42.15947472871655,
+          "empty": false,
+          "finish": "stop",
+          "preview": "12:00"
+        },
+        {
+          "id": "reasoning_math_prob",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "3/10",
+          "ms": 2661,
+          "tps": 42.21926555839122,
+          "empty": false,
+          "finish": "stop",
+          "preview": "3/10"
+        },
+        {
+          "id": "logic_boxes",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "Mezcla=Manzanas",
+          "ms": 12619,
+          "tps": 42.22038866631721,
+          "empty": false,
+          "finish": "stop",
+          "preview": "Mezcla=Manzanas"
+        },
+        {
+          "id": "data_sql_result",
+          "category": "data",
+          "ok": true,
+          "detail": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]",
+          "ms": 4453,
+          "tps": 42.17625782578146,
+          "empty": false,
+          "finish": "stop",
+          "preview": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]"
+        },
+        {
+          "id": "instruction_json",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"name\":\"Ana Ruiz\",\"age\":34,\"skills\":[\"Python\",\"Kubernetes\",\"SQL\"]}",
+          "ms": 2921,
+          "tps": 42.246224601695076,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```json\n{\n  \"name\": \"Ana Ruiz\",\n  \"age\": 34,\n  \"skills\": [\"Python\", \"Kubernetes\", \"SQL\"]\n}\n```"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": false,
+          "detail": "ladra perro el pero duerme, gato El.",
+          "ms": 24689,
+          "tps": 42.21672061409899,
+          "empty": false,
+          "finish": "stop",
+          "preview": "ladra perro el pero duerme, gato El."
+        },
+        {
+          "id": "retrieval_needle",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419",
+          "ms": 3964,
+          "tps": 41.26802508191421,
+          "empty": false,
+          "finish": "stop",
+          "preview": "QX-7419"
+        },
+        {
+          "id": "spanish_entities",
+          "category": "spanish",
+          "ok": true,
+          "detail": "{\"persona\":\"Marta Lopez\",\"empresa\":\"Acme Iberia\",\"ciudad\":\"Sevilla\"}",
+          "ms": 3360,
+          "tps": 42.242518648053036,
+          "empty": false,
+          "finish": "stop",
+          "preview": "{\"persona\": \"Marta Lopez\", \"empresa\": \"Acme Iberia\", \"ciudad\": \"Sevilla\"}"
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "Assignment to constant variable.",
+          "ms": 0,
+          "tps": 0
+        },
+        {
+          "id": "coding_hard_lru",
+          "category": "coding",
+          "ok": false,
+          "detail": "g1=undefined g2=-1 g1b=-1 g3=undefined g4=undefined",
+          "ms": 5815,
+          "tps": 42.20323389313579,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nclass LRUCache {\n  constructor(capacity) {\n    this.capacity = capacity;\n    this.map = new Map();\n  }\n\n  get(key) {\n    if (!this.map.has(key)) return -1"
+        },
+        {
+          "id": "reasoning_multi_rates",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "3",
+          "ms": 2055,
+          "tps": 42.1778562089189,
+          "empty": false,
+          "finish": "stop",
+          "preview": "3"
+        },
+        {
+          "id": "retrieval_two_needles",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419,ZK-2288",
+          "ms": 4662,
+          "tps": 40.92456783656365,
+          "empty": false,
+          "finish": "stop",
+          "preview": "QX-7419,ZK-2288"
+        },
+        {
+          "id": "instruction_nested",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"pedido\":778,\"cliente\":\"Ana\",\"items\":[{\"producto\":\"Teclado\",\"cantidad\":2,\"precio\":25},{\"producto\":\"Raton\",\"cantidad\":1,",
+          "ms": 5794,
+          "tps": 42.21644459462586,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```json\n{\n  \"pedido\": 778,\n  \"cliente\": \"Ana\",\n  \"items\": [\n    {\"producto\": \"Teclado\", \"cantidad\": 2, \"precio\": 25},\n    {\"producto\": \"Raton\", \"cantidad\": 1, \""
+        },
+        {
+          "id": "tool_call_convert",
+          "category": "tools",
+          "ok": true,
+          "detail": "{\"monto\":250,\"de\":\"USD\",\"a\":\"EUR\"}",
+          "ms": 2154,
+          "tps": 42.0922064414929,
+          "empty": true,
+          "finish": "tool_calls",
+          "preview": ""
+        }
+      ],
+      "ms": 156707
+    },
+    {
+      "preset": "8GB-RESEARCH",
+      "started": true,
+      "nCtx": 65536,
+      "kv": "q4_0",
+      "ctx": 65536,
+      "tasks": [
+        {
+          "id": "coding_impl_chunk",
+          "category": "coding",
+          "ok": true,
+          "detail": "3/3 tests",
+          "ms": 3139,
+          "tps": 42.24960240719686,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction chunk(arr, n) {\n  if (n <= 0) return [];\n  const result = [];\n  for (let i = 0; i < arr.length; i += n) {\n    result.push(arr.slice(i, i + n));\n "
+        },
+        {
+          "id": "coding_impl_balanced",
+          "category": "coding",
+          "ok": true,
+          "detail": "6/6 tests",
+          "ms": 4379,
+          "tps": 42.15081230973265,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction isBalanced(s) {\n  const stack = [];\n  const pairs = { ')': '(', ']': '[', '}': '{' };\n  for (const char of s) {\n    if (char === '(' || char === "
+        },
+        {
+          "id": "coding_debug_bsearch",
+          "category": "coding",
+          "ok": true,
+          "detail": "5/5 tests",
+          "ms": 26741,
+          "tps": 42.189218115884515,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nfunction search(arr, target) {\n  let lo = 0, hi = arr.length;\n  while (lo < hi) {\n    const mid = (lo + hi) >> 1;\n    if (arr[mid] === target) return mid;"
+        },
+        {
+          "id": "coding_trace",
+          "category": "coding",
+          "ok": true,
+          "detail": "respuesta=2-6",
+          "ms": 3512,
+          "tps": 42.28153529872496,
+          "empty": false,
+          "finish": "stop",
+          "preview": "2-6"
+        },
+        {
+          "id": "reasoning_math_train",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "12:00",
+          "ms": 3491,
+          "tps": 42.30123483858206,
+          "empty": false,
+          "finish": "stop",
+          "preview": "12:00"
+        },
+        {
+          "id": "reasoning_math_prob",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "3/10",
+          "ms": 2495,
+          "tps": 42.27357428143378,
+          "empty": false,
+          "finish": "stop",
+          "preview": "3/10"
+        },
+        {
+          "id": "logic_boxes",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "Mezcla=Manzanas",
+          "ms": 9460,
+          "tps": 42.26199044535771,
+          "empty": false,
+          "finish": "stop",
+          "preview": "Mezcla=Manzanas"
+        },
+        {
+          "id": "data_sql_result",
+          "category": "data",
+          "ok": true,
+          "detail": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]",
+          "ms": 4523,
+          "tps": 42.207377393272374,
+          "empty": false,
+          "finish": "stop",
+          "preview": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]"
+        },
+        {
+          "id": "instruction_json",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"name\":\"Ana Ruiz\",\"age\":34,\"skills\":[\"Python\",\"Kubernetes\",\"SQL\"]}",
+          "ms": 3356,
+          "tps": 42.27202573101291,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```json\n{\n  \"name\": \"Ana Ruiz\",\n  \"age\": 34,\n  \"skills\": [\"Python\", \"Kubernetes\", \"SQL\"]\n}\n```"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 13460,
+          "tps": 42.28802825919982,
+          "empty": false,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "retrieval_needle",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419",
+          "ms": 4149,
+          "tps": 41.340900371737376,
+          "empty": false,
+          "finish": "stop",
+          "preview": "QX-7419"
+        },
+        {
+          "id": "spanish_entities",
+          "category": "spanish",
+          "ok": true,
+          "detail": "{\"persona\":\"Marta Lopez\",\"empresa\":\"Acme Iberia\",\"ciudad\":\"Sevilla\"}",
+          "ms": 3206,
+          "tps": 42.30059256622402,
+          "empty": false,
+          "finish": "stop",
+          "preview": "{\"persona\": \"Marta Lopez\", \"empresa\": \"Acme Iberia\", \"ciudad\": \"Sevilla\"}"
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "Unexpected token",
+          "ms": 0,
+          "tps": 0
+        },
+        {
+          "id": "coding_hard_lru",
+          "category": "coding",
+          "ok": false,
+          "detail": "g1=undefined g2=-1 g1b=-1 g3=undefined g4=undefined",
+          "ms": 5469,
+          "tps": 42.233756521830536,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```js\nclass LRUCache {\n  constructor(capacity) {\n    this.capacity = capacity;\n    this.map = new Map();\n  }\n\n  get(key) {\n    if (!this.map.has(key)) return -1"
+        },
+        {
+          "id": "reasoning_multi_rates",
+          "category": "reasoning",
+          "ok": true,
+          "detail": "3",
+          "ms": 4233,
+          "tps": 42.21551925454713,
+          "empty": false,
+          "finish": "stop",
+          "preview": "3"
+        },
+        {
+          "id": "retrieval_two_needles",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419, ZK-2288",
+          "ms": 4905,
+          "tps": 41.00890425805572,
+          "empty": false,
+          "finish": "stop",
+          "preview": "QX-7419, ZK-2288"
+        },
+        {
+          "id": "instruction_nested",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"pedido\":778,\"cliente\":\"Ana\",\"items\":[{\"producto\":\"Teclado\",\"cantidad\":2,\"precio\":25},{\"producto\":\"Raton\",\"cantidad\":1,",
+          "ms": 5509,
+          "tps": 42.21804298726689,
+          "empty": false,
+          "finish": "stop",
+          "preview": "```json\n{\n  \"pedido\": 778,\n  \"cliente\": \"Ana\",\n  \"items\": [\n    {\"producto\": \"Teclado\", \"cantidad\": 2, \"precio\": 25},\n    {\"producto\": \"Raton\", \"cantidad\": 1, \""
+        },
+        {
+          "id": "tool_call_convert",
+          "category": "tools",
+          "ok": true,
+          "detail": "{\"monto\":250,\"de\":\"USD\",\"a\":\"EUR\"}",
+          "ms": 2160,
+          "tps": 42.18557595059054,
+          "empty": true,
+          "finish": "tool_calls",
+          "preview": ""
+        }
+      ],
+      "ms": 146605
+    }
+  ]
+}

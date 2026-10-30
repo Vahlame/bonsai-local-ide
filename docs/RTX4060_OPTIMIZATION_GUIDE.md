@@ -288,6 +288,22 @@ It writes `reports/bench-quality-<stamp>/results.{md,json}` and regenerates the 
 chart above. Use it to decide whether a lower-precision KV (to buy context) actually
 costs quality for your workload.
 
+### Measured result (2026-10-30, one pass per preset)
+
+| Preset | KV | Ctx | Points | % | Gen t/s |
+|---|---|---:|---:|---:|---:|
+| `8GB-VISION-HIGH` | q8_0 | 32,768 | 17/18 | 94.4% | 42.1 |
+| `8GB-VISION-MAX-F16` | f16 | 43,008 | 16/18 | 88.9% | 42.3 |
+| `8GB-CODE-BALANCED` | q8_0 | 32,768 | 16/18 | 88.9% | 42.1 |
+| `8GB-RESEARCH` | q4_0 | 65,536 | 16/18 | 88.9% | 42.1 |
+| `8GB-VISION-BALANCED` | q4_0 | 28,672 | 15/18 | 83.3% | 42.1 |
+
+**Interpretation:** with n=18 and a single pass, a 1–2 task spread is **not
+significant**. There is no evidence here that q8_0/f16/q4_0 change quality; choose
+KV by VRAM/context needs. Consistent model weakness across all presets: the **LRU
+cache** (it deletes the key then reads it, returning `undefined`) and an
+intermittent **expression parser** (`2+3*4`). Those are 9B model limits, not KV.
+
 
 ---
 
