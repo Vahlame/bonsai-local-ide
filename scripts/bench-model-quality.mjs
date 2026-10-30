@@ -60,6 +60,10 @@ const SAMPLING_CONFIGS = [
   { name: "T1.0 p.95 k20 m.05 reason", temperature: 1.0, top_p: 0.95, top_k: 20, min_p: 0.05 },
 ];
 const samplingMode = process.argv.includes("--sampling");
+const configFilter = (arg("configs", "") || "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isInteger(n) && n > 0);
+const ACTIVE_CONFIGS = configFilter.length
+  ? SAMPLING_CONFIGS.filter((_, i) => configFilter.includes(i + 1))
+  : SAMPLING_CONFIGS;
 
 const DEFAULT_PRESETS = [
   "8GB-VISION-MAX-F16",
@@ -477,7 +481,7 @@ async function runSamplingMatrix(preset) {
   if (!srv.ok) return [{ preset: `${preset} (no arranco)`, started: false, reason: srv.reason, nCtx: 0, tasks: [], ms: Date.now() - started }];
   const rows = [];
   const base = { reasoning_budget: THINK, presence_penalty: PP, repeat_penalty: RP };
-  for (const cfg of SAMPLING_CONFIGS) {
+  for (const cfg of ACTIVE_CONFIGS) {
     ACTIVE_SAMPLING = { ...base, ...cfg };
     const t0 = Date.now();
     const results = [];
@@ -529,7 +533,10 @@ async function main() {
   const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
   const outDir = path.join(PROJECT, "reports", `${samplingMode ? "bench-sampling" : "bench-quality"}-${stamp}`);
   fs.mkdirSync(outDir, { recursive: true });
-  const chartPath = path.join(PROJECT, "docs", "graficos", samplingMode ? "bench-sampling.svg" : "bench-quality.svg");
+  const chartOut = arg("chart-out", "");
+  const chartPath = chartOut
+    ? (path.isAbsolute(chartOut) ? chartOut : path.join(PROJECT, chartOut))
+    : path.join(PROJECT, "docs", "graficos", samplingMode ? "bench-sampling.svg" : "bench-quality.svg");
 
   // Modo solo-grafica: reconstruye el SVG desde un results.json existente sin
   // arrancar el servidor (util tras una pasada parcial de varianza).
@@ -545,12 +552,12 @@ async function main() {
   }
 
   console.log(`BIN=${BIN}`);
-  console.log(`presets=${presets.join(", ")} tasks=${ACTIVE_TASKS.length} think=${THINK} max_tokens=${MAX_TOKENS}${samplingMode ? ` sampling=${SAMPLING_CONFIGS.length} configs` : ""}`);
+  console.log(`presets=${presets.join(", ")} tasks=${ACTIVE_TASKS.length} think=${THINK} max_tokens=${MAX_TOKENS}${samplingMode ? ` sampling=${ACTIVE_CONFIGS.length} configs` : ""}`);
 
   let rows = [];
   if (samplingMode) {
     const preset = arg("preset", "8GB-CODE-BALANCED");
-    console.log(`\n=== matriz de muestreo sobre ${preset} (${SAMPLING_CONFIGS.length} configuraciones) ===`);
+    console.log(`\n=== matriz de muestreo sobre ${preset} (${ACTIVE_CONFIGS.length} configuraciones) ===`);
     rows = await runSamplingMatrix(preset);
   } else {
     for (const preset of presets) {
@@ -583,7 +590,7 @@ async function main() {
   // Markdown
   const md = [];
   md.push(`# ${samplingMode ? "Benchmark de muestreo" : "Benchmark de calidad por preset"} - ${stamp}`);
-  md.push(`\nTareas: **${ACTIVE_TASKS.length}** · pensamiento ${THINK} · max_tokens ${MAX_TOKENS} · repeticiones ${REPS}${samplingMode ? ` · ${SAMPLING_CONFIGS.length} configuraciones` : ` · temperatura ${TEMP}`}`);
+  md.push(`\nTareas: **${ACTIVE_TASKS.length}** · pensamiento ${THINK} · max_tokens ${MAX_TOKENS} · repeticiones ${REPS}${samplingMode ? ` · ${ACTIVE_CONFIGS.length} configuraciones` : ` · temperatura ${TEMP}`}`);
   md.push(`\n## Resultado global\n`);
   md.push(`| ${samplingMode ? "Config" : "Preset"} | KV | Ctx | Puntos | % | Gen t/s | Tiempo |`);
   md.push(`|---|---|---:|---:|---:|---:|---:|`);
@@ -594,7 +601,7 @@ async function main() {
     md.push(`\n### Parametros por configuracion\n`);
     md.push(`| Config | temp | top_p | top_k | min_p |`);
     md.push(`|---|---:|---:|---:|---:|`);
-    for (const c of SAMPLING_CONFIGS) md.push(`| ${c.name} | ${c.temperature} | ${c.top_p} | ${c.top_k} | ${c.min_p} |`);
+    for (const c of ACTIVE_CONFIGS) md.push(`| ${c.name} | ${c.temperature} | ${c.top_p} | ${c.top_k} | ${c.min_p} |`);
   }
   md.push(`\n## Por categoria\n`);
   md.push(`| ${samplingMode ? "Config" : "Preset"} | ${categories.join(" | ")} |`);
