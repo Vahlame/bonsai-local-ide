@@ -212,6 +212,8 @@
       }
       setTimeout(() => { button.textContent = "Copiar"; }, 1400);
     });
+  })();
+
   // ------------------------------------------------------------------ server management panel
 (function serverPanel() {
   "use strict";
@@ -227,91 +229,37 @@
   const MODEL_PATH = "models\\Ornith-1.5-9B-Q4_K_M.gguf";
   const PROJ_PATH = "models\\mmproj-Ornith-1.5-9B-BF16.gguf";
   const TEMPLATE_PATH = "logs\\chat_template_8080.jinja";
-  
-  const PRESET_CONFIGS = {
-    "8GB-VISION-DEFAULT-F16": { ctx: 16384, kv: "f16", vision: true },
-    "8GB-VISION-ULTRA-F16": { ctx: 32768, kv: "f16", vision: true },
-    "8GB-VISION-HIGH": { ctx: 32768, kv: "IQ4_XS", vision: true },
-    "8GB-VISION-BALANCED": { ctx: 28672, kv: "q4_0", vision: true },
-    "8GB-VISION-SAFE": { ctx: 24576, kv: "q4_0", vision: true },
-    "8GB-CODE-BALANCED": { ctx: 32768, kv: "q8_0", vision: false },
-    "8GB-CODE-FAST": { ctx: 16384, kv: "f16", vision: false },
-    "8GB-RESEARCH": { ctx: 65536, kv: "IQ1_S", vision: false },
-  };
-  
-  function getServerCommand(preset) {
-    const cfg = PRESET_CONFIGS[preset] || PRESET_CONFIGS["8GB-VISION-DEFAULT-F16"];
-    const useStable = cfg.kv === "f16";
-    
-    const args = [
-      "-m", MODEL_PATH,
-      "--gpu-layers", "99",
-      "--flash-attn", "on",
-      "-c", cfg.ctx.toString(),
-      "-ctk", cfg.kv,
-      "-ctv", cfg.kv,
-      "-b", "512",
-      "-ub", "256",
-      "-t", "4",
-      "--host", "127.0.0.1",
-      "--port", "8080",
-      "--jinja",
-      "--metrics",
-      "-lv", "4",
-      "--cors-origins", "http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788",
-      "--temp", "0.6",
-      "--top-p", "0.95",
-      "--top-k", "20",
-      "--min-p", "0",
-      "--presence-penalty", "0",
-      "--repeat-penalty", "1",
-      "--spec-type", "none",
-      "--no-context-shift",
-      "--chat-template-file", TEMPLATE_PATH,
-      "--reasoning-budget", "4096",
-      "--reasoning-format", "deepseek"
-    ];
-    
-    if (!useStable) {
-      args.push("--fit", "off");
-      args.push("--kv-offload");
-      args.push("--cache-ram", "0");
-      args.push("-np", "1");
-    } else {
-      args.push("--ctx-checkpoints", "0");
-    }
-    
-    if (cfg.vision) {
-      args.push("--mmproj", PROJ_PATH);
-      args.push("--mmproj-offload");
-      args.push("--mmproj-device", "CUDA0");
-      args.push("--image-max-tokens", "512");
-    }
-    
-    const binPath = ".local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89\\bin\\llama-server.exe";
-    // Use relative path from project root - works from any location
-    return `cd /d "%~dp0.." && "${binPath}" ${args.join(' ')}`;
-  }
-  
-  function copyServerCommand() {
+  const MODEL_KEY = "ornith9b";
+
+  async function copyServerCommand() {
     const preset = presetSelect.value;
-    const cmd = getServerCommand(preset);
-    navigator.clipboard.writeText(cmd).then(() => {
-      const btn = document.getElementById("server-terminal");
-      const originalText = btn.querySelector("span").textContent;
+    const btn = document.getElementById("server-terminal");
+    const originalText = btn.querySelector("span").textContent;
+    try {
+      // El comando lo construye el servidor con rutas absolutas reales.
+      const res = await fetch(`/api/server/command?preset=${encodeURIComponent(preset)}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("No se pudo generar el comando");
+      const data = await res.json();
+      await navigator.clipboard.writeText(data.command);
       btn.querySelector("span").textContent = "¡Copiado!";
       btn.style.background = "var(--accent-soft)";
-      setTimeout(() => {
-        btn.querySelector("span").textContent = "Terminal";
-        btn.style.background = "";
-      }, 2000);
-      
-      const toast = document.createElement("div");
-      toast.className = "aviso ok";
-      toast.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg><span class="a-txt">Comando copiado al portapapeles. Abre PowerShell y pégalo (Ctrl+V).</span>`;
-      document.body.appendChild(toast);
-      setTimeout(() => { toast.classList.add("sale"); setTimeout(() => toast.remove(), 300); }, 3000);
-    });
+      aviso("ok", "Comando copiado. Abre PowerShell y pégalo (Ctrl+V).");
+    } catch (err) {
+      btn.querySelector("span").textContent = "Error";
+      aviso("error", "No se pudo copiar el comando: " + err.message);
+    } finally {
+      setTimeout(() => { btn.querySelector("span").textContent = originalText; btn.style.background = ""; }, 2200);
+    }
+  }
+  
+  function aviso(tipo, texto) {
+    const cont = document.getElementById("avisos") || document.body;
+    const toast = document.createElement("div");
+    toast.className = "aviso " + tipo;
+    toast.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg><span class="a-txt"></span>`;
+    toast.querySelector(".a-txt").textContent = texto;
+    cont.appendChild(toast);
+    setTimeout(() => { toast.classList.add("sale"); setTimeout(() => toast.remove(), 300); }, 3200);
   }
   
   let serverProcess = null;
@@ -334,117 +282,63 @@
   
   async function checkServerHealth() {
     try {
-      const res = await fetch("http://127.0.0.1:8080/health", { timeout: 3000 });
+      const res = await fetch("/api/servidor", { cache: "no-store" });
       if (res.ok) {
-        const preset = presetSelect.value;
-        const presetLabel = presetSelect.options[presetSelect.selectedIndex]?.text || preset;
-        updateStatus(true, `Conectado - ${presetLabel}`);
-        return true;
+        const data = await res.json();
+        if (data.encendido) {
+          const preset = presetSelect.value;
+          const presetLabel = presetSelect.options[presetSelect.selectedIndex]?.text || preset;
+          updateStatus(true, `Conectado - ${presetLabel}`);
+          startBtn.hidden = true;
+          stopBtn.hidden = false;
+          presetSelect.disabled = true;
+          return true;
+        }
       }
     } catch (e) {
-      // server not running
+      // UI no responde
     }
     updateStatus(false, "Desconectado");
+    startBtn.hidden = false;
+    stopBtn.hidden = true;
+    presetSelect.disabled = false;
     return false;
-  }
-  
-  function buildServerArgs(preset) {
-    const cfg = PRESET_CONFIGS[preset] || PRESET_CONFIGS["8GB-VISION-DEFAULT-F16"];
-    const useStable = cfg.kv === "f16";
-    
-    const args = [
-      "--gpu-layers", "99",
-      "--flash-attn", "on",
-      "-c", cfg.ctx.toString(),
-      "-ctk", cfg.kv,
-      "-ctv", cfg.kv,
-      "-b", "512",
-      "-ub", "256",
-      "-t", "4",
-      "--host", "127.0.0.1",
-      "--port", "8080",
-      "--jinja",
-      "--metrics",
-      "-lv", "4",
-      "--cors-origins", "http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788",
-      "--temp", "0.6",
-      "--top-p", "0.95",
-      "--top-k", "20",
-      "--min-p", "0",
-      "--presence-penalty", "0",
-      "--repeat-penalty", "1",
-      "--spec-type", "none",
-      "--no-context-shift",
-      "--chat-template-file", TEMPLATE_PATH,
-      "--reasoning-budget", "4096",
-      "--reasoning-format", "deepseek"
-    ];
-    
-    if (!useStable) {
-      args.push("--fit", "off");
-      args.push("--kv-offload");
-      args.push("--cache-ram", "0");
-      args.push("-np", "1");
-    }
-    
-    if (useStable) {
-      args.push("--ctx-checkpoints", "0");
-    }
-    
-    if (cfg.vision) {
-      args.push("--mmproj", PROJ_PATH);
-      args.push("--mmproj-offload");
-      args.push("--mmproj-device", "CUDA0");
-      args.push("--image-max-tokens", "512");
-    }
-    
-    return args;
   }
   
   async function startServer() {
     const preset = presetSelect.value;
-    const cfg = PRESET_CONFIGS[preset];
     
     startBtn.disabled = true;
     startBtn.querySelector("span").textContent = "Iniciando...";
     updateStatus(false, `Iniciando ${preset}...`);
     
     try {
-      const args = [
-        "-m", MODEL_PATH,
-        "--gpu-layers", "99",
-        ...buildServerArgs(preset)
-      ];
-      
-      // Use fetch to start server via API
+      // El endpoint arranca el binario optimizado con el preset elegido; el preset
+      // decide contexto, KV y visión. Solo se fija el presupuesto de razonamiento.
       const res = await fetch("/api/server/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          preset: preset,
-          model: MODEL_PATH,
-          args: args,
-          binary: BIN_PATH
-        })
+        body: JSON.stringify({ preset, model: MODEL_KEY, pensar: 4096 })
       });
       
-      if (!res.ok) throw new Error("Failed to start server");
+      if (!res.ok) throw new Error((await res.text()) || "No se pudo iniciar el servidor");
       
-      // Poll for server readiness
       updateStatus(false, "Cargando modelo...");
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 90; i++) {
         await new Promise(r => setTimeout(r, 2000));
         if (await checkServerHealth()) {
           startBtn.hidden = true;
           stopBtn.hidden = false;
           presetSelect.disabled = true;
+          aviso("ok", "Servidor listo. El modelo ya responde.");
           return;
         }
       }
-      throw new Error("Server did not become ready in time");
+      throw new Error("El modelo no terminó de cargar a tiempo");
     } catch (err) {
       console.error("Start server error:", err);
-      updateStatus(false, "Error: " + err.message);
+      updateStatus(false, "Error");
+      aviso("error", "No se pudo iniciar: " + err.message);
       startBtn.disabled = false;
       startBtn.querySelector("span").textContent = "Iniciar";
     }
@@ -479,15 +373,13 @@
   statusPoll = setInterval(checkServerHealth, 10000);
   
   // Event listeners
-  // Hide start/stop buttons (don't work due to Windows process tree limitation)
-  startBtn.hidden = true;
-  stopBtn.hidden = true;
-  
-  // Terminal button is the only one that works - copies command to clipboard
+  startBtn.addEventListener("click", startServer);
+  stopBtn.addEventListener("click", stopServer);
   document.getElementById("server-terminal").addEventListener("click", copyServerCommand);
   
   // Cleanup on page unload
   window.addEventListener("beforeunload", () => {
     if (statusPoll) clearInterval(statusPoll);
   });
+})();
 })();

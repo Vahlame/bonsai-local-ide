@@ -1,9 +1,29 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/**
+ * Presets de motor: se combinan el fichero historico y el optimizado para RTX 4060.
+ * El optimizado manda si hay colision de nombres. Asi la interfaz conoce tanto los
+ * perfiles antiguos como los nuevos (8GB-VISION-DEFAULT-F16, -ULTRA-F16, ...).
+ * @param {URL} url
+ * @returns {Record<string, unknown>}
+ */
+function leerPresets(url) {
+  try {
+    if (fs.existsSync(url)) return JSON.parse(fs.readFileSync(url, "utf8"));
+  } catch {
+    /* fichero ilegible: se ignora */
+  }
+  return {};
+}
+
 const frozen = new URL("./engine-presets.json", import.meta.url);
-export const ENGINE_PROFILES = Object.freeze(JSON.parse(fs.readFileSync(
-  fs.existsSync(frozen) ? frozen : new URL("../config/local-engine-presets.json", import.meta.url), "utf8")));
+const historico = new URL("../config/local-engine-presets.json", import.meta.url);
+const optimizado = new URL("../config/local-engine-presets-rtx4060-optimized.json", import.meta.url);
+
+const base = fs.existsSync(frozen) ? leerPresets(frozen) : leerPresets(historico);
+const extra = leerPresets(optimizado);
+export const ENGINE_PROFILES = Object.freeze({ ...base, ...extra });
 
 const MODELO_FILE = new URL("../chat/modelo.json", import.meta.url);
 let MODELO_CACHE = null;
@@ -58,7 +78,9 @@ export function validarTechoModelo(clave, contexto, vision) {
 }
 
 export const CUSTOM_ENGINE = "CUSTOM";
-const KV = new Set(["f16", "q8_0", "q4_0"]);
+// KV soportados: los historicos + los cuantizados de la build optimizada.
+// GGML_CUDA_FA_ALL_QUANTS=ON en la build sm89 permite estas combinaciones con FlashAttention.
+const KV = new Set(["f16", "q8_0", "q4_0", "IQ4_XS", "IQ2_XS", "IQ1_S"]);
 
 export function isNamedEnginePreset(name) {
   return typeof name === "string" && Object.hasOwn(ENGINE_PROFILES, name);

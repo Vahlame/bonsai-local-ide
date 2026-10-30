@@ -121,20 +121,57 @@ End-to-end optimizations:
 
 ```powershell
 # 1. Build optimized binary (one-time, ~20 min)
-.\scripts\build-rtx4060-optimized.ps1 -Variant RTX4060-Opt -Jobs 4
+.\scripts\build-rtx4060-optimized.ps1
 
-# 2. Setup speculative decoding draft model
+# 2. Setup speculative decoding draft model (optional)
 .\scripts\setup-speculative-draft.ps1
 
-# 3. Calibrate profiles for your GPU
-.\scripts\calibrate-rtx4060-profiles.ps1
+# 3. Open the IDE (desktop shortcut does the same)
+.\scripts\bonsai-rtx4060.ps1 launch
+#    -> abre http://127.0.0.1:8787
 
-# 4. Launch with unified script
-.\scripts\bonsai-rtx4060.ps1 launch -EnginePreset 8GB-VISION-ULTRA
+# 4. Inside the IDE, choose a preset in the top bar and click "Iniciar"
+#    (or click "Terminal" to copy the exact PowerShell command for that preset)
 
-# 5. Check status
+# 5. Check status / stop
 .\scripts\bonsai-rtx4060.ps1 status
 ```
+
+---
+
+## How the server lifecycle works (important)
+
+This is the part that used to fail and is now fixed:
+
+```
+Desktop shortcut
+   └─> scripts/bonsai-rtx4060.ps1 launch
+          └─> scripts/start-ui-rtx4060-optimized.ps1   (SOLO abre la UI Node)
+                 └─> node chat/ui-server.mjs  en http://127.0.0.1:8787
+
+UI top bar  [Iniciar ▼ preset]
+   └─> POST /api/server/start
+          └─> chat/ui-server.mjs  lanzarServidorLlama()
+                 └─> spawn("powershell.exe", start-gpu-model-rtx4060-optimized.ps1,
+                           { windowsHide: true }) + unref()
+                        └─> Start-Process llama-server.exe -NoNewWindow + WaitForExit()
+```
+
+Why this is stable on Windows:
+
+- El **wrapper de PowerShell NO sale** hasta que llama-server termina
+  (`WaitForExit()`), así que el hijo nunca queda huérfano.
+- Node lo lanza con `windowsHide: true` y **`unref()`**, **sin `detached`**
+  (`detached: true` deja al hijo sin consola y PowerShell 5.1 sale con código 0
+  sin ejecutar nada — el bug histórico).
+- Si cierras el navegador o la UI, **el modelo sigue vivo**; puedes reconectar.
+- `stop-managed-server.ps1` reconoce tanto `bin\llama-server.exe` como el binario
+  sm89 de `.local\opt\...` y ambos lanzadores, así que "Detener" funciona con los
+  presets optimizados.
+
+The **Terminal** button is a fallback: it copies a complete, absolute-path
+PowerShell command built server-side (`GET /api/server/command?preset=...`) so you
+can paste it into any PowerShell window and run the server manually.
 
 ---
 
@@ -171,27 +208,32 @@ End-to-end optimizations:
 
 | Issue | Solution |
 |-------|----------|
-| OOM on vision profiles | Use IQ4_XS or q4_0 KV, reduce context |
-| Speculative decoding not working | Verify draft model exists, check preset has `specDecode: true` |
-| CUDA graphs causing instability | Use `RTX4060-Opt-NoGraphs` variant |
-| Slow token generation | Enable SpecDecode preset, check draft model |
-| Build fails | Clean `.local/opt/bonsai-inference` and rebuild |
+| "El puerto 8080 ya está ocupado" | Otro llama-server ajeno usa el puerto. Ciérralo o usa "Detener" en la UI si es administrado. |
+| La UI abre pero dice "Desconectado" | Pulsa **Iniciar** en la barra superior (o pega el comando del botón **Terminal**). |
+| El servidor muere al cerrar la terminal | No lo lances con `Start-Process`/jobs a mano: usa **Iniciar** (spawn+unref) o el comando del botón **Terminal**. |
+| OOM con f16 a 32k + visión | Usa el preset default (16k f16) o `8GB-VISION-HIGH` (IQ4_XS). |
+| Crash en reposo con f16 | El lanzador ya añade `--ctx-checkpoints 0`; no lo quites. |
+| Speculative decoding no acelera | Verifica que exista `models/Ornith-1.5-1B-Q4_K_M.gguf`; el preset debe tener `spec: draft`. |
+| "El motor en ejecución no coincide…" | El servidor cargado no es el preset pedido; pulsa **Detener** y luego **Iniciar**. |
+| Build falla | Borra `.local/opt/bonsai-inference` y reconstruye con `build-rtx4060-optimized.ps1`. |
 
 ---
 
-## Files Created
+## Files
 
 | File | Purpose |
 |------|---------|
-| `scripts/build-rtx4060-optimized.ps1` | Custom llama.cpp build |
-| `config/local-engine-presets-rtx4060-optimized.json` | 10 optimized presets |
-| `scripts/start-gpu-model-rtx4060-optimized.ps1` | Optimized launcher |
-| `scripts/start-ui-rtx4060-optimized.ps1` | UI launcher with reuse logic |
-| `scripts/setup-speculative-draft.ps1` | Draft model downloader |
-| `scripts/calibrate-rtx4060-profiles.ps1` | Auto VRAM calibration |
-| `scripts/bonsai-rtx4060.ps1` | Unified launcher |
-| `chat/agent-profiles-optimized.json` | 3 optimized agent profiles |
-| `chat/optimized-agent-integration.mjs` | End-to-end agent optimizations |
+| `scripts/build-rtx4060-optimized.ps1` | Custom llama.cpp sm89 build |
+| `config/local-engine-presets-rtx4060-optimized.json` | Optimized presets (f16 / IQ4_XS / q8_0 / q4_0 / IQ1_S) |
+| `scripts/start-gpu-model-rtx4060-optimized.ps1` | Model launcher (proven Start-Process + WaitForExit lifecycle) |
+| `scripts/start-ui-rtx4060-optimized.ps1` | Desktop entry: opens ONLY the web UI (reused if already running) |
+| `scripts/stop-managed-server.ps1` | Stops the managed server (understands both binaries + launchers) |
+| `scripts/bonsai-rtx4060.ps1` | Unified entry point (launch/status/benchmark/calibrate) |
+| `chat/ui-server.mjs` | UI server; `lanzarServidorLlama`, `/api/server/start|stop|command` |
+| `chat/ui/ide.js` / `chat/ui/index.html` | Server panel (preset selector, Iniciar/Detener/Terminal) |
+| `chat/engine-profiles.mjs` | Merges classic + optimized presets; accepts all KV types |
+| `scripts/add_template_properly.py` | Injects the official chat template into `chat/modelo.json` |
+| `scripts/chat_template_ornith.txt` | Official Ornith 1.5 9B template (source) |
 
 ---
 

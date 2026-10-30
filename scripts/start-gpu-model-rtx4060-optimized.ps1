@@ -1,21 +1,31 @@
 <#
 .SYNOPSIS
-    RTX 4060 8GB Optimized Model Launcher for llama.cpp v0.8.0+
+    RTX 4060 8GB optimized llama-server launcher (llama.cpp v0.8.0+, sm89 build).
+
 .DESCRIPTION
-    Optimized launcher with:
-    - Auto VRAM calibration per profile
-    - Speculative decoding support
-    - Optimal KV quantization per profile
-    - FlashAttn v2 tuned for sm89
-    - Dynamic batch/ubatch sizing
-    - mmproj offload optimization
-    - Custom CUDA graph settings
+    Single source of truth for launching the optimized server. Reads the preset
+    from config/local-engine-presets-rtx4060-optimized.json and the model from
+    chat/modelo.json, builds the llama-server argument line and launches it with
+    the EXACT lifecycle that the rest of the project relies on:
+
+        Start-Process -NoNewWindow -PassThru  +  WaitForExit()
+
+    This wrapper stays alive for as long as llama-server runs. It must NOT exit
+    early: llama-server is a child process and Windows tears down the whole job
+    when the parent exits. The caller (ui-server.mjs) spawns us with
+    windowsHide:true and unref(); that is what keeps the server alive after the
+    caller dies.
+
 .NOTES
-    Replaces start-gpu-model.ps1 for RTX 4060 optimized builds.
+    - Designed to be spawned from chat/ui-server.mjs (lanzarServidorLlama).
+    - Writes logs/servidor-administrado-<port>.json so stop-managed-server.ps1
+      can find and stop exactly this process (never foreign servers).
+    - The chat template from chat/modelo.json is written to a .jinja file and
+      passed with --chat-template-file (inline --chat-template breaks on quotes).
 #>
 
 param (
-    [Parameter(Mandatory=$true)][string]$Modelo,
+    [Parameter(Mandatory = $true)][string]$Modelo,
     [string]$ContextSize = "auto",
     [int]$Port = 8080,
     [string]$HostIP = "127.0.0.1",
@@ -25,105 +35,85 @@ param (
     [switch]$Vision,
     [switch]$DryRun,
     [switch]$ManagedByIDE,
-    [ValidateSet("", "8GB-VISION-DEFAULT-F16", "8GB-VISION-ULTRA-F16", "8GB-VISION-ULTRA", "8GB-VISION-HIGH", 
-                 "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
-                 "8GB-CODE-MAX", "8GB-CODE-HIGH", "8GB-CODE-BALANCED", "8GB-CODE-FAST",
-                 "8GB-RESEARCH", "8GB-VISION-QUALITY", "CUSTOM")][string]$EnginePreset = "",
+    [string]$EnginePreset = "",
     [int]$FreeMiBOverride = 0,
     [int]$MarginOverrideMiB = -1,
     [string]$DraftModel = "",
-    [int]$DraftTokens = 4
+    [int]$DraftTokens = 4,
+    [string]$Log = ""
 )
 
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
 
+if ($Log) {
+    try { Start-Transcript -Path $Log -Append -Force | Out-Null } catch { }
+}
+
 # =============================================================================
-# LOAD OPTIMIZED PRESETS
+# PRESET
 # =============================================================================
 $PresetPath = Join-Path $RootDir "config\local-engine-presets-rtx4060-optimized.json"
 $Presets = Get-Content -LiteralPath $PresetPath -Raw | ConvertFrom-Json
+
 $EngineOptions = $null
-$SafetyMiB = 0
+$SafetyMiB = if ($MarginOverrideMiB -ge 0) { $MarginOverrideMiB } else { 200 }
 $SpeculativeDecoding = $false
 $DraftModelPath = ""
 $DraftTokensCount = 4
+$Batch = 512
+$UBatch = 256
 
 if ($EnginePreset -and $EnginePreset -ne 'CUSTOM') {
     $EngineOptions = $Presets.$EnginePreset
-    if (-not $EngineOptions) { throw "Preset de motor optimizado desconocido: $EnginePreset" }
-    
+    if (-not $EngineOptions) { throw "Preset de motor desconocido: $EnginePreset" }
     if ($ContextSize -eq "auto") { $ContextSize = [string]$EngineOptions.context }
     if ($KVCacheType -eq "auto") { $KVCacheType = [string]$EngineOptions.kv }
-    $SafetyMiB = [int]$EngineOptions.marginMiB
+    if ($PSBoundParameters.ContainsKey('EngineOptions')) { }
+    $SafetyMiB = if ($MarginOverrideMiB -ge 0) { $MarginOverrideMiB } else { [int]$EngineOptions.marginMiB }
     if (-not $PSBoundParameters.ContainsKey('Vision')) { $Vision = [bool]$EngineOptions.vision }
-    
-    # Speculative decoding setup
+    $Batch = [int]$EngineOptions.batch
+    $UBatch = [int]$EngineOptions.ubatch
     if ($EngineOptions.spec -eq "draft") {
         $SpeculativeDecoding = $true
         $DraftModelPath = Join-Path $RootDir ("models\" + $EngineOptions.draftModel)
         $DraftTokensCount = [int]$EngineOptions.draftTokens
     }
-}
-elseif ($EnginePreset -eq 'CUSTOM') {
-    # CUSTOM with optimized defaults for RTX 4060
-    $SafetyMiB = if ($MarginOverrideMiB -ge 0) { $MarginOverrideMiB } else { 200 }
-    if ($KVCacheType -eq "auto") { $KVCacheType = "q4_0" }  # Optimal default
-}
-else {
-    # Legacy fallback
+} elseif ($EnginePreset -eq 'CUSTOM') {
+    if ($KVCacheType -eq "auto") { $KVCacheType = "f16" }
+} else {
     if ($ContextSize -eq "auto") { $ContextSize = "16384" }
     if ($KVCacheType -eq "auto") { $KVCacheType = "q4_0" }
-    $SafetyMiB = if ($MarginOverrideMiB -ge 0) { $MarginOverrideMiB } else { 200 }
 }
 
-# Override margin if explicitly provided
 if ($MarginOverrideMiB -ge 0) { $SafetyMiB = $MarginOverrideMiB }
 
 # =============================================================================
-# LOAD MODEL CATALOG
+# MODEL + BINARY
 # =============================================================================
 $Catalogo = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 $Item = $Catalogo.catalogo.$Modelo
-if (-not $Item -or $Item.servidor.tipo -ne "gpu-completa") { throw "Modelo sin perfil de GPU completa: $Modelo" }
+if (-not $Item -or $Item.servidor.tipo -ne "gpu-completa") {
+    throw "Modelo sin perfil de GPU completa: $Modelo"
+}
 $ModelPath = Join-Path $RootDir ("models\" + $Item.archivo)
-$BinPath = Join-Path $RootDir "bin\llama-server.exe"
-
-# Check for optimized binary (try project-local first, then user profile)
-$OptBinPath = Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"
-if (-not (Test-Path -LiteralPath $OptBinPath)) {
-    $OptBinPath = Join-Path $env:USERPROFILE ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"
-}
-if (Test-Path -LiteralPath $OptBinPath) {
-    $BinPath = $OptBinPath
-    Write-Host "Usando binario optimizado RTX 4060: $BinPath" -ForegroundColor Green
-}
-
 if (-not (Test-Path -LiteralPath $ModelPath)) { throw "Falta el modelo: $ModelPath" }
-if ((Get-Item -LiteralPath $ModelPath).Length -ne [int64]$Item.bytes) { throw "El modelo no tiene el tamano verificado; descarga incompleta." }
-if (-not $DryRun -and @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue).Count -gt 0) { throw "El puerto $Port ya esta ocupado. No se modifican servidores ajenos." }
-
-# =============================================================================
-# VRAM MEASUREMENT
-# =============================================================================
-$FreeMiB = 0
-$UsandoOverride = $false
-if ($FreeMiBOverride -gt 0) {
-    if ($DryRun) {
-        $FreeMiB = $FreeMiBOverride
-        $UsandoOverride = $true
-    } else {
-        Write-Host "Aviso: -FreeMiBOverride se ignora en arranque real; se mide VRAM con nvidia-smi." -ForegroundColor Yellow
-    }
-}
-if (-not $UsandoOverride) {
-    $FreeOutput = & nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits
-    if ($LASTEXITCODE -ne 0) { throw "No se pudo comprobar la VRAM libre. No se arranca sin verificar la GPU." }
-    $FreeMiB = [int](@($FreeOutput)[0].Trim())
+if ([int64]$Item.bytes -gt 0 -and (Get-Item -LiteralPath $ModelPath).Length -ne [int64]$Item.bytes) {
+    throw "El modelo no tiene el tamano verificado; descarga incompleta."
 }
 
+$BinPath = Join-Path $RootDir "bin\llama-server.exe"
+$Candidates = @(
+    (Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"),
+    (Join-Path $env:USERPROFILE ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe")
+)
+foreach ($cand in $Candidates) {
+    if (Test-Path -LiteralPath $cand) { $BinPath = $cand; break }
+}
+$UsingOptimized = $BinPath -like "*build-RTX4060-Opt-sm89*"
+
 # =============================================================================
-# VRAM CALCULATION - OPTIMIZED FOR RTX 4060
+# VRAM
 # =============================================================================
 $GpuProfile = $Item.servidor
 $WeightsMiB = [math]::Ceiling([int64]$Item.bytes / 1MB)
@@ -131,45 +121,49 @@ if (($EngineOptions -or $EnginePreset -eq 'CUSTOM') -and $Item.servidor.pesosGpu
     $WeightsMiB = [int]$Item.servidor.pesosGpuEstandarMiB
 }
 
-# KV cache bytes per element (updated for new quantization types)
 $KvBytesPerElement = @{
-    "f16"     = 2.0;      # 16-bit
-    "q8_0"    = 1.0;      # 8-bit quantized
-    "q4_0"    = 0.5;      # 4-bit quantized
-    "IQ4_XS"  = 0.5625;   # 4.5-bit (4-bit + 0.5-bit overhead)
-    "IQ2_XS"  = 0.28125;  # 2.25-bit
-    "IQ1_S"   = 0.15625;  # 1.25-bit
+    "f16"    = 2.0; "q8_0" = 1.0; "q4_0" = 0.5;
+    "IQ4_XS" = 0.5625; "IQ2_XS" = 0.28125; "IQ1_S" = 0.15625;
 }
 $ElementBytes = $KvBytesPerElement[$KVCacheType]
-if (-not $ElementBytes) { throw "Tipo de KV no soportado: $KVCacheType. Use: f16, q8_0, q4_0, IQ4_XS, IQ2_XS, IQ1_S" }
+if (-not $ElementBytes) { throw "Tipo de KV no soportado: $KVCacheType" }
 
 $VisionProfile = if ($Vision) { $Item.vision } else { $null }
 $VisionMiB = 0
+$ProjectorPath = ""
 if ($Vision) {
-    if (-not $VisionProfile.archivo -or -not $VisionProfile.offload -or -not $VisionProfile.contexto) { 
-        throw "Este perfil solo admite vision con proyector propio en GPU y un techo de contexto declarado." 
+    if (-not $VisionProfile.archivo -or -not $VisionProfile.contexto) {
+        throw "Este perfil no admite vision con proyector en GPU."
     }
     $ProjectorPath = Join-Path $RootDir ("models\" + $VisionProfile.archivo)
-    if (-not (Test-Path -LiteralPath $ProjectorPath) -or (Get-Item -LiteralPath $ProjectorPath).Length -ne [int64]$VisionProfile.bytes) { 
-        throw "Falta el proyector de vision verificado: $ProjectorPath" 
+    if (-not (Test-Path -LiteralPath $ProjectorPath)) {
+        throw "Falta el proyector de vision verificado: $ProjectorPath"
     }
-    # mmproj BF16 is ~900MB, but with offload it's mostly in VRAM
+    if ([int64]$VisionProfile.bytes -gt 0 -and (Get-Item -LiteralPath $ProjectorPath).Length -ne [int64]$VisionProfile.bytes) {
+        throw "El proyector de vision no tiene el tamano verificado."
+    }
     $VisionMiB = [int]$VisionProfile.reservaMiB
 }
 
 function Get-RequiredMiB([int]$ContextTokens, [string]$CacheType) {
-    $ElementBytes = $KvBytesPerElement[$CacheType]
-    # KV cache = context * attention_layers * kv_heads * head_dim * 2 (K+V) * element_bytes
-    $CacheBytes = $ContextTokens * [double]$GpuProfile.capasAtencionCompleta * $GpuProfile.cabezasKV * $GpuProfile.dimCabeza * 2 * $ElementBytes
-    return $WeightsMiB + [math]::Ceiling($CacheBytes / 1MB) + [int]$GpuProfile.reservaMiB + $VisionMiB + $SafetyMiB
+    $bytes = $KvBytesPerElement[$CacheType]
+    $cacheBytes = $ContextTokens * [double]$GpuProfile.capasAtencionCompleta * $GpuProfile.cabezasKV * $GpuProfile.dimCabeza * 2 * $bytes
+    return $WeightsMiB + [math]::Ceiling($cacheBytes / 1MB) + [int]$GpuProfile.reservaMiB + $VisionMiB + $SafetyMiB
 }
 
-# =============================================================================
-# AUTO CONTEXT SELECTION
-# =============================================================================
-$KvOrder = @("f16", "q8_0", "q4_0", "IQ4_XS", "IQ2_XS", "IQ1_S")
-$TechoContexto = [int]$GpuProfile.contexto
+$FreeMiB = 0
+$UsandoOverride = $false
+if ($FreeMiBOverride -gt 0 -and $DryRun) {
+    $FreeMiB = $FreeMiBOverride
+    $UsandoOverride = $true
+}
+if (-not $UsandoOverride) {
+    $FreeOutput = & nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits
+    if ($LASTEXITCODE -ne 0) { throw "No se pudo comprobar la VRAM libre." }
+    $FreeMiB = [int](@($FreeOutput)[0].Trim())
+}
 
+$TechoContexto = [int]$GpuProfile.contexto
 if ($Vision) {
     $TechoVision = [int]$VisionProfile.contexto
     if ($ContextSize -ne 'auto' -and $VisionProfile.contextoMaximoManual) {
@@ -179,7 +173,6 @@ if ($Vision) {
 }
 
 if ($ContextSize -eq "auto") {
-    Write-Host "Buscando mejor contexto para KV=$KVCacheType..." -ForegroundColor Cyan
     $ContextTokens = $TechoContexto
     $Found = $false
     while ($ContextTokens -ge 4096) {
@@ -192,42 +185,39 @@ if ($ContextSize -eq "auto") {
 } else {
     $ContextTokens = [int]$ContextSize
     $Req = Get-RequiredMiB $ContextTokens $KVCacheType
-    if ($Req -gt $FreeMiB) { throw "Contexto $ContextTokens con KV=$KVCacheType requiere $Req MiB, pero solo hay $FreeMiB MiB libres" }
-    if ($ContextTokens -gt $TechoContexto) { throw "Contexto $ContextTokens supera el techo $TechoContexto del modelo" }
-    Write-Host "Contexto fijo: $ContextTokens tokens (req=$Req MiB, free=$FreeMiB MiB)" -ForegroundColor Cyan
+    if ($Req -gt $FreeMiB) {
+        throw "Contexto $ContextTokens con KV=$KVCacheType requiere $Req MiB, pero solo hay $FreeMiB MiB libres"
+    }
+    if ($ContextTokens -gt $TechoContexto) { throw "Contexto $ContextTokens supera el techo $TechoContexto" }
+    Write-Host "Contexto: $ContextTokens tokens (req=$Req MiB, free=$FreeMiB MiB)" -ForegroundColor Cyan
 }
 
 # =============================================================================
-# BUILD ARGUMENT LINE
+# ARGS
 # =============================================================================
-# Use STABLE flags for f16 KV (avoids idle crash bug): no -np 1, no --fit off, no --kv-offload, no --cache-ram 0
-$UseStableFlags = ($KVCacheType -eq 'f16')
+# f16 KV has a llama.cpp idle-crash bug with context checkpoints: disable them
+# and use the default (auto) slot layout for stability. Quantized KV keeps the
+# single-slot layout that the project has used since v0.7.
+$StableF16 = ($KVCacheType -eq 'f16')
 
-$ServerArgs = @(
-    "-m", $ModelPath
-    "--gpu-layers", "99"
-)
-if (-not $UseStableFlags) {
+$ServerArgs = @("-m", $ModelPath, "--gpu-layers", "99")
+if (-not $StableF16) {
     $ServerArgs += "--fit", "off"
     $ServerArgs += "--kv-offload"
 }
 $ServerArgs += "--flash-attn", "on"
-$ServerArgs += "-c", $ContextTokens
+$ServerArgs += "-c", "$ContextTokens"
 $ServerArgs += "-ctk", $KVCacheType
 $ServerArgs += "-ctv", $KVCacheType
-if (-not $UseStableFlags) {
-    $ServerArgs += "-np", "1"
-}
-$ServerArgs += "-b", [int]$EngineOptions.batch
-$ServerArgs += "-ub", [int]$EngineOptions.ubatch
+if (-not $StableF16) { $ServerArgs += "-np", "1" }
+$ServerArgs += "-b", "$Batch"
+$ServerArgs += "-ub", "$UBatch"
 $ServerArgs += "-t", "4"
 $ServerArgs += "--host", $HostIP
-$ServerArgs += "--port", $Port
+$ServerArgs += "--port", "$Port"
 $ServerArgs += "--jinja"
 $ServerArgs += "--metrics"
-if (-not $UseStableFlags) {
-    $ServerArgs += "--cache-ram", "0"
-}
+if (-not $StableF16) { $ServerArgs += "--cache-ram", "0" }
 $ServerArgs += "-lv", "4"
 $ServerArgs += "--cors-origins", "http://127.0.0.1:$Port,http://localhost:$Port,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788"
 $ServerArgs += "--temp", "0.6"
@@ -238,21 +228,17 @@ $ServerArgs += "--presence-penalty", "0"
 $ServerArgs += "--repeat-penalty", "1"
 $ServerArgs += "--spec-type", "none"
 $ServerArgs += "--no-context-shift"
-if ($UseStableFlags) {
-    # Disable context checkpoints to prevent idle crash (llama.cpp bug with f16 KV)
-    $ServerArgs += "--ctx-checkpoints", "0"
-}
+if ($StableF16) { $ServerArgs += "--ctx-checkpoints", "0" }
 
-# Chat template (from modelo.json) - use file to avoid command-line escaping issues
+# Chat template -> file (inline breaks on quotes/newlines)
 $ChatTemplatePath = ""
 if ($Item.chat_template) {
     $ChatTemplatePath = Join-Path $RootDir "logs\chat_template_$Port.jinja"
+    New-Item -ItemType Directory -Force (Split-Path -Parent $ChatTemplatePath) | Out-Null
     $Item.chat_template | Set-Content -LiteralPath $ChatTemplatePath -Encoding UTF8 -NoNewline
     $ServerArgs += "--chat-template-file", $ChatTemplatePath
-    Write-Host "Chat template loaded from modelo.json ($(($Item.chat_template).Length) chars) -> $ChatTemplatePath" -ForegroundColor Cyan
 }
 
-# Vision args
 if ($Vision) {
     $ServerArgs += "--mmproj", $ProjectorPath
     $ServerArgs += "--mmproj-offload"
@@ -260,43 +246,49 @@ if ($Vision) {
     $ServerArgs += "--image-max-tokens", "512"
 }
 
-# Reasoning
 if ($Pensar -gt 0) {
-    $ServerArgs += "--reasoning-budget", $Pensar
+    $ServerArgs += "--reasoning-budget", "$Pensar"
     $ServerArgs += "--reasoning-format", "deepseek"
 }
 
-# Speculative decoding
 if ($SpeculativeDecoding -and (Test-Path -LiteralPath $DraftModelPath)) {
+    $ServerArgs += "--spec-type", "draft-simple"
     $ServerArgs += "--draft-model", $DraftModelPath
-    $ServerArgs += "--draft-tokens", $DraftTokensCount
-    Write-Host "Speculative decoding ENABLED: draft=$DraftModelPath, tokens=$DraftTokensCount" -ForegroundColor Green
-}
-
-if ($DryRun) { 
-    Write-Host ($BinPath + " " + ($ServerArgs | ForEach-Object { if ($_ -match ' ') { '"' + $_ + '"' } else { $_ } }) -join ' ')
-    exit 0 
+    $ServerArgs += "--draft-tokens", "$DraftTokensCount"
 }
 
 # =============================================================================
-# LAUNCH WITH ATOMIC MARKER
+# DRY RUN
+# =============================================================================
+function ConvertTo-ArgumentText([string]$Value) {
+    if ($Value -match '^[^\s"]+$') { return $Value }
+    return '"' + $Value.Replace('"', '\"') + '"'
+}
+$ArgumentLine = (($ServerArgs | ForEach-Object { ConvertTo-ArgumentText ([string]$_) }) -join ' ')
+
+if ($DryRun) {
+    Write-Host ("BIN: " + $BinPath)
+    Write-Host ("ARGS: " + $ArgumentLine)
+    exit 0
+}
+
+# =============================================================================
+# LAUNCH (proven lifecycle: Start-Process -NoNewWindow + WaitForExit)
 # =============================================================================
 $Wrapper = Get-Process -Id $PID -ErrorAction Stop
 $WrapperTicks = $Wrapper.StartTime.ToUniversalTime().Ticks.ToString()
 $Marker = Join-Path $RootDir "logs\servidor-administrado-$Port.json"
 $MarkerTmp = $Marker + ".tmp"
 
-# Capture llama.cpp version
 $LlamaVersion = "desconocida"
-try { 
+try {
     $oldEAP = $ErrorActionPreference
     $ErrorActionPreference = "SilentlyContinue"
     $out = & $BinPath --version 2>&1
     $ErrorActionPreference = $oldEAP
-    if ($out) { $LlamaVersion = ($out -split "`r?`n" | Select-Object -First 1).Trim() } 
-} catch {}
+    if ($out) { $LlamaVersion = ($out -split "`r?`n" | Select-Object -First 1).Trim() }
+} catch { }
 
-# Active key for reuse (vision projector)
 $ActiveKey = $null
 if ($Vision -and $VisionProfile -and $VisionProfile.archivo) { $ActiveKey = $VisionProfile.archivo }
 
@@ -305,7 +297,8 @@ function Write-MarcadorAdministrado([int]$ServidorPid) {
         modelo = $Modelo; puerto = $Port; contexto = $ContextTokens; kv = $KVCacheType;
         vision = [bool]$Vision; pensar = $Pensar; dormir = $DormirSeg; hostIP = $HostIP;
         pid = $PID; wrapperPid = $PID; iniciado = $WrapperTicks; enginePreset = $EnginePreset;
-        llamaVersion = $LlamaVersion; activeKey = $ActiveKey; speculative = $SpeculativeDecoding
+        llamaVersion = $LlamaVersion; activeKey = $ActiveKey; speculative = $SpeculativeDecoding;
+        optimized = $UsingOptimized
     }
     if ($ServidorPid -gt 0) {
         $Info.pidServidor = $ServidorPid
@@ -318,61 +311,34 @@ function Write-MarcadorAdministrado([int]$ServidorPid) {
 }
 
 if ($ManagedByIDE) {
-    try { Write-MarcadorAdministrado 0 } catch { Write-Host "Aviso: no se pudo escribir marcador: $($_.Exception.Message)" -ForegroundColor Yellow }
+    try { Write-MarcadorAdministrado 0 } catch { Write-Host "Aviso marcador: $($_.Exception.Message)" -ForegroundColor Yellow }
 }
 
-# Default log prefix
 if (-not $env:BONSAI_LLAMA_LOG_PREFIX) {
     $env:BONSAI_LLAMA_LOG_PREFIX = Join-Path $RootDir "logs\llama-server-$Port"
 }
-$ExecOptions = @{ 
-    FilePath = $BinPath; 
-    ArgumentList = $ServerArgs; 
-    PassThru = $true; 
-    NoNewWindow = $false; 
-    WindowStyle = "Hidden"; 
-    RedirectStandardOutput = $env:BONSAI_LLAMA_LOG_PREFIX + ".out.log"; 
-    RedirectStandardError = $env:BONSAI_LLAMA_LOG_PREFIX + ".err.log" 
-}
 
-# Launch server - use scheduled task for proper detachment
-$CmdLine = "$BinPath $($ServerArgs -join ' ')"
+$ExecOptions = @{
+    FilePath               = $BinPath
+    ArgumentList           = $ArgumentLine
+    PassThru               = $true
+    NoNewWindow            = $true
+    RedirectStandardOutput = $env:BONSAI_LLAMA_LOG_PREFIX + ".out.log"
+    RedirectStandardError  = $env:BONSAI_LLAMA_LOG_PREFIX + ".err.log"
+}
+$Exec = Start-Process @ExecOptions
+$null = $Exec.Handle
+
 if ($ManagedByIDE) {
-    # Create a one-time scheduled task to launch the server detached
-    $TaskName = "BonsaiLlamaServer_$Port"
-    $Action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c start \"llama-server\" /b $CmdLine"
-    $Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(2)
-    $Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-    
-    try {
-        # Remove existing task if any
-        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
-        Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Force
-        Start-ScheduledTask -TaskName $TaskName
-        
-        # Wait for model to load and server to start
-        Start-Sleep -Seconds 10
-        
-        # Find the server process
-        $ServerProc = Get-Process -Name "llama-server" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*llama-server.exe" } | Select-Object -First 1
-        if (-not $ServerProc) {
-            Write-Host "Error: llama-server.exe no se encontro corriendo. Revisa $($env:BONSAI_LLAMA_LOG_PREFIX).err.log" -ForegroundColor Red
-            if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
-            exit 1
-        }
-        try { Write-MarcadorAdministrado ([int]$ServerProc.Id) } catch { Write-Host "Aviso: no se pudo completar marcador: $($_.Exception.Message)" -ForegroundColor Yellow }
-        # Exit successfully - server is running in background
-        exit 0
-    } catch {
-        Write-Host "Error creando tarea programada" -ForegroundColor Red
+    Start-Sleep -Milliseconds 300
+    $Vivo = Get-Process -Id $Exec.Id -ErrorAction SilentlyContinue
+    if (-not $Vivo -or $Vivo.HasExited) {
+        Write-Host "Error: llama-server.exe murio al arrancar (PID $($Exec.Id)). Revisa $($env:BONSAI_LLAMA_LOG_PREFIX).err.log" -ForegroundColor Red
         if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
         exit 1
     }
+    try { Write-MarcadorAdministrado ([int]$Exec.Id) } catch { Write-Host "Aviso marcador PID: $($_.Exception.Message)" -ForegroundColor Yellow }
 }
-
-# Non-managed mode: run and wait
-$Exec = Start-Process @ExecOptions
-$null = $Exec.Handle
 
 $ExitCode = 1
 try {

@@ -1105,9 +1105,18 @@ async function main(args) {
   chat.actOnPc = true;
   chat.loadSession();
   for (const aviso of avisosInicio) chat.note(`historial: ${aviso}`);
-  await chat.connect();
+  // El servidor del modelo puede NO estar arrancado todavía: el usuario lo inicia
+  // desde el botón "Iniciar" (o el comando del botón "Terminal"). La interfaz debe
+  // abrir igualmente y mostrar "Desconectado" hasta que /api/server/start lo encienda.
+  let modeloListo = false;
+  try {
+    await chat.connect();
+    modeloListo = true;
+  } catch {
+    modeloListo = false;
+  }
   /** Visión: el servidor la anuncia en /props. Sin mmproj no puede ver imágenes. */
-  chat.vision = Boolean(chat.props?.modalities && chat.props.modalities.vision === true);
+  chat.vision = modeloListo && Boolean(chat.props?.modalities && chat.props.modalities.vision === true);
 
   let busy = false;
   let configuracionApagada = null;
@@ -1239,39 +1248,116 @@ async function main(args) {
   }
 
   /**
-   * Lanza `start-server.ps1` con el modelo pedido, en su propia ventana minimizada.
+   * Comando PowerShell listo para pegar que arranca el servidor optimizado con el
+   * preset dado, usando rutas absolutas (la interfaz corre en el navegador y no
+   * conoce el disco). Refleja exactamente la logica de flags de
+   * start-gpu-model-rtx4060-optimized.ps1 (f16 estable, vision, plantilla, etc.).
+   * @param {string} preset
+   * @param {number} puerto
+   * @returns {string}
+   */
+  function comandoServidorOptimizado(preset, puerto) {
+    const nombre = isNamedEnginePreset(preset) ? preset : "8GB-VISION-DEFAULT-F16";
+    const p = engineProfile(nombre);
+    const ctx = Number(p.context) || 16384;
+    const kv = String(p.kv || "f16");
+    const vision = Boolean(p.vision);
+    const estable = kv === "f16";
+
+    const modeloItem = (MODELO.catalogo && MODELO.catalogo.ornith9b) || {};
+    const modelPath = path.join(PROJECT, "models", modeloItem.archivo || "Ornith-1.5-9B-Q4_K_M.gguf");
+    const projArchivo = modeloItem.vision && modeloItem.vision.archivo;
+    const projPath = projArchivo ? path.join(PROJECT, "models", projArchivo) : "";
+    const templatePath = path.join(PROJECT, "logs", `chat_template_${puerto}.jinja`);
+
+    const cands = [
+      path.join(PROJECT, ".local", "opt", "bonsai-inference", "build-RTX4060-Opt-sm89", "bin", "llama-server.exe"),
+      path.join(process.env.USERPROFILE || "", ".local", "opt", "bonsai-inference", "build-RTX4060-Opt-sm89", "bin", "llama-server.exe"),
+    ];
+    let bin = path.join(PROJECT, "bin", "llama-server.exe");
+    for (const c of cands) { try { if (fs.existsSync(c)) { bin = c; break; } } catch { /* ignora */ } }
+
+    const a = ["-m", modelPath, "--gpu-layers", "99"];
+    if (!estable) a.push("--fit", "off", "--kv-offload");
+    a.push("--flash-attn", "on", "-c", String(ctx), "-ctk", kv, "-ctv", kv);
+    if (!estable) a.push("-np", "1");
+    a.push("-b", "512", "-ub", "256", "-t", "4", "--host", "127.0.0.1", "--port", String(puerto), "--jinja", "--metrics");
+    if (!estable) a.push("--cache-ram", "0");
+    a.push("-lv", "4",
+      "--cors-origins", `http://127.0.0.1:${puerto},http://localhost:${puerto},http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788`,
+      "--temp", "0.6", "--top-p", "0.95", "--top-k", "20", "--min-p", "0",
+      "--presence-penalty", "0", "--repeat-penalty", "1", "--spec-type", "none", "--no-context-shift");
+    if (estable) a.push("--ctx-checkpoints", "0");
+    // La plantilla se genera desde modelo.json para que exista al pegar el comando.
+    try {
+      if (modeloItem.chat_template) {
+        fs.mkdirSync(path.dirname(templatePath), { recursive: true });
+        fs.writeFileSync(templatePath, modeloItem.chat_template, "utf8");
+      }
+    } catch { /* se intentara igualmente */ }
+    a.push("--chat-template-file", templatePath);
+    if (vision && projPath) a.push("--mmproj", projPath, "--mmproj-offload", "--mmproj-device", "CUDA0", "--image-max-tokens", "512");
+    if (p.spec === "draft" && p.draftModel) {
+      const draftPath = path.join(PROJECT, "models", String(p.draftModel));
+      try {
+        if (fs.existsSync(draftPath)) {
+          a.push("--spec-type", "draft-simple", "--draft-model", draftPath, "--draft-tokens", String(p.draftTokens || 4));
+        }
+      } catch { /* sin draft */ }
+    }
+    a.push("--reasoning-budget", "4096", "--reasoning-format", "deepseek");
+
+    const quote = (s) => (/[\s"]/.test(s) ? `"${s.replace(/"/g, '\\"')}"` : s);
+    const linea = [bin, ...a].map(quote).join(" ");
+    return `cd "${PROJECT}"; & ${linea}`;
+  }
+
+  /**
+   * Lanza el servidor de IA. Para los presets optimizados de la RTX 4060 usa el
+   * lanzador dedicado (`start-gpu-model-rtx4060-optimized.ps1`), que arranca el
+   * binario sm89 y aplica f16/vision/chat-template. Para el resto, el historico.
    * @param {string} clave
+   * @param {Record<string, any> | null} configuracion
    */
   function lanzarServidorLlama(clave, configuracion = null) {
-    const script = path.join(PROJECT, "scripts", "start-server.ps1");
-    // Con -File (que es lo que arranca de verdad desde Node) y -Log, para que el propio
-    // script grabe lo que dice: si el servidor no levanta, el motivo queda en el archivo.
     const logArranque = process.env.BONSAI_LOG_ARRANQUE || path.join(PROJECT, "logs", "arranque-modelo.log");
-    const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-ManagedByIDE", "-Modelo", clave, "-Port", new URL(chat.base).port || "80"];
+    const puerto = new URL(chat.base).port || "80";
+    const preset = configuracion ? configuracion.enginePreset || "" : leerAjustes().enginePreset || "";
+    // Presets optimizados RTX 4060 -> lanzador dedicado con binario sm89.
+    const optimizado = /^(8GB-VISION-DEFAULT-F16|8GB-VISION-ULTRA-F16|8GB-VISION-HIGH|8GB-VISION-BALANCED|8GB-VISION-SAFE|8GB-CODE-MAX|8GB-CODE-HIGH|8GB-CODE-BALANCED|8GB-CODE-FAST|8GB-RESEARCH|8GB-VISION-QUALITY|8GB-VISION-ULTRA)$/.test(preset);
+    const script = path.join(PROJECT, "scripts", optimizado ? "start-gpu-model-rtx4060-optimized.ps1" : "start-server.ps1");
+    const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-ManagedByIDE", "-Modelo", clave, "-Port", puerto];
     try {
       fs.mkdirSync(path.dirname(logArranque), { recursive: true });
       args.push("-Log", logArranque);
     } catch {
       /* sin registro: se lanza igual */
     }
-    const preset = configuracion ? configuracion.enginePreset || "" : leerAjustes().enginePreset || "";
     if (preset && isNamedEnginePreset(preset)) {
       args.push("-EnginePreset", preset);
     } else if (preset === "CUSTOM") {
       args.push("-EnginePreset", "CUSTOM");
     }
-    const conVision = configuracion ? Boolean(configuracion.vision) : (preset && isNamedEnginePreset(preset)) ? Boolean(engineProfile(preset).vision) : typeof leerAjustes().engineVision === "boolean" ? leerAjustes().engineVision : mmprojDisponible(clave);
+    const conVision = configuracion && typeof configuracion.vision === "boolean"
+      ? configuracion.vision
+      : (preset && isNamedEnginePreset(preset)) ? Boolean(engineProfile(preset).vision)
+      : typeof leerAjustes().engineVision === "boolean" ? leerAjustes().engineVision
+      : mmprojDisponible(clave);
     if (conVision) args.push("-Vision");
+    else if (optimizado) args.push("-Vision:$false");
     else args.push("-SinVision");
     if (configuracion) {
-      args.push("-ContextSize", String(configuracion.contexto), "-KVCacheType", configuracion.kv, "-DormirSeg", String(configuracion.dormir), "-HostIP", configuracion.hostIP);
+      // Solo se pasan contexto/KV si vienen definidos; si no, manda el preset.
+      if (configuracion.contexto !== undefined && configuracion.contexto !== null) args.push("-ContextSize", String(configuracion.contexto));
+      if (configuracion.kv) args.push("-KVCacheType", configuracion.kv);
+      if ("dormir" in configuracion) args.push("-DormirSeg", String(configuracion.dormir));
+      if (configuracion.hostIP) args.push("-HostIP", configuracion.hostIP);
     } else {
       const aj = leerAjustes();
       if (aj.coderContextTokens) args.push("-ContextSize", String(aj.coderContextTokens));
-      if (preset === "CUSTOM") args.push("-KVCacheType", ["f16","q8_0","q4_0"].includes(aj.engineKv) ? aj.engineKv : "f16");
+      if (preset === "CUSTOM") args.push("-KVCacheType", ["f16", "q8_0", "q4_0", "IQ4_XS", "IQ2_XS", "IQ1_S"].includes(aj.engineKv) ? aj.engineKv : "f16");
     }
     // Siempre explícito: el razonamiento que pidió el usuario si ESE modelo lo admite, o 0.
-    // (Antes se pasaba el del modelo que se iba a descargar.)
     const pensar = configuracion ? configuracion.pensar : presupuestoPensar(clave, Number(leerAjustes().pensar));
     args.push("-Pensar", String(pensar));
     pensarServidor = pensar;
@@ -1640,7 +1726,11 @@ async function main(args) {
       inicial = guardarAjustes({ enginePreset: "CUSTOM", ...(args.thinkProvided ? { pensar: args.think } : {}) });
     } else if (isNamedEnginePreset(args.enginePreset)) {
       const p = engineProfile(args.enginePreset);
-      if (chat.nCtx !== p.context || chat.vision !== Boolean(p.vision)) throw new Error("El motor en ejecución no coincide con el perfil solicitado; vuelve a iniciarlo desde el lanzador.");
+      // Si el modelo aún no está cargado (nCtx vacío), no se puede comparar: se guarda
+      // el preset como predeterminado y el usuario lo inicia con el botón Iniciar.
+      if (modeloListo && (chat.nCtx !== p.context || chat.vision !== Boolean(p.vision))) {
+        throw new Error("El motor en ejecución no coincide con el perfil solicitado; vuelve a iniciarlo desde el lanzador.");
+      }
       inicial = guardarAjustes({ enginePreset: args.enginePreset, coderContextTokens: p.context, historial: p.context, ...(args.thinkProvided ? { pensar: args.think } : {}) });
     }
   } else if (args.thinkProvided) inicial = guardarAjustes({ pensar: args.think });
@@ -2394,6 +2484,14 @@ async function main(args) {
       // ================================================================
       // OPTIMIZED SERVER MANAGEMENT (RTX 4060)
       // ================================================================
+      if (req.method === "GET" && url.pathname === "/api/server/command") {
+        // Devuelve un comando PowerShell listo para pegar, con rutas absolutas.
+        const preset = url.searchParams.get("preset") || "8GB-VISION-DEFAULT-F16";
+        const comando = comandoServidorOptimizado(preset, args.llamaPort);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ command: comando, preset }));
+        return;
+      }
       if (req.method === "POST" && url.pathname === "/api/server/start") {
         if (busy) { res.writeHead(409).end("Hay una operación en curso"); return; }
         busy = true;
@@ -2402,7 +2500,6 @@ async function main(args) {
           const preset = raw?.preset || "8GB-VISION-DEFAULT-F16";
           const modelo = raw?.model || "ornith9b";
           
-          // Validate preset
           const validPresets = [
             "8GB-VISION-DEFAULT-F16", "8GB-VISION-ULTRA-F16", "8GB-VISION-HIGH",
             "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
@@ -2416,20 +2513,18 @@ async function main(args) {
           
           // Stop any existing server first
           await apagarLlamaServer();
-          await new Promise(r => setTimeout(r, 1000));
+          await new Promise(r => setTimeout(r, 800));
           
-          // Launch with optimized preset
+          // Deja que el PRESET decida contexto, KV y visión (no se fuerzan aquí).
+          // Solo el razonamiento se fija explícitamente.
           const hijo = lanzarServidorLlama(modelo, {
             enginePreset: preset,
-            vision: true,
-            contexto: 16384, // Will be overridden by preset
-            kv: "f16",
-            pensar: 4096,
-            hostIP: "127.0.0.1",
-            dormir: 0
+            pensar: Number(raw?.pensar) > 0 ? Number(raw.pensar) : 4096,
+            dormir: 0,
+            hostIP: "127.0.0.1"
           });
           
-          if (!(await esperarEncendido(180000, hijo))) {
+          if (!(await esperarEncendido(240000, hijo))) {
             throw new Error("El modelo no arrancó; revisa logs/arranque-modelo.log");
           }
           

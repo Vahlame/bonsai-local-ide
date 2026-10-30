@@ -25,6 +25,16 @@ param(
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
 
+# El binario optimizado puede estar en el proyecto o en el perfil del usuario.
+function Get-OptBinary {
+    $cands = @(
+        (Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin"),
+        (Join-Path $env:USERPROFILE ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin")
+    )
+    foreach ($c in $cands) { if (Test-Path -LiteralPath (Join-Path $c "llama-server.exe")) { return $c } }
+    return ""
+}
+
 function Show-Banner {
     Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host "  Bonsai IDE - RTX 4060 8GB Optimized (llama.cpp v0.8.0+)    " -ForegroundColor Cyan
@@ -34,8 +44,8 @@ function Show-Banner {
 
 function Check-Prerequisites {
     # Check optimized binary exists
-    $OptBin = Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"
-    if (-not (Test-Path -LiteralPath $OptBin)) {
+    $OptBinDir = Get-OptBinary
+    if (-not $OptBinDir) {
         Write-Warning "Binario optimizado no encontrado. Ejecuta: .\scripts\build-rtx4060-optimized.ps1"
         return $false
     }
@@ -67,8 +77,9 @@ switch ($Action) {
     }
     "benchmark" {
         Show-Banner
-        $OptBin = Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-bench.exe"
-        if (-not (Test-Path -LiteralPath $OptBin)) { throw "Binario optimizado no encontrado" }
+        $OptBinDir = Get-OptBinary
+        if (-not $OptBinDir) { throw "Binario optimizado no encontrado" }
+        $OptBin = Join-Path $OptBinDir "llama-bench.exe"
         
         $Model = Join-Path $RootDir "models\Ornith-1.5-9B-Q4_K_M.gguf"
         Write-Host "Ejecutando benchmark RTX 4060 optimizado..." -ForegroundColor Cyan
@@ -79,9 +90,10 @@ switch ($Action) {
         Write-Host "`nEstado del sistema:" -ForegroundColor Cyan
         
         # Binary status
-        $OptBin = Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"
+        $OptBinDir = Get-OptBinary
+        $OptBin = if ($OptBinDir) { Join-Path $OptBinDir "llama-server.exe" } else { "" }
         $StdBin = Join-Path $RootDir "bin\llama-server.exe"
-        Write-Host "  Binario optimizado: $(if (Test-Path $OptBin) { '[OK] ' + $OptBin } else { '[FAIL] No encontrado' })" -ForegroundColor $(if (Test-Path $OptBin) { 'Green' } else { 'Red' })
+        Write-Host "  Binario optimizado: $(if ($OptBin -and (Test-Path $OptBin)) { '[OK] ' + $OptBin } else { '[FAIL] No encontrado' })" -ForegroundColor $(if ($OptBin -and (Test-Path $OptBin)) { 'Green' } else { 'Red' })
         Write-Host "  Binario estándar:   $(if (Test-Path $StdBin) { '[OK] ' + $StdBin } else { '[FAIL] No encontrado' })" -ForegroundColor $(if (Test-Path $StdBin) { 'Green' } else { 'Red' })
         
         # Draft model
