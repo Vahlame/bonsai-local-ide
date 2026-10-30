@@ -42,9 +42,9 @@
     "description": "MAX PRECISION: 32,768 tokens with full f16 KV cache + vision. Note: may crash on idle due to llama.cpp bug. Use for high-quality single requests."
   },
   "8GB-VISION-ULTRA": {
-    "label": "⚡ Ultra: 36k ctx + IQ4_XS KV + Vision + SpecDecode",
+    "label": "⚡ Ultra: 36k ctx + q4_0 KV + Vision",
     "context": 36864,
-    "kv": "IQ4_XS",
+    "kv": "q4_0",
     "batch": 512,
     "ubatch": 256,
     "flash": "on",
@@ -55,12 +55,12 @@
     "thinkingTokens": 4096,
     "draftModel": "Ornith-1.5-1B-Q4_K_M.gguf",
     "draftTokens": 4,
-    "description": "Maximum context with vision. IQ4_XS KV saves ~1.2GB vs f16. Speculative decoding with 1B draft model for ~2x token speed."
+    "description": "Maximum vision context at low KV cost. q4_0 KV fits 36k + vision; speculative decoding only if the draft model is present."
   },
   "8GB-VISION-HIGH": {
-    "label": "🚀 High: 32k ctx + IQ4_XS KV + Vision + FlashAttn v2",
+    "label": "🚀 High: 32k ctx + q8_0 KV + Vision",
     "context": 32768,
-    "kv": "IQ4_XS",
+    "kv": "q8_0",
     "batch": 512,
     "ubatch": 256,
     "flash": "on",
@@ -69,7 +69,7 @@
     "vision": true,
     "coderOutputTokens": 6144,
     "thinkingTokens": 4096,
-    "description": "Best balance for coding with vision. IQ4_XS KV saves ~1GB. FlashAttn v2 tuned for sm89."
+    "description": "Best balance for coding with vision. q8_0 KV is near-lossless (8/8 in the KV quality test) and fits 32k + vision."
   },
   "8GB-VISION-BALANCED": {
     "label": "⚖️ Balanced: 28k ctx + q4_0 KV + Vision",
@@ -100,9 +100,9 @@
     "description": "Conservative with large margin. For heavy vision + long context tasks."
   },
   "8GB-CODE-MAX": {
-    "label": "💻 Code Max: 48k ctx + IQ2_XS KV (no vision)",
+    "label": "💻 Code Max: 48k ctx + q4_0 KV (no vision)",
     "context": 49152,
-    "kv": "IQ2_XS",
+    "kv": "q4_0",
     "batch": 512,
     "ubatch": 256,
     "flash": "on",
@@ -113,7 +113,7 @@
     "thinkingTokens": 4096,
     "draftModel": "Ornith-1.5-1B-Q4_K_M.gguf",
     "draftTokens": 4,
-    "description": "Maximum context for code-only tasks. IQ2_XS KV saves ~1.8GB vs f16. SpecDecode for speed."
+    "description": "Maximum code-only context. q4_0 KV fits 48k without vision. SpecDecode only if the draft model is present."
   },
   "8GB-CODE-HIGH": {
     "label": "💻 Code High: 40k ctx + q4_0 KV (no vision)",
@@ -160,9 +160,9 @@
     "description": "Maximum throughput for short-context coding. Large batch + SpecDecode = ~3x token speed."
   },
   "8GB-RESEARCH": {
-    "label": "🔬 Research: 64k ctx + IQ1_S KV (no vision, experimental)",
+    "label": "🔬 Research: 64k ctx + q4_0 KV (no vision, experimental)",
     "context": 65536,
-    "kv": "IQ1_S",
+    "kv": "q4_0",
     "batch": 256,
     "ubatch": 128,
     "flash": "on",
@@ -171,7 +171,7 @@
     "vision": false,
     "coderOutputTokens": 4096,
     "thinkingTokens": 2048,
-    "description": "EXPERIMENTAL: Maximum context with ultra-low KV. May have quality degradation. For research only."
+    "description": "EXPERIMENTAL: 64k text-only context. q4_0 KV keeps it in VRAM; quality per token is lower than q8_0/f16 at long range."
   },
   "8GB-VISION-QUALITY": {
     "label": "🎨 Vision Quality: 32k ctx + f16 KV + Vision (best quality)",

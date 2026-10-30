@@ -78,9 +78,9 @@ export function validarTechoModelo(clave, contexto, vision) {
 }
 
 export const CUSTOM_ENGINE = "CUSTOM";
-// KV soportados: los historicos + los cuantizados de la build optimizada.
-// GGML_CUDA_FA_ALL_QUANTS=ON en la build sm89 permite estas combinaciones con FlashAttention.
-const KV = new Set(["f16", "q8_0", "q4_0", "IQ4_XS", "IQ2_XS", "IQ1_S"]);
+// Tipos de KV REALES que acepta llama.cpp y soporta la build sm89 con FlashAttention.
+// IQ4_XS / IQ2_XS / IQ1_S son cuantizaciones de PESOS, no de KV: no son validas aqui.
+const KV = new Set(["f16", "bf16", "q8_0", "q4_0"]);
 
 export function isNamedEnginePreset(name) {
   return typeof name === "string" && Object.hasOwn(ENGINE_PROFILES, name);

@@ -1355,7 +1355,7 @@ async function main(args) {
     } else {
       const aj = leerAjustes();
       if (aj.coderContextTokens) args.push("-ContextSize", String(aj.coderContextTokens));
-      if (preset === "CUSTOM") args.push("-KVCacheType", ["f16", "q8_0", "q4_0", "IQ4_XS", "IQ2_XS", "IQ1_S"].includes(aj.engineKv) ? aj.engineKv : "f16");
+      if (preset === "CUSTOM") args.push("-KVCacheType", ["f16", "bf16", "q8_0", "q4_0"].includes(aj.engineKv) ? aj.engineKv : "f16");
     }
     // Siempre explícito: el razonamiento que pidió el usuario si ESE modelo lo admite, o 0.
     const pensar = configuracion ? configuracion.pensar : presupuestoPensar(clave, Number(leerAjustes().pensar));
