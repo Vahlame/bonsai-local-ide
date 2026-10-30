@@ -4,6 +4,38 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [1.5.0] - 2026-10-30
+
+### Cambiado
+
+- **Preset por defecto `8GB-VISION-MAX-F16`**: 43.008 tokens con KV **f16**,
+  visión y pensamiento (4096). Es el techo medido en RTX 4060 8 GB (7.481 MiB);
+  45.056 falla con OOM en prefill largo.
+- **Ciclo de vida robusto del servidor**: Node lanza el lanzador con
+  `windowsHide` + `unref()` (sin `detached`) y el wrapper PowerShell usa
+  `Start-Process -NoNewWindow` + `WaitForExit()`. El modelo sobrevive al cierre de
+  la UI/navegador.
+- **Panel de servidor funcional en el IDE**: selector de preset, **Iniciar**,
+  **Detener** y **Terminal** (copia un comando PowerShell con rutas absolutas,
+  generado en el servidor).
+
+### Corregido
+
+- `start-gpu-model-rtx4060-optimized.ps1` ya no sale antes de tiempo (mataba el
+  modelo en Windows).
+- `stop-managed-server.ps1` reconoce el binario optimizado sm89 y el lanzador
+  optimizado, así que **Detener** funciona y permite reiniciar.
+- La UI ya no se cae al arrancar sin modelo cargado.
+- Error de sintaxis en `chat/ui/ide.js` que impedía ejecutar el panel de servidor.
+- El comando del botón Terminal ya no usa `%~dp0` (inválido en PowerShell).
+
+### Añadido
+
+- `scripts/benchmark-rtx4060-matrix.ps1` y `scripts/probe-rtx4060-context.ps1`
+  (mediciones reproducibles).
+- Gráficos SVG en `docs/graficos/` (presets, techo de contexto, calidad KV).
+- Guía de ciclo de vida y tuning en `docs/RTX4060_OPTIMIZATION_GUIDE.md`.
+
 ## [1.2.0] - 2026-10-30
 
 ### Añadido
