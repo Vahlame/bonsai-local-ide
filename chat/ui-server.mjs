@@ -31,7 +31,7 @@ import { candidatosDeMemoria, crearMemoriaGlobal } from "./memoria-global.mjs";
 import { Terminales } from "./terminal.mjs";
 import { buscarDefinicion, diagnosticarArchivo, diagnosticarTexto, indiceSimbolos, simbolos } from "./diagnosticos.mjs";
 import { CoderTask, CODER_CONFIG, coderOptions, runCheck } from "./coder-harness.mjs";
-import { ENGINE_PROFILES, engineProfile, isNamedEnginePreset, configMotor, CUSTOM_ENGINE } from "./engine-profiles.mjs";
+import { ENGINE_PROFILES, engineProfile, isNamedEnginePreset, configMotor, CUSTOM_ENGINE, validarTechoModelo } from "./engine-profiles.mjs";
 import { EscrituraIncremental } from "./escritura-incremental.mjs";
 import { consultarRegistro } from "./registros.mjs";
 
@@ -585,6 +585,7 @@ function catalogoModelos() {
       uso: typeof row.uso === "string" ? row.uso : "",
       existe: bytes > 0 && (esperado === 0 || bytes === esperado),
       gpuCompleta: row.servidor?.tipo === "gpu-completa",
+      margenObjetivoMiB: Number(row.servidor?.margenObjetivoMiB) || 0,
       predeterminado: clave === MODELO.modeloPredeterminado,
     });
   }
@@ -1188,14 +1189,19 @@ async function main(args) {
   }
 
   /**
-   * VRAM libre en MiB (Infinity si no hay nvidia-smi, para no bloquear).
-   * @returns {Promise<number>}
+   * VRAM libre en MiB (null si no se pudo medir, para no confundir fallo con éxito).
+   * @returns {Promise<number | null>}
    */
   function vramLibreMiB() {
     return new Promise((resolve) => {
       execFile("nvidia-smi", ["--query-gpu=memory.free", "--format=csv,noheader,nounits"], { windowsHide: true, timeout: 8000 }, (err, stdout) => {
         const n = Number.parseInt(String(stdout || "").trim(), 10);
-        resolve(err || !Number.isFinite(n) ? Number.POSITIVE_INFINITY : n);
+        if (err || !Number.isFinite(n)) {
+          process.stderr.write("[GPU] nvidia-smi falló o no devolvió VRAM libre: no se pudo medir la memoria disponible.\n");
+          resolve(null);
+          return;
+        }
+        resolve(n);
       });
     });
   }
@@ -1205,9 +1211,10 @@ async function main(args) {
    * relanzándolo) hasta que no quede proceso, el puerto esté cerrado y la VRAM se haya
    * soltado. Lanzar antes de eso hacía que start-server.ps1 se negara a arrancar.
    * @param {number} ms
+   * @param {number} [umbralMiB] VRAM mínima libre requerida; por defecto deriva del catálogo.
    * @returns {Promise<boolean>}
    */
-  async function liberarGpu(ms, alDetener = () => {}) {
+  async function liberarGpu(ms, alDetener = () => {}, umbralMiB) {
     await apagarLlamaServer();
     alDetener();
     const fin = Date.now() + ms;
@@ -1220,8 +1227,12 @@ async function main(args) {
         puertoCerrado = true;
       }
       const libre = await vramLibreMiB();
-      if (puertoCerrado && (libre === Number.POSITIVE_INFINITY || libre >= 6500)) return true;
+      const umbral = umbralMiB ?? 6500;
+      if (puertoCerrado && libre !== null && libre >= umbral) return true;
       await new Promise((r) => setTimeout(r, 600));
+    }
+    if (await vramLibreMiB() === null) {
+      process.stderr.write("[GPU] No se pudo medir VRAM tras el tiempo de espera: no se confirma que la GPU esté libre.\n");
     }
     return false;
   }
@@ -2424,10 +2435,15 @@ async function main(args) {
           if (anterior?.error) throw new Error(`No se puede cambiar sin una configuración anterior recuperable: ${anterior.error}`);
           const actualAjustes = leerAjustes();
           const cfg = configMotor(raw, actualAjustes, anterior);
+          // Validación temprana del techo del modelo: si no cabe, falla ANTES de parar el servidor.
+          const techo = validarTechoModelo(clave, cfg.contexto, cfg.vision);
+          if (!techo.ok) throw new Error(`${techo.motivo}. El cambio se rechaza sin apagar el modelo actual.`);
           await cambiarConRecuperacion({
             anterior,
             liberar: async (alDetener) => {
-              if (!(await liberarGpu(35000, alDetener))) throw new Error("no se pudo liberar la GPU o el puerto");
+              const modeloCatalogo = catalogoModelos().find((m) => m.clave === objetivo);
+              const margenVRAM = modeloCatalogo?.margenObjetivoMiB || 6500;
+              if (!(await liberarGpu(35000, alDetener, margenVRAM))) throw new Error("no se pudo liberar la GPU o el puerto");
             },
             arrancar: async (restaurar) => {
               if (restaurar?.error) throw new Error(restaurar.error);
@@ -3105,6 +3121,9 @@ async function main(args) {
             const crudas = calls.length ? [] : llamadasCrudas(raw, dialectoDe(modeloActualClave(), MODELO.catalogo));
             const usadas = calls.length ? calls : crudas;
             const coder = chat.coderTask;
+            // Solo un cierre con verificación real puede pasar a DONE; un turno sin
+            // herramientas ni cambios no demuestra que el pedido esté resuelto.
+            let finalVerificationOk = false;
             const checked = coder ? coder.accept(usadas) : {valid:usadas,errors:[]};
             const specialized = (coder ? checked.valid : usadas).filter(c=>["escribir_partes","consultar_salida","mcp_playwright"].includes(c.name) || (coder && ["leer","indice","buscar_codigo","simbolo","git_diff"].includes(c.name)));
             const normal = (coder ? checked.valid : usadas).filter(c=>!specialized.includes(c));
@@ -3883,6 +3902,7 @@ async function main(args) {
                   ponerEn(ultimaId, `Verificación automática:\n${verification.summary}`);
                   wrote = true; progresoPaso = true;
                 }
+                if (!usadas.length) finalVerificationOk = verification.ok;
                 if (!verification.ok) { ultimoFallo = true; wrote = true; }
                 if (!usadas.length && !verification.ok && !verification.changed) coder.stopped = "unresolved_verification";
               }
@@ -3919,7 +3939,7 @@ async function main(args) {
             resultadosPendientes = resultados;
             const work = scope !== null || reads.length > 0 || ranCommand || searches.length > 0 || wrote || effects?.navegaciones?.length > 0 || effects?.webs?.length > 0;
             if (coder?.stopped) return null;
-            if (coder && !usadas.length && !coder.state.errors.length) { coder.state.phase = "DONE"; coder.trace("done",{tests:coder.state.tests}); return null; }
+            if (coder && !usadas.length && !coder.state.errors.length && finalVerificationOk) { coder.state.phase = "DONE"; coder.trace("done",{tests:coder.state.tests}); return null; }
             if (follow && work) {
               if (nativa) return { texto: "", resultados };
               return { texto: [AVISO_SEGUIR, ...pieces].join("\n\n"), resultados: null, imagenes: [...imagenesPorLlamada.values()].flat() };

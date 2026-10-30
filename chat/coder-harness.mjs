@@ -133,7 +133,7 @@ export const CODER_TOOLS = [
   tool(
     "ejecutar",
     "Ejecuta un comando de desarrollo o tests en la shell del proyecto; salida acotada.",
-    { comando: str, segundo_plano: { type: "boolean" } },
+    { comando: str, segundo_plano: { type: "boolean" }, repetir: { type: "boolean" } },
     ["comando"],
   ),
   base("proceso"),
@@ -655,6 +655,20 @@ export class CoderTask {
     const signature = this.revision();
     if (!files.length) {
       this.needsFinalVerification = false;
+      // A finish claim without a diff or inspected evidence cannot prove that an
+      // edit request was completed. Non-final calls still report "nothing to do".
+      if (final) {
+        this.verificationSummary =
+          "No se modificó ni inspeccionó ningún archivo: no hay evidencia para dar la tarea por terminada.";
+        this.trace("verified", {
+          ok: false,
+          files: [],
+          tests: [],
+          summary: this.verificationSummary,
+          reason: "no_evidence",
+        });
+        return { ok: false, summary: this.verificationSummary, changed: false };
+      }
       return {
         ok: true,
         summary: "Sin cambios que verificar.",
