@@ -5,16 +5,16 @@ Chat con agente, editor con pestañas, diffs, git, terminal integrado, navegador
 controlado y visión — todo en tu GPU, sin nube.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-1.5.0-cde86e">
+  <img alt="version" src="https://img.shields.io/badge/version-1.5.1-cde86e">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v1.5.0** — build optimizada de llama.cpp para sm89, plantilla oficial de
+> **v1.5.1** — build optimizada de llama.cpp para sm89, plantilla oficial de
 > Ornith 1.5 9B (visión + herramientas + razonamiento) y **43.008 tokens por
-> defecto con KV f16, visión y pensamiento**. Notas: [RELEASE-1.5.0](docs/RELEASE-1.5.0.md).
+> defecto con KV f16, visión y pensamiento**. Notas: [RELEASE-1.5.1](docs/RELEASE-1.5.1.md).
 
 ---
 
@@ -231,7 +231,7 @@ npm run test:gpu-exclusiva  # calidad KV; exige GPU libre
 node scripts/run-tests.mjs --listar   # ver suites por grupo
 ```
 
-Verificación de la **1.5.0**: `npm test` → **40/40**, arranque por la UI a 43k,
+Verificación de la **1.5.1**: `npm test` → **40/40**, arranque por la UI a 43k,
 prefill largo (1.982 t/s), 15 s en reposo vivo y parada sin procesos huérfanos.
 
 Herramientas reproducibles añadidas:
@@ -273,7 +273,7 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 
 | Documento | Contenido |
 |---|---|
-| [RELEASE-1.5.0](docs/RELEASE-1.5.0.md) | Techo de 43k, mediciones y cambios |
+| [RELEASE-1.5.1](docs/RELEASE-1.5.1.md) | KV preset fix y benchmark de calidad |
 | [RTX4060_OPTIMIZATION_GUIDE](docs/RTX4060_OPTIMIZATION_GUIDE.md) | Ciclo de vida, presets, tuning, troubleshooting |
 | [CONTEXTO-Y-DIAGNOSTICO](docs/CONTEXTO-Y-DIAGNOSTICO.md) | Métricas, límites y diagnóstico |
 | [SMALL-LOCAL-CODER](docs/SMALL-LOCAL-CODER.md) | Perfil de coding con contexto selectivo |
