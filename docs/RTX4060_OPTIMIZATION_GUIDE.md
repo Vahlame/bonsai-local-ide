@@ -45,19 +45,24 @@ This document describes the complete optimization pipeline for running Bonsai ID
 
 ### 2. Engine Presets (`config/local-engine-presets-rtx4060-optimized.json`)
 
-| Preset | Context | KV Type | Vision | SpecDecode | Best For |
-|--------|---------|---------|--------|------------|----------|
-| **8GB-VISION-ULTRA** | 36k | IQ4_XS | ✓ | ✓ | Max context + vision + speed |
-| **8GB-VISION-HIGH** | 32k | IQ4_XS | ✓ | — | Coding with vision |
-| **8GB-VISION-BALANCED** | 28k | q4_0 | ✓ | — | Safe vision coding |
-| **8GB-CODE-MAX** | 48k | IQ2_XS | — | ✓ | Max code context |
-| **8GB-CODE-FAST** | 16k | f16 | — | ✓ | Maximum throughput |
-| **8GB-RESEARCH** | 64k | IQ1_S | — | — | Experimental |
+| Preset | Context | KV Type | Vision | Best For |
+|--------|---------|---------|--------|----------|
+| **8GB-VISION-MAX-F16** | 43k | f16 | ✓ | Default: max precision + context |
+| **8GB-VISION-ULTRA** | 36k | q4_0 | ✓ | High context + vision |
+| **8GB-VISION-HIGH** | 32k | q8_0 | ✓ | Best balance (8/8 quality profile) |
+| **8GB-VISION-BALANCED** | 28k | q4_0 | ✓ | Safe vision coding |
+| **8GB-CODE-MAX** | 48k | q4_0 | — | Max code context |
+| **8GB-CODE-FAST** | 16k | f16 | — | Maximum throughput |
+| **8GB-RESEARCH** | 64k | q4_0 | — | Experimental |
+
+> **KV types are limited to what llama.cpp actually accepts:** `f16`, `bf16`,
+> `q8_0`, `q4_0` (plus q4_1/iq4_nl/q5_0/q5_1, not used here). `IQ4_XS`, `IQ2_XS`
+> and `IQ1_S` are **weight** quantizations, **not valid for KV cache** — using them
+> makes `llama-server` exit at startup.
 
 **Key Innovations**:
-- **IQ4_XS KV** (~4.5-bit): Saves ~1.2GB vs f16, minimal quality loss
-- **IQ2_XS KV** (~2.25-bit): Saves ~1.8GB vs f16 for code-only
-- **Speculative Decoding**: 4-token lookahead with 1B draft model → ~2-3x token speed
+- **q8_0 KV** (~8-bit): near-lossless (8/8 in the KV quality test), ~0.5 GB cheaper than f16 at 32k
+- **q4_0 KV** (~4-bit): halves KV vs q8_0, enables 36k/48k/64k windows
 - **Dynamic Margins**: 100-300 MiB based on risk profile
 
 ### 3. Optimized Launcher (`scripts/start-gpu-model-rtx4060-optimized.ps1`)
@@ -91,7 +96,7 @@ Features:
 End-to-end optimizations:
 - **Parallel tool execution** for independent calls
 - **Speculative verification** (tests run in background)
-- **Optimized KV cache** with quantization (q4_0, IQ4_XS)
+- **Optimized KV cache** with real quant types (q8_0, q4_0)
 - **Adaptive batch/ubatch** sizing
 - **Smart resource conflict detection**
 
@@ -112,8 +117,8 @@ End-to-end optimizations:
 | Configuration | VRAM Used | Free (8GB) |
 |---------------|-----------|------------|
 | Standard f16 KV | ~7.9 GB | ~200 MB |
-| **IQ4_XS KV** | **~6.7 GB** | **~1.3 GB** |
-| **IQ2_XS KV** | **~5.8 GB** | **~2.2 GB** |
+| **q8_0 KV** | **~6.7 GB** | **~1.3 GB** |
+| **q4_0 KV** | **~6.1 GB** | **~1.9 GB** |
 
 ---
 
@@ -184,14 +189,14 @@ can paste it into any PowerShell window and run the server manually.
 | `8GB-VISION-MAX-F16` | **43,008** | f16 | ✅ | **Default** · highest precision + context |
 | `8GB-VISION-DEFAULT-F16` | 16,384 | f16 | ✅ | Safe fallback, lots of headroom |
 | `8GB-VISION-ULTRA-F16` | 32,768 | f16 | ✅ | Max precision, high context |
-| `8GB-VISION-ULTRA` | 36,864 | IQ4_XS | ✅ | + SpecDecode |
-| `8GB-VISION-HIGH` | 32,768 | IQ4_XS | ✅ | Best balance |
+| `8GB-VISION-ULTRA` | 36,864 | q4_0 | ✅ | High context, cheap KV |
+| `8GB-VISION-HIGH` | 32,768 | q8_0 | ✅ | Best balance (8/8 quality) |
 | `8GB-VISION-BALANCED` | 28,672 | q4_0 | ✅ | Safe |
 | `8GB-VISION-SAFE` | 24,576 | q4_0 | ✅ | Conservative margin |
-| `8GB-CODE-MAX` | 49,152 | IQ2_XS | — | Long code + SpecDecode |
+| `8GB-CODE-MAX` | 49,152 | q4_0 | — | Long code |
 | `8GB-CODE-BALANCED` | 32,768 | q8_0 | — | Near-lossless |
 | `8GB-CODE-FAST` | 16,384 | f16 | — | Max throughput |
-| `8GB-RESEARCH` | 65,536 | IQ1_S | — | Experimental |
+| `8GB-RESEARCH` | 65,536 | q4_0 | — | Experimental |
 
 ## KV quality evidence
 
@@ -200,7 +205,7 @@ can paste it into any PowerShell window and run the server manually.
 Config **A (32K · q8_0 · vision)** passed all 8 checks and is the recommended
 quality profile. **B (16K f16)** and **C (32K f16 text-only)** each failed 2 of 8.
 The default `8GB-VISION-DEFAULT-F16` trades raw context for stability and
-precision; use `8GB-VISION-HIGH` (q8_0/IQ4_XS) if you need the 8/8 quality profile
+precision; use `8GB-VISION-HIGH` (q8_0) if you need the 8/8 quality profile
 with longer context.
 
 ---
@@ -250,6 +255,39 @@ the crash. (Do not remove that flag.)
   decoding, but it needs ~0.7 GB for the draft model and therefore **cannot fit at
   43k f16 + vision**. It is only viable at ≤16k context.
 
+---
+
+## Quality benchmark (complex tasks, deterministic)
+
+![Quality by preset](graficos/bench-quality.svg)
+
+`scripts/bench-model-quality.mjs` starts each preset's server, runs 18 tasks across
+8 fields and grades them automatically (no human judge):
+
+- **coding**: implement `chunk`, implement `isBalanced`, **arithmetic expression
+  parser** and **LRU cache** (all executed in a `vm` sandbox with a timeout), fix a
+  broken binary search, predict output.
+- **reasoning**: train catch-up, probability as a reduced fraction, **three-rate
+  work problem**, logic puzzle.
+- **data**: SQL aggregation result as JSON.
+- **instruction**: strict JSON extraction, **nested JSON** with computed total.
+- **text**: word-order transform preserving punctuation.
+- **retrieval**: one needle and **two needles in order** in ~6–8k tokens.
+- **spanish**: entity extraction as JSON.
+- **tools**: correct native `tool_call` arguments.
+
+Run:
+
+```powershell
+node scripts/bench-model-quality.mjs
+node scripts/bench-model-quality.mjs --presets 8GB-VISION-MAX-F16,8GB-RESEARCH
+node scripts/bench-model-quality.mjs --tasks coding_impl_chunk,data_sql_result
+```
+
+It writes `reports/bench-quality-<stamp>/results.{md,json}` and regenerates the SVG
+chart above. Use it to decide whether a lower-precision KV (to buy context) actually
+costs quality for your workload.
+
 
 ---
 
@@ -269,7 +307,7 @@ the crash. (Do not remove that flag.)
 │              llama.cpp v0.8.0+ (RTX4060-Opt Build)              │
 │  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────┐   │
 │  │ FlashAttn v2 │  │  Speculative │  │  Quantized KV Cache │   │
-│  │ (sm89 tuned) │  │  Decoding    │  │  (IQ4_XS, IQ2_XS)   │   │
+│  │ (sm89 tuned) │  │  Decoding    │  │  (q8_0, q4_0)      │   │
 │  └──────────────┘  └──────────────┘  └─────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
           │                │                     │
@@ -289,7 +327,7 @@ the crash. (Do not remove that flag.)
 | "El puerto 8080 ya está ocupado" | Otro llama-server ajeno usa el puerto. Ciérralo o usa "Detener" en la UI si es administrado. |
 | La UI abre pero dice "Desconectado" | Pulsa **Iniciar** en la barra superior (o pega el comando del botón **Terminal**). |
 | El servidor muere al cerrar la terminal | No lo lances con `Start-Process`/jobs a mano: usa **Iniciar** (spawn+unref) o el comando del botón **Terminal**. |
-| OOM con f16 a 32k + visión | Usa el preset default (16k f16) o `8GB-VISION-HIGH` (IQ4_XS). |
+| OOM con f16 a 32k + visión | Usa el preset default (16k f16) o `8GB-VISION-HIGH` (q8_0). |
 | Crash en reposo con f16 | El lanzador ya añade `--ctx-checkpoints 0`; no lo quites. |
 | Speculative decoding no acelera | Verifica que exista `models/Ornith-1.5-1B-Q4_K_M.gguf`; el preset debe tener `spec: draft`. |
 | "El motor en ejecución no coincide…" | El servidor cargado no es el preset pedido; pulsa **Detener** y luego **Iniciar**. |
@@ -302,7 +340,7 @@ the crash. (Do not remove that flag.)
 | File | Purpose |
 |------|---------|
 | `scripts/build-rtx4060-optimized.ps1` | Custom llama.cpp sm89 build |
-| `config/local-engine-presets-rtx4060-optimized.json` | Optimized presets (f16 / IQ4_XS / q8_0 / q4_0 / IQ1_S) |
+| `config/local-engine-presets-rtx4060-optimized.json` | Optimized presets (f16 / q8_0 / q4_0) |
 | `scripts/start-gpu-model-rtx4060-optimized.ps1` | Model launcher (proven Start-Process + WaitForExit lifecycle) |
 | `scripts/start-ui-rtx4060-optimized.ps1` | Desktop entry: opens ONLY the web UI (reused if already running) |
 | `scripts/stop-managed-server.ps1` | Stops the managed server (understands both binaries + launchers) |

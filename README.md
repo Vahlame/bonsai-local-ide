@@ -107,14 +107,14 @@ flowchart TD
 | **`8GB-VISION-MAX-F16`** | **43.008** | **f16** | ✅ | **Por defecto** · máxima precisión y contexto |
 | `8GB-VISION-DEFAULT-F16` | 16.384 | f16 | ✅ | Seguro, mucho margen |
 | `8GB-VISION-ULTRA-F16` | 32.768 | f16 | ✅ | Precisión alta, contexto medio |
-| `8GB-VISION-ULTRA` | 36.864 | IQ4_XS | ✅ | + SpecDecode |
-| `8GB-VISION-HIGH` | 32.768 | IQ4_XS | ✅ | Mejor equilibrio |
+| `8GB-VISION-ULTRA` | 36.864 | q4_0 | ✅ | Contexto alto y barato |
+| `8GB-VISION-HIGH` | 32.768 | q8_0 | ✅ | Mejor equilibrio (calidad 8/8) |
 | `8GB-VISION-BALANCED` | 28.672 | q4_0 | ✅ | Conservador |
 | `8GB-VISION-SAFE` | 24.576 | q4_0 | ✅ | Mucho margen |
-| `8GB-CODE-MAX` | 49.152 | IQ2_XS | — | Código largo + SpecDecode |
+| `8GB-CODE-MAX` | 49.152 | q4_0 | — | Código largo |
 | `8GB-CODE-BALANCED` | 32.768 | q8_0 | — | Casi sin pérdida |
 | `8GB-CODE-FAST` | 16.384 | f16 | — | Máximo throughput |
-| `8GB-RESEARCH` | 65.536 | IQ1_S | — | Experimental |
+| `8GB-RESEARCH` | 65.536 | q4_0 | — | Experimental |
 
 ---
 
@@ -154,6 +154,27 @@ el lanzador usa `--ctx-checkpoints 0` para f16 y desaparece.
 ### Calidad de KV (A/B/C)
 
 ![Calidad KV](docs/graficos/kv-quality.svg)
+
+### Calidad por preset — benchmark de tareas complejas
+
+![Calidad por preset](docs/graficos/bench-quality.svg)
+
+Benchmark determinista (sin jurado humano) sobre **18 tareas** en 8 campos:
+implementación y depuración de código (ejecutadas en un sandbox con timeout),
+predicción de salida, **parser de expresiones**, **caché LRU**, matemáticas,
+lógica, **problemas de tasas**, SQL, instrucciones JSON (**incluido JSON anidado**),
+transformación de texto, retrieval de contexto largo (**1 y 2 agujas**), extracción
+en español y *tool-calling*. Se ejecuta con pensamiento (1024) y temperatura 0.2
+para comparar la precisión real de cada nivel de KV.
+
+```powershell
+node scripts/bench-model-quality.mjs                 # 5 presets
+node scripts/bench-model-quality.mjs --presets 8GB-VISION-MAX-F16,8GB-RESEARCH
+node scripts/bench-model-quality.mjs --tasks coding_hard_calc,data_sql_result
+```
+
+Resultados crudos en `reports/bench-quality-<fecha>/`. La gráfica se regenera en
+`docs/graficos/bench-quality.svg`.
 
 ---
 

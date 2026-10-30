@@ -21,6 +21,10 @@ versionado semántico.
 
 ### Corregido
 
+- **Presets con KV inválido**: `IQ4_XS`, `IQ2_XS` e `IQ1_S` son cuantizaciones de
+  **pesos**, no de caché KV; `llama-server` salía al arrancar. Los presets
+  `8GB-VISION-ULTRA` (ahora 36k q4_0), `8GB-VISION-HIGH` (32k q8_0),
+  `8GB-CODE-MAX` (48k q4_0) y `8GB-RESEARCH` (64k q4_0) usan tipos válidos.
 - `start-gpu-model-rtx4060-optimized.ps1` ya no sale antes de tiempo (mataba el
   modelo en Windows).
 - `stop-managed-server.ps1` reconoce el binario optimizado sm89 y el lanzador

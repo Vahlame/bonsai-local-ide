@@ -1,58 +1,65 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="340" viewBox="0 0 720 340" font-family="Segoe UI, system-ui, sans-serif">
-  <rect width="720" height="340" fill="#0d100b"/>
-  <text x="24" y="34" fill="#e9eee0" font-size="18" font-weight="600">Presets — context window vs VRAM budget</text>
-  <text x="24" y="54" fill="#8d9680" font-size="12">RTX 4060 8GB · llama.cpp v0.8.0 sm89 · auto-calibrated</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="380" viewBox="0 0 760 380" font-family="Segoe UI, system-ui, sans-serif">
+  <rect width="760" height="380" fill="#0d100b"/>
+  <text x="24" y="34" fill="#e9eee0" font-size="18" font-weight="600">Presets — context window vs VRAM (RTX 4060 8 GB)</text>
+  <text x="24" y="54" fill="#8d9680" font-size="12">Only real KV types: f16 / q8_0 / q4_0 (IQ* are weight quant types, invalid for KV)</text>
 
-  <!-- legend -->
-  <rect x="470" y="26" width="12" height="12" rx="3" fill="#cde86e"/>
-  <text x="488" y="36" fill="#8d9680" font-size="11">f16 (max precision)</text>
-  <rect x="470" y="46" width="12" height="12" rx="3" fill="#82b8d0"/>
-  <text x="488" y="56" fill="#8d9680" font-size="11">quantized KV</text>
+  <g font-size="10" fill="#8d9680">
+    <rect x="470" y="26" width="12" height="12" rx="3" fill="#cde86e"/><text x="488" y="36">f16 (max precision)</text>
+    <rect x="600" y="26" width="12" height="12" rx="3" fill="#82b8d0"/><text x="618" y="36">q8_0</text>
+    <rect x="470" y="46" width="12" height="12" rx="3" fill="#e8c06a"/><text x="488" y="56">q4_0</text>
+    <text x="600" y="56">★ measured</text>
+  </g>
 
-  <!-- grid -->
+  <!-- grid: 48k across 540px -> 11.25 px per 1k -->
   <g stroke="#222a1c" stroke-width="1" stroke-dasharray="3 4">
-    <line x1="150" y1="90" x2="690" y2="90"/>
-    <line x1="150" y1="140" x2="690" y2="140"/>
-    <line x1="150" y1="190" x2="690" y2="190"/>
-    <line x1="150" y1="240" x2="690" y2="240"/>
+    <line x1="190" y1="86" x2="730" y2="86"/>
+    <line x1="190" y1="128" x2="730" y2="128"/>
+    <line x1="190" y1="170" x2="730" y2="170"/>
+    <line x1="190" y1="212" x2="730" y2="212"/>
   </g>
   <g fill="#6f7a64" font-size="10">
-    <text x="120" y="94">48K</text><text x="120" y="144">36K</text><text x="120" y="194">24K</text><text x="120" y="244">12K</text>
+    <text x="160" y="90" text-anchor="end">48k</text><text x="160" y="132" text-anchor="end">36k</text>
+    <text x="160" y="174" text-anchor="end">24k</text><text x="160" y="216" text-anchor="end">12k</text>
   </g>
 
-  <!-- bars: label + context bar; VRAM noted -->
-  <!-- Default 16k f16 -->
-  <text x="24" y="105" fill="#e9eee0" font-size="11">Default 16k f16</text>
-  <rect x="150" y="92" width="180" height="18" rx="4" fill="#cde86e"/>
-  <text x="338" y="105" fill="#8d9680" font-size="10">~7.0 GB · vision</text>
+  <!-- rows -->
+  <text x="24" y="80" fill="#e9eee0" font-size="11" font-weight="700">MAX 43k f16 +V ★</text>
+  <rect x="190" y="68" width="484" height="16" rx="4" fill="#cde86e"/>
+  <text x="682" y="80" fill="#cde86e" font-size="10">7.48 GB</text>
 
-  <!-- Ultra-F16 32k -->
-  <text x="24" y="130" fill="#e9eee0" font-size="11">Ultra-F16 32k</text>
-  <rect x="150" y="117" width="360" height="18" rx="4" fill="#cde86e"/>
-  <text x="518" y="130" fill="#8d9680" font-size="10">~7.8 GB · vision</text>
+  <text x="24" y="102" fill="#e9eee0" font-size="11">Default 16k f16 +V</text>
+  <rect x="190" y="90" width="180" height="16" rx="4" fill="#cde86e"/>
+  <text x="378" y="102" fill="#8d9680" font-size="10">~6.5 GB</text>
 
-  <!-- HIGH 32k IQ4_XS -->
-  <text x="24" y="155" fill="#e9eee0" font-size="11">High 32k IQ4_XS</text>
-  <rect x="150" y="142" width="360" height="18" rx="4" fill="#82b8d0"/>
-  <text x="518" y="155" fill="#8d9680" font-size="10">~6.7 GB · vision</text>
+  <text x="24" y="124" fill="#e9eee0" font-size="11">Ultra-F16 32k +V</text>
+  <rect x="190" y="112" width="360" height="16" rx="4" fill="#cde86e"/>
+  <text x="558" y="124" fill="#8d9680" font-size="10">~7.2 GB</text>
 
-  <!-- BALANCED 28k q4_0 -->
-  <text x="24" y="180" fill="#e9eee0" font-size="11">Balanced 28k q4_0</text>
-  <rect x="150" y="167" width="315" height="18" rx="4" fill="#82b8d0"/>
-  <text x="473" y="180" fill="#8d9680" font-size="10">~6.4 GB · vision</text>
+  <text x="24" y="146" fill="#e9eee0" font-size="11">High 32k q8_0 +V</text>
+  <rect x="190" y="134" width="360" height="16" rx="4" fill="#82b8d0"/>
+  <text x="558" y="146" fill="#8d9680" font-size="10">~6.7 GB</text>
 
-  <!-- CODE-MAX 48k IQ2_XS -->
-  <text x="24" y="205" fill="#e9eee0" font-size="11">Code-Max 48k IQ2_XS</text>
-  <rect x="150" y="192" width="540" height="18" rx="4" fill="#82b8d0"/>
-  <text x="698" y="205" fill="#8d9680" font-size="10" text-anchor="end">~5.8 GB</text>
+  <text x="24" y="168" fill="#e9eee0" font-size="11">Ultra 36k q4_0 +V</text>
+  <rect x="190" y="156" width="405" height="16" rx="4" fill="#e8c06a"/>
+  <text x="603" y="168" fill="#8d9680" font-size="10">~6.6 GB</text>
 
-  <!-- RESEARCH 64k IQ1_S -->
-  <text x="24" y="230" fill="#e9eee0" font-size="11">Research 64k IQ1_S</text>
-  <rect x="150" y="217" width="620" height="18" rx="4" fill="#e8c06a" opacity="0.85"/>
-  <text x="698" y="230" fill="#8d9680" font-size="10" text-anchor="end">~5.2 GB</text>
+  <text x="24" y="190" fill="#e9eee0" font-size="11">Balanced 28k q4_0 +V</text>
+  <rect x="190" y="178" width="315" height="16" rx="4" fill="#e8c06a"/>
+  <text x="513" y="190" fill="#8d9680" font-size="10">~6.3 GB</text>
 
-  <!-- throughput footnote -->
-  <text x="24" y="286" fill="#e9eee0" font-size="12" font-weight="600">Throughput (Ornith 9B Q4_K_M)</text>
-  <text x="24" y="305" fill="#8d9680" font-size="11">prefill 512: 1,925 t/s (+2.6% vs stock) · generation: ~41 t/s · SpecDecode: up to ~100 t/s</text>
-  <text x="24" y="323" fill="#5c6554" font-size="10">Numbers are single-pass measurements on this machine, not statistical benchmarks.</text>
+  <text x="24" y="212" fill="#e9eee0" font-size="11">Code-Max 48k q4_0</text>
+  <rect x="190" y="200" width="540" height="16" rx="4" fill="#e8c06a"/>
+  <text x="738" y="212" fill="#8d9680" font-size="10" text-anchor="end">~5.8 GB</text>
+
+  <text x="24" y="234" fill="#e9eee0" font-size="11">Code-Balanced 32k q8_0</text>
+  <rect x="190" y="222" width="360" height="16" rx="4" fill="#82b8d0"/>
+  <text x="558" y="234" fill="#8d9680" font-size="10">~5.6 GB</text>
+
+  <text x="24" y="256" fill="#e9eee0" font-size="11">Research 64k q4_0</text>
+  <rect x="190" y="244" width="620" height="16" rx="4" fill="#e8c06a"/>
+  <text x="738" y="256" fill="#8d9680" font-size="10" text-anchor="end">~5.9 GB</text>
+
+  <text x="24" y="316" fill="#e9eee0" font-size="12" font-weight="600">Throughput (Ornith 9B Q4_K_M, measured)</text>
+  <text x="24" y="335" fill="#8d9680" font-size="11">prefill ~2,200 t/s · generation ~43 t/s · f16 KV is faster than q8_0 here (2,199 vs 2,159 pp)</text>
+  <text x="24" y="353" fill="#5c6554" font-size="10">★ 43,008 f16 + vision measured 7,481 MiB; 45k OOM. "~" values are VRAM-model estimates.</text>
 </svg>
