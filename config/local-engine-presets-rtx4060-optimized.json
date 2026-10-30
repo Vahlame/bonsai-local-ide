@@ -1,4 +1,18 @@
 {
+  "8GB-VISION-MAX-F16": {
+    "label": "🏆 MAX: 43k ctx + f16 KV + Vision + Thinking (highest precision & context)",
+    "context": 43008,
+    "kv": "f16",
+    "batch": 512,
+    "ubatch": 256,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 100,
+    "vision": true,
+    "coderOutputTokens": 8192,
+    "thinkingTokens": 4096,
+    "description": "MAX PRECISION & CONTEXT: 43,008 tokens with full f16 KV + vision + 4096-token thinking. Measured stable (long prompt + 30s idle, ~7.6GB VRAM). 45k OOMs. This is the highest f16 ceiling on an 8GB RTX 4060."
+  },
   "8GB-VISION-DEFAULT-F16": {
     "label": "✅ Default: 16k ctx + f16 KV + Vision (ROCK SOLID)",
     "context": 16384,
@@ -11,7 +25,7 @@
     "vision": true,
     "coderOutputTokens": 6144,
     "thinkingTokens": 4096,
-    "description": "DEFAULT STABLE: 16,384 tokens with full f16 KV cache + vision. Rock-solid stability, high precision. Best for production use."
+    "description": "SAFE: 16,384 tokens with full f16 KV cache + vision. Rock-solid with lots of VRAM headroom. Use when other GPU apps are running."
   },
   "8GB-VISION-ULTRA-F16": {
     "label": "🔥 Ultra F16: 32k ctx + f16 KV + Vision (MAX PRECISION)",
