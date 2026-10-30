@@ -311,7 +311,7 @@ const UI_SERVIDOS = new Set([".js", ".mjs", ".css", ".html", ".svg", ".json", ".
  */
 function parseArgs(argv) {
   // think = presupuesto de razonamiento en tokens; 0 (por defecto) = APAGADO.
-  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 8192, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo" };
+  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 8192, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo", agentProfile:"optimized" };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--host") out.host = argv[++i] ?? out.host;
@@ -321,6 +321,7 @@ function parseArgs(argv) {
     else if (arg === "--think") {out.think = Number(argv[++i]);out.thinkProvided=true;}
     else if (arg === "--engine-preset") {out.enginePreset=argv[++i];if (isNamedEnginePreset(out.enginePreset)) engineProfile(out.enginePreset);}
     else if (arg === "--perfil") out.perfil = argv[++i] ?? out.perfil;
+    else if (arg === "--agent-profile") out.agentProfile = argv[++i] ?? out.agentProfile;
     else if (arg === "--open") out.open = true;
     else throw new Error(`Argumento desconocido: ${arg}`);
   }
@@ -2389,6 +2390,74 @@ async function main(args) {
         } finally { busy = false; }
         return;
       }
+      
+      // ================================================================
+      // OPTIMIZED SERVER MANAGEMENT (RTX 4060)
+      // ================================================================
+      if (req.method === "POST" && url.pathname === "/api/server/start") {
+        if (busy) { res.writeHead(409).end("Hay una operación en curso"); return; }
+        busy = true;
+        try {
+          const raw = JSON.parse(await readBody(req));
+          const preset = raw?.preset || "8GB-VISION-DEFAULT-F16";
+          const modelo = raw?.model || "ornith9b";
+          
+          // Validate preset
+          const validPresets = [
+            "8GB-VISION-DEFAULT-F16", "8GB-VISION-ULTRA-F16", "8GB-VISION-HIGH",
+            "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
+            "8GB-CODE-MAX", "8GB-CODE-HIGH", "8GB-CODE-BALANCED", "8GB-CODE-FAST",
+            "8GB-RESEARCH", "8GB-VISION-QUALITY"
+          ];
+          if (!validPresets.includes(preset)) {
+            res.writeHead(400).end("Preset no válido");
+            return;
+          }
+          
+          // Stop any existing server first
+          await apagarLlamaServer();
+          await new Promise(r => setTimeout(r, 1000));
+          
+          // Launch with optimized preset
+          const hijo = lanzarServidorLlama(modelo, {
+            enginePreset: preset,
+            vision: true,
+            contexto: 16384, // Will be overridden by preset
+            kv: "f16",
+            pensar: 4096,
+            hostIP: "127.0.0.1",
+            dormir: 0
+          });
+          
+          if (!(await esperarEncendido(180000, hijo))) {
+            throw new Error("El modelo no arrancó; revisa logs/arranque-modelo.log");
+          }
+          
+          await chat.connect();
+          chat.vision = Boolean(chat.props?.modalities?.vision);
+          
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+          res.end(JSON.stringify({ ok: true, encendido: true, preset }));
+        } catch (err) {
+          res.writeHead(500).end(String(err.message || err));
+        } finally { busy = false; }
+        return;
+      }
+      
+      if (req.method === "POST" && url.pathname === "/api/server/stop") {
+        if (busy) { res.writeHead(409).end("Hay una operación en curso"); return; }
+        busy = true;
+        try {
+          await apagarLlamaServer();
+          await new Promise(r => setTimeout(r, 1000));
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+          res.end(JSON.stringify({ ok: true, encendido: false }));
+        } catch (err) {
+          res.writeHead(500).end(String(err.message || err));
+        } finally { busy = false; }
+        return;
+      }
+      
       if (req.method === "GET" && url.pathname === "/api/modelos") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
         // `guardado` = el que arrancará la próxima vez; `actual` = el que está cargado ahora.

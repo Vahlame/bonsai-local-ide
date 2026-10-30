@@ -1,19 +1,31 @@
 {
-  "8GB-VISION-ULTRA-F16": {
-    "label": "🔥 Ultra F16: 39k ctx + f16 KV + Vision + SpecDecode (MAX PRECISION)",
-    "context": 39936,
+  "8GB-VISION-DEFAULT-F16": {
+    "label": "✅ Default: 16k ctx + f16 KV + Vision (ROCK SOLID)",
+    "context": 16384,
     "kv": "f16",
     "batch": 512,
     "ubatch": 256,
     "flash": "on",
-    "spec": "draft",
-    "marginMiB": 150,
+    "spec": "none",
+    "marginMiB": 300,
+    "vision": true,
+    "coderOutputTokens": 6144,
+    "thinkingTokens": 4096,
+    "description": "DEFAULT STABLE: 16,384 tokens with full f16 KV cache + vision. Rock-solid stability, high precision. Best for production use."
+  },
+  "8GB-VISION-ULTRA-F16": {
+    "label": "🔥 Ultra F16: 32k ctx + f16 KV + Vision (MAX PRECISION)",
+    "context": 32768,
+    "kv": "f16",
+    "batch": 512,
+    "ubatch": 256,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 200,
     "vision": true,
     "coderOutputTokens": 8192,
     "thinkingTokens": 4096,
-    "draftModel": "Ornith-1.5-1B-Q4_K_M.gguf",
-    "draftTokens": 4,
-    "description": "MAXIMUM PRECISION & CONTEXT: 39,936 tokens with full f16 KV cache + vision + speculative decoding. Previously validated stable config with f16 KV. Best quality for coding + vision tasks."
+    "description": "MAX PRECISION: 32,768 tokens with full f16 KV cache + vision. Note: may crash on idle due to llama.cpp bug. Use for high-quality single requests."
   },
   "8GB-VISION-ULTRA": {
     "label": "⚡ Ultra: 36k ctx + IQ4_XS KV + Vision + SpecDecode",

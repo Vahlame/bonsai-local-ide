@@ -25,7 +25,8 @@ param (
     [switch]$Vision,
     [switch]$DryRun,
     [switch]$ManagedByIDE,
-    [ValidateSet("", "8GB-VISION-ULTRA-F16", "8GB-VISION-ULTRA", "8GB-VISION-HIGH", "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
+    [ValidateSet("", "8GB-VISION-DEFAULT-F16", "8GB-VISION-ULTRA-F16", "8GB-VISION-ULTRA", "8GB-VISION-HIGH", 
+                 "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
                  "8GB-CODE-MAX", "8GB-CODE-HIGH", "8GB-CODE-BALANCED", "8GB-CODE-FAST",
                  "8GB-RESEARCH", "8GB-VISION-QUALITY", "CUSTOM")][string]$EnginePreset = "",
     [int]$FreeMiBOverride = 0,
@@ -88,16 +89,19 @@ if (-not $Item -or $Item.servidor.tipo -ne "gpu-completa") { throw "Modelo sin p
 $ModelPath = Join-Path $RootDir ("models\" + $Item.archivo)
 $BinPath = Join-Path $RootDir "bin\llama-server.exe"
 
-# Check for optimized binary
+# Check for optimized binary (try project-local first, then user profile)
 $OptBinPath = Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"
+if (-not (Test-Path -LiteralPath $OptBinPath)) {
+    $OptBinPath = Join-Path $env:USERPROFILE ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"
+}
 if (Test-Path -LiteralPath $OptBinPath) {
     $BinPath = $OptBinPath
     Write-Host "Usando binario optimizado RTX 4060: $BinPath" -ForegroundColor Green
 }
 
 if (-not (Test-Path -LiteralPath $ModelPath)) { throw "Falta el modelo: $ModelPath" }
-if ((Get-Item -LiteralPath $ModelPath).Length -ne [int64]$Item.bytes) { throw "El modelo no tiene el tamaño verificado; descarga incompleta." }
-if (-not $DryRun -and @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue).Count -gt 0) { throw "El puerto $Port ya está ocupado. No se modifican servidores ajenos." }
+if ((Get-Item -LiteralPath $ModelPath).Length -ne [int64]$Item.bytes) { throw "El modelo no tiene el tamano verificado; descarga incompleta." }
+if (-not $DryRun -and @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue).Count -gt 0) { throw "El puerto $Port ya esta ocupado. No se modifican servidores ajenos." }
 
 # =============================================================================
 # VRAM MEASUREMENT
@@ -143,11 +147,11 @@ $VisionProfile = if ($Vision) { $Item.vision } else { $null }
 $VisionMiB = 0
 if ($Vision) {
     if (-not $VisionProfile.archivo -or -not $VisionProfile.offload -or -not $VisionProfile.contexto) { 
-        throw "Este perfil solo admite visión con proyector propio en GPU y un techo de contexto declarado." 
+        throw "Este perfil solo admite vision con proyector propio en GPU y un techo de contexto declarado." 
     }
     $ProjectorPath = Join-Path $RootDir ("models\" + $VisionProfile.archivo)
     if (-not (Test-Path -LiteralPath $ProjectorPath) -or (Get-Item -LiteralPath $ProjectorPath).Length -ne [int64]$VisionProfile.bytes) { 
-        throw "Falta el proyector de visión verificado: $ProjectorPath" 
+        throw "Falta el proyector de vision verificado: $ProjectorPath" 
     }
     # mmproj BF16 is ~900MB, but with offload it's mostly in VRAM
     $VisionMiB = [int]$VisionProfile.reservaMiB
@@ -196,35 +200,48 @@ if ($ContextSize -eq "auto") {
 # =============================================================================
 # BUILD ARGUMENT LINE
 # =============================================================================
+# Use STABLE flags for f16 KV (avoids idle crash bug): no -np 1, no --fit off, no --kv-offload, no --cache-ram 0
+$UseStableFlags = ($KVCacheType -eq 'f16')
+
 $ServerArgs = @(
     "-m", $ModelPath
     "--gpu-layers", "99"
-    "--fit", "off"
-    "--kv-offload"
-    "--flash-attn", "on"
-    "-c", $ContextTokens
-    "-ctk", $KVCacheType
-    "-ctv", $KVCacheType
-    "-np", "1"
-    "-b", [int]$EngineOptions.batch
-    "-ub", [int]$EngineOptions.ubatch
-    "-t", "4"
-    "--host", $HostIP
-    "--port", $Port
-    "--jinja"
-    "--metrics"
-    "--cache-ram", "0"
-    "-lv", "4"
-    "--cors-origins", "http://127.0.0.1:$Port,http://localhost:$Port,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788"
-    "--temp", "0.6"
-    "--top-p", "0.95"
-    "--top-k", "20"
-    "--min-p", "0"
-    "--presence-penalty", "0"
-    "--repeat-penalty", "1"
-    "--spec-type", "none"
-    "--no-context-shift"
 )
+if (-not $UseStableFlags) {
+    $ServerArgs += "--fit", "off"
+    $ServerArgs += "--kv-offload"
+}
+$ServerArgs += "--flash-attn", "on"
+$ServerArgs += "-c", $ContextTokens
+$ServerArgs += "-ctk", $KVCacheType
+$ServerArgs += "-ctv", $KVCacheType
+if (-not $UseStableFlags) {
+    $ServerArgs += "-np", "1"
+}
+$ServerArgs += "-b", [int]$EngineOptions.batch
+$ServerArgs += "-ub", [int]$EngineOptions.ubatch
+$ServerArgs += "-t", "4"
+$ServerArgs += "--host", $HostIP
+$ServerArgs += "--port", $Port
+$ServerArgs += "--jinja"
+$ServerArgs += "--metrics"
+if (-not $UseStableFlags) {
+    $ServerArgs += "--cache-ram", "0"
+}
+$ServerArgs += "-lv", "4"
+$ServerArgs += "--cors-origins", "http://127.0.0.1:$Port,http://localhost:$Port,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788"
+$ServerArgs += "--temp", "0.6"
+$ServerArgs += "--top-p", "0.95"
+$ServerArgs += "--top-k", "20"
+$ServerArgs += "--min-p", "0"
+$ServerArgs += "--presence-penalty", "0"
+$ServerArgs += "--repeat-penalty", "1"
+$ServerArgs += "--spec-type", "none"
+$ServerArgs += "--no-context-shift"
+if ($UseStableFlags) {
+    # Disable context checkpoints to prevent idle crash (llama.cpp bug with f16 KV)
+    $ServerArgs += "--ctx-checkpoints", "0"
+}
 
 # Chat template (from modelo.json) - use file to avoid command-line escaping issues
 $ChatTemplatePath = ""
@@ -256,9 +273,6 @@ if ($SpeculativeDecoding -and (Test-Path -LiteralPath $DraftModelPath)) {
     Write-Host "Speculative decoding ENABLED: draft=$DraftModelPath, tokens=$DraftTokensCount" -ForegroundColor Green
 }
 
-# Flash attention (v2 optimized for sm89)
-$ServerArgs += "--flash-attn", "on"
-
 if ($DryRun) { 
     Write-Host ($BinPath + " " + ($ServerArgs | ForEach-Object { if ($_ -match ' ') { '"' + $_ + '"' } else { $_ } }) -join ' ')
     exit 0 
@@ -274,7 +288,13 @@ $MarkerTmp = $Marker + ".tmp"
 
 # Capture llama.cpp version
 $LlamaVersion = "desconocida"
-try { $out = & $BinPath --version 2>&1; if ($out) { $LlamaVersion = ($out -split "`r?`n" | Select-Object -First 1).Trim() } } catch {}
+try { 
+    $oldEAP = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
+    $out = & $BinPath --version 2>&1
+    $ErrorActionPreference = $oldEAP
+    if ($out) { $LlamaVersion = ($out -split "`r?`n" | Select-Object -First 1).Trim() } 
+} catch {}
 
 # Active key for reuse (vision projector)
 $ActiveKey = $null
@@ -309,24 +329,50 @@ $ExecOptions = @{
     FilePath = $BinPath; 
     ArgumentList = $ServerArgs; 
     PassThru = $true; 
-    NoNewWindow = $true; 
+    NoNewWindow = $false; 
+    WindowStyle = "Hidden"; 
     RedirectStandardOutput = $env:BONSAI_LLAMA_LOG_PREFIX + ".out.log"; 
     RedirectStandardError = $env:BONSAI_LLAMA_LOG_PREFIX + ".err.log" 
 }
-$Exec = Start-Process @ExecOptions
-$null = $Exec.Handle
 
-# Verify process stays alive
+# Launch server - use scheduled task for proper detachment
+$CmdLine = "$BinPath $($ServerArgs -join ' ')"
 if ($ManagedByIDE) {
-    Start-Sleep -Milliseconds 500
-    $Vivo = Get-Process -Id $Exec.Id -ErrorAction SilentlyContinue
-    if (-not $Vivo -or $Vivo.HasExited) {
-        Write-Host "Error: llama-server.exe murió inmediatamente (PID $($Exec.Id)). Revisa $($env:BONSAI_LLAMA_LOG_PREFIX).err.log" -ForegroundColor Red
+    # Create a one-time scheduled task to launch the server detached
+    $TaskName = "BonsaiLlamaServer_$Port"
+    $Action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c start \"llama-server\" /b $CmdLine"
+    $Trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(2)
+    $Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+    
+    try {
+        # Remove existing task if any
+        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+        Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Force
+        Start-ScheduledTask -TaskName $TaskName
+        
+        # Wait for model to load and server to start
+        Start-Sleep -Seconds 10
+        
+        # Find the server process
+        $ServerProc = Get-Process -Name "llama-server" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*llama-server.exe" } | Select-Object -First 1
+        if (-not $ServerProc) {
+            Write-Host "Error: llama-server.exe no se encontro corriendo. Revisa $($env:BONSAI_LLAMA_LOG_PREFIX).err.log" -ForegroundColor Red
+            if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
+            exit 1
+        }
+        try { Write-MarcadorAdministrado ([int]$ServerProc.Id) } catch { Write-Host "Aviso: no se pudo completar marcador: $($_.Exception.Message)" -ForegroundColor Yellow }
+        # Exit successfully - server is running in background
+        exit 0
+    } catch {
+        Write-Host "Error creando tarea programada" -ForegroundColor Red
         if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
         exit 1
     }
-    try { Write-MarcadorAdministrado ([int]$Exec.Id) } catch { Write-Host "Aviso: no se pudo completar marcador: $($_.Exception.Message)" -ForegroundColor Yellow }
 }
+
+# Non-managed mode: run and wait
+$Exec = Start-Process @ExecOptions
+$null = $Exec.Handle
 
 $ExitCode = 1
 try {
