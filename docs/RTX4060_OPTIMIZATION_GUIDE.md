@@ -47,7 +47,10 @@ This document describes the complete optimization pipeline for running Bonsai ID
 
 | Preset | Context | KV Type | Vision | Best For |
 |--------|---------|---------|--------|----------|
-| **8GB-VISION-MAX-F16** | 43k | f16 | ✓ | Default: max precision + context |
+| **8GB-VISION-MAX-Q8-100K** | **110,592** | **q8_0** | ✓ CPU | **Default**: max context, near-lossless KV |
+| **8GB-VISION-MAX-Q8** | 71,680 | q8_0 | ✓ GPU | Fast vision (~2 s/image) |
+| **8GB-VISION-MAX-Q4** | 110,592 | q4_0 | ✓ GPU | Max context with fast vision |
+| **8GB-VISION-MAX-F16** | 43,008 | f16 | ✓ GPU | Maximum KV precision |
 | **8GB-VISION-ULTRA** | 36k | q4_0 | ✓ | High context + vision |
 | **8GB-VISION-HIGH** | 32k | q8_0 | ✓ | Best balance (8/8 quality profile) |
 | **8GB-VISION-BALANCED** | 28k | q4_0 | ✓ | Safe vision coding |
@@ -112,13 +115,17 @@ End-to-end optimizations:
 | Token Generation (tg1) | 40.2 t/s | **36.6 t/s** (-9%) |
 | **With SpecDecode** | N/A | **~100 t/s** (+150%) |
 
-### VRAM Usage (43008 ctx + f16 KV + Vision)
+### VRAM usage (measured, GPU dedicated to the model)
 
-| Configuration | VRAM Used | Free (8GB) |
-|---------------|-----------|------------|
-| Standard f16 KV | ~7.9 GB | ~200 MB |
-| **q8_0 KV** | **~6.7 GB** | **~1.3 GB** |
-| **q4_0 KV** | **~6.1 GB** | **~1.9 GB** |
+| Configuration | Context | Vision | VRAM peak | Free |
+|---|---:|---|---:|---:|
+| q8_0 KV, projector on CPU (`8GB-VISION-MAX-Q8-100K`) | 110,592 | ✓ | 7,650 MiB | ~300 MiB |
+| q8_0 KV, projector on GPU (`8GB-VISION-MAX-Q8`) | 71,680 | ✓ | 7,543 MiB | ~410 MiB |
+| q4_0 KV, projector on GPU (`8GB-VISION-MAX-Q4`) | 110,592 | ✓ | 7,497 MiB | ~460 MiB |
+| f16 KV, projector on GPU (`8GB-VISION-MAX-F16`) | 43,008 | ✓ | 7,481 MiB | ~480 MiB |
+
+The projector is ~879 MiB. Keeping it in RAM is what allows 110,592 with q8_0;
+114,688 fails to start in every configuration.
 
 ---
 
@@ -229,29 +236,33 @@ with that many real prompt tokens:
 | **q8_0** | **CPU** (`--no-mmproj-offload`) | **110,592** | **87,433** | **7,650 MiB** | 114,688 OOM |
 | q8_0 | none | 110,592 | — | 7,481 MiB | 114,688 OOM |
 
-**Default is `8GB-VISION-MAX-Q8-100K`**: 110,592 · q8_0 · visión en CPU · 4096 de
-pensamiento. El proyector de visión (879 MiB) se saca de la VRAM y la ventana sube de
-71k a 110k sin tocar el KV. Coste honesto: cada imagen tarda ~15,4 s (captura
-1200×528 + 120 tokens), frente a ~2 s con el proyector en GPU; la imagen se entiende
-igual (describió el panel de ajustes). Alternativas: `8GB-VISION-MAX-Q8` (71k, visión
-rápida), `8GB-VISION-MAX-Q4` (110k, visión rápida con q4_0), `8GB-VISION-MAX-F16` (43k).
+![Why q8_0 + vision jumps from 71k to 110k](graficos/vision-projector.svg)
+
+**Default is `8GB-VISION-MAX-Q8-100K`**: 110,592 · q8_0 · vision on CPU · 4096
+thinking. The 879 MiB projector leaves VRAM and the window doubles from 71k to 110k
+without touching the KV. Honest cost: ~15.4 s per image (1200×528 screenshot + 120
+tokens) versus ~2 s with the projector on GPU; the image is still understood (it
+described the settings panel). Alternatives: `8GB-VISION-MAX-Q8` (71k, fast vision),
+`8GB-VISION-MAX-Q4` (110k, fast vision with q4_0), `8GB-VISION-MAX-F16` (43k).
 
 ### Context split (frontier-style)
 
-`historial = ventana − reserva de salida − margen`; la reserva incluye el pensamiento,
-así que razonar no se come la respuesta. Con el preset de 110.592:
+`history = window − output reserve − margin`; the output reserve includes thinking, so
+reasoning never eats the answer. With the 110,592 preset:
 
-| Parte | Tokens |
+![Context split](graficos/context-split.svg)
+
+| Part | Tokens |
 |---|---:|
-| Historial | ~98.176 |
-| Pensamiento | 4.096 |
-| Respuesta / edición | ~7.936 |
-| Margen | 128 |
+| History | ~98,176 |
+| Thinking | 4,096 |
+| Answer / edit | ~7,936 |
+| Safety margin | 128 |
 
-`historial = 0` en Ajustes = automático. Los turnos viejos se compactan con el modelo
-en notas estructuradas (objetivo, decisiones, archivos, comandos/pruebas, errores
-abiertos, pendiente), con tope ~6 % de la ventana (1k–8k); el historial original sigue
-guardado en la sesión.
+`historial = 0` in Settings means automatic. Older turns are compacted by the model
+into structured notes (objective, decisions, files, commands/tests, open errors,
+pending), capped at ~6 % of the window (1k–8k tokens); the original turns stay in the
+session.
 
 > The f16-only table below is the earlier probe and is kept for history:
 >
@@ -368,6 +379,31 @@ FAIL,FAIL,OK,FAIL,FAIL). The initial 94.4 % was one lucky sample, not KV precisi
 node scripts/bench-model-quality.mjs --presets 8GB-VISION-HIGH,8GB-VISION-MAX-F16 `
   --tasks coding_hard_calc,text_transform_reverse --repeat 5
 node scripts/bench-model-quality.mjs --chart-from reports/bench-quality-<stamp>/results.json
+```
+
+### Complex project benchmark (real `node --test`)
+
+![Complex project benchmark](graficos/bench-project.svg)
+
+`scripts/bench-project.mjs` asks for a multi-file Node ESM project (`taskforge`:
+priority queue with FIFO ties + concurrency scheduler with retries + `node:test`
+suites), writes the files and **runs `node --test`**. The score is tests that pass,
+not "looks right". 2 reps per preset, thinking 2048, vision on:
+
+| Preset | Tests | Pass | % | All green | Vision check |
+|---|---:|---:|---:|:--:|:--:|
+| `8GB-VISION-MAX-F16` | 14 | 8 | 57 % | no | fail |
+| `8GB-VISION-MAX-Q8` | 18 | 6 | 33 % | no | fail |
+| `8GB-VISION-MAX-Q4` | 9 | 2 | 22 % | no | fail |
+
+Honest reading: no run leaves the suite green; the model writes all five files and
+part of the tests but fails the priority-queue/scheduler details. The vision check
+(screenshot keyword match) failed in all three. This is the 9B model's limit on
+multi-file work, not context or KV precision. Use it to compare presets, not as a
+promise that the project will be perfect.
+
+```powershell
+node scripts/bench-project.mjs --reps 2 --think 2048 --max-tokens 8000
 ```
 
 

@@ -7,33 +7,34 @@ solicita pensamiento en las generaciones nuevas de modelos compatibles; la
 continuación de una respuesta ya comenzada conserva su plantilla sin abrir otro
 bloque de pensamiento.
 
-El perfil personalizado local quedó configurado por petición del usuario en 43.008 tokens, KV F16, visión
-y hasta 4.096 tokens de pensamiento según la tarea. La ventana reservada para
-salida y el historial efectivo dependen del ajuste y de la petición. No se
-prometen 18k de historial y 18k de salida para todas las imágenes y herramientas.
-El ajuste solicitado de historial es 28.672 tokens y la salida del perfil de
-programación reserva inicialmente 14.336. El margen de 128 y las imágenes se
-descuentan de la misma ventana, así que el historial efectivo es menor cuando
-corresponde. Las herramientas también ocupan entrada; el pensamiento está incluido
-en la salida. Una petición excepcional puede reducir la reserva de salida y el
-diagnóstico muestra el valor real.
-Los perfiles no añaden la antigua reserva obligatoria de 400 MiB; la estimación
-de arranque aún incluye buffers y proyector. La comprobación de imágenes usa un
-margen transitorio de 64 MiB cuando aplica, basado en mediciones previas.
+El perfil por defecto desde la v1.6.0 es **110.592 tokens, KV q8_0, visión y 4.096 de
+pensamiento** (`8GB-VISION-MAX-Q8-100K`). El proyector de visión vive en RAM
+(`--no-mmproj-offload`), lo que libera ~879 MiB y permite el doble de ventana que con
+el proyector en GPU (71.680). Coste medido: una captura 1200×528 tarda ~15,4 s en
+codificarse y responderse, frente a ~2 s con el proyector en GPU. La imagen se entiende
+igual (describió el panel de ajustes del IDE).
 
-En esta RTX 4060 Laptop se probó 39.936/F16 con proyector: una petición de
-27.702 tokens de texto y una imagen fue procesada, y la imagen de control se leyó
-correctamente. El mínimo observado fue 546 MiB libres. En un benchmark corto,
-la generación rondó 42 tokens/s y el procesamiento de 512–2.048 tokens de prompt
-1.530–1.681 tokens/s. Es una medición puntual, no una garantía contra OOM con
-otras imágenes, cargas o aplicaciones. Otra imagen de control de cuatro cifras se
-leyó incompleta, por lo que no debe asumirse visión perfecta.
+El reparto es **automático**: `historial = ventana − reserva de salida − 128`, y la
+reserva incluye el pensamiento. Con 110.592 queda en **~98.176 de historial + 4.096
+de pensamiento + ~7.936 de respuesta/edición + 128 de margen**. Con el preset de
+71.680: ~59.264 + 4.096 + ~7.936 + 128. En Ajustes, `historial = 0` significa
+automático; un número fijo pone un techo manual y el servidor lo recorta si no cabe.
+Las imágenes y las herramientas también consumen esa misma ventana: el historial
+efectivo baja cuando hay adjuntos. Una petición excepcional puede reducir la reserva
+de salida y el diagnóstico muestra el valor real.
 
-También se probó 43.008/F16 con visión y 40.531 tokens de entrada: tres cargas
-pasaron, pero en las repeticiones el mínimo observado llegó a solo 106 MiB libres.
-Con 44.032 hubo un error CUDA de memoria. Por eso 43.008 es una selección manual
-con margen limitado, no el techo automático conservador ni una garantía de
-estabilidad; el pensamiento de 4.096 tokens completos no se ejercitó en esa prueba.
+![Reparto del contexto](graficos/context-split.svg)
+
+![Proyector de visión GPU vs CPU](graficos/vision-projector.svg)
+
+Medición histórica (28-oct-2026, perfil f16 anterior): 39.936/F16 con proyector procesó
+una petición de 27.702 tokens de texto más una imagen y la leyó correctamente, con
+546 MiB libres mínimo y ~42 t/s de generación. Con 43.008/F16 y 40.531 tokens de
+entrada, tres cargas pasaron pero el mínimo bajó a 106 MiB libres; 44.032 falló con
+error CUDA. Esa es la razón de que f16 se quedara en 43.008 y de que el techo actual
+use KV q8_0/q4_0 en vez de f16. La lectura visual de varias cifras con el fixture
+bitmap no es fiable: 5/21 aciertos en cadenas de 3–5 caracteres y 6/6 en un solo
+dígito a escala 24; ninguna prueba demuestra OCR general.
 
 La verificación final de la suite usó 43.008/F16/visión/pensamiento 4.096. Con un
 prefill de 30.205 tokens, la VRAM libre mínima fue 476 MiB en una pasada y 62 MiB en
@@ -67,8 +68,11 @@ se guardan hasta 64 MiB y se marca si se alcanza ese límite.
 ## Continuidad y compactación
 
 Cuando el historial supera su presupuesto efectivo, el perfil general resume grupos
-completos de mensajes; si el resumen falla o queda vacío, devuelve el error y restaura
-la memoria y el índice anteriores. La solicitud actual no se recorta para hacerla caber.
+completos de mensajes con un prompt de compactación estructurado (`OBJETIVO`,
+`DECISIONES`, `ARCHIVOS`, `COMANDOS Y PRUEBAS`, `ERRORES ABIERTOS`, `PENDIENTE`); si
+el resumen falla o queda vacío, devuelve el error y restaura la memoria y el índice
+anteriores. El tope de la memoria compactada es adaptativo: ~6 % de la ventana, entre
+1.024 y 8.192 tokens. La solicitud actual no se recorta para hacerla caber.
 El perfil de programación conserva el objetivo y el estado de la tarea y sustituye
 grupos antiguos por extractos acotados con su procedencia; las afirmaciones del
 asistente no se consideran verificadas. Los originales permanecen en la sesión local.
@@ -80,7 +84,8 @@ lecturas dura un turno y comprueba fecha de modificación, cambio y tamaño.
 
 El diagnóstico de Ajustes indica el conteo disponible, la reserva estimada de imágenes,
 antes y después de compactar, duración y costo informado del resumen cuando el backend
-lo suministra. El pensamiento es parte de la generación, no una reserva adicional.
+lo suministra. El pensamiento va DENTRO de la reserva de salida: se reserva junto a la
+respuesta para que razonar no reduzca el espacio de la respuesta.
 Al pedir explícitamente «continúa» se incluye la tarea anterior y su estado guardado;
 el agente debe comprobar efectos inciertos antes de repetirlos. Esto no garantiza
 recuperación exacta de una operación interrumpida a mitad de ejecución.
