@@ -278,6 +278,52 @@ try {
     (await pagina.locator(".editor-wrap textarea").inputValue()).startsWith("alfa\n"),
   );
 
+  // ---- 3b. El compositor espera al estado inicial antes de aceptar envíos ----
+  const paginaCarga = await navegador.newPage({ viewport: { width: 1440, height: 900 } });
+  let liberarEstado = () => {};
+  const esperaEstado = new Promise((resolver) => { liberarEstado = resolver; });
+  await paginaCarga.route("**/api/state", async (route) => {
+    await esperaEstado;
+    await route.continue();
+  });
+  await paginaCarga.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+  await paginaCarga.waitForSelector("#input", { timeout: 10000 });
+  check(
+    "con /api/state pendiente, escribir y enviar siguen desactivados",
+    (await paginaCarga.locator("#input").isDisabled()) && (await paginaCarga.locator("#send").isDisabled()),
+  );
+  liberarEstado();
+  await paginaCarga.waitForFunction(
+    () => !document.querySelector("#input")?.disabled && !document.querySelector("#send")?.disabled,
+    null,
+    { timeout: 20000 },
+  );
+  check("el compositor se activa al terminar la carga inicial", !(await paginaCarga.locator("#input").isDisabled()));
+  await paginaCarga.close();
+
+  // ---- 3c. Tras recargar con un turno vivo, Detener sigue disponible ----
+  const estadoBase = await (await fetch(`${url}api/state`, { cache: "no-store" })).json();
+  const paginaOcupada = await navegador.newPage({ viewport: { width: 1440, height: 900 } });
+  await paginaOcupada.route("**/api/state", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ...estadoBase, busy: true }),
+    }),
+  );
+  await paginaOcupada.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+  await paginaOcupada.locator("#stop:not([hidden])").waitFor({ timeout: 15000 });
+  check("con un turno vivo tras recargar, Detener está visible", await paginaOcupada.locator("#stop").isVisible());
+  check("con un turno vivo tras recargar, Enviar está bloqueado", await paginaOcupada.locator("#send").isDisabled());
+  await paginaOcupada.locator("#stop").click();
+  await paginaOcupada.waitForFunction(
+    () => Boolean(document.querySelector("#stop")?.hidden) && !document.querySelector("#send")?.disabled,
+    null,
+    { timeout: 15000 },
+  );
+  check("Detener limpia el estado ocupado y reactiva el compositor", !(await paginaOcupada.locator("#send").isDisabled()));
+  await paginaOcupada.close();
+
   // ---- 4. Hallazgo 16: Ajustes enseña los cuatro valores reales ----
   await pagina.locator('button[title="Ajustes"]').click();
   const presupuesto = pagina.locator("#ajustes-presupuesto");
