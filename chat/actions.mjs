@@ -723,6 +723,22 @@ export function nativeToolEffects(calls) {
     notes.push(`quedaron ${searches.length - 4} búsquedas sin hacer`);
     notesIds.push(ids.get(`search:${searches[4]}`) || "");
   }
+  if (writes.length > 6) {
+    notes.push(`quedaron ${writes.length - 6} escrituras sin lanzar; pídelas en el siguiente paso`);
+    notesIds.push(ids.get(`write:${writes[6].rel}`) || "");
+  }
+  if (edits.length > 8) {
+    notes.push(`quedaron ${edits.length - 8} ediciones sin lanzar; pídelas en el siguiente paso`);
+    notesIds.push(ids.get(`edit:${edits.length - 9}`) || "");
+  }
+  if (borrados.length > 6) {
+    notes.push(`quedaron ${borrados.length - 6} borrados sin lanzar; pídelos en el siguiente paso`);
+    notesIds.push(ids.get(`del:${borrados[6]}`) || "");
+  }
+  if (movidos.length > 6) {
+    notes.push(`quedaron ${movidos.length - 6} movimientos sin lanzar; pídelos en el siguiente paso`);
+    notesIds.push(ids.get(`move:${movidos[6].origen}`) || "");
+  }
   return {
     navegaciones,
     commands: commands.slice(0, 6),

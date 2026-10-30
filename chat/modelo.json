@@ -51,7 +51,8 @@
           "evidencia": "logs/ornith-vision-ide-39936.json",
           "residenciaGPU": "logs/ornith-validacion-39936.json"
         },
-        "calibrado": "2026-10-28"
+        "calibrado": "2026-10-28",
+        "notaReserva": "reservaMiB=900 (≈ 879 MiB del proyector + ~21 MiB de buffer) cubre la carga en GPU del mmproj BF16 sin offload. El valor proviene del tamaño en disco del mmproj (921 704 672 bytes) y se mantiene mientras no se mida un pico superior en producción."
       },
       "servidor": { "pesosGpuEstandarMiB": 4864, "pesosGpuEstandarEvidencia": "CUDA0 4812.25 MiB medidos + 51.75 MiB de margen, adfffbe41, GGUF 70c112196e0b7023803c9762752e46d29e612a92c83f995bc3ba1ceb07e8fab6; solo colocacion estandar", "tipo": "gpu-completa", "contexto": 53248, "capasAtencionCompleta": 8, "cabezasKV": 4, "dimCabeza": 256, "reservaMiB": 620, "ubatch": 128, "margenObjetivoMiB": 200, "nota": "Perfil final elegido el 28-oct-2026: 39936 tokens, KV q8_0 y vision completa en CUDA0. Imagen 1200x528: leyo 4758, 539 tokens de entrada, minimo 426 MiB libres (logs/ornith-39936-final.err.log). 40960 fallo con imagen grande; no aumentar ni recalibrar. El techo historico de texto sin vision es 53248/q8_0; el presupuesto de VRAM es una estimacion, no una garantia de carga." },
       "muestreo": {
