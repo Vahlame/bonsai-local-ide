@@ -239,6 +239,81 @@
     "8GB-RESEARCH": { ctx: 65536, kv: "IQ1_S", vision: false },
   };
   
+  function getServerCommand(preset) {
+    const cfg = PRESET_CONFIGS[preset] || PRESET_CONFIGS["8GB-VISION-DEFAULT-F16"];
+    const useStable = cfg.kv === "f16";
+    
+    const args = [
+      "-m", MODEL_PATH,
+      "--gpu-layers", "99",
+      "--flash-attn", "on",
+      "-c", cfg.ctx.toString(),
+      "-ctk", cfg.kv,
+      "-ctv", cfg.kv,
+      "-b", "512",
+      "-ub", "256",
+      "-t", "4",
+      "--host", "127.0.0.1",
+      "--port", "8080",
+      "--jinja",
+      "--metrics",
+      "-lv", "4",
+      "--cors-origins", "http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788",
+      "--temp", "0.6",
+      "--top-p", "0.95",
+      "--top-k", "20",
+      "--min-p", "0",
+      "--presence-penalty", "0",
+      "--repeat-penalty", "1",
+      "--spec-type", "none",
+      "--no-context-shift",
+      "--chat-template-file", TEMPLATE_PATH,
+      "--reasoning-budget", "4096",
+      "--reasoning-format", "deepseek"
+    ];
+    
+    if (!useStable) {
+      args.push("--fit", "off");
+      args.push("--kv-offload");
+      args.push("--cache-ram", "0");
+      args.push("-np", "1");
+    } else {
+      args.push("--ctx-checkpoints", "0");
+    }
+    
+    if (cfg.vision) {
+      args.push("--mmproj", PROJ_PATH);
+      args.push("--mmproj-offload");
+      args.push("--mmproj-device", "CUDA0");
+      args.push("--image-max-tokens", "512");
+    }
+    
+    const binPath = ".local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89\\bin\\llama-server.exe";
+    const projectPath = "C:\\Users\\user\\Documents\\prject_local_AI";
+    return `cd ${projectPath} && "${binPath}" ${args.join(' ')}`;
+  }
+  
+  function copyServerCommand() {
+    const preset = presetSelect.value;
+    const cmd = getServerCommand(preset);
+    navigator.clipboard.writeText(cmd).then(() => {
+      const btn = document.getElementById("server-terminal");
+      const originalText = btn.querySelector("span").textContent;
+      btn.querySelector("span").textContent = "¡Copiado!";
+      btn.style.background = "var(--accent-soft)";
+      setTimeout(() => {
+        btn.querySelector("span").textContent = "Terminal";
+        btn.style.background = "";
+      }, 2000);
+      
+      const toast = document.createElement("div");
+      toast.className = "aviso ok";
+      toast.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg><span class="a-txt">Comando copiado al portapapeles. Abre PowerShell y pégalo (Ctrl+V).</span>`;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.classList.add("sale"); setTimeout(() => toast.remove(), 300); }, 3000);
+    });
+  }
+  
   let serverProcess = null;
   let statusPoll = null;
   
@@ -404,6 +479,7 @@
   // Event listeners
   startBtn.addEventListener("click", startServer);
   stopBtn.addEventListener("click", stopServer);
+  document.getElementById("server-terminal").addEventListener("click", copyServerCommand);
   
   // Cleanup on page unload
   window.addEventListener("beforeunload", () => {
