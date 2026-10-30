@@ -34,6 +34,7 @@ const PORT = Number(arg("port", "8093"));
 const THINK = Number(arg("think", "1024"));
 const MAX_TOKENS = Number(arg("max-tokens", "1200"));
 const TEMP = Number(arg("temp", "0.2"));
+const REPS = Math.max(1, Number(arg("repeat", "1")));
 const REQ_TIMEOUT_MS = Number(arg("timeout", "240000"));
 
 const DEFAULT_PRESETS = [
@@ -409,26 +410,29 @@ async function runPreset(preset) {
   }
   const results = [];
   for (const task of ACTIVE_TASKS) {
-    let r;
-    try {
-      const base = await ask(task);
-      if (!base.raw) {
-        r = { id: task.id, category: task.category, ok: false, detail: base.detail, ms: base.ms, tps: 0 };
-      } else {
-        const verdict = await task.check(base.content, base.raw);
-        r = { id: task.id, category: task.category, ok: Boolean(verdict.ok), detail: verdict.detail, ms: base.ms, tps: base.tps,
-              empty: base.content.trim().length === 0,
-              finish: base.raw?.choices?.[0]?.finish_reason || "",
-              preview: base.content.slice(0, 160) };
-        if (!verdict.ok && process.env.BENCH_DEBUG) {
-          process.stdout.write(`\n--- DEBUG ${task.id} content ---\n${base.content}\n--- END ---\n`);
+    for (let rep = 1; rep <= REPS; rep++) {
+      let r;
+      try {
+        const base = await ask(task);
+        if (!base.raw) {
+          r = { id: task.id, category: task.category, ok: false, detail: base.detail, ms: base.ms, tps: 0, rep };
+        } else {
+          const verdict = await task.check(base.content, base.raw);
+          r = { id: task.id, category: task.category, ok: Boolean(verdict.ok), detail: verdict.detail, ms: base.ms, tps: base.tps,
+                empty: base.content.trim().length === 0, rep,
+                finish: base.raw?.choices?.[0]?.finish_reason || "",
+                preview: base.content.slice(0, 160) };
+          if (!verdict.ok && process.env.BENCH_DEBUG) {
+            process.stdout.write(`\n--- DEBUG ${task.id} content ---\n${base.content}\n--- END ---\n`);
+          }
         }
+      } catch (err) {
+        r = { id: task.id, category: task.category, ok: false, detail: String(err?.message || err).slice(0, 80), ms: 0, tps: 0, rep };
       }
-    } catch (err) {
-      r = { id: task.id, category: task.category, ok: false, detail: String(err?.message || err).slice(0, 80), ms: 0, tps: 0 };
+      results.push(r);
+      const tag = REPS > 1 ? ` [${rep}/${REPS}]` : "";
+      process.stdout.write(`  ${preset} ${task.id}${tag}: ${r.ok ? "OK" : "FAIL"} (${r.detail})\n`);
     }
-    results.push(r);
-    process.stdout.write(`  ${preset} ${task.id}: ${r.ok ? "OK" : "FAIL"} (${r.detail})\n`);
   }
   await stopServer(srv.ci);
   return { preset, started: true, nCtx: srv.nCtx, kv: PRESETS[preset].kv, ctx: PRESETS[preset].context, tasks: results, ms: Date.now() - started };
@@ -470,6 +474,20 @@ async function main() {
   const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
   const outDir = path.join(PROJECT, "reports", `bench-quality-${stamp}`);
   fs.mkdirSync(outDir, { recursive: true });
+  const chartPath = path.join(PROJECT, "docs", "graficos", "bench-quality.svg");
+
+  // Modo solo-grafica: reconstruye el SVG desde un results.json existente sin
+  // arrancar el servidor (util tras una pasada parcial de varianza).
+  const chartFrom = arg("chart-from", "");
+  if (chartFrom) {
+    const data = JSON.parse(fs.readFileSync(chartFrom, "utf8"));
+    const cats = [...new Set((data.tasks || []).map((t) => t.category))];
+    const rows = (data.presets || []).map((p) => ({ preset: p.preset, score: p.score, passed: p.passed, total: p.total }));
+    fs.mkdirSync(path.dirname(chartPath), { recursive: true });
+    fs.writeFileSync(chartPath, svgBar(rows, cats), "utf8");
+    console.log(`Grafica regenerada desde ${chartFrom} -> ${chartPath}`);
+    return;
+  }
 
   console.log(`BIN=${BIN}`);
   console.log(`presets=${presets.join(", ")} tasks=${ACTIVE_TASKS.length} think=${THINK} max_tokens=${MAX_TOKENS}`);
@@ -527,7 +545,7 @@ async function main() {
   fs.writeFileSync(path.join(outDir, "results.md"), md.join("\n"), "utf8");
 
   // SVG
-  const chartPath = path.join(PROJECT, "docs", "graficos", "bench-quality.svg");
+  // SVG
   fs.mkdirSync(path.dirname(chartPath), { recursive: true });
   fs.writeFileSync(chartPath, svgBar(summary.map((s) => ({ preset: s.preset, score: s.score, passed: s.passed, total: s.total })), categories), "utf8");
 

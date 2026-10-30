@@ -304,6 +304,16 @@ KV by VRAM/context needs. Consistent model weakness across all presets: the **LR
 cache** (it deletes the key then reads it, returning `undefined`) and an
 intermittent **expression parser** (`2+3*4`). Those are 9B model limits, not KV.
 
+**Variance check (5 repetitions, q8_0 vs f16):** both **6/10**. `coding_hard_calc`
+alternates OK/FAIL on **both** (q8_0: OK,FAIL,FAIL,FAIL,OK; f16:
+FAIL,FAIL,OK,FAIL,FAIL). The initial 94.4 % was one lucky sample, not KV precision.
+
+```powershell
+node scripts/bench-model-quality.mjs --presets 8GB-VISION-HIGH,8GB-VISION-MAX-F16 `
+  --tasks coding_hard_calc,text_transform_reverse --repeat 5
+node scripts/bench-model-quality.mjs --chart-from reports/bench-quality-<stamp>/results.json
+```
+
 
 ---
 

@@ -194,6 +194,19 @@ Debilidad común detectada (falla en **todos** los presets): la caché **LRU** �
 modelo hace `delete(key)` y *después* `get(key)`, devolviendo `undefined`. El parser
 de expresiones es intermitente (`2+3*4`). Son límites del modelo de 9B, no del KV.
 
+**Prueba de varianza (5 repeticiones, q8_0 vs f16):** ambos **6/10**. La tarea
+`coding_hard_calc` alterna OK/FAIL en **los dos** (q8_0: OK,FAIL,FAIL,FAIL,OK;
+f16: FAIL,FAIL,OK,FAIL,FAIL). Es la prueba de que el 94,4 % de q8_0 fue **una
+muestra con suerte**, no precisión del KV.
+
+```powershell
+# media con repeticiones
+node scripts/bench-model-quality.mjs --presets 8GB-VISION-HIGH,8GB-VISION-MAX-F16 `
+  --tasks coding_hard_calc,text_transform_reverse --repeat 5
+# reconstruir solo la grafica desde un results.json
+node scripts/bench-model-quality.mjs --chart-from reports/bench-quality-<fecha>/results.json
+```
+
 ---
 
 ## 🧱 Requisitos
