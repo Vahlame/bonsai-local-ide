@@ -290,7 +290,7 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 | [RTX4060_OPTIMIZATION_GUIDE](docs/RTX4060_OPTIMIZATION_GUIDE.md) | Ciclo de vida, presets, tuning, troubleshooting |
 | [CONTEXTO-Y-DIAGNOSTICO](docs/CONTEXTO-Y-DIAGNOSTICO.md) | Métricas, límites y diagnóstico |
 | [SMALL-LOCAL-CODER](docs/SMALL-LOCAL-CODER.md) | Perfil de coding con contexto selectivo |
-| [ARQUITECTURA-Y-PLAN-MAESTRO](ARQUITECTURA-Y-PLAN-MAESTRO.md) | Decisiones de diseño |
+| [ARQUITECTURA-Y-PLAN-MAESTRO](docs/archive/ARQUITECTURA-Y-PLAN-MAESTRO.md) | Decisiones de diseño (histórico) |
 | [CHANGELOG](CHANGELOG.md) | Historial de versiones |
 
 ---
