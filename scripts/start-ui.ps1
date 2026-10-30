@@ -132,46 +132,80 @@ if ($serverState -eq 'managed' -and $EnginePreset) {
     }
 }
 if ($serverState -eq "empty") {
-    # Comprobacion previa a la vista: si la VRAM no alcanza, el servidor minimizado fallaria sin que se vea.
-    # OJO: @VisionFlags es splatting de ARRAY y pasa los elementos como POSICIONALES: `-Vision`
-    # acababa siendo el valor de `-HostIP` (verificado en PowerShell 5.1), así que la
-    # precomprobacion de VRAM medía una configuración distinta de la que luego se lanza.
-    & "$RootDir\scripts\start-server.ps1" -ContextSize $ContextSize -KVCacheType $KVCacheType -Port $Port -Pensar $Pensar -DryRun -Vision:($VisionFlags.Count -gt 0) -EnginePreset $EnginePreset
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    # El DryRun acaba de persistir el perfil elegido: se muestra para que el usuario sepa que
-    # contexto/KV se va a cargar (y que no se vuelve en silencio a 16K/f16).
-    if ($ContextSize -eq "auto" -and -not $EnginePreset) {
-        $perfilPath = Join-Path $RootDir "logs\perfil-servidor-$Port.json"
-        if (Test-Path $perfilPath) {
-            try {
-                $perfil = Get-Content $perfilPath -Raw | ConvertFrom-Json
-                Write-Host "Perfil de arranque: contexto $($perfil.contexto) | KV $($perfil.kv) | vision $($perfil.vision)" -ForegroundColor Gray
-            } catch { }
+    # P2-13: comparar modelo del marcador con el activo; sacar $activeKey del bloque de visión
+    $activeKey = $null
+    if ($VisionFlags.Count -gt 0) {
+        $Catalogo = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+        $Item = $Catalogo.catalogo.$Modelo
+        if ($Item -and $Item.vision -and $Item.vision.archivo) {
+            $activeKey = $Item.vision.archivo
         }
     }
-    Write-Host "[1/2] Iniciando llama-server (contexto: $ContextSize)..." -ForegroundColor Green
-    Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$RootDir\scripts\start-server.ps1`" -ManagedByIDE -ContextSize $ContextSize -KVCacheType $KVCacheType -Port $Port$PensarArgs$VisionArgs$EngineArgs -Log `"$RootDir\logs\arranque-modelo.log`"" -WindowStyle Hidden
+    $CurrentMarker = $null
+    if (Test-Path -LiteralPath (Join-Path $RootDir "logs\servidor-administrado-$Port.json")) {
+        $CurrentMarker = Get-Content -LiteralPath (Join-Path $RootDir "logs\servidor-administrado-$Port.json") -Raw | ConvertFrom-Json
+    }
+    if ($CurrentMarker -and $CurrentMarker.modelo -ne $Modelo) {
+        Write-Host "Marcador modelo ($($CurrentMarker.modelo)) distinto del solicitado ($Modelo): no se reutiliza." -ForegroundColor Yellow
+        $serverState = 'empty'
+        $CurrentMarker = $null
+    } elseif ($CurrentMarker -and $activeKey -and $CurrentMarker.activeKey -ne $activeKey) {
+        Write-Host "Marcador activeKey ($($CurrentMarker.activeKey)) distinto del solicitado ($activeKey): no se reutiliza." -ForegroundColor Yellow
+        $serverState = 'empty'
+        $CurrentMarker = $null
+    }
+    if ($serverState -eq "empty") {
+        # Comprobacion previa a la vista: si la VRAM no alcanza, el servidor minimizado fallaria sin que se vea.
+        # OJO: @VisionFlags es splatting de ARRAY y pasa los elementos como POSICIONALES: `-Vision`
+        # acababa siendo el valor de `-HostIP` (verificado en PowerShell 5.1), así que la
+        # precomprobacion de VRAM medía una configuración distinta de la que luego se lanza.
+        & "$RootDir\scripts\start-server.ps1" -ContextSize $ContextSize -KVCacheType $KVCacheType -Port $Port -Pensar $Pensar -DryRun -Vision:($VisionFlags.Count -gt 0) -EnginePreset $EnginePreset
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        # El DryRun acaba de persistir el perfil elegido: se muestra para que el usuario sepa que
+        # contexto/KV se va a cargar (y que no se vuelve en silencio a 16K/f16).
+        if ($ContextSize -eq "auto" -and -not $EnginePreset) {
+            $perfilPath = Join-Path $RootDir "logs\perfil-servidor-$Port.json"
+            if (Test-Path $perfilPath) {
+                try {
+                    $perfil = Get-Content $perfilPath -Raw | ConvertFrom-Json
+                    Write-Host "Perfil de arranque: contexto $($perfil.contexto) | KV $($perfil.kv) | vision $($perfil.vision)" -ForegroundColor Gray
+                } catch { }
+            }
+        }
+        Write-Host "[1/2] Iniciando llama-server (contexto: $ContextSize)..." -ForegroundColor Green
+        # P2-11: usar -PassThru + sondeo de proceso en lugar de esperar 3 min a ciegas
+        $ProcArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$RootDir\scripts\start-server.ps1`" -ManagedByIDE -ContextSize $ContextSize -KVCacheType $KVCacheType -Port $Port$PensarArgs$VisionArgs$EngineArgs -Log `"$RootDir\logs\arranque-modelo.log`""
+        $Launcher = Start-Process -FilePath "powershell.exe" -ArgumentList $ProcArgs -PassThru -WindowStyle Hidden
+        Write-Host "[2/2] Esperando a que el modelo cargue en la GPU (PID launcher $($Launcher.Id))..." -ForegroundColor Green
+        $deadline = (Get-Date).AddMinutes(2)
+        $ready = $false
+        while ((Get-Date) -lt $deadline) {
+            if (-not (Get-Process -Id $Launcher.Id -ErrorAction SilentlyContinue)) {
+                Write-Error "El lanzador murió antes de que el servidor respondiera (PID $($Launcher.Id)). Revisa $RootDir\logs\arranque-modelo.log"
+                exit 1
+            }
+            try {
+                $health = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/health" -UseBasicParsing -TimeoutSec 3
+                if ($health.StatusCode -eq 200) {
+                    $ready = $true
+                    break
+                }
+            } catch {
+                Start-Sleep -Seconds 2
+            }
+        }
+        if (-not $ready) {
+            $launcherVivo = $null -ne (Get-Process -Id $Launcher.Id -ErrorAction SilentlyContinue)
+            Write-Error "El servidor no respondio en http://127.0.0.1:$Port/health (launcher PID $($Launcher.Id) sigue vivo: $launcherVivo)"
+            exit 1
+        }
+    }
 } else {
     Write-Host "[1/2] llama-server ya esta en ejecucion." -ForegroundColor Yellow
-}
-
-Write-Host "[2/2] Esperando a que el modelo cargue en la GPU..." -ForegroundColor Green
-$deadline = (Get-Date).AddMinutes(3)
-$ready = $false
-while ((Get-Date) -lt $deadline) {
-    try {
-        $health = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/health" -UseBasicParsing -TimeoutSec 3
-        if ($health.StatusCode -eq 200) {
-            $ready = $true
-            break
-        }
-    } catch {
-        Start-Sleep -Seconds 2
+    # P2-13: verificar que el modelo activo coincide con el marcador
+    if ($CurrentMarker -and $CurrentMarker.modelo -ne $Modelo) {
+        Write-Host "Aviso: modelo en marcador ($($CurrentMarker.modelo)) != solicitado ($Modelo)." -ForegroundColor Yellow
     }
-}
-if (-not $ready) {
-    Write-Error "El servidor no respondio en http://127.0.0.1:$Port/health"
-    exit 1
 }
 
 Write-Host "Abriendo http://127.0.0.1:$UiPort" -ForegroundColor Gray

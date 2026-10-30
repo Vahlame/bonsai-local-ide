@@ -271,30 +271,55 @@ if ($DryRun) { Write-Host ($BinPath + " " + $ArgumentLine); exit 0 }
 $Wrapper = Get-Process -Id $PID -ErrorAction Stop
 $WrapperTicks = $Wrapper.StartTime.ToUniversalTime().Ticks.ToString()
 $Marker = Join-Path $RootDir "logs\servidor-administrado-$Port.json"
+$MarkerTmp = $Marker + ".tmp"
+
+# P2-10: capturar versión de llama.cpp
+$LlamaVersion = & $BinPath --version 2>&1 | Select-Object -First 1
+if (-not $LlamaVersion) { $LlamaVersion = "desconocida" }
+
+# P2-13: activeKey para reutilización (proyector de visión si está activo)
+$ActiveKey = $null
+if ($Vision -and $VisionProfile -and $VisionProfile.archivo) {
+    $ActiveKey = $VisionProfile.archivo
+}
+
 function Write-MarcadorAdministrado([int]$ServidorPid) {
     $Info = [ordered]@{
         modelo = $Modelo; puerto = $Port; contexto = $ContextTokens; kv = $KvType;
         vision = [bool]$Vision; pensar = $Pensar; dormir = $DormirSeg; hostIP = $HostIP;
-        pid = $PID; wrapperPid = $PID; iniciado = $WrapperTicks; enginePreset = $EnginePreset
+        pid = $PID; wrapperPid = $PID; iniciado = $WrapperTicks; enginePreset = $EnginePreset;
+        llamaVersion = $LlamaVersion
+        activeKey = $ActiveKey
     }
     if ($ServidorPid -gt 0) {
         $Info.pidServidor = $ServidorPid
         $Info.iniciadoServidor = (Get-Process -Id $ServidorPid -ErrorAction Stop).StartTime.ToUniversalTime().Ticks.ToString()
     }
     New-Item -ItemType Directory -Force (Split-Path -Parent $Marker) | Out-Null
-    $Info | ConvertTo-Json -Compress | Set-Content -LiteralPath $Marker -Encoding ASCII
+    # P2-12: escritura atómica (tmp -> rename)
+    $Info | ConvertTo-Json -Compress | Set-Content -LiteralPath $MarkerTmp -Encoding ASCII
+    if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
+    Rename-Item -LiteralPath $MarkerTmp -NewName $Marker -Force
 }
 if ($ManagedByIDE) {
     try { Write-MarcadorAdministrado 0 } catch { Write-Host "Aviso: no se pudo escribir el marcador del servidor administrado: $($_.Exception.Message)" -ForegroundColor Yellow }
 }
-$ExecOptions = @{ FilePath = $BinPath; ArgumentList = $ArgumentLine; PassThru = $true; NoNewWindow = $true }
-if ($env:BONSAI_LLAMA_LOG_PREFIX) {
-    $ExecOptions.RedirectStandardOutput = $env:BONSAI_LLAMA_LOG_PREFIX + ".out.log"
-    $ExecOptions.RedirectStandardError = $env:BONSAI_LLAMA_LOG_PREFIX + ".err.log"
+# P2-09: prefijo de log por defecto si no está configurado
+if (-not $env:BONSAI_LLAMA_LOG_PREFIX) {
+    $env:BONSAI_LLAMA_LOG_PREFIX = Join-Path $RootDir "logs\llama-server-$Port"
 }
+$ExecOptions = @{ FilePath = $BinPath; ArgumentList = $ArgumentLine; PassThru = $true; NoNewWindow = $true; RedirectStandardOutput = $env:BONSAI_LLAMA_LOG_PREFIX + ".out.log"; RedirectStandardError = $env:BONSAI_LLAMA_LOG_PREFIX + ".err.log" }
 $Exec = Start-Process @ExecOptions
 $null = $Exec.Handle
+# P2-12: comprobar que el proceso sigue vivo tras lanzar
 if ($ManagedByIDE) {
+    Start-Sleep -Milliseconds 200
+    $Vivo = Get-Process -Id $Exec.Id -ErrorAction SilentlyContinue
+    if (-not $Vivo -or $Vivo.HasExited) {
+        Write-Host "Error: llama-server.exe murió inmediatamente tras lanzarse (PID $($Exec.Id)). Revisa $($env:BONSAI_LLAMA_LOG_PREFIX).err.log" -ForegroundColor Red
+        if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
+        exit 1
+    }
     try { Write-MarcadorAdministrado ([int]$Exec.Id) } catch { Write-Host "Aviso: no se pudo completar el marcador con el PID real de llama-server.exe: $($_.Exception.Message)" -ForegroundColor Yellow }
 }
 $ExitCode = 1

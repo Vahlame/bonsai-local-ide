@@ -2403,6 +2403,20 @@ async function main(args) {
         if (raw.enginePreset !== undefined && raw.enginePreset !== "CUSTOM" && raw.enginePreset !== "" && !isNamedEnginePreset(raw.enginePreset)) {
           res.writeHead(400).end("Perfil de motor desconocido"); return;
         }
+        // CUSTOM: apply the same validations as named presets (context range, KV type, vision boolean).
+        if (raw.enginePreset === "CUSTOM") {
+          const contexto = Number(raw.contexto ?? raw.context ?? 16384);
+          if (!Number.isInteger(contexto) || contexto < 4096 || contexto > 65536) {
+            res.writeHead(400).end("Ventana de contexto inválida (4096-65536)"); return;
+          }
+          const kv = String(raw.kv ?? "f16");
+          if (!["f16", "q8_0", "q4_0"].includes(kv)) {
+            res.writeHead(400).end("Tipo de KV inválido (f16, q8_0, q4_0)"); return;
+          }
+          if (raw.vision !== undefined && typeof raw.vision !== "boolean") {
+            res.writeHead(400).end("vision debe ser booleano"); return;
+          }
+        }
         const item = catalogoModelos().find((m) => m.clave === clave);
         if (!item) {
           res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end(`modelo desconocido: ${clave}`);
@@ -3839,7 +3853,7 @@ async function main(args) {
               ac.signal.throwIfAborted();
               const row = showAction("read", String(argsWeb.url), "run");
               try {
-                const detail = await leerWeb(argsWeb, { signal: ac.signal, blockedPorts: [args.port, new URL(chat.base).port] });
+                const detail = await leerWeb(argsWeb, { signal: ac.signal, blockedPorts: [args.port, new URL(chat.base).port], allowPrivate: argsWeb.allowPrivate });
                 finishAction(row, "done", detail);
                 poner(`web:${i}`, detail);
                 progresoPaso = true;
