@@ -225,6 +225,10 @@ $ServerArgs = @(
     "--top-k", "$($Sampling.top_k)", "--min-p", (NumberText $Sampling.min_p),
     "--presence-penalty", (NumberText $Sampling.presence_penalty), "--repeat-penalty", (NumberText $Sampling.repeat_penalty)
 )
+# Chat template oficial del modelo (si existe)
+if ($Item.chat_template) {
+    $ServerArgs += @("--chat-template", $Item.chat_template)
+}
 # Perfiles nombrados y CUSTOM comparten la colocacion estandar de llama.cpp (mmap,
 # sin forzar tensores a CUDA0): es la que deja caber 36k con KV f16 en 8 GB.
 if ($EngineOptions -or $EnginePreset -eq 'CUSTOM') {
