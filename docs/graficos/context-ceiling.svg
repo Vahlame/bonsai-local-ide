@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="340" viewBox="0 0 760 340" font-family="Segoe UI, system-ui, sans-serif">
+  <rect width="760" height="340" fill="#0d100b"/>
+  <text x="24" y="34" fill="#e9eee0" font-size="18" font-weight="600">f16 context ceiling — vision + 4096-token thinking</text>
+  <text x="24" y="54" fill="#8d9680" font-size="12">RTX 4060 8GB · realistic long prompt (~1k prefill) + 8s idle · 2026-10-30</text>
+
+  <!-- axis -->
+  <line x1="190" y1="286" x2="730" y2="286" stroke="#2c3326"/>
+  <g fill="#6f7a64" font-size="10">
+    <text x="190" y="302" text-anchor="middle">0</text>
+    <text x="325" y="302" text-anchor="middle">16k</text>
+    <text x="460" y="302" text-anchor="middle">32k</text>
+    <text x="595" y="302" text-anchor="middle">48k</text>
+  </g>
+
+  <!-- rows: label at x=24, bar from 190, scale 540px = 48k => 11.25px per 1k -->
+  <!-- 32768 -->
+  <text x="24" y="103" fill="#e9eee0" font-size="11">32,768</text>
+  <rect x="190" y="90" width="369" height="18" rx="4" fill="#cde86e"/>
+  <text x="567" y="103" fill="#8d9680" font-size="10">PASS · 7,157 MiB</text>
+  <!-- 36864 -->
+  <text x="24" y="133" fill="#e9eee0" font-size="11">36,864</text>
+  <rect x="190" y="120" width="415" height="18" rx="4" fill="#cde86e"/>
+  <text x="613" y="133" fill="#8d9680" font-size="10">PASS · 7,287 MiB</text>
+  <!-- 39936 -->
+  <text x="24" y="163" fill="#e9eee0" font-size="11">39,936</text>
+  <rect x="190" y="150" width="449" height="18" rx="4" fill="#cde86e"/>
+  <text x="647" y="163" fill="#8d9680" font-size="10">PASS · 7,383 MiB</text>
+  <!-- 43008 MAX -->
+  <text x="24" y="193" fill="#e9eee0" font-size="11" font-weight="700">43,008 ★</text>
+  <rect x="190" y="180" width="484" height="18" rx="4" fill="#cde86e"/>
+  <text x="682" y="193" fill="#cde86e" font-size="10" font-weight="700">PASS · 7,481 MiB</text>
+  <!-- 45056 -->
+  <text x="24" y="223" fill="#e9eee0" font-size="11">45,056</text>
+  <rect x="190" y="210" width="507" height="18" rx="4" fill="#ea9a89" opacity="0.55"/>
+  <text x="707" y="223" fill="#ea9a89" font-size="10">OOM (CUDA)</text>
+
+  <text x="24" y="266" fill="#8d9680" font-size="11">★ chosen default: 43,008 tok = highest f16 ceiling; 45k runs out of VRAM on long prompt.</text>
+  <text x="24" y="284" fill="#5c6554" font-size="10">ub512 also fits 43k (7,501 MiB) but +0.8% prefill only; ub256 kept for image headroom.</text>
+</svg>

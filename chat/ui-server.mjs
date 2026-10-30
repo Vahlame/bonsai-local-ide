@@ -1257,7 +1257,7 @@ async function main(args) {
    * @returns {string}
    */
   function comandoServidorOptimizado(preset, puerto) {
-    const nombre = isNamedEnginePreset(preset) ? preset : "8GB-VISION-DEFAULT-F16";
+    const nombre = isNamedEnginePreset(preset) ? preset : "8GB-VISION-MAX-F16";
     const p = engineProfile(nombre);
     const ctx = Number(p.context) || 16384;
     const kv = String(p.kv || "f16");
@@ -1324,7 +1324,7 @@ async function main(args) {
     const puerto = new URL(chat.base).port || "80";
     const preset = configuracion ? configuracion.enginePreset || "" : leerAjustes().enginePreset || "";
     // Presets optimizados RTX 4060 -> lanzador dedicado con binario sm89.
-    const optimizado = /^(8GB-VISION-DEFAULT-F16|8GB-VISION-ULTRA-F16|8GB-VISION-HIGH|8GB-VISION-BALANCED|8GB-VISION-SAFE|8GB-CODE-MAX|8GB-CODE-HIGH|8GB-CODE-BALANCED|8GB-CODE-FAST|8GB-RESEARCH|8GB-VISION-QUALITY|8GB-VISION-ULTRA)$/.test(preset);
+    const optimizado = /^(8GB-VISION-MAX-F16|8GB-VISION-DEFAULT-F16|8GB-VISION-ULTRA-F16|8GB-VISION-HIGH|8GB-VISION-BALANCED|8GB-VISION-SAFE|8GB-CODE-MAX|8GB-CODE-HIGH|8GB-CODE-BALANCED|8GB-CODE-FAST|8GB-RESEARCH|8GB-VISION-QUALITY|8GB-VISION-ULTRA)$/.test(preset);
     const script = path.join(PROJECT, "scripts", optimizado ? "start-gpu-model-rtx4060-optimized.ps1" : "start-server.ps1");
     const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-ManagedByIDE", "-Modelo", clave, "-Port", puerto];
     try {
@@ -2486,7 +2486,7 @@ async function main(args) {
       // ================================================================
       if (req.method === "GET" && url.pathname === "/api/server/command") {
         // Devuelve un comando PowerShell listo para pegar, con rutas absolutas.
-        const preset = url.searchParams.get("preset") || "8GB-VISION-DEFAULT-F16";
+        const preset = url.searchParams.get("preset") || "8GB-VISION-MAX-F16";
         const comando = comandoServidorOptimizado(preset, args.llamaPort);
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
         res.end(JSON.stringify({ command: comando, preset }));
@@ -2497,10 +2497,11 @@ async function main(args) {
         busy = true;
         try {
           const raw = JSON.parse(await readBody(req));
-          const preset = raw?.preset || "8GB-VISION-DEFAULT-F16";
+          const preset = raw?.preset || "8GB-VISION-MAX-F16";
           const modelo = raw?.model || "ornith9b";
           
           const validPresets = [
+            "8GB-VISION-MAX-F16",
             "8GB-VISION-DEFAULT-F16", "8GB-VISION-ULTRA-F16", "8GB-VISION-HIGH",
             "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
             "8GB-CODE-MAX", "8GB-CODE-HIGH", "8GB-CODE-BALANCED", "8GB-CODE-FAST",

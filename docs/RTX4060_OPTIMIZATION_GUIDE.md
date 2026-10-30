@@ -181,7 +181,8 @@ can paste it into any PowerShell window and run the server manually.
 
 | Preset | Context | KV | Vision | Notes |
 |--------|--------:|----|:------:|-------|
-| `8GB-VISION-DEFAULT-F16` | 16,384 | f16 | ✅ | Rock-solid default, max precision |
+| `8GB-VISION-MAX-F16` | **43,008** | f16 | ✅ | **Default** · highest precision + context |
+| `8GB-VISION-DEFAULT-F16` | 16,384 | f16 | ✅ | Safe fallback, lots of headroom |
 | `8GB-VISION-ULTRA-F16` | 32,768 | f16 | ✅ | Max precision, high context |
 | `8GB-VISION-ULTRA` | 36,864 | IQ4_XS | ✅ | + SpecDecode |
 | `8GB-VISION-HIGH` | 32,768 | IQ4_XS | ✅ | Best balance |
@@ -201,6 +202,54 @@ quality profile. **B (16K f16)** and **C (32K f16 text-only)** each failed 2 of 
 The default `8GB-VISION-DEFAULT-F16` trades raw context for stability and
 precision; use `8GB-VISION-HIGH` (q8_0/IQ4_XS) if you need the 8/8 quality profile
 with longer context.
+
+---
+
+## Maximum context with f16 + vision + thinking (measured)
+
+![Context ceiling](graficos/context-ceiling.svg)
+
+Probed with a realistic ~1k-token prompt (long-prompt prefill is what actually
+blows the compute buffer) plus an 8 s idle window:
+
+| Context | Result | Peak VRAM | Free |
+|---:|:--:|---:|---:|
+| 32,768 | PASS | 7,157 MiB | 800 MiB |
+| 36,864 | PASS | 7,287 MiB | 670 MiB |
+| 39,936 | PASS | 7,383 MiB | 574 MiB |
+| **43,008** | **PASS** | **7,481 MiB** | **476 MiB** |
+| 45,056 | OOM | — | — |
+
+**43,008 tokens is the hard ceiling** for f16 KV + vision + 4096-token thinking on
+an 8 GB RTX 4060. 45k fails with `CUDA error: out of memory` during long prefill.
+The default preset is now `8GB-VISION-MAX-F16` (43,008 · f16 · vision · thinking).
+
+### Why the previous "idle crash" is gone
+
+The old crash at high f16 context came from **context checkpoints**, not the
+context size. The launcher now passes `--ctx-checkpoints 0` for f16, which removes
+the crash. (Do not remove that flag.)
+
+### Knob tuning (llama-bench, pp2048 / tg128, f16)
+
+| Config | pp t/s | tg t/s | Verdict |
+|---|---:|---:|---|
+| baseline b512 ub256 t4 mmap | 2,199.9 | 43.34 | reference |
+| ub512 | **2,218.5** | 43.44 | +0.85% prefill |
+| ub128 | 2,036.6 | 43.38 | worse |
+| b1024 / b2048 | 2,201 / 2,203 | 43.4 | noise |
+| threads 8 | 2,181.7 | 43.43 | no gain |
+| no-mmap / mlock | 2,178.7 / 2,174.3 | 43.4 | worse |
+| **q8_0 KV** | 2,159.3 | 43.15 | slower *and* less precise |
+
+**Takeaways:**
+- **f16 KV is faster than q8_0 here** (and more precise) — keep f16.
+- `ub512` gives only ~0.8% prefill; `ub256` is kept for image headroom at 43k.
+- Threads, batch size and mmap/mlock give no meaningful gain with full offload.
+- Real generation speed is ~43 t/s; the big remaining lever is speculative
+  decoding, but it needs ~0.7 GB for the draft model and therefore **cannot fit at
+  43k f16 + vision**. It is only viable at ≤16k context.
+
 
 ---
 
