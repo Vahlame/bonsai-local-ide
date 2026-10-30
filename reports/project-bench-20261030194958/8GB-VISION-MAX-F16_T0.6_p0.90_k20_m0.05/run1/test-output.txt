@@ -1,0 +1,152 @@
+TAP version 13
+# Subtest: dequeue returns items in priority order
+ok 1 - dequeue returns items in priority order
+  ---
+  duration_ms: 0.6923
+  type: 'test'
+  ...
+# Subtest: FIFO order on priority tie
+ok 2 - FIFO order on priority tie
+  ---
+  duration_ms: 0.1197
+  type: 'test'
+  ...
+# Subtest: size reflects number of enqueued items
+ok 3 - size reflects number of enqueued items
+  ---
+  duration_ms: 0.0964
+  type: 'test'
+  ...
+# Subtest: dequeue on empty throws Error
+ok 4 - dequeue on empty throws Error
+  ---
+  duration_ms: 0.3086
+  type: 'test'
+  ...
+# Subtest: runs tasks respecting priority and reports completion order
+not ok 5 - runs tasks respecting priority and reports completion order
+  ---
+  duration_ms: 1.1057
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05\\run1\\test\\scheduler.test.mjs:5:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'push')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:38:23
+    new Promise (<anonymous>)
+    Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:37:13)
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/test/scheduler.test.mjs:24:35)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: never exceeds concurrency limit
+not ok 6 - never exceeds concurrency limit
+  ---
+  duration_ms: 1.2497
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05\\run1\\test\\scheduler.test.mjs:37:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'push')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:38:23
+    new Promise (<anonymous>)
+    Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:37:13)
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/test/scheduler.test.mjs:57:35)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: retries failed task and succeeds on the third attempt
+not ok 7 - retries failed task and succeeds on the third attempt
+  ---
+  duration_ms: 0.2306
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05\\run1\\test\\scheduler.test.mjs:64:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'push')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:38:23
+    new Promise (<anonymous>)
+    Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:37:13)
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/test/scheduler.test.mjs:79:35)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: task that always fails returns ok:false with error and attempts
+not ok 8 - task that always fails returns ok:false with error and attempts
+  ---
+  duration_ms: 0.2289
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05\\run1\\test\\scheduler.test.mjs:89:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'push')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:38:23
+    new Promise (<anonymous>)
+    Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:37:13)
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/test/scheduler.test.mjs:98:35)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: results are ordered by completion time
+not ok 9 - results are ordered by completion time
+  ---
+  duration_ms: 0.2188
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05\\run1\\test\\scheduler.test.mjs:107:1'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'push')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:38:23
+    new Promise (<anonymous>)
+    Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:37:13)
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-F16_T0.6_p0.90_k20_m0.05/run1/test/scheduler.test.mjs:134:35)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Error: Test "runs tasks respecting priority and reports completion order" at test\\scheduler.test.mjs:5:1 generated asynchronous activity after the test ended. This activity created the error "TypeError: Cannot read properties of undefined (reading 'forEach')" and would have caused the test to fail, but instead triggered an unhandledRejection event.
+# Error: Test "runs tasks respecting priority and reports completion order" at test\\scheduler.test.mjs:5:1 generated asynchronous activity after the test ended. This activity created the error "TypeError: Cannot read properties of undefined (reading 'forEach')" and would have caused the test to fail, but instead triggered an unhandledRejection event.
+# Error: Test "never exceeds concurrency limit" at test\\scheduler.test.mjs:37:1 generated asynchronous activity after the test ended. This activity created the error "TypeError: Cannot read properties of undefined (reading 'forEach')" and would have caused the test to fail, but instead triggered an unhandledRejection event.
+# Error: Test "never exceeds concurrency limit" at test\\scheduler.test.mjs:37:1 generated asynchronous activity after the test ended. This activity created the error "TypeError: Cannot read properties of undefined (reading 'forEach')" and would have caused the test to fail, but instead triggered an unhandledRejection event.
+# Error: Test "never exceeds concurrency limit" at test\\scheduler.test.mjs:37:1 generated asynchronous activity after the test ended. This activity created the error "TypeError: Cannot read properties of undefined (reading 'forEach')" and would have caused the test to fail, but instead triggered an unhandledRejection event.
+# Error: Test "retries failed task and succeeds on the third attempt" at test\\scheduler.test.mjs:64:1 generated asynchronous activity after the test ended. This activity created the error "TypeError: Cannot read properties of undefined (reading 'forEach')" and would have caused the test to fail, but instead triggered an unhandledRejection event.
+# Error: Test "task that always fails returns ok:false with error and attempts" at test\\scheduler.test.mjs:89:1 generated asynchronous activity after the test ended. This activity created the error "TypeError: Cannot read properties of undefined (reading 'forEach')" and would have caused the test to fail, but instead triggered an unhandledRejection event.
+# Error: Test "results are ordered by completion time" at test\\scheduler.test.mjs:107:1 generated asynchronous activity after the test ended. This activity created the error "TypeError: Cannot read properties of undefined (reading 'forEach')" and would have caused the test to fail, but instead triggered an unhandledRejection event.
+# Error: Test "results are ordered by completion time" at test\\scheduler.test.mjs:107:1 generated asynchronous activity after the test ended. This activity created the error "TypeError: Cannot read properties of undefined (reading 'forEach')" and would have caused the test to fail, but instead triggered an unhandledRejection event.
+1..9
+# tests 9
+# suites 0
+# pass 4
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 71.999
+

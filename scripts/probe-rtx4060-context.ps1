@@ -22,7 +22,9 @@ param(
     [int]$UBatch = 256,
     [int]$Port = 8090,
     [int]$Think = 4096,
-    [switch]$Vision
+    [switch]$Vision,
+    # -CPUProjector: el proyector de vision vive en RAM (libera ~879 MiB de VRAM).
+    [switch]$CPUProjector
 )
 
 $ErrorActionPreference = "Stop"
@@ -48,11 +50,21 @@ if ($Item.chat_template) { $Item.chat_template | Set-Content -LiteralPath $Tpl -
 $Stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $Out = Join-Path $RootDir "reports\context-probe-$Stamp.md"
 New-Item -ItemType Directory -Force (Split-Path -Parent $Out) | Out-Null
-"# Context probe ($KV, ub=$UBatch, vision=$([bool]$Vision), think=$Think) - $Stamp`n" | Set-Content $Out -Encoding UTF8
+"# Context probe ($KV, ub=$UBatch, vision=$([bool]$Vision), think=$Think, cpuproj=$([bool]$CPUProjector)) - $Stamp`n" | Set-Content $Out -Encoding UTF8
 "| ctx | result | peak VRAM MiB | free MiB | notes |`n|---:|---|---:|---:|---|" | Add-Content $Out -Encoding UTF8
 
 Get-Process llama-server* -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 1
+# Espera a que el driver libere la VRAM del proceso anterior: si no, el siguiente
+# arranque falla al cargar el proyector de vision (cudaMalloc de ~879 MiB).
+$libreEspera = (Get-Date).AddSeconds(25)
+while ((Get-Date) -lt $libreEspera) {
+    try {
+        $libre = [int]((& nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits) | Select-Object -First 1)
+        if ($libre -ge 7600) { break }
+    } catch { break }
+    Start-Sleep -Milliseconds 700
+}
 
 foreach ($ctx in $Contexts) {
     Write-Host "==> ctx $ctx" -ForegroundColor Cyan
@@ -66,7 +78,7 @@ foreach ($ctx in $Contexts) {
         "--chat-template-file", $Tpl,
         "--reasoning-budget", "$Think", "--reasoning-format", "deepseek"
     )
-    if ($Vision) { $args += @("--mmproj", $Proj, "--mmproj-offload", "--mmproj-device", "CUDA0", "--image-max-tokens", "512") }
+    if ($Vision) { $args += @("--mmproj", $Proj); if (-not $CPUProjector) { $args += @("--mmproj-offload", "--mmproj-device", "CUDA0") } else { $args += @("--no-mmproj-offload") }; $args += @("--image-max-tokens", "512") }
 
     $logOut = Join-Path $RootDir "logs\probe-$ctx.out.log"
     $logErr = Join-Path $RootDir "logs\probe-$ctx.err.log"

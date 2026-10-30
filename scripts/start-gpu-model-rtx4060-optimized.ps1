@@ -72,6 +72,7 @@ if ($EnginePreset -and $EnginePreset -ne 'CUSTOM') {
     if ($PSBoundParameters.ContainsKey('EngineOptions')) { }
     $SafetyMiB = if ($MarginOverrideMiB -ge 0) { $MarginOverrideMiB } else { [int]$EngineOptions.marginMiB }
     if (-not $PSBoundParameters.ContainsKey('Vision')) { $Vision = [bool]$EngineOptions.vision }
+    $ProjectorCPU = [bool]$EngineOptions.mmprojCPU
     $Batch = [int]$EngineOptions.batch
     $UBatch = [int]$EngineOptions.ubatch
     if ($EngineOptions.spec -eq "draft") {
@@ -141,7 +142,9 @@ if ($Vision) {
     if ([int64]$VisionProfile.bytes -gt 0 -and (Get-Item -LiteralPath $ProjectorPath).Length -ne [int64]$VisionProfile.bytes) {
         throw "El proyector de vision no tiene el tamano verificado."
     }
-    $VisionMiB = [int]$VisionProfile.reservaMiB
+    # Con -mmprojCPU el proyector vive en RAM: libera ~879 MiB de VRAM (permite ~110k
+    # con q8_0) pero cada imagen se codifica en CPU (mas lento). Sin el flag, GPU.
+    $VisionMiB = if ($ProjectorCPU) { 0 } else { [int]$VisionProfile.reservaMiB }
 }
 
 function Get-RequiredMiB([int]$ContextTokens, [string]$CacheType) {
@@ -197,7 +200,7 @@ if ($ContextSize -eq "auto") {
 # f16 KV has a llama.cpp idle-crash bug with context checkpoints: disable them
 # and use the default (auto) slot layout for stability. Quantized KV keeps the
 # single-slot layout that the project has used since v0.7.
-$StableF16 = ($KVCacheType -eq 'f16')
+$StableF16 = $true
 
 $ServerArgs = @("-m", $ModelPath, "--gpu-layers", "99")
 if (-not $StableF16) {
@@ -220,9 +223,9 @@ if (-not $StableF16) { $ServerArgs += "--cache-ram", "0" }
 $ServerArgs += "-lv", "4"
 $ServerArgs += "--cors-origins", "http://127.0.0.1:$Port,http://localhost:$Port,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788"
 $ServerArgs += "--temp", "0.6"
-$ServerArgs += "--top-p", "0.95"
+$ServerArgs += "--top-p", "0.90"
 $ServerArgs += "--top-k", "20"
-$ServerArgs += "--min-p", "0"
+$ServerArgs += "--min-p", "0.05"
 $ServerArgs += "--presence-penalty", "0"
 $ServerArgs += "--repeat-penalty", "1"
 $ServerArgs += "--spec-type", "none"
@@ -240,8 +243,8 @@ if ($Item.chat_template) {
 
 if ($Vision) {
     $ServerArgs += "--mmproj", $ProjectorPath
-    $ServerArgs += "--mmproj-offload"
-    $ServerArgs += "--mmproj-device", "CUDA0"
+    if ($ProjectorCPU) { $ServerArgs += "--no-mmproj-offload" }
+    else { $ServerArgs += "--mmproj-offload"; $ServerArgs += "--mmproj-device", "CUDA0" }
     $ServerArgs += "--image-max-tokens", "512"
 }
 

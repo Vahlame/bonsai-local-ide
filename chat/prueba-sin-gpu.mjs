@@ -98,7 +98,7 @@ try {
     await chat.runTurn("hola", AbortSignal.timeout(5000));
     const body = seen[0] || {};
     check("sin razonamiento por defecto", body.chat_template_kwargs?.enable_thinking === false && body.thinking_budget_tokens === undefined);
-    check("muestreo del perfil codigo", body.temperature === 0.5 && body.top_p === 0.85 && body.top_k === 20 && body.min_p === 0 && body.presence_penalty === 0);
+    check("muestreo del perfil codigo", body.temperature === 0.6 && body.top_p === 0.9 && body.top_k === 20 && body.min_p === 0.05 && body.presence_penalty === 0);
     check("pide caché de prompt y uso exacto", body.cache_prompt === true && body.stream_options?.include_usage === true);
     check("una tanda no pasa de 2048 tokens", body.max_tokens <= 2048);
     check("sin herramientas no manda parallel_tool_calls", body.parallel_tool_calls === undefined);
@@ -142,7 +142,7 @@ try {
     const body = seen[0] || {};
     check("razonamiento: presupuesto en la raíz", body.thinking_budget_tokens > 0 && body.thinking_budget_tokens <= 2048 && body.chat_template_kwargs?.enable_thinking === true);
     check("razonamiento: esfuerzo medium (high da 500)", body.chat_template_kwargs?.reasoning_effort === "medium");
-    check("razonamiento: muestreo de razonar", body.temperature === 1 && body.min_p === 0.05 && body.top_p === 0.95);
+    check("razonamiento: muestreo de razonar", body.temperature === 0.6 && body.min_p === 0.05 && body.top_p === 0.9);
     check("razonamiento: la tanda incluye el presupuesto", body.max_tokens === 2048 + body.thinking_budget_tokens);
     const last = chat.session.turns[chat.session.turns.length - 1];
     check("razonamiento: el pensamiento no entra al historial", last?.content === "respuesta final");
@@ -161,7 +161,7 @@ try {
     const second = seen[1] || {};
     check("continúa con continue_final_message", second.continue_final_message === true && second.add_generation_prompt === false);
     check("la continuación no razona", second.chat_template_kwargs?.enable_thinking === false && second.thinking_budget_tokens === undefined);
-    check("la continuación vuelve al muestreo de código", second.temperature === 0.5);
+    check("la continuación vuelve al muestreo de código", second.temperature === 0.6);
     const last = chat.session.turns[chat.session.turns.length - 1];
     check("une las dos tandas", last?.content === "parte uno de la respuesta, parte dos");
     server.close();
@@ -243,7 +243,7 @@ try {
   {
     const chat = client(1);
     chat.props = { model_path: "C:/models/Ornith-1.5-9B-Q4_K_M.gguf" };
-    check("Ornith usa su propio muestreo de codigo", chat.samplingFields().temperature === 0.6 && chat.samplingFields().top_p === 0.95);
+    check("Ornith usa su propio muestreo de codigo", chat.samplingFields().temperature === 0.6 && chat.samplingFields().top_p === 0.9);
     chat.nCtx = 32768;
     chat.configuredCap = 32768;
     chat.actOnPc = true;

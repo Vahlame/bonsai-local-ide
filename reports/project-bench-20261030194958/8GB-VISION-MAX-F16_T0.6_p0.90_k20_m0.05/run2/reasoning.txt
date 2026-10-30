@@ -1,0 +1,229 @@
+The user wants me to create a Node.js (ESM) project called "taskforge" with multiple files. Let me write complete, correct, and executable code following the exact format requested.
+
+Let me carefully design each file:
+
+1) `package.json` with `{"type":"module"}` and a `test` script.
+
+2) `src/priority-queue.mjs`: A `PriorityQueue` class with:
+   - `enqueue(item, priority)`
+   - `dequeue()`
+   - `size`
+   - Min-heap: smallest priority comes out first; on tie, FIFO (the one that arrived first).
+   - `dequeue()` on empty throws Error.
+
+3) `src/scheduler.mjs`: A `Scheduler` class with:
+   - constructor `{concurrency}`
+   - `add(fn, {priority=0, retries=0})` registers an async task
+   - `run()` executes respecting priority and NEVER more than "concurrency" tasks at once, retries up to "retries" times if fn throws (and if still failing, the result is `{ok:false, error}`), returns an array of results in order of completion with shape `{id, ok, value?, error?, attempts}`.
+
+4) `test/priority-queue.test.mjs` and `test/scheduler.test.mjs` using ONLY `node:test` and `node:assert/strict`. Cover:
+   - order by priority
+   - FIFO on tie
+   - empty dequeue
+   - concurrency limit (measure max simultaneous)
+   - retries (2 failures then success)
+   - definitive failure
+   - completion order by duration
+
+Let me write the code carefully.
+
+### package.json
+
+```json
+{
+  "name": "taskforge",
+  "version": "1.0.0",
+  "description": "Priority queue and async task scheduler",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
+```
+
+Wait, the requirement says `{"type":"module"}` and `script test`. Let me keep it minimal but complete.
+
+### src/priority-queue.mjs
+
+I need to implement a min-heap. On tie (equal priority), FIFO order - the one that arrived first should come out first.
+
+A min-heap with FIFO tie-breaking. I'll implement a binary min-heap where the comparison is (priority, insertionOrder). Since insertion order is monotonically increasing, using a counter for insertion order ensures FIFO among equal priorities.
+
+Let me implement:
+
+```js
+export class PriorityQueue {
+  #heap = [];
+  #counter = 0;
+
+  enqueue(item, priority) {
+    this.#heap.push({ item, priority, order: this.#counter++ });
+    this.#siftUp(this.#heap.length - 1);
+  }
+
+  get size() {
+    return this.#heap.length;
+  }
+
+  dequeue() {
+    if (this.#heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const [root] = this.#heap;
+    const item = root.item;
+    const last = this.#heap.pop();
+    if (this.#heap.length > 0) {
+      this.#heap[0] = last;
+      this.#siftDown(0);
+    }
+    return item;
+  }
+
+  #siftUp(start) {
+    const heap = this.#heap;
+    let i = start;
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (heap[i].priority < heap[parent].priority ||
+          (heap[i].priority === heap[parent].priority &&
+           heap[i].order < heap[parent].order)) {
+        [heap[i], heap[parent]] = [heap[parent], heap[i]];
+        i = parent;
+      } else {
+        break;
+      }
+    }
+  }
+
+  #siftDown(start) {
+    const heap = this.#heap;
+    let i = start;
+    const length = heap.length;
+    while (true) {
+      let left = 2 * i + 1;
+      let right = 2 * i + 2;
+      let smallest = i;
+      if (left < length && this.#less(heap[left], heap[smallest])) {
+        smallest = left;
+      }
+      if (right < length && this.#less(heap[right], heap[smallest])) {
+        smallest = right;
+      }
+      if (smallest === i) break;
+      [heap[i], heap[smallest]] = [heap[smallest], heap[i]];
+      i = smallest;
+    }
+  }
+
+  #less(a, b) {
+    if (a.priority !== b.priority) return a.priority < b.priority;
+    return a.order < b.order;
+  }
+}
+```
+
+This should work correctly.
+
+### src/scheduler.mjs
+
+```js
+export class Scheduler {
+  #concurrency;
+  #running = new Set();
+  #waiting = [];
+  #idCounter = 0;
+  #done = false;
+
+  constructor({ concurrency = 1 } = {}) {
+    this.#concurrency = concurrency;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    const id = ++this.#idCounter;
+    this.#waiting.push({ id, fn, priority, retries, attempts: 0 });
+    this.#schedule();
+    return id;
+  }
+
+  run() {
+    this.#done = true;
+    this.#schedule();
+    return new Promise((resolve) => {
+      const results = new Array(this.#waiting.length);
+      // We'll fill results as they complete
+      // Use a different approach: collect results in a map
+    });
+  }
+  ...
+}
+```
+
+Hmm, let me think about the design more carefully.
+
+The `run()` method should:
+- Execute respecting priority
+- Never more than "concurrency" tasks at once
+- Retry up to "retries" times if fn throws
+- If still failing, result is `{ok:false, error}`
+- Return array of results in order of completion with shape `{id, ok, value?, error?, attempts}`
+
+Let me think about the ordering of `add` vs `run`. The `add` method registers a task, and `run()` executes. So tasks can be added before run() is called. But we need to be careful: if add() is called after run() starts, should it still work? The requirement says "add(fn, ...) que registra una tarea async" and "run() que ejecuta". I think the typical pattern is add tasks, then run. But to be safe, let me make add() work even after run() starts (add to waiting queue, then schedule).
+
+Actually, let me reconsider. The scheduler needs to handle the case where tasks are added before run(). Let me design it so that:
+- `add()` pushes to waiting queue and schedules if not running (or if there's capacity).
+- `run()` starts the scheduling loop.
+
+Let me think about how to return results in order of completion. I'll use a Map or array indexed by id, and when a task completes, push to a results array. But the requirement says "orden de finalizacion" (order of completion). So the results array should be in the order tasks finish, not the order they were added.
+
+Let me use an array that gets filled as tasks complete. I'll maintain a results array and push to it when each task finishes.
+
+Let me write:
+
+```js
+export class Scheduler {
+  #concurrency;
+  #waiting = [];
+  #running = new Set();
+  #idCounter = 0;
+  #started = false;
+
+  constructor({ concurrency = 1 } = {}) {
+    if (!Number.isInteger(concurrency) || concurrency < 1) {
+      throw new RangeError('concurrency must be a positive integer');
+    }
+    this.#concurrency = concurrency;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    const task = { id: ++this.#idCounter, fn, priority, retries };
+    this.#waiting.push(task);
+    if (!this.#started) {
+      this.#started = true;
+      this.#pump();
+    }
+    return task.id;
+  }
+
+  run() {
+    this.#started = true;
+    this.#pump();
+    return new Promise((resolve) => {
+      this.#resolve = resolve;
+    });
+  }
+
+  #pump() {
+    while (this.#running.size < this.#concurrency && this.#waiting.length > 0) {
+      const task = this.#waiting.shift();
+      this.#running.add(task.id);
+      this.#dispatch(task);
+    }
+  }
+
+  #dispatch(task) {
+    const runTask = async () => {
+      const result = { id: task.id, ok: false, attempts: 0 };
+      let lastError;
+      for (let attempt = 0; attempt <= task.retries; attempt++) {
+        result

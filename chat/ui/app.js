@@ -343,7 +343,7 @@
 
   // ================================================================== ajustes
   /** @type {{tema: string, perfil: string, pensar: number, reglas: boolean, historial: number}} */
-  let ajustes = { tema: "slate", perfil: "codigo", pensar: 0, reglas: true, historial: 32768, continuarAuto: true, saltosTope: 192, comandoSegundos: 180 };
+  let ajustes = { tema: "slate", perfil: "codigo", pensar: 0, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180 };
 
   const TEMAS = [["slate","Grafito"],["ocean","Niebla azul"],["forest","Bosque"],["sand","Arena"],["light","Marfil"],["dark","Medianoche"]];
   function siguienteTema() { const i=TEMAS.findIndex(([v])=>v===ajustes.tema); return TEMAS[(i+1)%TEMAS.length][0]; }
@@ -1469,8 +1469,8 @@
     dato("Ventana del servidor", `${formatoTokens(datos.ventana)} tokens`, "Contexto con el que arrancó llama-server.");
     dato(
       "Historial solicitado",
-      datos.solicitado === null ? "— (sin ajuste explícito)" : `${formatoTokens(datos.solicitado)} tokens`,
-      "Tope pedido en Ajustes; el servidor lo puede recortar.",
+      datos.auto || datos.solicitado === null ? "Automático (ventana − salida)" : `${formatoTokens(datos.solicitado)} tokens`,
+      "Automático = todo el historial que quepa dejando la reserva para pensar y responder.",
     );
     dato("Historial efectivo", `${formatoTokens(datos.efectivo)} tokens`, "Lo que de verdad puede viajar como historial en cada petición.");
     dato(
@@ -1852,7 +1852,7 @@
     // una PETICIÓN al servidor; el tope real lo recorta historyCap() según la ventana que
     // arrancó llama-server (por eso abajo se enseñan los cuatro valores reales).
     const historial = el("select");
-    const topes = [[8192, "8192 tokens"], [16384, "16384 tokens"], [28672, "28672 tokens (2/3 de 43008)"], [32768, "32768 tokens"], [36864, "36864 tokens"], [39936, "39936 tokens"], [43008, "43008 tokens"]];
+    const topes = [[0, "Automático (ventana − salida)"], [8192, "8192 tokens"], [16384, "16384 tokens"], [32768, "32768 tokens"], [65536, "65536 tokens"], [110592, "110592 tokens"]];
     if (Number.isFinite(Number(ajustes.historial)) && !topes.some(([v]) => v === Number(ajustes.historial))) topes.push([Number(ajustes.historial), `${ajustes.historial} tokens`]);
     for (const [v, t] of topes) {
       const o = el("option", "", String(t));
@@ -1864,7 +1864,7 @@
       const nuevoHistorial = Number(historial.value);
       const ctx = Number(ajustes.coderContextTokens) || 0;
       // If historial < context window, mark preset as CUSTOM so the chip reflects it
-      const presetResultante = (ctx > 0 && nuevoHistorial < ctx) ? "CUSTOM" : (ajustes.enginePreset || "");
+      const presetResultante = (nuevoHistorial > 0 && ctx > 0 && nuevoHistorial < ctx) ? "CUSTOM" : (ajustes.enginePreset || "");
       await guardarAjustes({ historial: nuevoHistorial, ...(presetResultante !== ajustes.enginePreset ? { enginePreset: presetResultante } : {}) });
       // Update motor dropdown to show CUSTOM if needed
       if (presetResultante === "CUSTOM") {

@@ -11,9 +11,10 @@
  *   node scripts/bench-model-quality.mjs --presets A,B,C
  *   node scripts/bench-model-quality.mjs --tasks coding_impl_js,reasoning_math
  *   node scripts/bench-model-quality.mjs --port 8092 --think 1024 --max-tokens 1200
+ *   node scripts/bench-model-quality.mjs --sampling --preset 8GB-CODE-BALANCED --repeat 2
  *
  * Escribe reports/bench-quality-<stamp>/{results.json,results.md} y
- * docs/graficos/bench-quality.svg
+ * docs/graficos/bench-quality.svg (o bench-sampling.svg en modo --sampling).
  */
 
 import fs from "node:fs";
@@ -34,8 +35,35 @@ const PORT = Number(arg("port", "8093"));
 const THINK = Number(arg("think", "1024"));
 const MAX_TOKENS = Number(arg("max-tokens", "1200"));
 const TEMP = Number(arg("temp", "0.2"));
+const TOPP = Number(arg("top-p", "0.9"));
+const TOPK = Number(arg("top-k", "20"));
+const MINP = Number(arg("min-p", "0"));
+const PP = Number(arg("presence-penalty", "0"));
+const RP = Number(arg("repeat-penalty", "1"));
 const REPS = Math.max(1, Number(arg("repeat", "1")));
 const REQ_TIMEOUT_MS = Number(arg("timeout", "240000"));
+
+const BASE_SAMPLING = { temperature: TEMP, top_p: TOPP, top_k: TOPK, min_p: MINP, presence_penalty: PP, repeat_penalty: RP, reasoning_budget: THINK };
+let ACTIVE_SAMPLING = BASE_SAMPLING;
+
+// Matriz de muestreo (--sampling). Nombres cortos para la grafica.
+const SAMPLING_CONFIGS = [
+  { name: "T0 greedy", temperature: 0, top_p: 1, top_k: 0, min_p: 0 },
+  { name: "T0.2 p.95 k20", temperature: 0.2, top_p: 0.95, top_k: 20, min_p: 0 },
+  { name: "T0.4 p.90 k40", temperature: 0.4, top_p: 0.9, top_k: 40, min_p: 0 },
+  { name: "T0.6 p.95 k20 code", temperature: 0.6, top_p: 0.95, top_k: 20, min_p: 0 },
+  { name: "T0.6 p.90 k20 m.05", temperature: 0.6, top_p: 0.9, top_k: 20, min_p: 0.05 },
+  { name: "T0.7 p.80 k20 chat", temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0 },
+  { name: "T0.8 p.95 k20 m.05", temperature: 0.8, top_p: 0.95, top_k: 20, min_p: 0.05 },
+  { name: "T0.6 p.95 k20 pres1.5", temperature: 0.6, top_p: 0.95, top_k: 20, min_p: 0, presence_penalty: 1.5 },
+  { name: "T0.6 p.95 k20 rep1.1", temperature: 0.6, top_p: 0.95, top_k: 20, min_p: 0, repeat_penalty: 1.1 },
+  { name: "T1.0 p.95 k20 m.05 reason", temperature: 1.0, top_p: 0.95, top_k: 20, min_p: 0.05 },
+];
+const samplingMode = process.argv.includes("--sampling");
+const configFilter = (arg("configs", "") || "").split(",").map((s) => Number(s.trim())).filter((n) => Number.isInteger(n) && n > 0);
+const ACTIVE_CONFIGS = configFilter.length
+  ? SAMPLING_CONFIGS.filter((_, i) => configFilter.includes(i + 1))
+  : SAMPLING_CONFIGS;
 
 const DEFAULT_PRESETS = [
   "8GB-VISION-MAX-F16",
@@ -74,7 +102,7 @@ function buildArgs(preset) {
   if (!p) throw new Error(`Preset desconocido: ${preset}`);
   const ctx = Number(p.context);
   const kv = String(p.kv);
-  const stable = kv === "f16";
+  const stable = true;
   const a = ["-m", MODEL, "--gpu-layers", "99"];
   if (!stable) a.push("--fit", "off", "--kv-offload");
   a.push("--flash-attn", "on", "-c", String(ctx), "-ctk", kv, "-ctv", kv);
@@ -372,18 +400,21 @@ const TASKS = [
 // --------------------------------------------------------------------------
 const ACTIVE_TASKS = onlyTasks.length ? TASKS.filter((t) => onlyTasks.includes(t.id)) : TASKS;
 
-async function ask(task) {
+async function ask(task, sampling = ACTIVE_SAMPLING) {
   const body = {
     model: "local",
     messages: [
       { role: "system", content: "Eres un asistente tecnico preciso. Sigue exactamente el formato pedido y no anadas texto extra." },
       { role: "user", content: task.prompt },
     ],
-    temperature: TEMP,
-    top_p: 0.9,
-    top_k: 20,
+    temperature: sampling.temperature,
+    top_p: sampling.top_p,
+    top_k: sampling.top_k,
+    min_p: sampling.min_p,
+    presence_penalty: sampling.presence_penalty ?? 0,
+    repeat_penalty: sampling.repeat_penalty ?? 1,
     max_tokens: MAX_TOKENS,
-    reasoning_budget: THINK,
+    reasoning_budget: sampling.reasoning_budget ?? THINK,
   };
   if (task.tools) { body.tools = task.tools; body.tool_choice = "auto"; }
   const t0 = Date.now();
@@ -402,6 +433,30 @@ async function ask(task) {
   return { raw, content, ms, tps, reasoning: String(msg.reasoning_content || "") };
 }
 
+async function runTaskOnce(label, task, rep) {
+  let r;
+  try {
+    const base = await ask(task);
+    if (!base.raw) {
+      r = { id: task.id, category: task.category, ok: false, detail: base.detail, ms: base.ms, tps: 0, rep };
+    } else {
+      const verdict = await task.check(base.content, base.raw);
+      r = { id: task.id, category: task.category, ok: Boolean(verdict.ok), detail: verdict.detail, ms: base.ms, tps: base.tps,
+            empty: base.content.trim().length === 0, rep,
+            finish: base.raw?.choices?.[0]?.finish_reason || "",
+            preview: base.content.slice(0, 160) };
+      if (!verdict.ok && process.env.BENCH_DEBUG) {
+        process.stdout.write(`\n--- DEBUG ${task.id} content ---\n${base.content}\n--- END ---\n`);
+      }
+    }
+  } catch (err) {
+    r = { id: task.id, category: task.category, ok: false, detail: String(err?.message || err).slice(0, 80), ms: 0, tps: 0, rep };
+  }
+  const tag = REPS > 1 ? ` [${rep}/${REPS}]` : "";
+  process.stdout.write(`  ${label} ${task.id}${tag}: ${r.ok ? "OK" : "FAIL"} (${r.detail})\n`);
+  return r;
+}
+
 async function runPreset(preset) {
   const started = Date.now();
   const srv = await startServer(preset);
@@ -410,32 +465,36 @@ async function runPreset(preset) {
   }
   const results = [];
   for (const task of ACTIVE_TASKS) {
-    for (let rep = 1; rep <= REPS; rep++) {
-      let r;
-      try {
-        const base = await ask(task);
-        if (!base.raw) {
-          r = { id: task.id, category: task.category, ok: false, detail: base.detail, ms: base.ms, tps: 0, rep };
-        } else {
-          const verdict = await task.check(base.content, base.raw);
-          r = { id: task.id, category: task.category, ok: Boolean(verdict.ok), detail: verdict.detail, ms: base.ms, tps: base.tps,
-                empty: base.content.trim().length === 0, rep,
-                finish: base.raw?.choices?.[0]?.finish_reason || "",
-                preview: base.content.slice(0, 160) };
-          if (!verdict.ok && process.env.BENCH_DEBUG) {
-            process.stdout.write(`\n--- DEBUG ${task.id} content ---\n${base.content}\n--- END ---\n`);
-          }
-        }
-      } catch (err) {
-        r = { id: task.id, category: task.category, ok: false, detail: String(err?.message || err).slice(0, 80), ms: 0, tps: 0, rep };
-      }
-      results.push(r);
-      const tag = REPS > 1 ? ` [${rep}/${REPS}]` : "";
-      process.stdout.write(`  ${preset} ${task.id}${tag}: ${r.ok ? "OK" : "FAIL"} (${r.detail})\n`);
-    }
+    for (let rep = 1; rep <= REPS; rep++) results.push(await runTaskOnce(preset, task, rep));
   }
   await stopServer(srv.ci);
   return { preset, started: true, nCtx: srv.nCtx, kv: PRESETS[preset].kv, ctx: PRESETS[preset].context, tasks: results, ms: Date.now() - started };
+}
+
+/**
+ * Modo --sampling: un solo servidor, una fila por configuracion de muestreo.
+ * Las tareas y el comprobador son los mismos; solo cambia el muestreo por peticion.
+ */
+async function runSamplingMatrix(preset) {
+  const started = Date.now();
+  const srv = await startServer(preset);
+  if (!srv.ok) return [{ preset: `${preset} (no arranco)`, started: false, reason: srv.reason, nCtx: 0, tasks: [], ms: Date.now() - started }];
+  const rows = [];
+  const base = { reasoning_budget: THINK, presence_penalty: PP, repeat_penalty: RP };
+  for (const cfg of ACTIVE_CONFIGS) {
+    ACTIVE_SAMPLING = { ...base, ...cfg };
+    const t0 = Date.now();
+    const results = [];
+    console.log(`\n-- muestreo: ${cfg.name} (temp=${cfg.temperature} top_p=${cfg.top_p} top_k=${cfg.top_k} min_p=${cfg.min_p})`);
+    for (const task of ACTIVE_TASKS) {
+      for (let rep = 1; rep <= REPS; rep++) results.push(await runTaskOnce(cfg.name, task, rep));
+    }
+    rows.push({ preset: cfg.name, started: true, nCtx: srv.nCtx, kv: PRESETS[preset].kv, ctx: PRESETS[preset].context,
+                tasks: results, ms: Date.now() - t0, sampling: { ...cfg } });
+  }
+  ACTIVE_SAMPLING = BASE_SAMPLING;
+  await stopServer(srv.ci);
+  return rows;
 }
 
 // --------------------------------------------------------------------------
@@ -472,9 +531,12 @@ function svgBar(presetRows, categories) {
 // --------------------------------------------------------------------------
 async function main() {
   const stamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
-  const outDir = path.join(PROJECT, "reports", `bench-quality-${stamp}`);
+  const outDir = path.join(PROJECT, "reports", `${samplingMode ? "bench-sampling" : "bench-quality"}-${stamp}`);
   fs.mkdirSync(outDir, { recursive: true });
-  const chartPath = path.join(PROJECT, "docs", "graficos", "bench-quality.svg");
+  const chartOut = arg("chart-out", "");
+  const chartPath = chartOut
+    ? (path.isAbsolute(chartOut) ? chartOut : path.join(PROJECT, chartOut))
+    : path.join(PROJECT, "docs", "graficos", samplingMode ? "bench-sampling.svg" : "bench-quality.svg");
 
   // Modo solo-grafica: reconstruye el SVG desde un results.json existente sin
   // arrancar el servidor (util tras una pasada parcial de varianza).
@@ -490,15 +552,21 @@ async function main() {
   }
 
   console.log(`BIN=${BIN}`);
-  console.log(`presets=${presets.join(", ")} tasks=${ACTIVE_TASKS.length} think=${THINK} max_tokens=${MAX_TOKENS}`);
+  console.log(`presets=${presets.join(", ")} tasks=${ACTIVE_TASKS.length} think=${THINK} max_tokens=${MAX_TOKENS}${samplingMode ? ` sampling=${ACTIVE_CONFIGS.length} configs` : ""}`);
 
-  const rows = [];
-  for (const preset of presets) {
-    console.log(`\n=== ${preset} ===`);
-    const row = await runPreset(preset);
-    rows.push(row);
-    const passed = row.tasks.filter((t) => t.ok).length;
-    console.log(`  -> ${passed}/${row.tasks.length} (${row.started ? "ok" : row.reason})`);
+  let rows = [];
+  if (samplingMode) {
+    const preset = arg("preset", "8GB-CODE-BALANCED");
+    console.log(`\n=== matriz de muestreo sobre ${preset} (${ACTIVE_CONFIGS.length} configuraciones) ===`);
+    rows = await runSamplingMatrix(preset);
+  } else {
+    for (const preset of presets) {
+      console.log(`\n=== ${preset} ===`);
+      const row = await runPreset(preset);
+      rows.push(row);
+      const passed = row.tasks.filter((t) => t.ok).length;
+      console.log(`  -> ${passed}/${row.tasks.length} (${row.started ? "ok" : row.reason})`);
+    }
   }
 
   const categories = [...new Set(ACTIVE_TASKS.map((t) => t.category))];
@@ -521,16 +589,22 @@ async function main() {
 
   // Markdown
   const md = [];
-  md.push(`# Benchmark de calidad por preset - ${stamp}`);
-  md.push(`\nTareas: **${ACTIVE_TASKS.length}** · pensamiento ${THINK} · max_tokens ${MAX_TOKENS} · temperatura ${TEMP}`);
+  md.push(`# ${samplingMode ? "Benchmark de muestreo" : "Benchmark de calidad por preset"} - ${stamp}`);
+  md.push(`\nTareas: **${ACTIVE_TASKS.length}** · pensamiento ${THINK} · max_tokens ${MAX_TOKENS} · repeticiones ${REPS}${samplingMode ? ` · ${ACTIVE_CONFIGS.length} configuraciones` : ` · temperatura ${TEMP}`}`);
   md.push(`\n## Resultado global\n`);
-  md.push(`| Preset | KV | Ctx | Puntos | % | Gen t/s | Tiempo |`);
+  md.push(`| ${samplingMode ? "Config" : "Preset"} | KV | Ctx | Puntos | % | Gen t/s | Tiempo |`);
   md.push(`|---|---|---:|---:|---:|---:|---:|`);
   for (const s of summary) {
     md.push(`| ${s.preset} | ${s.kv || "-"} | ${s.ctx || "-"} | ${s.passed}/${s.total} | ${s.score.toFixed(1)}% | ${s.avgTps.toFixed(1)} | ${s.seconds}s |`);
   }
+  if (samplingMode) {
+    md.push(`\n### Parametros por configuracion\n`);
+    md.push(`| Config | temp | top_p | top_k | min_p |`);
+    md.push(`|---|---:|---:|---:|---:|`);
+    for (const c of ACTIVE_CONFIGS) md.push(`| ${c.name} | ${c.temperature} | ${c.top_p} | ${c.top_k} | ${c.min_p} |`);
+  }
   md.push(`\n## Por categoria\n`);
-  md.push(`| Preset | ${categories.join(" | ")} |`);
+  md.push(`| ${samplingMode ? "Config" : "Preset"} | ${categories.join(" | ")} |`);
   md.push(`|---|${categories.map(() => "---:").join("|")}|`);
   for (const s of summary) {
     md.push(`| ${s.preset} | ${categories.map((c) => s.byCat[c] === null ? "-" : (s.byCat[c] * 100).toFixed(0) + "%").join(" | ")} |`);

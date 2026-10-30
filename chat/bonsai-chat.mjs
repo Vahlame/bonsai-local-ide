@@ -61,7 +61,13 @@ export const RESERVA_POR_FASE = Object.freeze({
 // seguir con ella («Creo test_api.py: ```python…»). De ahí que se le diga qué NO hacer y que
 // la transcripción vaya entre marcas: es material para archivar, no un pedido.
 const SUMMARY_RULES =
-  "Eres el archivador de una sesión de programación. Escribe SOLO notas en viñetas sobre lo que YA pasó: lo que pidió el usuario, archivos creados o cambiados (ruta y para qué), nombres reales de funciones y clases, comandos ejecutados con su resultado y los errores que siguen pendientes. NO escribas código, NO sigas la tarea, NO digas lo que vas a hacer y NO des el pedido por cumplido. Lo importante primero. Máximo 700 palabras.";
+  "Eres el compactador de contexto de una sesion de programacion (estilo Claude/DeepSeek). " +
+  "Devuelve SOLO vinetas, agrupadas con estos encabezados cuando tengan contenido: " +
+  "OBJETIVO, DECISIONES, ARCHIVOS (ruta + para que), COMANDOS Y PRUEBAS (resultado), " +
+  "ERRORES ABIERTOS, PENDIENTE, HECHOS CLAVE. " +
+  "Conserva literales los nombres de archivos, funciones, clases, rutas, comandos y numeros. " +
+  "No inventes, no escribas codigo, no repitas lo obvio, no sigas la tarea y no des nada por cumplido. " +
+  "Fusiona con las notas anteriores sin duplicar. Lo importante primero. Maximo 700 palabras.";
 
 /**
  * @param {string[]} argv
@@ -90,8 +96,8 @@ function parseArgs(argv) {
     else throw new Error(`Argumento desconocido: ${arg}`);
   }
   if (!Number.isInteger(out.port) || out.port <= 0) throw new Error("Puerto inválido");
-  if (!Number.isInteger(out.historyCap) || out.historyCap < 512) {
-    throw new Error("El tope de historial tiene que ser un entero >= 512");
+  if (!Number.isInteger(out.historyCap) || out.historyCap < 0) {
+    throw new Error("El tope de historial tiene que ser un entero >= 0 (0 = automático: ventana menos salida)");
   }
   if (!Number.isInteger(out.think) || out.think < 0) throw new Error("--think es un presupuesto en tokens (0 = apagado)");
   muestreo(out.perfil);
@@ -375,29 +381,62 @@ export class BonsaiChat {
    *  - Nunca menos de MIN_ROOM (siempre hay hueco para terminar la frase).
    *  - Nunca más de media ventana (el resto no se usaría: el tope de historial ya no baja).
    *  - Sin fase conocida se conserva la reserva de siempre (compatibilidad).
+   *  - El pensamiento va DENTRO de la reserva: si se reserva solo la respuesta, el
+   *    razonamiento se come el hueco de la respuesta (ventana = entrada + pensar + salida).
    * @returns {number}
    */
   reservaSalida() {
     if (Number.isFinite(this.overrideOutputReservation)) return this.overrideOutputReservation;
     if (this.consultation) return Math.min(SLICE_TOKENS + 512, Math.floor((this.nCtx || 8192) / 2));
-    if (this.agentProfile === "small-local-coder") { const c = this.coderTask?.config || this.coderConfig || CODER_CONFIG; return Math.min(c.outputTokens, Math.max(256, Math.floor((this.nCtx || c.contextTokens) / 2) - 128)); }
+    const pensar = this.reservaPensamiento();
+    if (this.agentProfile === "small-local-coder") {
+      const c = this.coderTask?.config || this.coderConfig || CODER_CONFIG;
+      const total = Math.max(0, Number(c.outputTokens) || 0) + pensar;
+      return Math.min(total, Math.max(256, Math.floor((this.nCtx || c.contextTokens) / 2) - 128));
+    }
     const fase = this.faseSalto;
     const conHerramientas = this.actOnPc && this.toolChoice !== "none";
     const reservaFase = conHerramientas
       ? (fase && Object.prototype.hasOwnProperty.call(RESERVA_POR_FASE, fase) ? RESERVA_POR_FASE[fase] : AGENT_SLICE_TOKENS)
       : SLICE_TOKENS;
     const mediaVentana = this.nCtx > 0 ? Math.floor(this.nCtx / 2) : Number.POSITIVE_INFINITY;
-    return Math.max(MIN_ROOM, Math.floor(Math.min(reservaFase, mediaVentana)));
+    return Math.max(MIN_ROOM, Math.floor(Math.min(reservaFase + pensar, mediaVentana)));
+  }
+
+  /**
+   * Tokens de razonamiento que hay que apartar junto a la respuesta. No puede llamar a
+   * effectiveThinkingBudget() (esa usa reservaSalida y sería recursivo): se limita por el
+   * presupuesto del usuario y por el tope del perfil de agente.
+   * @returns {number}
+   */
+  reservaPensamiento() {
+    if (!(this.thinkBudget > 0)) return 0;
+    const config = this.coderTask?.config || this.coderConfig || CODER_CONFIG;
+    const topePerfil = Number(config.thinkingTokens);
+    return Number.isFinite(topePerfil) && topePerfil > 0
+      ? Math.min(this.thinkBudget, topePerfil)
+      : this.thinkBudget;
+  }
+
+  /**
+   * Presupuesto de la memoria compactada: ~6 % de la ventana (1k–8k tokens).
+   * Es el "summary" que sustituye a los turnos plegados.
+   * @returns {number}
+   */
+  memoryCapTokens() {
+    const w = this.nCtx > 0 ? this.nCtx : 16384;
+    return Math.max(1024, Math.min(8192, Math.round(w * 0.06)));
   }
 
   historyCap() {
-    // La reserva de salida es adaptativa (ver reservaSalida) y el tope que pidió el usuario
-    // (configuredCap) sigue mandando: si es menor que lo que cabe, se respeta.
+    // configuredCap = 0 -> automático: todo el historial que quepa dejando la
+    // reserva de salida (como los modelos frontera: ventana = entrada + salida).
     const reserva = this.reservaSalida();
     const coderConfig = this.coderTask?.config || this.coderConfig || CODER_CONFIG;
     const ventana = this.agentProfile === "small-local-coder" ? Math.min(this.nCtx || coderConfig.contextTokens, coderConfig.contextTokens) : this.nCtx;
-    const ceiling = ventana > 0 ? Math.max(512, ventana - reserva - 128 - (this.pendingImageTokens || 0)) : this.configuredCap;
-    return Math.max(512, Math.min(this.configuredCap, ceiling) - this.tighten);
+    const ceiling = ventana > 0 ? Math.max(512, ventana - reserva - 128 - (this.pendingImageTokens || 0)) : (this.configuredCap > 0 ? this.configuredCap : 512);
+    const cap = this.configuredCap > 0 ? this.configuredCap : Number.POSITIVE_INFINITY;
+    return Math.max(512, Math.min(cap, ceiling) - this.tighten);
   }
 
   /**
@@ -414,7 +453,9 @@ export class BonsaiChat {
     const efectivo = this.historyCap();
     return {
       ventana,
-      solicitado: this.configuredCap,
+      // 0 = automático (ventana - salida). Se expone como null para que la UI lo muestre.
+      solicitado: this.configuredCap > 0 ? this.configuredCap : null,
+      auto: this.configuredCap <= 0,
       efectivo,
       reservaSalida: this.reservaSalida(),
     };
@@ -741,6 +782,7 @@ export class BonsaiChat {
    * @returns {Promise<string>}
    */
   async summarize(prev, turns, extra, maxWords = 700) {
+    const cap = this.memoryCapTokens();
     const parts = [];
     for (const turn of turns) {
       // R = resultado de una herramienta: no lo dijo el usuario. Las llamadas del asistente
@@ -753,7 +795,7 @@ export class BonsaiChat {
     if (extra) parts.push(`A ya escrito, no repetir: ${sampleText(extra, estimateTokens, 1600)}`);
     let blob = parts.join("\n");
     if (estimateTokens(blob) > 2400) blob = sampleText(blob, estimateTokens, 2400);
-    if (estimateTokens(prev) > MEMORY_CAP_TOKENS) throw new Error("La memoria anterior supera el límite de resumen; se conserva íntegra en la sesión.");
+    if (estimateTokens(prev) > cap) throw new Error("La memoria anterior supera el límite de resumen; se conserva íntegra en la sesión.");
     const notes = prev;
     if (!blob.trim()) {
       // Sin nada nuevo no hay nada que resumir… salvo que lo que se pida sea ACORTAR las
@@ -797,8 +839,8 @@ export class BonsaiChat {
         : "";
       const merged = typeof content === "string" ? limpiarNotas(content) : "";
       if (!merged) throw new Error("El modelo devolvió un resumen vacío o inválido");
-      if (estimateTokens(merged) > MEMORY_CAP_TOKENS && this.summaryMetrics) this.summaryMetrics.truncated = true;
-      return takeHeadByTokens(merged, MEMORY_CAP_TOKENS, estimateTokens);
+      if (estimateTokens(merged) > cap && this.summaryMetrics) this.summaryMetrics.truncated = true;
+      return takeHeadByTokens(merged, cap, estimateTokens);
     } catch (err) {
       if (this.active?.signal.aborted || (err instanceof Error && err.name === "AbortError")) throw err;
       throw new Error(`No se pudo compactar la conversación; se conserva el historial: ${err instanceof Error ? err.message : String(err)}`);
@@ -817,6 +859,7 @@ export class BonsaiChat {
     // Hallazgo 21: la memoria de respaldo no puede quedarse con lo viejo y perder lo nuevo.
     // Primero se aparta espacio para los hechos recientes (fallos abiertos y verificaciones
     // pendientes primero) y solo con lo que sobra se recortan las notas antiguas.
+    const cap = this.memoryCapTokens();
     /** @type {string[]} */
     const recientes = [];
     for (const turn of turns) {
@@ -835,18 +878,18 @@ export class BonsaiChat {
     const normales = recientes.filter((linea) => !HUELLA_FALLO.test(linea));
     // Reserva para lo nuevo: ~45 % del tope. Los fallos van delante y completos; de los
     // turnos normales se conservan los más recientes (el final del bloque plegado).
-    const reservaNueva = Math.max(320, Math.floor(MEMORY_CAP_TOKENS * 0.45));
+    const reservaNueva = Math.max(320, Math.floor(cap * 0.45));
     const parteFallos = takeHeadByTokens(fallos.join("\n"), Math.max(96, Math.floor(reservaNueva * 0.7)), estimateTokens);
     const parteNormal = takeTailByTokens(normales.join("\n"), Math.max(64, reservaNueva - estimateTokens(parteFallos)), estimateTokens);
     const nuevas = [parteFallos, parteNormal].filter(Boolean).join("\n");
     if (!nuevas && !notes) return "";
     const tokensNuevas = estimateTokens(nuevas);
-    const presupuestoViejas = Math.max(0, MEMORY_CAP_TOKENS - tokensNuevas - 2);
+    const presupuestoViejas = Math.max(0, cap - tokensNuevas - 2);
     const viejas = presupuestoViejas > 0 && notes ? takeHeadByTokens(notes, presupuestoViejas, estimateTokens) : "";
     let texto = [viejas, nuevas].filter(Boolean).join("\n");
     // Red de seguridad: si aun así no cabe, se recorta MÁS lo viejo, nunca lo nuevo.
-    if (estimateTokens(texto) > MEMORY_CAP_TOKENS && viejas) {
-      const sobra = Math.max(0, MEMORY_CAP_TOKENS - tokensNuevas - 1);
+    if (estimateTokens(texto) > cap && viejas) {
+      const sobra = Math.max(0, cap - tokensNuevas - 1);
       texto = [takeHeadByTokens(viejas, sobra, estimateTokens), nuevas].filter(Boolean).join("\n");
     }
     return texto;
@@ -1066,7 +1109,7 @@ export class BonsaiChat {
       const messages = [{role:"system",content:system},{role:"user",content:[task.state.goal,map?`MAPA (solo metadatos):\n${map}`:"",snippets?`CONTEXTO SELECCIONADO:\n${snippets}`:"",memory].filter(Boolean).join("\n\n")},...previous,...recent.flat().map(convert),{role:"user",content:task.dynamic()}];
       const count = await this.countPrompt(messages,false);
       if (tokensBefore === null) tokensBefore = count;
-      if (count > this.historyCap() && count <= this.configuredCap && !Number.isFinite(this.overrideOutputReservation)) {
+      if (count > this.historyCap() && (this.configuredCap <= 0 || count <= this.configuredCap) && !Number.isFinite(this.overrideOutputReservation)) {
         const available = this.nCtx - count - 128 - (this.pendingImageTokens || 0);
         if (available >= 2048 && available < this.reservaSalida()) {
           this.overrideOutputReservation = available;
