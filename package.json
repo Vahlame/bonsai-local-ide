@@ -24,7 +24,8 @@
     "test:gpu-exclusiva": "node scripts/run-tests.mjs gpu-exclusiva",
     "test:navegador": "node scripts/run-tests.mjs navegador",
     "test:todo": "node scripts/run-tests.mjs todo",
-    "test:listar": "node scripts/run-tests.mjs --listar"
+    "test:listar": "node scripts/run-tests.mjs --listar",
+    "docs:links": "node scripts/check-doc-links.mjs"
   },
   "engines": {
     "node": ">=22"

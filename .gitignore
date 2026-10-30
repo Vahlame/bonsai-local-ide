@@ -78,3 +78,7 @@ reports/coder-2026-10-28/engine-*.log
 _verify_v41/
 *.bak
 URL-CURSOR.txt
+
+# Historial de asistentes externos
+.aider*
+URL-CURSOR.txt
