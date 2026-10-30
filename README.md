@@ -1,267 +1,250 @@
-# Bonsai Local IDE
+# 🌳 Bonsai Local IDE
 
-**Versión 1.2.0 · 30 de octubre de 2026.** Esta entrega añade **memoria global entre
-chats** (selectiva, con presupuesto y editable), control del servidor desde la interfaz,
-un **navegador Playwright MCP aislado**, cierre seguro de turnos y varias correcciones
-de robustez del agente. Notas completas: [RELEASE-1.2.0.md](docs/RELEASE-1.2.0.md).
-Evidencia de las pruebas: [docs/evidencia/2026-10-30](docs/evidencia/2026-10-30/RESUMEN.md).
+**Entorno de desarrollo con IA 100 % local para Windows 10/11.**
+Chat con agente, editor con pestañas, diffs, git, terminal integrado, navegador
+controlado y visión — todo en tu GPU, sin nube.
 
-**Contexto y agente:** el prompt de sistema distingue conversación y trabajo sobre el
-proyecto; el historial se conserva mientras quepa y el conteo usa el tokenizer de
-llama-server cuando está disponible. El perfil local configurado en esta máquina
-utiliza Ornith con visión, pensamiento y 43.008 tokens de ventana. Las métricas,
-límites y pasos de diagnóstico están en [contexto y diagnósticos](docs/CONTEXTO-Y-DIAGNOSTICO.md).
-La configuración local se guarda fuera de Git: una instalación nueva no hereda esos ajustes.
-La [auditoría y hoja de ruta](docs/AUDITORIA-PROFUNDA-2026-10-29.md) recoge riesgos y trabajo pendiente.
-Las cifras y recomendaciones históricas de las secciones siguientes pueden corresponder a
-perfiles anteriores.
+<p>
+  <img alt="version" src="https://img.shields.io/badge/version-1.5.0-cde86e">
+  <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
+  <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
+  <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
+  <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
+</p>
 
-**Coding con contexto selectivo:** `small-local-coder` añade Tree-sitter en CPU,
-mapa selectivo, dieciocho herramientas con validación de schema, estado externo y
-verificación/reparación automática. Se selecciona en Ajustes → Agente o con
-`scripts/start-ui.ps1 -AgentProfile small-local-coder -EnginePreset 8GB-BALANCED`.
-Los perfiles actuales admiten visión cuando el modelo y su proyector lo permiten;
-incluyen opciones de 16k F16, 32k Q8 y **32k/36k F16**. El ajuste personalizado
-de esta máquina usa 43.008 tokens, KV F16 y visión. En la verificación final de la
-1.2.0 quedaron **476 MiB libres** como mínimo; otra pasada de la misma sesión, con
-más carga externa, midió **62 MiB**. Es un perfil manual con margen limitado y no
-garantiza estabilidad bajo todas las cargas. No existe una reserva obligatoria de
-400 MiB. Entrada, imágenes y generación comparten la ventana.
-El modo Consulta permite combinar
-imágenes y texto sin editar el proyecto. El modo Agente conserva la imagen durante
-las ediciones y reparaciones. La selección se guarda después de cargar correctamente.
-Ver [arquitectura y uso](docs/SMALL-LOCAL-CODER.md) y
-[mediciones reproducibles](reports/coder-2026-10-28/RESUMEN.md).
+> **v1.5.0** — build optimizada de llama.cpp para sm89, plantilla oficial de
+> Ornith 1.5 9B (visión + herramientas + razonamiento) y **43.008 tokens por
+> defecto con KV f16, visión y pensamiento**. Notas: [RELEASE-1.5.0](docs/RELEASE-1.5.0.md).
 
-**Abrir el IDE:** el acceso directo **Bonsai IDE** usa `scripts/launch-ide.ps1`;
-también puede ejecutarse ese script directamente. Reutiliza un IDE sano y recuerda
-modelo, perfil, contexto, razonamiento y tema. La UI ofrece seis temas (Grafito,
-Niebla azul, Bosque, Arena, Marfil y Medianoche), pensamiento del modelo local en
-un panel desplegable separado y VRAM libre real en la barra inferior. El presupuesto
-de pensamiento es un máximo disponible: el modelo puede concluir antes de 4k.
+---
 
-**Continuación · 29 de octubre:** CUDA/Nsight instalados y utilizados; build sm89,
-verificación Python/TypeScript, LSP opcional y perfiles simultáneos de código,
-visión y pensamiento. El runtime original sigue activo: el build específico no
-demostró una ventaja de velocidad suficiente para sustituirlo.
-Ver [resultados actuales y pendientes](reports/coder-phase3/RESUMEN.md),
-[auditoría de los dos prompts](reports/coder-phase3/PENDIENTES-PROMPTS.md),
-[fase anterior](reports/coder-phase2/RESUMEN.md) y
-[reproducción de la toolchain](docs/INFERENCE-TOOLCHAIN.md).
+## ✨ Lo que hace
 
-Entorno de desarrollo con inferencia de IA **100 % local** para Windows 10 y 11: chat con agente,
-editor con pestañas, diffs, deshacer, git, navegador controlado y visión. Sin servicios en
-la nube: el modelo corre en la GPU del equipo con `llama-server` (llama.cpp) y la interfaz
-es un servidor Node propio.
+| Área | Capacidad |
+|---|---|
+| **Agente** | Edita archivos, ejecuta comandos, corre tests, lee/crea archivos, plan persistente, hasta 192 pasos por turno |
+| **Editor** | Pestañas, Ctrl+S, Ctrl+K (edición con diff y guardado atómico), paleta (Ctrl+P), búsqueda (Ctrl+Shift+F) |
+| **Contexto** | Tokenizer real del servidor, historial adaptativo y presupuesto honesto (ventana / solicitado / efectivo / reserva de salida) |
+| **Visión** | Imágenes pegadas o arrastradas, OCR local opcional, proyector en GPU |
+| **Razonamiento** | Panel desplegable del *thinking*; presupuesto configurable (por defecto 4096 tokens) |
+| **Herramientas** | Terminal persistente, problemas/diagnósticos, esquema, ir a definición (F12), procesos en segundo plano |
+| **Navegador** | Playwright MCP aislado, `evaluar` para diagnósticos JS, WebGL/workers/HMR |
+| **Git** | Estado por archivo, selección explícita, sin `add -A` |
+| **Seguridad** | Guardados atómicos, punto de deshacer por escritura, rutas confinadas, git seguro |
 
-## Perfil general histórico · 28 de octubre de 2026
+---
 
-- **Modelo activo/recomendado:** **Ornith-1.5-9B Q4_K_M** (`ornith-ai/Ornith-1.5-9B-GGUF`),
-  5.780.090.816 bytes verificados con su SHA-256. **Perfil final: 39.936 tokens con visión,
-  KV q8_0**, con **todos los tensores, KV y proyector en CUDA0**. Validado mediante el IDE
-  con 28.057 tokens de texto y una imagen de 1200×528: leyó «4758» sin OCR y conservó
-  al menos **426 MiB libres**. El presupuesto estimado es 7.696 MiB; no equivale al pico
-  real. El arranque automático prueba primero el techo exacto, sin redondearlo a 36.864,
-  guarda el perfil en `logs/perfil-servidor-<puerto>.json` y lo reutiliza
-  en el siguiente arranque; recuerda el modelo elegido en `chat/modelo-activo.json`.
-- **Muestreo propio del modelo:** temperatura 0.6, top-p 0.95, top-k 20. El razonamiento
-  es opcional (Ajustes → Modo razonamiento) y solo se usa en modelos que lo admiten.
-- **Presupuesto de contexto honesto:** Ajustes muestra los **cuatro valores reales**
-  (ventana del servidor, historial solicitado, historial efectivo y reserva de salida). El
-  "tope de historial" es una petición: no agranda la ventana del modelo. El estado de la
-  barra inferior enseña la ventana y el historial efectivo.
-- **Interfaz:** pestañas, Ctrl+S, recarga automática si el agente reescribe el archivo,
-  **Ctrl+K** (edición con el modelo, diff y guardado con precondición: si el archivo cambió
-  en disco responde 409 y **no pisa nada**), paleta de comandos (Ctrl+P / Ctrl+Shift+P),
-  búsqueda en el proyecto (Ctrl+Shift+F), git archivo a archivo, reglas del proyecto
-  (`BONSAI.md`, `AGENTS.md`, `.cursor/rules`), deshacer escrituras del agente, adjuntos e
-  imágenes (con OCR local opcional), navegador headless para comprobar páginas, temas y
-  paneles adaptables.
-- **Panel inferior (Ctrl+`):** **terminal integrado** con stdin y comandos sin el tope de 60 s,
-  **Problemas** (diagnósticos reales: JS/MJS/CJS con `node --check`, Python con `py_compile`,
-  JSON, y comprobación estructural de HTML/CSS/MD), **Esquema** de símbolos del archivo e
-  **ir a definición** (F12). Los procesos que el agente lanza con `segundo_plano: true`
-  **ya no mueren al acabar el turno**: siguen vivos y se listan/detienen desde el panel
-  (`/api/procesos`).
-- **Agente más capaz:** `borrar` y `mover` (borrar/mover/renombrar con punto de deshacer),
-  **plan persistente** (`plan`, checklist que se recuerda en cada turno) y
-  **«Continuar solo hasta terminar»** (hasta 3 turnos internos si se agota el límite de pasos
-  o el turno se atasca). El tope de pasos por turno (192 por defecto) y el tiempo máximo por
-  comando (3 min) se ajustan desde Ajustes.
-- **Autonomía de desarrollo:** Permisos → todo permite comandos de compilación, instalación,
-  SDKs, rutas de ejecutables y gestión de los procesos de la tarea. Las herramientas de
-  archivos aceptan rutas relativas o absolutas dentro del proyecto, formatos nativos y
-  archivos sin extensión. `proceso leer` consulta salida y código de builds asíncronos.
-- **Investigación web:** `buscar` obtiene fuentes y `leer_web` abre su texto y enlaces,
-  con paginación y un buscador alternativo. El agente recibe instrucciones para contrastar
-  documentación oficial y citar las fuentes leídas. La inferencia sigue siendo local;
-  buscar, descargar dependencias y cargar recursos CDN requiere internet.
-- **Navegador de desarrollo:** WebGL, workers, service workers, APIs y WebSocket/HMR;
-  `evaluar` obtiene diagnósticos JavaScript. El perfil `aislado` conserva la restricción
-  al origen elegido. Los guardados siguen siendo atómicos y recuperables; el cambio de
-  modelo solo detiene servidores administrados por este IDE.
+## 🧭 Arquitectura
 
-## Requisitos
+```mermaid
+flowchart LR
+    subgraph UI["Interfaz (navegador)"]
+        WEB["index.html<br/>chat-core · app · ide · paneles"]
+    end
 
-- **Windows 10 o 11**, con Windows PowerShell 5.1 (los scripts son `.ps1`). El agente y
-  la terminal usan `cmd.exe`; PowerShell se invoca explícitamente cuando hace falta.
-- **Node.js 22 o superior** (`node --version`).
-- **GPU NVIDIA** con sitio para el modelo completo en VRAM (probado en RTX 4060 Laptop
-  8 GB). El arranque se niega a cargar si no cabe entero: no hay capas en CPU.
-- `bin/` con `llama-server.exe` de llama.cpp con CUDA y sus DLL.
-- `models/` con el GGUF del catálogo y, si se quiere visión, el `mmproj` del modelo.
-- **Edge o Chrome** instalados para la herramienta `navegador` y las pruebas de navegador.
-- **`playwright-core`** en `chat/` para esas mismas pruebas: `npm ci --prefix chat`
-  (dependencia ya instalada en este equipo; la raíz no necesita `node_modules`).
+    subgraph NODE["Servidor Node · chat/ui-server.mjs"]
+        API["API /api/*"]
+        AGENT["Agente + herramientas"]
+        CTX["Contexto / tokenizer"]
+    end
 
-## Arranque
+    subgraph LLAMA["llama-server (llama.cpp v0.8.0 sm89)"]
+        MODEL["Ornith 1.5 9B Q4_K_M"]
+        MMPROJ["mmproj (visión)"]
+    end
 
-```powershell
-.\scripts\start-ui.ps1                              # modelo + interfaz en http://127.0.0.1:8787
-.\scripts\start-server.ps1 -Modelo ornith9b -Vision # solo API OpenAI-compatible en :8080
-.\scripts\start-chat.ps1                            # servidor + chat de terminal
-.\scripts\start-server.ps1 -DryRun                  # comprueba VRAM y enseña el comando, sin lanzar
+    GPU["🎮 RTX 4060 8 GB"]
+
+    WEB <-->|HTTP| API
+    API --> AGENT
+    AGENT --> CTX
+    AGENT <-->|OpenAI /v1| MODEL
+    MODEL --- MMPROJ
+    MODEL --> GPU
+    MMPROJ --> GPU
 ```
 
-- El modelo se cambia desde el botón **Modelo** de la barra superior (o desde el chat, si
-  se arrancó aparte). El cambio descarga el modelo anterior y carga el nuevo conservando el
-  historial; solo toca servidores lanzados por este IDE.
-- La visión se activa sola si el proyector del modelo está en `models/`; `start-ui.ps1
-  -SinVision` la apaga y `start-server.ps1 -Vision` la fuerza.
-- Puertos por defecto: **8080** API (`/v1`) y **8787** interfaz. La API es compatible con
-  OpenAI, así que también sirve para Cursor/Aider (`scripts/start-cursor-bridge.ps1`,
-  `scripts/start-aider.ps1`). Detalle de integración: [INTEGRACION-MODELO.md](INTEGRACION-MODELO.md).
-- El perfil elegido se guarda en `logs/perfil-servidor-<puerto>.json` y se reutiliza en
-  el siguiente arranque. Para reproducir el perfil de esta máquina:
-  `.\scripts\start-ui.ps1 -EnginePreset CUSTOM -ContextSize 43008 -KVCacheType f16`
-  (la visión se activa si el proyector está en `models/`). **No aumentar el techo de
-  visión**: 44.032 falló con error CUDA de memoria. El techo histórico sin visión
-  (53.248) es otro perfil.
+---
 
-## Pruebas
+## 🚀 Arranque rápido
 
 ```powershell
-npm test                 # suites aisladas: sin GPU ni llama-server real (~120 s)
-npm run test:navegador   # Edge/Chrome headless: UI, Ctrl+K, humo (~15 s)
-npm run test:gpu         # necesita el modelo real arrancado (lento; opcional)
-npm run test:gpu-exclusiva  # calidad KV: exige la GPU libre, sin servidor en 8080
-npm run test:todo        # las cuatro familias
-node scripts/run-tests.mjs --listar   # ver qué suites hay en cada grupo
+# 1) Abre el IDE (esto también lo hace el acceso directo del escritorio)
+.\scripts\bonsai-rtx4060.ps1 launch
+
+# 2) En la barra superior del IDE elige el preset y pulsa "Iniciar"
+#    (o pulsa "Terminal" para copiar el comando exacto de PowerShell)
 ```
 
-Resultado de la verificación de la **1.2.0** (30-oct-2026, RTX 4060 Laptop 8 GB,
-Ornith-1.5-9B-Q4_K_M, 43.008 tokens, KV F16, visión y pensamiento 4.096):
+```mermaid
+flowchart TD
+    A["Acceso directo<br/>Bonsai IDE"] --> B["start-ui-rtx4060-optimized.ps1<br/>(solo UI Node)"]
+    B --> C["http://127.0.0.1:8787"]
+    C --> D{"Barra superior"}
+    D -->|Iniciar| E["POST /api/server/start"]
+    D -->|Terminal| F["GET /api/server/command<br/>(comando absoluto al portapapeles)"]
+    E --> G["spawn + unref (Node)"]
+    G --> H["start-gpu-model-rtx4060-optimized.ps1"]
+    H --> I["Start-Process llama-server<br/>+ WaitForExit"]
+    I --> J["🎮 GPU · servidor vivo"]
+    F --> K["Pega en PowerShell"]
+    K --> J
+```
 
-| Grupo | Resultado | Tiempo |
-| --- | ---: | ---: |
-| `npm test` (aisladas) | **40/40** | 125,3 s |
-| `npm run test:navegador` | **5/5** | 16,4 s |
-| `npm run test:gpu` (servidor cargado) | **4/4** | 95,4 s |
-| `npm run test:gpu-exclusiva` (GPU libre) | **1/1** | 89,6 s |
+> **Por qué así:** en Windows el hijo muere si el padre termina. El wrapper de
+> PowerShell **no sale** (`WaitForExit()`), y Node lo lanza con `windowsHide` +
+> `unref()` **sin `detached`**. Resultado: el modelo sigue vivo aunque cierres el
+> navegador. [Detalle](docs/RTX4060_OPTIMIZATION_GUIDE.md#how-the-server-lifecycle-works-important).
 
-Son pasadas únicas, no una medida estadística. Los JSON saneados, la configuración
-exacta y los límites están en
-[la evidencia de la release](docs/evidencia/2026-10-30/RESUMEN.md).
+---
 
-Validación del perfil final, usando el servidor existente en 8080 sin reiniciarlo
-ni comparar otras configuraciones:
+## 🎛️ Presets (RTX 4060 8 GB)
+
+![Presets: contexto vs VRAM](docs/graficos/presets-vram.svg)
+
+| Preset | Contexto | KV | Visión | Uso |
+|---|---:|:--:|:--:|---|
+| **`8GB-VISION-MAX-F16`** | **43.008** | **f16** | ✅ | **Por defecto** · máxima precisión y contexto |
+| `8GB-VISION-DEFAULT-F16` | 16.384 | f16 | ✅ | Seguro, mucho margen |
+| `8GB-VISION-ULTRA-F16` | 32.768 | f16 | ✅ | Precisión alta, contexto medio |
+| `8GB-VISION-ULTRA` | 36.864 | IQ4_XS | ✅ | + SpecDecode |
+| `8GB-VISION-HIGH` | 32.768 | IQ4_XS | ✅ | Mejor equilibrio |
+| `8GB-VISION-BALANCED` | 28.672 | q4_0 | ✅ | Conservador |
+| `8GB-VISION-SAFE` | 24.576 | q4_0 | ✅ | Mucho margen |
+| `8GB-CODE-MAX` | 49.152 | IQ2_XS | — | Código largo + SpecDecode |
+| `8GB-CODE-BALANCED` | 32.768 | q8_0 | — | Casi sin pérdida |
+| `8GB-CODE-FAST` | 16.384 | f16 | — | Máximo throughput |
+| `8GB-RESEARCH` | 65.536 | IQ1_S | — | Experimental |
+
+---
+
+## 📊 Rendimiento medido (RTX 4060 Laptop 8 GB)
+
+### Techo de contexto con f16 + visión + pensamiento
+
+![Techo de contexto](docs/graficos/context-ceiling.svg)
+
+| Contexto | Resultado | VRAM pico |
+|---:|:--:|---:|
+| 32.768 | PASS | 7.157 MiB |
+| 36.864 | PASS | 7.287 MiB |
+| 39.936 | PASS | 7.383 MiB |
+| **43.008** | **PASS** | **7.481 MiB** |
+| 45.056 | **OOM** | — |
+
+**43.008 es el techo real.** 45k falla con `CUDA error: out of memory` en prefill
+largo. El antiguo fallo en reposo a contexto alto era por *context checkpoints*;
+el lanzador usa `--ctx-checkpoints 0` para f16 y desaparece.
+
+### Ajuste de parámetros (llama-bench, f16)
+
+| Configuración | pp t/s | tg t/s | Veredicto |
+|---|---:|---:|---|
+| base b512 ub256 t4 mmap | 2.199,9 | 43,34 | referencia |
+| ub512 | **2.218,5** | 43,44 | +0,85 % prefill |
+| ub128 | 2.036,6 | 43,38 | peor |
+| threads 8 | 2.181,7 | 43,43 | sin mejora |
+| no-mmap / mlock | 2.178 / 2.174 | 43,4 | peor |
+| **q8_0 KV** | 2.159,3 | 43,15 | más lento y menos preciso |
+
+- **f16 es más rápido que q8_0 aquí**, además de más preciso → se queda f16.
+- Prefill ~2.200 t/s, generación ~43 t/s.
+- Speculative decoding (~2× generación) necesita ~0,7 GB y **no cabe a 43k f16 + visión**; solo a ≤16k.
+
+### Calidad de KV (A/B/C)
+
+![Calidad KV](docs/graficos/kv-quality.svg)
+
+---
+
+## 🧱 Requisitos
+
+- **Windows 10/11** con Windows PowerShell 5.1.
+- **Node.js ≥ 22**.
+- **GPU NVIDIA** que quepa el modelo entero en VRAM (probado en RTX 4060 8 GB).
+  No hay capas en CPU.
+- `bin/` con `llama-server.exe` (CUDA) o el build optimizado en
+  `.local/opt/bonsai-inference/build-RTX4060-Opt-sm89/bin/`.
+- `models/` con el GGUF del catálogo y, para visión, su `mmproj`.
+- **Edge/Chrome** para la herramienta `navegador` y las pruebas de navegador.
+
+---
+
+## 🛠️ Build optimizada (opcional, ~20 min)
 
 ```powershell
-node chat/prueba-gpu-real.mjs --log logs/ornith-gpu.err.log --salida logs/gpu-real-43008.json
-node chat/prueba-vision.mjs --puerto 8080 --texto-largo --sin-ocr --exigir --salida logs/vision-43008.json
+.\scripts\build-rtx4060-optimized.ps1
 ```
 
-La segunda prueba usa adjuntos y `/api/chat` de un IDE con proyecto y estado temporales,
-conserva el texto largo durante la lectura visual y exige visión activa. `--sin-ocr`
-desactiva la transcripción solo en ese proceso de prueba. Sin `--numero` lee dos imágenes
-de un solo dígito; `--numero` permite comprobar manualmente un caso de tres o cuatro
-cifras, que este modelo no garantiza. El grupo GPU completo añade el cambio de modelo en
-caliente y la observación real; no es necesario para esta validación.
+Configura llama.cpp para **sm89** (Ada): FlashAttention v2, CUDA graphs,
+`FATTN_TILE_SIZE=128`, 4 warps, `GGML_CUDA_FA_ALL_QUANTS=ON`. La comparativa y
+flags están en [RTX4060_OPTIMIZATION_GUIDE](docs/RTX4060_OPTIMIZATION_GUIDE.md).
 
-- `npm test` ejecuta cada suite en su propio proceso, captura su salida y resume OK/FALLO
-  (código 0/1). Incluye, entre otras: `modelo.mjs`, `actions.mjs` (diff), `editar.mjs`
-  (Ctrl+K y CRLF), `prueba-editor.mjs`, `prueba-contexto.mjs`, `prueba-stream.mjs`,
-  `prueba-lecturas.mjs`, `prueba-servidor-estado.mjs`, `prueba-agente-limites.mjs`,
-  `prueba-agente.mjs`, `prueba-markdown-seguro.mjs`, `prueba-navegador-rutas.mjs`,
-  `prueba-sin-gpu.mjs`, `prueba-api.mjs`, `prueba-seguridad.mjs`, `prueba-procesos.mjs`,
-  `prueba-truncado.mjs`, `prueba-archivos-seguros.mjs`, `prueba-git-seguro.mjs`,
-  `prueba-recuperacion-modelo.mjs`, `prueba-servidor-administrado.mjs`,
-  `prueba-perfil-gpu.mjs` (estas dos últimas usan PowerShell en modo DryRun/aislado, sin
-  arrancar el modelo), `prueba-terminal.mjs` (terminal persistente, stdin y procesos en
-  segundo plano) y `prueba-diagnosticos.mjs` (diagnósticos, outline e ir a definición).
-- Todas usan estado y proyecto **temporales** (`os.tmpdir()`): no tocan los chats, la
-  carpeta de trabajo ni los logs del usuario. Las que levantan `ui-server` lo hacen en
-  puertos libres y con un **llama-server simulado** (sin GPU).
-- Sueltas también se pueden ejecutar: `node chat/editar.mjs`, `node chat/actions.mjs`,
-  `node chat/prueba-ui.mjs`, `node chat/prueba-ui-humo.mjs`…
-- `npm run test:gpu` no se ejecuta por defecto: `prueba-gpu-real.mjs`, `prueba-vision.mjs`,
-  `prueba-modelos.mjs --real` y `prueba-observacion.mjs --real` validan residencia CUDA,
-  visión, cambio de modelo en caliente y navegación con el modelo real. Necesitan el
-  servidor ya arrancado.
-- `npm run test:gpu-exclusiva` ejecuta `prueba-calidad-kv.mjs --real` y exige la GPU
-  libre: arranca sus propios servidores en puertos libres, así que hay que detener antes
-  el de 8080 (`.\scripts\stop-managed-server.ps1 -Port 8080`). Compara q8_0 ≈ f16; ver
-  `docs/CALIDAD-KV-2026-10-27.md`. El grupo `todo` las ejecuta en ese orden, pero deja de
-  ser una pasada desatendida si el servidor de 8080 está ocupando la GPU.
-- El cierre real de un `llama-server` huérfano (BUG-05) se validó una vez en esta máquina con
-  `node chat/prueba-servidor-administrado.mjs --gpu`; se recomienda repetirlo tras cambiar
-  los scripts de arranque. `prueba-ocr.mjs` se ejecuta aparte cuando toca tocar el OCR.
+---
 
-## Estructura
+## 🧪 Pruebas
+
+```powershell
+npm test                    # 40 suites aisladas (sin GPU) ~2 min
+npm run test:navegador      # Edge/Chrome headless (UI, Ctrl+K, humo)
+npm run test:gpu            # requiere el modelo real cargado
+npm run test:gpu-exclusiva  # calidad KV; exige GPU libre
+node scripts/run-tests.mjs --listar   # ver suites por grupo
+```
+
+Verificación de la **1.5.0**: `npm test` → **40/40**, arranque por la UI a 43k,
+prefill largo (1.982 t/s), 15 s en reposo vivo y parada sin procesos huérfanos.
+
+Herramientas reproducibles añadidas:
+
+```powershell
+.\scripts\benchmark-rtx4060-matrix.ps1          # matriz batch/ubatch/threads/mmap/KV
+.\scripts\probe-rtx4060-context.ps1 -ContextList "32768,43008,45056" -Vision
+```
+
+---
+
+## 📁 Estructura
 
 ```text
-chat/            servidor de UI, agente, contexto, herramientas y las suites de prueba
-                 (terminal.mjs = terminal persistente; diagnosticos.mjs = problemas/outline)
-chat/ui/         index.html + chat-core.js (script clásico), app.js, ide.js, paneles.js,
-                 markdown.js, iconos.js, tema.css; fuentes e iconos locales
-scripts/         arranque (start-*.ps1), calibración y run-tests.mjs (ejecutor de pruebas)
+chat/            servidor de UI, agente, contexto, herramientas y suites de prueba
+chat/ui/         index.html, chat-core.js, app.js, ide.js, paneles.js, tema.css, fuentes
+scripts/         arranque (start-*.ps1), build, calibración, bench y run-tests.mjs
+config/          presets de motor (clásicos + optimizados RTX 4060)
 bin/             llama.cpp con CUDA (llama-server y DLL)
-models/          GGUF del modelo y del proyector de visión
-docs/            documentación técnica, notas de release y evidencia de pruebas
-reports/         investigación comparativa de modelos
-salida/          adjuntos y artefactos de las pruebas del agente (no es la carpeta de trabajo)
+models/          GGUF del modelo y proyector de visión (no versionados)
+docs/            guía RTX 4060, releases, evidencia y gráficos SVG
+reports/         mediciones reproducibles (bench, sonda de contexto, investigación)
+salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 ```
 
-## Documentación
+---
 
-- **Novedades de esta versión:** [docs/RELEASE-1.2.0.md](docs/RELEASE-1.2.0.md) y
-  [CHANGELOG.md](CHANGELOG.md).
-- **Evidencia de pruebas:** [docs/evidencia/2026-10-30](docs/evidencia/2026-10-30/RESUMEN.md).
-- **Histórico de la etapa anterior (27B):** [docs/HISTORICO-2026-10-27-27b.md](docs/HISTORICO-2026-10-27-27b.md)
-  — configuración antigua con CPU parcial; **no** representa el arranque actual.
-- Arquitectura, decisiones y plan: [ARQUITECTURA-Y-PLAN-MAESTRO.md](ARQUITECTURA-Y-PLAN-MAESTRO.md).
-- Cambios del 28-oct (terminal, diagnósticos, plan, procesos en segundo plano):
-  [docs/CAMBIOS-2026-10-28.md](docs/CAMBIOS-2026-10-28.md).
-- Auditoría de bugs y refactorización: [AUDITORIA-BUGS-Y-REFACTORIZACION.md](AUDITORIA-BUGS-Y-REFACTORIZACION.md) y [AUDITORIA-HANDOFF.md](AUDITORIA-HANDOFF.md).
-- Auditoría del harness, permisos y validación del perfil final:
-  [docs/HARNESS-LOCAL-2026-10-28.md](docs/HARNESS-LOCAL-2026-10-28.md).
-- Seguridad del navegador del agente: [chat/SEGURIDAD-NAVEGADOR.md](chat/SEGURIDAD-NAVEGADOR.md).
-- Investigación de modelos para 8 GB: [reports/Coding models for eight GB.md](reports/Coding%20models%20for%20eight%20GB.md).
+## 🔒 Seguridad y fiabilidad
 
-## Seguridad y fiabilidad (resumen)
+- Rutas confinadas al proyecto; guardados **atómicos** con copia de recuperación.
+- Un **punto de deshacer** por escritura del agente; reversión por turno.
+- Git por archivo, con selección explícita (nunca `add -A`).
+- Navegador con perfil efímero; puertos del IDE/modelo protegidos.
+- La inferencia es local; buscar/descargar dependencias/CDN requiere internet.
 
-- Las rutas del editor, el agente y deshacer rechazan enlaces y junctions dentro del
-  proyecto. Los guardados preparan una copia de recuperación y escriben un temporal junto al
-  archivo para sustituirlo atómicamente. Los puntos de deshacer nuevos quedan ligados a su
-  carpeta; los antiguos se conservan pero no se aplican automáticamente.
-- Git muestra cada archivo y pide seleccionarlos antes de confirmar; no agrega todo el
-  proyecto. `.gitignore` excluye estado local, capturas, adjuntos, credenciales y salidas de
-  pruebas.
-- El navegador usa un perfil efímero y protege los puertos del IDE y del modelo. En modo
-  `desarrollo` permite recursos web, APIs, workers y HMR. Para pruebas limitadas a un solo
-  origen configura `BONSAI_BROWSER_POLICY=aislado` antes del arranque. La ejecución local
-  conserva los permisos del usuario de Windows; las comprobaciones de comandos no son
-  un sandbox del sistema operativo.
-- El OCR de Windows se usa localmente como pista para transcribir texto de capturas; tanto
-  el OCR como el modelo pueden equivocarse, así que en caso de discrepancia hay que revisar
-  la imagen.
-- El medidor informa si el equipo limita la potencia de la GPU muy por debajo de su límite
-  habitual (se observó 10 W frente a 80 W): revisa el modo de rendimiento y la alimentación
-  si vuelve a ocurrir.
+---
 
-## Licencia
+## 📚 Documentación
 
-El código de este repositorio se publica bajo la licencia **MIT** (ver
-[LICENSE](LICENSE)). Los pesos del modelo, los binarios de `llama.cpp` y las
-dependencias de `chat/package.json` no están cubiertos por esa licencia y conservan
-sus propios términos. El repositorio no incluye modelos, binarios ni datos locales.
+| Documento | Contenido |
+|---|---|
+| [RELEASE-1.5.0](docs/RELEASE-1.5.0.md) | Techo de 43k, mediciones y cambios |
+| [RTX4060_OPTIMIZATION_GUIDE](docs/RTX4060_OPTIMIZATION_GUIDE.md) | Ciclo de vida, presets, tuning, troubleshooting |
+| [CONTEXTO-Y-DIAGNOSTICO](docs/CONTEXTO-Y-DIAGNOSTICO.md) | Métricas, límites y diagnóstico |
+| [SMALL-LOCAL-CODER](docs/SMALL-LOCAL-CODER.md) | Perfil de coding con contexto selectivo |
+| [ARQUITECTURA-Y-PLAN-MAESTRO](ARQUITECTURA-Y-PLAN-MAESTRO.md) | Decisiones de diseño |
+| [CHANGELOG](CHANGELOG.md) | Historial de versiones |
+
+---
+
+## 📄 Licencia
+
+El código se publica bajo **MIT** ([LICENSE](LICENSE)). Los pesos del modelo, los
+binarios de `llama.cpp` y las dependencias de `chat/package.json` conservan sus
+propios términos. El repositorio no incluye modelos, binarios ni datos locales.
