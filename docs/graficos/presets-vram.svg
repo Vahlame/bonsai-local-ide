@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="340" viewBox="0 0 720 340" font-family="Segoe UI, system-ui, sans-serif">
+  <rect width="720" height="340" fill="#0d100b"/>
+  <text x="24" y="34" fill="#e9eee0" font-size="18" font-weight="600">Presets — context window vs VRAM budget</text>
+  <text x="24" y="54" fill="#8d9680" font-size="12">RTX 4060 8GB · llama.cpp v0.8.0 sm89 · auto-calibrated</text>
+
+  <!-- legend -->
+  <rect x="470" y="26" width="12" height="12" rx="3" fill="#cde86e"/>
+  <text x="488" y="36" fill="#8d9680" font-size="11">f16 (max precision)</text>
+  <rect x="470" y="46" width="12" height="12" rx="3" fill="#82b8d0"/>
+  <text x="488" y="56" fill="#8d9680" font-size="11">quantized KV</text>
+
+  <!-- grid -->
+  <g stroke="#222a1c" stroke-width="1" stroke-dasharray="3 4">
+    <line x1="150" y1="90" x2="690" y2="90"/>
+    <line x1="150" y1="140" x2="690" y2="140"/>
+    <line x1="150" y1="190" x2="690" y2="190"/>
+    <line x1="150" y1="240" x2="690" y2="240"/>
+  </g>
+  <g fill="#6f7a64" font-size="10">
+    <text x="120" y="94">48K</text><text x="120" y="144">36K</text><text x="120" y="194">24K</text><text x="120" y="244">12K</text>
+  </g>
+
+  <!-- bars: label + context bar; VRAM noted -->
+  <!-- Default 16k f16 -->
+  <text x="24" y="105" fill="#e9eee0" font-size="11">Default 16k f16</text>
+  <rect x="150" y="92" width="180" height="18" rx="4" fill="#cde86e"/>
+  <text x="338" y="105" fill="#8d9680" font-size="10">~7.0 GB · vision</text>
+
+  <!-- Ultra-F16 32k -->
+  <text x="24" y="130" fill="#e9eee0" font-size="11">Ultra-F16 32k</text>
+  <rect x="150" y="117" width="360" height="18" rx="4" fill="#cde86e"/>
+  <text x="518" y="130" fill="#8d9680" font-size="10">~7.8 GB · vision</text>
+
+  <!-- HIGH 32k IQ4_XS -->
+  <text x="24" y="155" fill="#e9eee0" font-size="11">High 32k IQ4_XS</text>
+  <rect x="150" y="142" width="360" height="18" rx="4" fill="#82b8d0"/>
+  <text x="518" y="155" fill="#8d9680" font-size="10">~6.7 GB · vision</text>
+
+  <!-- BALANCED 28k q4_0 -->
+  <text x="24" y="180" fill="#e9eee0" font-size="11">Balanced 28k q4_0</text>
+  <rect x="150" y="167" width="315" height="18" rx="4" fill="#82b8d0"/>
+  <text x="473" y="180" fill="#8d9680" font-size="10">~6.4 GB · vision</text>
+
+  <!-- CODE-MAX 48k IQ2_XS -->
+  <text x="24" y="205" fill="#e9eee0" font-size="11">Code-Max 48k IQ2_XS</text>
+  <rect x="150" y="192" width="540" height="18" rx="4" fill="#82b8d0"/>
+  <text x="698" y="205" fill="#8d9680" font-size="10" text-anchor="end">~5.8 GB</text>
+
+  <!-- RESEARCH 64k IQ1_S -->
+  <text x="24" y="230" fill="#e9eee0" font-size="11">Research 64k IQ1_S</text>
+  <rect x="150" y="217" width="620" height="18" rx="4" fill="#e8c06a" opacity="0.85"/>
+  <text x="698" y="230" fill="#8d9680" font-size="10" text-anchor="end">~5.2 GB</text>
+
+  <!-- throughput footnote -->
+  <text x="24" y="286" fill="#e9eee0" font-size="12" font-weight="600">Throughput (Ornith 9B Q4_K_M)</text>
+  <text x="24" y="305" fill="#8d9680" font-size="11">prefill 512: 1,925 t/s (+2.6% vs stock) · generation: ~41 t/s · SpecDecode: up to ~100 t/s</text>
+  <text x="24" y="323" fill="#5c6554" font-size="10">Numbers are single-pass measurements on this machine, not statistical benchmarks.</text>
+</svg>

@@ -175,6 +175,35 @@ can paste it into any PowerShell window and run the server manually.
 
 ---
 
+## Presets at a glance
+
+![Presets: context vs VRAM](graficos/presets-vram.svg)
+
+| Preset | Context | KV | Vision | Notes |
+|--------|--------:|----|:------:|-------|
+| `8GB-VISION-DEFAULT-F16` | 16,384 | f16 | ✅ | Rock-solid default, max precision |
+| `8GB-VISION-ULTRA-F16` | 32,768 | f16 | ✅ | Max precision, high context |
+| `8GB-VISION-ULTRA` | 36,864 | IQ4_XS | ✅ | + SpecDecode |
+| `8GB-VISION-HIGH` | 32,768 | IQ4_XS | ✅ | Best balance |
+| `8GB-VISION-BALANCED` | 28,672 | q4_0 | ✅ | Safe |
+| `8GB-VISION-SAFE` | 24,576 | q4_0 | ✅ | Conservative margin |
+| `8GB-CODE-MAX` | 49,152 | IQ2_XS | — | Long code + SpecDecode |
+| `8GB-CODE-BALANCED` | 32,768 | q8_0 | — | Near-lossless |
+| `8GB-CODE-FAST` | 16,384 | f16 | — | Max throughput |
+| `8GB-RESEARCH` | 65,536 | IQ1_S | — | Experimental |
+
+## KV quality evidence
+
+![KV quality](graficos/kv-quality.svg)
+
+Config **A (32K · q8_0 · vision)** passed all 8 checks and is the recommended
+quality profile. **B (16K f16)** and **C (32K f16 text-only)** each failed 2 of 8.
+The default `8GB-VISION-DEFAULT-F16` trades raw context for stability and
+precision; use `8GB-VISION-HIGH` (q8_0/IQ4_XS) if you need the 8/8 quality profile
+with longer context.
+
+---
+
 ## Architecture Diagram
 
 ```
