@@ -149,6 +149,24 @@ The projector is ~879 MiB. Keeping it in RAM is what allows 110,592 with q8_0;
 .\scripts\bonsai-rtx4060.ps1 status
 ```
 
+### The IDE window runs without the GPU
+
+The IDE is a web UI served by Node. Opened in a normal browser tab it can use hardware
+acceleration and compete for VRAM with `llama-server`, so the launchers use
+`scripts/open-ide.ps1` instead:
+
+- Edge/Chrome in **app mode** (`--app=http://127.0.0.1:8787`): own window, no tabs or
+  address bar.
+- **Software rendering** (`--disable-gpu`, `--disable-gpu-compositing`,
+  `--disable-accelerated-2d-canvas`, `--disable-gpu-rasterization`). Measured with the
+  window open: **0 MiB of VRAM used**; the status bar shows «UI · CPU».
+- **Isolated profile** in `logs\ui-app-profile` (does not touch your own browser).
+- Starts maximized; `-Tab` opens a normal tab with the same no-GPU flags.
+
+The UI itself is built for software rendering: no `backdrop-filter`, no blur filters,
+and only short `opacity`/`transform` animations. It is responsive at 1920×1080 (one
+toolbar row) and reflows to two rows and a stacked editor/chat layout below 1180 px.
+
 ---
 
 ## How the server lifecycle works (important)

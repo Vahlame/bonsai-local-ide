@@ -59,8 +59,11 @@
   }
 
   // =========================================================== avisos emergentes
-  const avisos = el("div", "avisos");
-  document.body.append(avisos);
+  // Un solo contenedor: index.html ya trae #avisos. Antes se creaba un segundo
+  // `.avisos`, así que `avisar()` e `ide.js` pintaban toasts en cajas distintas y
+  // cualquier selector `.avisos` (pruebas incluidas) podía leer la caja vacía.
+  const avisos = document.getElementById("avisos") || el("div", "avisos");
+  if (!avisos.isConnected) document.body.append(avisos);
 
   /**
    * @param {string} texto

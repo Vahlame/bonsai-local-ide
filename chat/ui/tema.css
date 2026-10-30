@@ -663,15 +663,15 @@ html, body { overflow: hidden; }
 #editor { min-width: 260px; }
 #chat { min-width: 300px; }
 .editor-layers .hl { min-height: calc(100% + 1.5em); }
-@media (min-width: 981px) and (max-width: 1200px) {
+@media (min-width: 1181px) and (max-width: 1400px) {
   #history { max-width: 165px; }
   #files { max-width: 200px; }
   #chat { max-width: 38vw; }
   #editor { min-width: 190px; }
   .top .brand small, .top #meta { display: none; }
 }
-@media (max-width: 980px) {
-  .work { display: grid; grid-template-columns: 180px minmax(0, 1fr); grid-template-rows: minmax(160px, 0.43fr) minmax(260px, 0.57fr); overflow: hidden; }
+@media (max-width: 1180px) {
+  .work { display: grid; grid-template-columns: 180px minmax(0, 1fr); grid-template-rows: minmax(150px, 0.38fr) minmax(300px, 0.62fr); overflow: hidden; }
   #history, #files { grid-column: 1; grid-row: 1; width: auto; max-height: none; min-height: 0; }
   #editor { grid-column: 2; grid-row: 1; min-width: 0; min-height: 0; }
   #chat { grid-column: 1 / -1; grid-row: 2; width: auto; min-width: 0; min-height: 0; max-height: none; }
@@ -679,7 +679,7 @@ html, body { overflow: hidden; }
   body.hide-chat #editor, body.hide-chat #files, body.hide-chat #history { grid-row: 1 / -1; }
   body.hide-editor #chat { grid-column: 2; grid-row: 1 / -1; }
   body.hide-editor.hide-history.hide-files #chat { grid-column: 1 / -1; }
-  .statusbar { flex-wrap: nowrap; min-height: 30px; height: 30px; }
+  .statusbar { flex-wrap: wrap; min-height: 30px; height: auto; }
   .hud { gap: 8px; }
   .hud .cell:nth-child(3), .hud .cell:nth-child(4), .hud .cell:nth-child(6) { display: none; }
 }
@@ -716,8 +716,9 @@ html, body { overflow: hidden; }
 }
 :root[data-theme="sand"] {
   --ink:#e3d9cb;--bg:#ddd3c4;--panel:#ece3d7;--raised:#f4ecdf;--hover:#dfd3c2;
-  --text:#443e38;--muted:#71665a;--accent:#876c56;--accent-hi:#715640;--accent-ink:#faf2e7;
-  --accent-soft:#876c5614;--accent-line:#876c5640;--code-bg:#e9dfd1;
+  --text:#443e38;--muted:#71665a;--accent:#5f7134;--accent-hi:#51622a;--accent-ink:#faf6ec;
+  --accent-soft:#5f713414;--accent-line:#5f71344d;--code-bg:#e9dfd1;
+  --gen:#3f6b7d;--ok:#3f6f4a;--warn:#866330;--danger:#a7514c;
 }
 body{font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;background:var(--bg)}
 *{scrollbar-color:var(--line-strong) transparent}
@@ -790,5 +791,128 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 :root:is([data-theme="light"],[data-theme="sand"]) .t-pn{color:#5e646c}
 :root:is([data-theme="light"],[data-theme="sand"]) .t-tag{color:#945247}
 :root:is([data-theme="light"],[data-theme="sand"]) .t-va{color:#376e66}
-@media(max-width:980px){.work{gap:7px;padding:7px}.top{padding:7px 10px}.hud .cell:first-child{display:none}.statusbar{min-height:34px!important}.settings-dialog .setting-row>span{max-width:100%}}
+@media(max-width:1180px){.work{gap:7px;padding:7px}.top{padding:7px 10px}.hud .cell:first-child{display:none}.statusbar{min-height:34px!important}.settings-dialog .setting-row>span{max-width:100%}}
 @media(prefers-reduced-motion:reduce){#log{scroll-behavior:auto}}
+
+/* ============================================================================
+   14. Pulido 1.6.0 — estética y microinteracciones SIN GPU
+   Regla dura: nada de backdrop-filter, blur ni filtros grandes. Todo se pinta en
+   CPU (el IDE se abre con --disable-gpu) y las animaciones son opacity/transform
+   cortos, que cuestan casi nada incluso por software.
+   ========================================================================== */
+
+/* --- Barra superior: una línea limpia en 1920x1080 ------------------------ */
+.top { align-items: center; }
+.top .server-preset { max-width: 250px; text-overflow: ellipsis; }
+.top .server-preset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* 1600x900 y similares: caben todos los controles en una sola línea con menos aire. */
+@media (max-width: 1750px) and (min-width: 1181px) {
+  .top { gap: 7px; padding-inline: 12px; }
+  .top .panes .ghost { padding-inline: 6px; }
+  .top .brand small, .top #meta { display: none; }
+  .top .server-preset { max-width: 210px; }
+  .top .icon-btn { width: 26px; height: 26px; }
+}
+
+/* Portátil estrecho (1024-1180): cabecera en dos filas y chat con más aire. */
+@media (max-width: 1180px) {
+  .top { gap: 6px; padding: 6px 8px; }
+  .top .brand small, .top #meta { display: none; }
+  .top .panes .ghost { padding-inline: 5px; font-size: 11px; }
+  .top .server-preset { max-width: 180px; }
+  .top #cerrar-bonsai { font-size: 12px; padding-inline: 7px; }
+  .top .icon-btn { width: 26px; height: 26px; }
+  #input { min-height: 48px; }
+}
+
+/* «Iniciar» es LA acción cuando no hay modelo: que se vea, no que parezca apagada. */
+#server-start:not([hidden]) {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
+  font-weight: 600;
+}
+#server-start:not([hidden]):hover:not(:disabled) { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+#server-start:disabled { opacity: 0.55; }
+#server-stop:not([hidden]) { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+
+/* --- Mensajes: burbuja propia para ti, columna para el modelo -------------- */
+#log { scroll-padding-block: 12px; }
+.msg.nueva { animation: msg-in 170ms var(--ease) both; }
+.msg.user {
+  margin-left: auto;
+  max-width: 88%;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  border-left: 1px solid var(--accent-line);
+  border-radius: 14px 14px 4px 14px;
+  padding: 10px 14px;
+}
+.msg.assistant {
+  border-left: 2px solid color-mix(in srgb, var(--gen) 45%, transparent);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  padding: 6px 4px 6px 14px;
+  margin-bottom: 20px;
+}
+.msg.assistant:hover { border-left-color: color-mix(in srgb, var(--gen) 85%, transparent); }
+.msg .body { max-width: 108ch; }
+@media (hover: hover) {
+  .msg.assistant > .ghost { opacity: 0; transition: opacity var(--dur-1) var(--ease); }
+  .msg.assistant:hover > .ghost, .msg.assistant:focus-within > .ghost { opacity: 0.85; }
+}
+@keyframes msg-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+/* --- Caja de escritura: foco que ilumina todo el bloque -------------------- */
+#box { transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease); }
+#box:focus-within { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft); }
+#input::placeholder { color: var(--dim); }
+#send { transition: background var(--dur-1) var(--ease), transform var(--dur-1) var(--ease), opacity var(--dur-1) var(--ease); }
+#send:active:not(:disabled) { transform: translateY(1px); }
+#send:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* --- Barra de estado: se acomoda, no se corta ----------------------------- */
+.statusbar { flex-wrap: wrap; overflow: visible; white-space: normal; row-gap: 5px; }
+.statusbar > * { flex-shrink: 0; }
+#stats-line { flex: 1 1 12ch; min-width: 0; max-width: none; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1280px) { .statusbar .meter { display: none; } }
+
+/* --- Detalles que suman --------------------------------------------------- */
+::selection { background: var(--accent-soft); color: var(--text); }
+*::-webkit-scrollbar { width: 11px; height: 11px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--dim); background-clip: content-box; }
+*::-webkit-scrollbar-corner { background: transparent; }
+
+/* Editor vacío: una pista centrada en vez de una línea perdida arriba. */
+#code.empty-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: pre-wrap;
+  max-width: 62ch;
+  margin: 0 auto;
+  padding: 24px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+/* Diálogos: sin blur (GPU). Sombra y velo sólido bastan. */
+.dialogo-fondo { backdrop-filter: none; background: color-mix(in srgb, var(--ink) 62%, transparent); }
+.dialogo { border-radius: 14px; }
+
+/* Foco visible único y consistente en todo el IDE. */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Quien pida menos movimiento, no lo recibe (incluye la entrada de mensajes). */
+@media (prefers-reduced-motion: reduce) {
+  .msg.nueva { animation: none; }
+  #log { scroll-behavior: auto; }
+}
