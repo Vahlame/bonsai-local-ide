@@ -29,7 +29,7 @@ param (
     [string]$ContextSize = "auto",
     [int]$Port = 8080,
     [string]$HostIP = "127.0.0.1",
-    [ValidateSet("auto", "f16", "q8_0", "q4_0", "IQ4_XS", "IQ2_XS", "IQ1_S")][string]$KVCacheType = "auto",
+    [ValidateSet("auto", "f16", "bf16", "q8_0", "q4_0")][string]$KVCacheType = "auto",
     [int]$Pensar = 0,
     [int]$DormirSeg = 0,
     [switch]$Vision,
@@ -122,11 +122,10 @@ if (($EngineOptions -or $EnginePreset -eq 'CUSTOM') -and $Item.servidor.pesosGpu
 }
 
 $KvBytesPerElement = @{
-    "f16"    = 2.0; "q8_0" = 1.0; "q4_0" = 0.5;
-    "IQ4_XS" = 0.5625; "IQ2_XS" = 0.28125; "IQ1_S" = 0.15625;
+    "f16"  = 2.0; "bf16" = 2.0; "q8_0" = 1.0; "q4_0" = 0.5;
 }
 $ElementBytes = $KvBytesPerElement[$KVCacheType]
-if (-not $ElementBytes) { throw "Tipo de KV no soportado: $KVCacheType" }
+if (-not $ElementBytes) { throw "Tipo de KV no soportado: $KVCacheType. Use: f16, bf16, q8_0, q4_0" }
 
 $VisionProfile = if ($Vision) { $Item.vision } else { $null }
 $VisionMiB = 0
