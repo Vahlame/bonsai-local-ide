@@ -18,13 +18,33 @@ export function entidades(text) {
 const textoPlano = (html) => entidades(String(html).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
 const atributo = (attrs, name) => entidades(attrs.match(new RegExp(`(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i"))?.slice(1).find((v) => v !== undefined) || "");
 
-export async function descargarWeb(raw, { signal, fetcher = fetch, maxBytes = 1_000_000, timeoutMs = 20000, blockedPorts = [] } = {}) {
+export async function descargarWeb(raw, { signal, fetcher = fetch, maxBytes = 1_000_000, timeoutMs = 20000, blockedPorts = [], allowPrivate = false } = {}) {
   let url = urlHttp(raw);
   const protegidos = new Set(blockedPorts.map(String));
   const combinado = AbortSignal.any([AbortSignal.timeout(timeoutMs), ...(signal ? [signal] : [])]);
   for (let salto = 0; salto <= 5; salto++) {
     const destino = new URL(url);
     if (protegidos.has(destino.port || (destino.protocol === "https:" ? "443" : "80"))) throw new Error("Ese puerto pertenece al IDE o al modelo; consulta el servidor del proyecto en otro puerto.");
+    // Bloquear rangos privados, loopback, link-local y metadatos de nube salvo allowPrivate.
+    if (!allowPrivate) {
+      const host = destino.hostname;
+      // Primero: endpoints de metadatos de nube (incluyen 169.254.169.254)
+      if (host === "metadata.google.internal" || host === "169.254.169.254") {
+        throw new Error("Endpoint de metadatos de nube no permitido. Usa allowPrivate=true solo en tests.");
+      }
+      const ip = host.match(/^(\d{1,3}\.){3}\d{1,3}$/) ? host : null;
+      if (ip) {
+        const [a, b] = ip.split(".").map(Number);
+        const esPrivada = a === 10
+          || a === 127
+          || a === 169 && b === 254
+          || a === 172 && b >= 16 && b <= 31
+          || a === 192 && b === 168
+          || a === 0
+          || a >= 224;
+        if (esPrivada) throw new Error(`Dirección privada/loopback/metadatos no permitida: ${ip}. Usa allowPrivate=true solo en tests.`);
+      }
+    }
     const res = await fetcher(url, { redirect: "manual", signal: combinado, headers: { "User-Agent": "Mozilla/5.0 (compatible; BonsaiLocalIDE/1.0)", Accept: "text/html,text/plain,application/json,application/xml;q=0.9,*/*;q=0.5" } });
     if ([301, 302, 303, 307, 308].includes(res.status)) {
       await res.body?.cancel();

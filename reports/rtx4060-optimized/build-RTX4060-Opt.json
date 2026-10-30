@@ -1,0 +1,119 @@
+{
+    "createdAt":  "2026-10-30T08:28:28.1253306Z",
+    "variant":  "RTX4060-Opt",
+    "commit":  "8642541b255bfb5dc39cd351a178be09013a55d6",
+    "architecture":  "89",
+    "jobs":  4,
+    "source":  "C:\\Users\\user\\.local\\opt\\bonsai-inference\\llama.cpp-rtx4060-opt",
+    "build":  "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89",
+    "binary":  "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89\\bin\\llama-server.exe",
+    "configuration":  [
+                          "-S",
+                          "C:\\Users\\user\\.local\\opt\\bonsai-inference\\llama.cpp-rtx4060-opt",
+                          "-B",
+                          "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89",
+                          "-G",
+                          "Ninja",
+                          "-DCMAKE_BUILD_TYPE=Release",
+                          "-DCMAKE_MAKE_PROGRAM=C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\Ninja\\ninja.exe",
+                          "-DCUDAToolkit_ROOT=C:\\Users\\user\\.local\\opt\\bonsai-inference\\cuda-12.9.1",
+                          "-DCMAKE_CUDA_ARCHITECTURES=89-real",
+                          "-DCMAKE_CUDA_FLAGS=-lineinfo -Xptxas=-v -Xcompiler=-O3 -use_fast_math -DGGML_CUDA_FA_ALL_QUANTS=ON -DGGML_CUDA_GRAPHS=ON -DGGML_CUDA_MMQ=OFF",
+                          "-DGGML_CUDA=ON",
+                          "-DGGML_NATIVE=ON",
+                          "-DGGML_BACKEND_DL=OFF",
+                          "-DGGML_CPU_ALL_VARIANTS=OFF",
+                          "-DGGML_CUDA_NCCL=OFF",
+                          "-DLLAMA_OPENSSL=OFF",
+                          "-DLLAMA_BUILD_UI=OFF",
+                          "-DLLAMA_BUILD_APP=OFF",
+                          "-DLLAMA_BUILD_EXAMPLES=OFF",
+                          "-DLLAMA_BUILD_TESTS=ON",
+                          "-DLLAMA_BUILD_TOOLS=ON",
+                          "-DLLAMA_BUILD_SERVER=ON",
+                          "-DLLAMA_BUILD_NUMBER=10743",
+                          "-DGGML_LTO=OFF",
+                          "-DGGML_CUDA_FORCE_MMQ=OFF",
+                          "-DGGML_CUDA_FORCE_CUBLAS=OFF",
+                          "-DGGML_CUDA_PEER_MAX_BATCH_SIZE=512",
+                          "-DGGML_CUDA_FATTN_TILE_SIZE=128",
+                          "-DGGML_CUDA_FATTN_NWARPS=4"
+                      ],
+    "files":  [
+                  {
+                      "name":  "cublas64_12.dll",
+                      "bytes":  102518272,
+                      "sha256":  "90052a83efd1b57a8e3616a6590b335855f81b814a4f16eecb7b5bf6d1b1d4eb"
+                  },
+                  {
+                      "name":  "cublasLt64_12.dll",
+                      "bytes":  668669952,
+                      "sha256":  "c3a05ea244c937314afec09f87b91f814c7e27977681f6c67eb51bb06ced3a4a"
+                  },
+                  {
+                      "name":  "cudart64_12.dll",
+                      "bytes":  583680,
+                      "sha256":  "760c38928bbe5759f7b31ed6692599eb7ec83cedd5702e84c2b72028a89837e1"
+                  },
+                  {
+                      "name":  "ggml-base.dll",
+                      "bytes":  678912,
+                      "sha256":  "cf9af0f2066f6232bbe846e690ee388bd0c90f1f9e76666e67baffc2aafaa629"
+                  },
+                  {
+                      "name":  "ggml-cpu.dll",
+                      "bytes":  1169920,
+                      "sha256":  "ae0f57285a809aab693873f21cd002134e1e59ddf5309016ad80b1ae563f68b1"
+                  },
+                  {
+                      "name":  "ggml-cuda.dll",
+                      "bytes":  62202880,
+                      "sha256":  "8d348b227fe634b96e687f6187e2f7c3927f87795dc0a9ed329e529527a991d1"
+                  },
+                  {
+                      "name":  "ggml.dll",
+                      "bytes":  61440,
+                      "sha256":  "45fe1e4fa80689793e951415b92e0154212cd8a8a80d3e0d293d5b34f58a1727"
+                  },
+                  {
+                      "name":  "llama-bench-impl.dll",
+                      "bytes":  909312,
+                      "sha256":  "df8e24fd8f61a0945513d5d7c6f86ab6c7c64a6f69767bb935ecb76f9a39d2a0"
+                  },
+                  {
+                      "name":  "llama-bench.exe",
+                      "bytes":  10752,
+                      "sha256":  "79a8340d93f50e7f34c504c4e9510893553278c46ee0827366d20f5dd9ea94b6"
+                  },
+                  {
+                      "name":  "llama-common.dll",
+                      "bytes":  8864256,
+                      "sha256":  "8e5448d4aa36aeebe3938db1cae1198a62d95b4021d036e1194a7214ebb6c2e1"
+                  },
+                  {
+                      "name":  "llama-server-impl.dll",
+                      "bytes":  7223808,
+                      "sha256":  "596471cc92de3f14f5b7458bc05a0b890bd9d7a85e445102aafd815c1b677de2"
+                  },
+                  {
+                      "name":  "llama-server.exe",
+                      "bytes":  10752,
+                      "sha256":  "2291b769638d830f25d81b02e6f57666ea30d3832fa49eba828a3aac75ae4983"
+                  },
+                  {
+                      "name":  "llama.dll",
+                      "bytes":  3095040,
+                      "sha256":  "d9a38be1d8d377c430e5149c19f958dd367473de74d7512a475311ac4845bfc8"
+                  },
+                  {
+                      "name":  "mtmd.dll",
+                      "bytes":  2800640,
+                      "sha256":  "90c72089e7ec8db27a72eb2155f5056a32e787a4cbad7fdc0773a1591844a0f2"
+                  },
+                  {
+                      "name":  "test-backend-ops.exe",
+                      "bytes":  1254400,
+                      "sha256":  "203dab5ca8856e73ecd4974f0a1b923806f3fbc78c2cce7d7cb199fb97e1070c"
+                  }
+              ]
+}

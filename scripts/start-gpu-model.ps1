@@ -15,7 +15,9 @@ param (
     [switch]$ManagedByIDE,
     [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG", "CUSTOM")][string]$EnginePreset = "",
     # SOLO PRUEBAS: sustituye la VRAM libre medida por nvidia-smi. Se ignora sin -DryRun.
-    [int]$FreeMiBOverride = 0
+    [int]$FreeMiBOverride = 0,
+    # Margen de VRAM en MiB. -1 = usar el del catálogo (margenObjetivoMiB) o el del preset.
+    [int]$MarginOverrideMiB = -1
 )
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
@@ -62,6 +64,15 @@ if (-not $UsandoOverride) {
 }
 
 $GpuProfile = $Item.servidor
+# El catálogo declara un colchón objetivo (200 MiB). Antes solo existía como dato y el
+# arranque comparaba con SafetyMiB = 0, así que un perfil podía aceptarse sin margen.
+# Los presets con nombre conservan su marginMiB; CUSTOM y el perfil automático usan el
+# del catálogo. -MarginOverrideMiB permite una excepción consciente y visible.
+if ($MarginOverrideMiB -ge 0) {
+    $SafetyMiB = $MarginOverrideMiB
+} elseif (-not $EngineOptions -and $GpuProfile.margenObjetivoMiB) {
+    $SafetyMiB = [int]$GpuProfile.margenObjetivoMiB
+}
 $VisionProfile = if ($Vision) { $Item.vision } else { $null }
 $VisionMiB = 0
 if ($Vision) {
@@ -196,7 +207,7 @@ if ($AutoContexto -or $AutoKv) {
 }
 if ($ContextTokens -lt 4096 -or $ContextTokens -gt $TechoContexto) { throw "Contexto admitido para este perfil: 4096 a $TechoContexto tokens (vision: $Vision)." }
 $RequiredMiB = Get-RequiredMiB $ContextTokens $KvType
-if ($RequiredMiB -gt $FreeMiB) { throw "No cabe todo en GPU: hacen falta ~$RequiredMiB MiB y hay $FreeMiB MiB libres. No se usa CPU como respaldo." }
+if ($RequiredMiB -gt $FreeMiB) { throw "No cabe todo en GPU: hacen falta ~$RequiredMiB MiB (incluye margen de $SafetyMiB MiB) y hay $FreeMiB MiB libres. No se usa CPU como respaldo. Si el margen no es necesario, indícalo explícitamente con -MarginOverrideMiB." }
 
 $SampleProfile = if ($Pensar -gt 0) { "razonar" } else { "codigo" }
 $Sampling = $Item.muestreo.$SampleProfile
@@ -214,6 +225,10 @@ $ServerArgs = @(
     "--top-k", "$($Sampling.top_k)", "--min-p", (NumberText $Sampling.min_p),
     "--presence-penalty", (NumberText $Sampling.presence_penalty), "--repeat-penalty", (NumberText $Sampling.repeat_penalty)
 )
+# Chat template oficial del modelo (si existe)
+if ($Item.chat_template) {
+    $ServerArgs += @("--chat-template", $Item.chat_template)
+}
 # Perfiles nombrados y CUSTOM comparten la colocacion estandar de llama.cpp (mmap,
 # sin forzar tensores a CUDA0): es la que deja caber 36k con KV f16 en 8 GB.
 if ($EngineOptions -or $EnginePreset -eq 'CUSTOM') {
@@ -260,30 +275,60 @@ if ($DryRun) { Write-Host ($BinPath + " " + $ArgumentLine); exit 0 }
 $Wrapper = Get-Process -Id $PID -ErrorAction Stop
 $WrapperTicks = $Wrapper.StartTime.ToUniversalTime().Ticks.ToString()
 $Marker = Join-Path $RootDir "logs\servidor-administrado-$Port.json"
+$MarkerTmp = $Marker + ".tmp"
+
+# P2-10: capturar versión de llama.cpp (usa stderr; no romper con ErrorActionPreference=Stop)
+$LlamaVersion = "desconocida"
+try {
+    $out = & $BinPath --version 2>&1
+    if ($out) { $LlamaVersion = ($out -split "`r?`n" | Select-Object -First 1).Trim() }
+} catch {
+    # ignorar; version se queda como "desconocida"
+}
+
+# P2-13: activeKey para reutilización (proyector de visión si está activo)
+$ActiveKey = $null
+if ($Vision -and $VisionProfile -and $VisionProfile.archivo) {
+    $ActiveKey = $VisionProfile.archivo
+}
+
 function Write-MarcadorAdministrado([int]$ServidorPid) {
     $Info = [ordered]@{
         modelo = $Modelo; puerto = $Port; contexto = $ContextTokens; kv = $KvType;
         vision = [bool]$Vision; pensar = $Pensar; dormir = $DormirSeg; hostIP = $HostIP;
-        pid = $PID; wrapperPid = $PID; iniciado = $WrapperTicks; enginePreset = $EnginePreset
+        pid = $PID; wrapperPid = $PID; iniciado = $WrapperTicks; enginePreset = $EnginePreset;
+        llamaVersion = $LlamaVersion
+        activeKey = $ActiveKey
     }
     if ($ServidorPid -gt 0) {
         $Info.pidServidor = $ServidorPid
         $Info.iniciadoServidor = (Get-Process -Id $ServidorPid -ErrorAction Stop).StartTime.ToUniversalTime().Ticks.ToString()
     }
     New-Item -ItemType Directory -Force (Split-Path -Parent $Marker) | Out-Null
-    $Info | ConvertTo-Json -Compress | Set-Content -LiteralPath $Marker -Encoding ASCII
+    # P2-12: escritura atómica (tmp -> rename)
+    $Info | ConvertTo-Json -Compress | Set-Content -LiteralPath $MarkerTmp -Encoding ASCII
+    if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
+    Rename-Item -LiteralPath $MarkerTmp -NewName $Marker -Force
 }
 if ($ManagedByIDE) {
     try { Write-MarcadorAdministrado 0 } catch { Write-Host "Aviso: no se pudo escribir el marcador del servidor administrado: $($_.Exception.Message)" -ForegroundColor Yellow }
 }
-$ExecOptions = @{ FilePath = $BinPath; ArgumentList = $ArgumentLine; PassThru = $true; NoNewWindow = $true }
-if ($env:BONSAI_LLAMA_LOG_PREFIX) {
-    $ExecOptions.RedirectStandardOutput = $env:BONSAI_LLAMA_LOG_PREFIX + ".out.log"
-    $ExecOptions.RedirectStandardError = $env:BONSAI_LLAMA_LOG_PREFIX + ".err.log"
+# P2-09: prefijo de log por defecto si no está configurado
+if (-not $env:BONSAI_LLAMA_LOG_PREFIX) {
+    $env:BONSAI_LLAMA_LOG_PREFIX = Join-Path $RootDir "logs\llama-server-$Port"
 }
+$ExecOptions = @{ FilePath = $BinPath; ArgumentList = $ArgumentLine; PassThru = $true; NoNewWindow = $true; RedirectStandardOutput = $env:BONSAI_LLAMA_LOG_PREFIX + ".out.log"; RedirectStandardError = $env:BONSAI_LLAMA_LOG_PREFIX + ".err.log" }
 $Exec = Start-Process @ExecOptions
 $null = $Exec.Handle
+# P2-12: comprobar que el proceso sigue vivo tras lanzar
 if ($ManagedByIDE) {
+    Start-Sleep -Milliseconds 200
+    $Vivo = Get-Process -Id $Exec.Id -ErrorAction SilentlyContinue
+    if (-not $Vivo -or $Vivo.HasExited) {
+        Write-Host "Error: llama-server.exe murió inmediatamente tras lanzarse (PID $($Exec.Id)). Revisa $($env:BONSAI_LLAMA_LOG_PREFIX).err.log" -ForegroundColor Red
+        if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
+        exit 1
+    }
     try { Write-MarcadorAdministrado ([int]$Exec.Id) } catch { Write-Host "Aviso: no se pudo completar el marcador con el PID real de llama-server.exe: $($_.Exception.Message)" -ForegroundColor Yellow }
 }
 $ExitCode = 1

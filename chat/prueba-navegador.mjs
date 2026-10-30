@@ -96,8 +96,9 @@ const falsoLlama = http.createServer((req, res) => {
 await new Promise((resolve) => falsoLlama.listen(0, "127.0.0.1", () => resolve(undefined)));
 const puertoLlama = /** @type {import("node:net").AddressInfo} */ (falsoLlama.address()).port;
 
-// Página que maneja la aplicación dentro de un iframe del MISMO origen (se sirve
-// desde /p/, o sea, desde la carpeta de trabajo temporal).
+// Página que maneja la aplicación dentro de un iframe del MISMO origen. Se sirve
+// desde /ui/ (código de confianza): los HTML de /p/ llevan CSP sandbox desde P1-04,
+// así que un arnés servido como artefacto no podría tocar su propio iframe.
 const arnes = `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><title>prueba navegador</title></head>
 <body style="margin:0;background:#111">
@@ -322,7 +323,9 @@ run();
 </script>
 </body></html>
 `;
-fs.writeFileSync(path.join(proyecto, "__prueba-navegador.html"), arnes, "utf8");
+const ARNES_REL = `.prueba-navegador-${process.pid}.html`;
+const ARNES_ABS = path.join(HERE, "ui", ARNES_REL);
+fs.writeFileSync(ARNES_ABS, arnes, "utf8");
 
 const hijo = spawn(process.execPath, [path.join(HERE, "ui-server.mjs"), "--port", String(PUERTO), "--llama-port", String(puertoLlama)], {
   cwd: HERE,
@@ -394,7 +397,7 @@ try {
   });
   if (fijado !== 200) throw new Error(`no se pudo fijar la carpeta de trabajo temporal (HTTP ${fijado})`);
 
-  const volcado = await edge([...BASE, "--dump-dom", `http://127.0.0.1:${PUERTO}/p/__prueba-navegador.html`]);
+  const volcado = await edge([...BASE, "--dump-dom", `http://127.0.0.1:${PUERTO}/ui/${ARNES_REL}`]);
   const bloque = volcado.match(/<pre id="resultado">([\s\S]*?)<\/pre>/);
   if (!bloque) {
     fallos.push(`La página de prueba no dejó resultado. Salida: ${volcado.slice(-500)}`);
@@ -411,7 +414,7 @@ try {
   if (CAPTURAS) {
     fs.mkdirSync(path.join(RAIZ, "capturas"), { recursive: true });
     const nombreCaptura = `ui-2026-10-26-${ANCHO}-${CLARO ? "claro" : "oscuro"}.png`;
-    await edge([...BASE, "--virtual-time-budget=20000", `--screenshot=${path.join(RAIZ, "capturas", nombreCaptura)}`, `http://127.0.0.1:${PUERTO}/p/__prueba-navegador.html`]);
+    await edge([...BASE, "--virtual-time-budget=20000", `--screenshot=${path.join(RAIZ, "capturas", nombreCaptura)}`, `http://127.0.0.1:${PUERTO}/ui/${ARNES_REL}`]);
     process.stdout.write(`captura: capturas/${nombreCaptura}\n`);
   }
 } catch (err) {
@@ -419,6 +422,7 @@ try {
 } finally {
   hijo.kill();
   falsoLlama.close();
+  fs.rmSync(ARNES_ABS, { force: true });
   try {
     fs.rmSync(tmp, { recursive: true, force: true });
   } catch {

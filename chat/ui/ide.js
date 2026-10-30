@@ -173,13 +173,17 @@
       if (event.key === "Escape" && !pop.hidden) pop.hidden = true;
     });
 
+    let tickEnCurso = false;
     async function tick() {
-      if (document.hidden) return;
+      if (tickEnCurso || document.hidden) return;
+      tickEnCurso = true;
       try {
         const res = await fetch("/api/gpu", { cache: "no-store" });
         if (res.ok) paint(await res.json());
       } catch {
         /* el servidor de la interfaz no responde: se reintenta */
+      } finally {
+        tickEnCurso = false;
       }
     }
     tick();
@@ -209,4 +213,173 @@
       setTimeout(() => { button.textContent = "Copiar"; }, 1400);
     });
   })();
+
+  // ------------------------------------------------------------------ server management panel
+(function serverPanel() {
+  "use strict";
+  
+  const startBtn = document.getElementById("server-start");
+  const stopBtn = document.getElementById("server-stop");
+  const presetSelect = document.getElementById("server-preset");
+  const statusEl = document.getElementById("server-status");
+  
+  if (!startBtn || !presetSelect) return;
+  
+  const BIN_PATH = ".local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89\\bin\\llama-server.exe";
+  const MODEL_PATH = "models\\Ornith-1.5-9B-Q4_K_M.gguf";
+  const PROJ_PATH = "models\\mmproj-Ornith-1.5-9B-BF16.gguf";
+  const TEMPLATE_PATH = "logs\\chat_template_8080.jinja";
+  const MODEL_KEY = "ornith9b";
+
+  async function copyServerCommand() {
+    const preset = presetSelect.value;
+    const btn = document.getElementById("server-terminal");
+    const originalText = btn.querySelector("span").textContent;
+    try {
+      // El comando lo construye el servidor con rutas absolutas reales.
+      const res = await fetch(`/api/server/command?preset=${encodeURIComponent(preset)}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("No se pudo generar el comando");
+      const data = await res.json();
+      await navigator.clipboard.writeText(data.command);
+      btn.querySelector("span").textContent = "¡Copiado!";
+      btn.style.background = "var(--accent-soft)";
+      aviso("ok", "Comando copiado. Abre PowerShell y pégalo (Ctrl+V).");
+    } catch (err) {
+      btn.querySelector("span").textContent = "Error";
+      aviso("error", "No se pudo copiar el comando: " + err.message);
+    } finally {
+      setTimeout(() => { btn.querySelector("span").textContent = originalText; btn.style.background = ""; }, 2200);
+    }
+  }
+  
+  function aviso(tipo, texto) {
+    const cont = document.getElementById("avisos") || document.body;
+    const toast = document.createElement("div");
+    toast.className = "aviso " + tipo;
+    toast.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg><span class="a-txt"></span>`;
+    toast.querySelector(".a-txt").textContent = texto;
+    cont.appendChild(toast);
+    setTimeout(() => { toast.classList.add("sale"); setTimeout(() => toast.remove(), 300); }, 3200);
+  }
+  
+  let serverProcess = null;
+  let statusPoll = null;
+  
+  function updateStatus(connected, message) {
+    if (!statusEl) return;
+    const dot = statusEl.querySelector(".dot");
+    const text = statusEl.querySelector("span");
+    if (connected) {
+      dot.classList.add("rtx");
+      dot.classList.remove("warn");
+      text.textContent = message || "Conectado";
+    } else {
+      dot.classList.remove("rtx");
+      dot.classList.add("warn");
+      text.textContent = message || "Desconectado";
+    }
+  }
+  
+  async function checkServerHealth() {
+    try {
+      const res = await fetch("/api/servidor", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.encendido) {
+          const preset = presetSelect.value;
+          const presetLabel = presetSelect.options[presetSelect.selectedIndex]?.text || preset;
+          updateStatus(true, `Conectado - ${presetLabel}`);
+          startBtn.hidden = true;
+          stopBtn.hidden = false;
+          presetSelect.disabled = true;
+          return true;
+        }
+      }
+    } catch (e) {
+      // UI no responde
+    }
+    updateStatus(false, "Desconectado");
+    startBtn.hidden = false;
+    stopBtn.hidden = true;
+    presetSelect.disabled = false;
+    return false;
+  }
+  
+  async function startServer() {
+    const preset = presetSelect.value;
+    
+    startBtn.disabled = true;
+    startBtn.querySelector("span").textContent = "Iniciando...";
+    updateStatus(false, `Iniciando ${preset}...`);
+    
+    try {
+      // El endpoint arranca el binario optimizado con el preset elegido; el preset
+      // decide contexto, KV y visión. Solo se fija el presupuesto de razonamiento.
+      const res = await fetch("/api/server/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preset, model: MODEL_KEY, pensar: 4096 })
+      });
+      
+      if (!res.ok) throw new Error((await res.text()) || "No se pudo iniciar el servidor");
+      
+      updateStatus(false, "Cargando modelo...");
+      for (let i = 0; i < 90; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        if (await checkServerHealth()) {
+          startBtn.hidden = true;
+          stopBtn.hidden = false;
+          presetSelect.disabled = true;
+          aviso("ok", "Servidor listo. El modelo ya responde.");
+          return;
+        }
+      }
+      throw new Error("El modelo no terminó de cargar a tiempo");
+    } catch (err) {
+      console.error("Start server error:", err);
+      updateStatus(false, "Error");
+      aviso("error", "No se pudo iniciar: " + err.message);
+      startBtn.disabled = false;
+      startBtn.querySelector("span").textContent = "Iniciar";
+    }
+  }
+  
+  async function stopServer() {
+    stopBtn.disabled = true;
+    stopBtn.querySelector("span").textContent = "Deteniendo...";
+    updateStatus(false, "Deteniendo...");
+    
+    try {
+      const res = await fetch("/api/server/stop", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to stop server");
+    } catch (err) {
+      console.error("Stop server error:", err);
+    }
+    
+    await new Promise(r => setTimeout(r, 1000));
+    if (!(await checkServerHealth())) {
+      startBtn.hidden = false;
+      stopBtn.hidden = true;
+      presetSelect.disabled = false;
+      startBtn.disabled = false;
+      startBtn.querySelector("span").textContent = "Iniciar";
+    }
+  }
+  
+  // Initial health check
+  checkServerHealth();
+  
+  // Poll status
+  statusPoll = setInterval(checkServerHealth, 10000);
+  
+  // Event listeners
+  startBtn.addEventListener("click", startServer);
+  stopBtn.addEventListener("click", stopServer);
+  document.getElementById("server-terminal").addEventListener("click", copyServerCommand);
+  
+  // Cleanup on page unload
+  window.addEventListener("beforeunload", () => {
+    if (statusPoll) clearInterval(statusPoll);
+  });
+})();
 })();

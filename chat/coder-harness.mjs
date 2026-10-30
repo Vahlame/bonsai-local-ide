@@ -12,6 +12,15 @@ import { matarArbol } from "./procesos.mjs";
 import { verificationCommands } from "./project-verification.mjs";
 import { TypeScriptLsp, typeScriptProject } from "./code-intelligence.mjs";
 
+/**
+ * Identidad completa de un diagnóstico para no confundir dos errores con el mismo
+ * mensaje en líneas distintas (el bug que ocultaba errores nuevos).
+ * @param {{archivo?: string, linea?: number, columna?: number, mensaje?: string, fuente?: string}} d
+ */
+export function identidadDiagnostico(d) {
+  return [d.archivo || "", d.linea ?? "", d.columna ?? "", d.fuente || "", d.mensaje || ""].join("|");
+}
+
 export const CODER_CONFIG = Object.freeze(
   JSON.parse(
     fs.readFileSync(new URL("./coder-profile.json", import.meta.url), "utf8"),
@@ -124,7 +133,7 @@ export const CODER_TOOLS = [
   tool(
     "ejecutar",
     "Ejecuta un comando de desarrollo o tests en la shell del proyecto; salida acotada.",
-    { comando: str, segundo_plano: { type: "boolean" } },
+    { comando: str, segundo_plano: { type: "boolean" }, repetir: { type: "boolean" } },
     ["comando"],
   ),
   base("proceso"),
@@ -646,6 +655,20 @@ export class CoderTask {
     const signature = this.revision();
     if (!files.length) {
       this.needsFinalVerification = false;
+      // A finish claim without a diff or inspected evidence cannot prove that an
+      // edit request was completed. Non-final calls still report "nothing to do".
+      if (final) {
+        this.verificationSummary =
+          "No se modificó ni inspeccionó ningún archivo: no hay evidencia para dar la tarea por terminada.";
+        this.trace("verified", {
+          ok: false,
+          files: [],
+          tests: [],
+          summary: this.verificationSummary,
+          reason: "no_evidence",
+        });
+        return { ok: false, summary: this.verificationSummary, changed: false };
+      }
       return {
         ok: true,
         summary: "Sin cambios que verificar.",
@@ -714,7 +737,7 @@ export class CoderTask {
           }
         }
       }
-      if (ast.syntaxErrors && !before?.syntaxErrors)
+      if (ast.syntaxErrors)
         errors.push(
           `${rel}: Tree-sitter detectó error de sintaxis; usa leer para localizarlo.`,
         );
@@ -726,11 +749,11 @@ export class CoderTask {
           )
         : [];
       const prior = new Set(
-        oldDiags.filter((d) => d.severidad === "error").map((d) => d.mensaje),
+        oldDiags.filter((d) => d.severidad === "error").map(identidadDiagnostico),
       );
       for (const d of diags.filter((d) => d.severidad === "error")) {
         const msg = `${rel}:${d.linea} ${d.mensaje}`;
-        (prior.has(d.mensaje) ? preexisting : errors).push(msg);
+        (prior.has(identidadDiagnostico(d)) ? preexisting : errors).push(msg);
       }
     }
     if (!errors.length) {

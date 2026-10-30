@@ -31,7 +31,7 @@ import { candidatosDeMemoria, crearMemoriaGlobal } from "./memoria-global.mjs";
 import { Terminales } from "./terminal.mjs";
 import { buscarDefinicion, diagnosticarArchivo, diagnosticarTexto, indiceSimbolos, simbolos } from "./diagnosticos.mjs";
 import { CoderTask, CODER_CONFIG, coderOptions, runCheck } from "./coder-harness.mjs";
-import { ENGINE_PROFILES, engineProfile, isNamedEnginePreset, configMotor, CUSTOM_ENGINE } from "./engine-profiles.mjs";
+import { ENGINE_PROFILES, engineProfile, isNamedEnginePreset, configMotor, CUSTOM_ENGINE, validarTechoModelo } from "./engine-profiles.mjs";
 import { EscrituraIncremental } from "./escritura-incremental.mjs";
 import { consultarRegistro } from "./registros.mjs";
 
@@ -311,7 +311,7 @@ const UI_SERVIDOS = new Set([".js", ".mjs", ".css", ".html", ".svg", ".json", ".
  */
 function parseArgs(argv) {
   // think = presupuesto de razonamiento en tokens; 0 (por defecto) = APAGADO.
-  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 8192, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo" };
+  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 8192, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo", agentProfile:"optimized" };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--host") out.host = argv[++i] ?? out.host;
@@ -321,6 +321,7 @@ function parseArgs(argv) {
     else if (arg === "--think") {out.think = Number(argv[++i]);out.thinkProvided=true;}
     else if (arg === "--engine-preset") {out.enginePreset=argv[++i];if (isNamedEnginePreset(out.enginePreset)) engineProfile(out.enginePreset);}
     else if (arg === "--perfil") out.perfil = argv[++i] ?? out.perfil;
+    else if (arg === "--agent-profile") out.agentProfile = argv[++i] ?? out.agentProfile;
     else if (arg === "--open") out.open = true;
     else throw new Error(`Argumento desconocido: ${arg}`);
   }
@@ -585,6 +586,7 @@ function catalogoModelos() {
       uso: typeof row.uso === "string" ? row.uso : "",
       existe: bytes > 0 && (esperado === 0 || bytes === esperado),
       gpuCompleta: row.servidor?.tipo === "gpu-completa",
+      margenObjetivoMiB: Number(row.servidor?.margenObjetivoMiB) || 0,
       predeterminado: clave === MODELO.modeloPredeterminado,
     });
   }
@@ -1103,9 +1105,18 @@ async function main(args) {
   chat.actOnPc = true;
   chat.loadSession();
   for (const aviso of avisosInicio) chat.note(`historial: ${aviso}`);
-  await chat.connect();
+  // El servidor del modelo puede NO estar arrancado todavía: el usuario lo inicia
+  // desde el botón "Iniciar" (o el comando del botón "Terminal"). La interfaz debe
+  // abrir igualmente y mostrar "Desconectado" hasta que /api/server/start lo encienda.
+  let modeloListo = false;
+  try {
+    await chat.connect();
+    modeloListo = true;
+  } catch {
+    modeloListo = false;
+  }
   /** Visión: el servidor la anuncia en /props. Sin mmproj no puede ver imágenes. */
-  chat.vision = Boolean(chat.props?.modalities && chat.props.modalities.vision === true);
+  chat.vision = modeloListo && Boolean(chat.props?.modalities && chat.props.modalities.vision === true);
 
   let busy = false;
   let configuracionApagada = null;
@@ -1188,14 +1199,19 @@ async function main(args) {
   }
 
   /**
-   * VRAM libre en MiB (Infinity si no hay nvidia-smi, para no bloquear).
-   * @returns {Promise<number>}
+   * VRAM libre en MiB (null si no se pudo medir, para no confundir fallo con éxito).
+   * @returns {Promise<number | null>}
    */
   function vramLibreMiB() {
     return new Promise((resolve) => {
       execFile("nvidia-smi", ["--query-gpu=memory.free", "--format=csv,noheader,nounits"], { windowsHide: true, timeout: 8000 }, (err, stdout) => {
         const n = Number.parseInt(String(stdout || "").trim(), 10);
-        resolve(err || !Number.isFinite(n) ? Number.POSITIVE_INFINITY : n);
+        if (err || !Number.isFinite(n)) {
+          process.stderr.write("[GPU] nvidia-smi falló o no devolvió VRAM libre: no se pudo medir la memoria disponible.\n");
+          resolve(null);
+          return;
+        }
+        resolve(n);
       });
     });
   }
@@ -1205,9 +1221,10 @@ async function main(args) {
    * relanzándolo) hasta que no quede proceso, el puerto esté cerrado y la VRAM se haya
    * soltado. Lanzar antes de eso hacía que start-server.ps1 se negara a arrancar.
    * @param {number} ms
+   * @param {number} [umbralMiB] VRAM mínima libre requerida; por defecto deriva del catálogo.
    * @returns {Promise<boolean>}
    */
-  async function liberarGpu(ms, alDetener = () => {}) {
+  async function liberarGpu(ms, alDetener = () => {}, umbralMiB) {
     await apagarLlamaServer();
     alDetener();
     const fin = Date.now() + ms;
@@ -1220,46 +1237,127 @@ async function main(args) {
         puertoCerrado = true;
       }
       const libre = await vramLibreMiB();
-      if (puertoCerrado && (libre === Number.POSITIVE_INFINITY || libre >= 6500)) return true;
+      const umbral = umbralMiB ?? 6500;
+      if (puertoCerrado && libre !== null && libre >= umbral) return true;
       await new Promise((r) => setTimeout(r, 600));
+    }
+    if (await vramLibreMiB() === null) {
+      process.stderr.write("[GPU] No se pudo medir VRAM tras el tiempo de espera: no se confirma que la GPU esté libre.\n");
     }
     return false;
   }
 
   /**
-   * Lanza `start-server.ps1` con el modelo pedido, en su propia ventana minimizada.
+   * Comando PowerShell listo para pegar que arranca el servidor optimizado con el
+   * preset dado, usando rutas absolutas (la interfaz corre en el navegador y no
+   * conoce el disco). Refleja exactamente la logica de flags de
+   * start-gpu-model-rtx4060-optimized.ps1 (f16 estable, vision, plantilla, etc.).
+   * @param {string} preset
+   * @param {number} puerto
+   * @returns {string}
+   */
+  function comandoServidorOptimizado(preset, puerto) {
+    const nombre = isNamedEnginePreset(preset) ? preset : "8GB-VISION-DEFAULT-F16";
+    const p = engineProfile(nombre);
+    const ctx = Number(p.context) || 16384;
+    const kv = String(p.kv || "f16");
+    const vision = Boolean(p.vision);
+    const estable = kv === "f16";
+
+    const modeloItem = (MODELO.catalogo && MODELO.catalogo.ornith9b) || {};
+    const modelPath = path.join(PROJECT, "models", modeloItem.archivo || "Ornith-1.5-9B-Q4_K_M.gguf");
+    const projArchivo = modeloItem.vision && modeloItem.vision.archivo;
+    const projPath = projArchivo ? path.join(PROJECT, "models", projArchivo) : "";
+    const templatePath = path.join(PROJECT, "logs", `chat_template_${puerto}.jinja`);
+
+    const cands = [
+      path.join(PROJECT, ".local", "opt", "bonsai-inference", "build-RTX4060-Opt-sm89", "bin", "llama-server.exe"),
+      path.join(process.env.USERPROFILE || "", ".local", "opt", "bonsai-inference", "build-RTX4060-Opt-sm89", "bin", "llama-server.exe"),
+    ];
+    let bin = path.join(PROJECT, "bin", "llama-server.exe");
+    for (const c of cands) { try { if (fs.existsSync(c)) { bin = c; break; } } catch { /* ignora */ } }
+
+    const a = ["-m", modelPath, "--gpu-layers", "99"];
+    if (!estable) a.push("--fit", "off", "--kv-offload");
+    a.push("--flash-attn", "on", "-c", String(ctx), "-ctk", kv, "-ctv", kv);
+    if (!estable) a.push("-np", "1");
+    a.push("-b", "512", "-ub", "256", "-t", "4", "--host", "127.0.0.1", "--port", String(puerto), "--jinja", "--metrics");
+    if (!estable) a.push("--cache-ram", "0");
+    a.push("-lv", "4",
+      "--cors-origins", `http://127.0.0.1:${puerto},http://localhost:${puerto},http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788`,
+      "--temp", "0.6", "--top-p", "0.95", "--top-k", "20", "--min-p", "0",
+      "--presence-penalty", "0", "--repeat-penalty", "1", "--spec-type", "none", "--no-context-shift");
+    if (estable) a.push("--ctx-checkpoints", "0");
+    // La plantilla se genera desde modelo.json para que exista al pegar el comando.
+    try {
+      if (modeloItem.chat_template) {
+        fs.mkdirSync(path.dirname(templatePath), { recursive: true });
+        fs.writeFileSync(templatePath, modeloItem.chat_template, "utf8");
+      }
+    } catch { /* se intentara igualmente */ }
+    a.push("--chat-template-file", templatePath);
+    if (vision && projPath) a.push("--mmproj", projPath, "--mmproj-offload", "--mmproj-device", "CUDA0", "--image-max-tokens", "512");
+    if (p.spec === "draft" && p.draftModel) {
+      const draftPath = path.join(PROJECT, "models", String(p.draftModel));
+      try {
+        if (fs.existsSync(draftPath)) {
+          a.push("--spec-type", "draft-simple", "--draft-model", draftPath, "--draft-tokens", String(p.draftTokens || 4));
+        }
+      } catch { /* sin draft */ }
+    }
+    a.push("--reasoning-budget", "4096", "--reasoning-format", "deepseek");
+
+    const quote = (s) => (/[\s"]/.test(s) ? `"${s.replace(/"/g, '\\"')}"` : s);
+    const linea = [bin, ...a].map(quote).join(" ");
+    return `cd "${PROJECT}"; & ${linea}`;
+  }
+
+  /**
+   * Lanza el servidor de IA. Para los presets optimizados de la RTX 4060 usa el
+   * lanzador dedicado (`start-gpu-model-rtx4060-optimized.ps1`), que arranca el
+   * binario sm89 y aplica f16/vision/chat-template. Para el resto, el historico.
    * @param {string} clave
+   * @param {Record<string, any> | null} configuracion
    */
   function lanzarServidorLlama(clave, configuracion = null) {
-    const script = path.join(PROJECT, "scripts", "start-server.ps1");
-    // Con -File (que es lo que arranca de verdad desde Node) y -Log, para que el propio
-    // script grabe lo que dice: si el servidor no levanta, el motivo queda en el archivo.
     const logArranque = process.env.BONSAI_LOG_ARRANQUE || path.join(PROJECT, "logs", "arranque-modelo.log");
-    const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-ManagedByIDE", "-Modelo", clave, "-Port", new URL(chat.base).port || "80"];
+    const puerto = new URL(chat.base).port || "80";
+    const preset = configuracion ? configuracion.enginePreset || "" : leerAjustes().enginePreset || "";
+    // Presets optimizados RTX 4060 -> lanzador dedicado con binario sm89.
+    const optimizado = /^(8GB-VISION-DEFAULT-F16|8GB-VISION-ULTRA-F16|8GB-VISION-HIGH|8GB-VISION-BALANCED|8GB-VISION-SAFE|8GB-CODE-MAX|8GB-CODE-HIGH|8GB-CODE-BALANCED|8GB-CODE-FAST|8GB-RESEARCH|8GB-VISION-QUALITY|8GB-VISION-ULTRA)$/.test(preset);
+    const script = path.join(PROJECT, "scripts", optimizado ? "start-gpu-model-rtx4060-optimized.ps1" : "start-server.ps1");
+    const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-ManagedByIDE", "-Modelo", clave, "-Port", puerto];
     try {
       fs.mkdirSync(path.dirname(logArranque), { recursive: true });
       args.push("-Log", logArranque);
     } catch {
       /* sin registro: se lanza igual */
     }
-    const preset = configuracion ? configuracion.enginePreset || "" : leerAjustes().enginePreset || "";
     if (preset && isNamedEnginePreset(preset)) {
       args.push("-EnginePreset", preset);
     } else if (preset === "CUSTOM") {
       args.push("-EnginePreset", "CUSTOM");
     }
-    const conVision = configuracion ? Boolean(configuracion.vision) : (preset && isNamedEnginePreset(preset)) ? Boolean(engineProfile(preset).vision) : typeof leerAjustes().engineVision === "boolean" ? leerAjustes().engineVision : mmprojDisponible(clave);
+    const conVision = configuracion && typeof configuracion.vision === "boolean"
+      ? configuracion.vision
+      : (preset && isNamedEnginePreset(preset)) ? Boolean(engineProfile(preset).vision)
+      : typeof leerAjustes().engineVision === "boolean" ? leerAjustes().engineVision
+      : mmprojDisponible(clave);
     if (conVision) args.push("-Vision");
+    else if (optimizado) args.push("-Vision:$false");
     else args.push("-SinVision");
     if (configuracion) {
-      args.push("-ContextSize", String(configuracion.contexto), "-KVCacheType", configuracion.kv, "-DormirSeg", String(configuracion.dormir), "-HostIP", configuracion.hostIP);
+      // Solo se pasan contexto/KV si vienen definidos; si no, manda el preset.
+      if (configuracion.contexto !== undefined && configuracion.contexto !== null) args.push("-ContextSize", String(configuracion.contexto));
+      if (configuracion.kv) args.push("-KVCacheType", configuracion.kv);
+      if ("dormir" in configuracion) args.push("-DormirSeg", String(configuracion.dormir));
+      if (configuracion.hostIP) args.push("-HostIP", configuracion.hostIP);
     } else {
       const aj = leerAjustes();
       if (aj.coderContextTokens) args.push("-ContextSize", String(aj.coderContextTokens));
-      if (preset === "CUSTOM") args.push("-KVCacheType", ["f16","q8_0","q4_0"].includes(aj.engineKv) ? aj.engineKv : "f16");
+      if (preset === "CUSTOM") args.push("-KVCacheType", ["f16", "q8_0", "q4_0", "IQ4_XS", "IQ2_XS", "IQ1_S"].includes(aj.engineKv) ? aj.engineKv : "f16");
     }
     // Siempre explícito: el razonamiento que pidió el usuario si ESE modelo lo admite, o 0.
-    // (Antes se pasaba el del modelo que se iba a descargar.)
     const pensar = configuracion ? configuracion.pensar : presupuestoPensar(clave, Number(leerAjustes().pensar));
     args.push("-Pensar", String(pensar));
     pensarServidor = pensar;
@@ -1628,7 +1726,11 @@ async function main(args) {
       inicial = guardarAjustes({ enginePreset: "CUSTOM", ...(args.thinkProvided ? { pensar: args.think } : {}) });
     } else if (isNamedEnginePreset(args.enginePreset)) {
       const p = engineProfile(args.enginePreset);
-      if (chat.nCtx !== p.context || chat.vision !== Boolean(p.vision)) throw new Error("El motor en ejecución no coincide con el perfil solicitado; vuelve a iniciarlo desde el lanzador.");
+      // Si el modelo aún no está cargado (nCtx vacío), no se puede comparar: se guarda
+      // el preset como predeterminado y el usuario lo inicia con el botón Iniciar.
+      if (modeloListo && (chat.nCtx !== p.context || chat.vision !== Boolean(p.vision))) {
+        throw new Error("El motor en ejecución no coincide con el perfil solicitado; vuelve a iniciarlo desde el lanzador.");
+      }
       inicial = guardarAjustes({ enginePreset: args.enginePreset, coderContextTokens: p.context, historial: p.context, ...(args.thinkProvided ? { pensar: args.think } : {}) });
     }
   } else if (args.thinkProvided) inicial = guardarAjustes({ pensar: args.think });
@@ -1771,7 +1873,19 @@ async function main(args) {
           return;
         }
         const type = TYPES[path.extname(abs).toLowerCase()] || "application/octet-stream";
-        res.writeHead(200, { "Content-Type": type });
+        /** @type {Record<string, string>} */
+        const headers = { "Content-Type": type, "X-Content-Type-Options": "nosniff" };
+        // HTML/SVG de artefactos se abren a veces en una pestaña. Con `sandbox` el
+        // documento recibe un origen opaco: sus scripts pueden correr, pero fetch/XHR
+        // contra /api/* es cross-origin y el navegador lo bloquea. El iframe inline
+        // conserva además su propio sandbox. Los recursos relativos del artefacto
+        // dejan de cargarse: es el precio de no ejecutar contenido no confiable en el
+        // origen del IDE.
+        if (type.startsWith("text/html") || type === "image/svg+xml") {
+          headers["Content-Security-Policy"] = "sandbox allow-scripts";
+          headers["Referrer-Policy"] = "no-referrer";
+        }
+        res.writeHead(200, headers);
         fs.createReadStream(abs).pipe(res);
         return;
       }
@@ -2115,7 +2229,7 @@ async function main(args) {
           }
           fs.rmSync(abs, { recursive: true, force: true });
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-          res.end(JSON.stringify({ ok: true, op, rel, carpeta, undo: undoId }));
+          res.end(JSON.stringify({ ok: true, op, rel, carpeta, undo: undoId || false }));
           return;
         }
         res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("operacion desconocida");
@@ -2366,6 +2480,79 @@ async function main(args) {
         } finally { busy = false; }
         return;
       }
+      
+      // ================================================================
+      // OPTIMIZED SERVER MANAGEMENT (RTX 4060)
+      // ================================================================
+      if (req.method === "GET" && url.pathname === "/api/server/command") {
+        // Devuelve un comando PowerShell listo para pegar, con rutas absolutas.
+        const preset = url.searchParams.get("preset") || "8GB-VISION-DEFAULT-F16";
+        const comando = comandoServidorOptimizado(preset, args.llamaPort);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ command: comando, preset }));
+        return;
+      }
+      if (req.method === "POST" && url.pathname === "/api/server/start") {
+        if (busy) { res.writeHead(409).end("Hay una operación en curso"); return; }
+        busy = true;
+        try {
+          const raw = JSON.parse(await readBody(req));
+          const preset = raw?.preset || "8GB-VISION-DEFAULT-F16";
+          const modelo = raw?.model || "ornith9b";
+          
+          const validPresets = [
+            "8GB-VISION-DEFAULT-F16", "8GB-VISION-ULTRA-F16", "8GB-VISION-HIGH",
+            "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
+            "8GB-CODE-MAX", "8GB-CODE-HIGH", "8GB-CODE-BALANCED", "8GB-CODE-FAST",
+            "8GB-RESEARCH", "8GB-VISION-QUALITY"
+          ];
+          if (!validPresets.includes(preset)) {
+            res.writeHead(400).end("Preset no válido");
+            return;
+          }
+          
+          // Stop any existing server first
+          await apagarLlamaServer();
+          await new Promise(r => setTimeout(r, 800));
+          
+          // Deja que el PRESET decida contexto, KV y visión (no se fuerzan aquí).
+          // Solo el razonamiento se fija explícitamente.
+          const hijo = lanzarServidorLlama(modelo, {
+            enginePreset: preset,
+            pensar: Number(raw?.pensar) > 0 ? Number(raw.pensar) : 4096,
+            dormir: 0,
+            hostIP: "127.0.0.1"
+          });
+          
+          if (!(await esperarEncendido(240000, hijo))) {
+            throw new Error("El modelo no arrancó; revisa logs/arranque-modelo.log");
+          }
+          
+          await chat.connect();
+          chat.vision = Boolean(chat.props?.modalities?.vision);
+          
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+          res.end(JSON.stringify({ ok: true, encendido: true, preset }));
+        } catch (err) {
+          res.writeHead(500).end(String(err.message || err));
+        } finally { busy = false; }
+        return;
+      }
+      
+      if (req.method === "POST" && url.pathname === "/api/server/stop") {
+        if (busy) { res.writeHead(409).end("Hay una operación en curso"); return; }
+        busy = true;
+        try {
+          await apagarLlamaServer();
+          await new Promise(r => setTimeout(r, 1000));
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+          res.end(JSON.stringify({ ok: true, encendido: false }));
+        } catch (err) {
+          res.writeHead(500).end(String(err.message || err));
+        } finally { busy = false; }
+        return;
+      }
+      
       if (req.method === "GET" && url.pathname === "/api/modelos") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
         // `guardado` = el que arrancará la próxima vez; `actual` = el que está cargado ahora.
@@ -2379,6 +2566,20 @@ async function main(args) {
         const clave = raw && typeof raw.clave === "string" ? raw.clave.trim() : "";
         if (raw.enginePreset !== undefined && raw.enginePreset !== "CUSTOM" && raw.enginePreset !== "" && !isNamedEnginePreset(raw.enginePreset)) {
           res.writeHead(400).end("Perfil de motor desconocido"); return;
+        }
+        // CUSTOM: apply the same validations as named presets (context range, KV type, vision boolean).
+        if (raw.enginePreset === "CUSTOM") {
+          const contexto = Number(raw.contexto ?? raw.context ?? 16384);
+          if (!Number.isInteger(contexto) || contexto < 4096 || contexto > 65536) {
+            res.writeHead(400).end("Ventana de contexto inválida (4096-65536)"); return;
+          }
+          const kv = String(raw.kv ?? "f16");
+          if (!["f16", "q8_0", "q4_0"].includes(kv)) {
+            res.writeHead(400).end("Tipo de KV inválido (f16, q8_0, q4_0)"); return;
+          }
+          if (raw.vision !== undefined && typeof raw.vision !== "boolean") {
+            res.writeHead(400).end("vision debe ser booleano"); return;
+          }
         }
         const item = catalogoModelos().find((m) => m.clave === clave);
         if (!item) {
@@ -2412,10 +2613,15 @@ async function main(args) {
           if (anterior?.error) throw new Error(`No se puede cambiar sin una configuración anterior recuperable: ${anterior.error}`);
           const actualAjustes = leerAjustes();
           const cfg = configMotor(raw, actualAjustes, anterior);
+          // Validación temprana del techo del modelo: si no cabe, falla ANTES de parar el servidor.
+          const techo = validarTechoModelo(clave, cfg.contexto, cfg.vision);
+          if (!techo.ok) throw new Error(`${techo.motivo}. El cambio se rechaza sin apagar el modelo actual.`);
           await cambiarConRecuperacion({
             anterior,
             liberar: async (alDetener) => {
-              if (!(await liberarGpu(35000, alDetener))) throw new Error("no se pudo liberar la GPU o el puerto");
+              const modeloCatalogo = catalogoModelos().find((m) => m.clave === objetivo);
+              const margenVRAM = modeloCatalogo?.margenObjetivoMiB || 6500;
+              if (!(await liberarGpu(35000, alDetener, margenVRAM))) throw new Error("no se pudo liberar la GPU o el puerto");
             },
             arrancar: async (restaurar) => {
               if (restaurar?.error) throw new Error(restaurar.error);
@@ -3093,6 +3299,9 @@ async function main(args) {
             const crudas = calls.length ? [] : llamadasCrudas(raw, dialectoDe(modeloActualClave(), MODELO.catalogo));
             const usadas = calls.length ? calls : crudas;
             const coder = chat.coderTask;
+            // Solo un cierre con verificación real puede pasar a DONE; un turno sin
+            // herramientas ni cambios no demuestra que el pedido esté resuelto.
+            let finalVerificationOk = false;
             const checked = coder ? coder.accept(usadas) : {valid:usadas,errors:[]};
             const specialized = (coder ? checked.valid : usadas).filter(c=>["escribir_partes","consultar_salida","mcp_playwright"].includes(c.name) || (coder && ["leer","indice","buscar_codigo","simbolo","git_diff"].includes(c.name)));
             const normal = (coder ? checked.valid : usadas).filter(c=>!specialized.includes(c));
@@ -3342,7 +3551,7 @@ async function main(args) {
               }
               step += 1;
               /** @type {ActionRow} */
-              const rowBorrar = { id: `${idTurno}-a${step}`, kind: "cmd", title: `borrar ${rel}`, state: "done", detail: st.isDirectory() ? "Carpeta vacía borrada." : "Archivo borrado (hay copia para deshacer)." };
+              const rowBorrar = { id: `${idTurno}-a${step}`, kind: "cmd", title: `borrar ${rel}`, state: "done", detail: st.isDirectory() ? "Carpeta vacía borrada." : undoId ? "Archivo borrado (hay copia para deshacer)." : "Archivo borrado (sin copia: no se puede deshacer)." };
               if (undoId) rowBorrar.undo = undoId;
               actions.push(rowBorrar);
               emitAction(rowBorrar);
@@ -3350,7 +3559,7 @@ async function main(args) {
               const conocido = new Map((chat.session.files || []).map((file) => [file.rel, file]));
               conocido.delete(rel);
               chat.session.files = [...conocido.values()];
-              poner(clave, `Borrado ${rel}. Hay punto de deshacer (botón en la tarjeta).`);
+              poner(clave, undoId ? `Borrado ${rel}. Hay punto de deshacer (botón en la tarjeta).` : `Borrado ${rel}. No hay copia: este borrado no se puede deshacer.`);
               wrote = true;
               progresoPaso = true;
               accionPaso = "write";
@@ -3808,7 +4017,7 @@ async function main(args) {
               ac.signal.throwIfAborted();
               const row = showAction("read", String(argsWeb.url), "run");
               try {
-                const detail = await leerWeb(argsWeb, { signal: ac.signal, blockedPorts: [args.port, new URL(chat.base).port] });
+                const detail = await leerWeb(argsWeb, { signal: ac.signal, blockedPorts: [args.port, new URL(chat.base).port], allowPrivate: argsWeb.allowPrivate });
                 finishAction(row, "done", detail);
                 poner(`web:${i}`, detail);
                 progresoPaso = true;
@@ -3871,6 +4080,7 @@ async function main(args) {
                   ponerEn(ultimaId, `Verificación automática:\n${verification.summary}`);
                   wrote = true; progresoPaso = true;
                 }
+                if (!usadas.length) finalVerificationOk = verification.ok;
                 if (!verification.ok) { ultimoFallo = true; wrote = true; }
                 if (!usadas.length && !verification.ok && !verification.changed) coder.stopped = "unresolved_verification";
               }
@@ -3907,7 +4117,7 @@ async function main(args) {
             resultadosPendientes = resultados;
             const work = scope !== null || reads.length > 0 || ranCommand || searches.length > 0 || wrote || effects?.navegaciones?.length > 0 || effects?.webs?.length > 0;
             if (coder?.stopped) return null;
-            if (coder && !usadas.length && !coder.state.errors.length) { coder.state.phase = "DONE"; coder.trace("done",{tests:coder.state.tests}); return null; }
+            if (coder && !usadas.length && !coder.state.errors.length && finalVerificationOk) { coder.state.phase = "DONE"; coder.trace("done",{tests:coder.state.tests}); return null; }
             if (follow && work) {
               if (nativa) return { texto: "", resultados };
               return { texto: [AVISO_SEGUIR, ...pieces].join("\n\n"), resultados: null, imagenes: [...imagenesPorLlamada.values()].flat() };

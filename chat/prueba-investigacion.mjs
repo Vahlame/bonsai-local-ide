@@ -29,21 +29,32 @@ const server = http.createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}`;
+const allowPrivate = { allowPrivate: true };
 try {
-  const page = JSON.parse(await leerWeb({ url: `${base}/redirect` }));
+  const page = JSON.parse(await leerWeb({ url: `${base}/redirect` }, allowPrivate));
   assert.equal(page.url, `${base}/fuente`); assert.equal(page.titulo, "Fuente técnica");
   assert.match(page.texto, /Referencia real/); assert.match(page.aviso, /no confiables/);
-  const range = JSON.parse(await leerWeb({ url: `${base}/grande`, desde: 300, caracteres: 200 }));
+  const range = JSON.parse(await leerWeb({ url: `${base}/grande`, desde: 300, caracteres: 200 }, allowPrivate));
   assert.equal(range.texto.length, 200); assert.equal(range.siguiente, 500);
-  const bounded = await descargarWeb(`${base}/grande`, { maxBytes: 500 });
+  const bounded = await descargarWeb(`${base}/grande`, { maxBytes: 500, allowPrivate: true });
   assert.equal(bounded.text.length, 500); assert.equal(bounded.truncado, true);
-  await assert.rejects(descargarWeb(`${base}/loop`), /redirecciones/);
-  await assert.rejects(leerWeb({ url: `${base}/bin` }), /Contenido application\/octet-stream/);
+  await assert.rejects(descargarWeb(`${base}/loop`, allowPrivate), /redirecciones/);
+  await assert.rejects(leerWeb({ url: `${base}/bin` }, allowPrivate), /Contenido application\/octet-stream/);
   await assert.rejects(leerWeb({ url: "file:///C:/Windows/win.ini" }), /http\/https/);
-  await assert.rejects(descargarWeb(`${base}/lento`, { timeoutMs: 30 }), /timeout|aborted/i);
+  await assert.rejects(descargarWeb(`${base}/lento`, { timeoutMs: 30, allowPrivate: true }), /timeout|aborted/i);
   const port = server.address().port;
-  await assert.rejects(leerWeb({ url: `${base}/privado` }, { blockedPorts: [port] }), /puerto pertenece al IDE/);
-  await assert.rejects(descargarWeb("https://example.org/redirect", { blockedPorts: [port], fetcher: async () => new Response(null, { status: 302, headers: { location: `${base}/privado` } }) }), /puerto pertenece al IDE/);
+  await assert.rejects(leerWeb({ url: `${base}/privado` }, { blockedPorts: [port], allowPrivate: true }), /puerto pertenece al IDE/);
+  await assert.rejects(descargarWeb("https://example.org/redirect", { blockedPorts: [port], fetcher: async () => new Response(null, { status: 302, headers: { location: `${base}/privado` } }), allowPrivate: true }), /puerto pertenece al IDE/);
+  // P2-19: direcciones privadas/loopback/metadatos bloqueadas por defecto
+  await assert.rejects(descargarWeb("http://127.0.0.1:9999/"), /Dirección privada\/loopback\/metadatos no permitida/);
+  await assert.rejects(descargarWeb("http://10.0.0.1/"), /Dirección privada\/loopback\/metadatos no permitida/);
+  await assert.rejects(descargarWeb("http://192.168.1.1/"), /Dirección privada\/loopback\/metadatos no permitida/);
+  await assert.rejects(descargarWeb("http://172.16.0.1/"), /Dirección privada\/loopback\/metadatos no permitida/);
+  await assert.rejects(descargarWeb("http://169.254.169.254/"), /Endpoint de metadatos de nube no permitido/);
+  await assert.rejects(descargarWeb("http://metadata.google.internal/"), /Endpoint de metadatos de nube no permitido/);
+  // Con allowPrivate=true se permiten (test usa fixture local)
+  const ok = await descargarWeb(`${base}/fuente`, { allowPrivate: true });
+  assert.ok(ok.text.includes("Referencia real"));
   console.log("Investigación: los puertos del IDE/modelo se protegen también tras redirecciones; otras APIs locales siguen disponibles.");
   console.log("Investigación: búsqueda con fallback, lectura, fuentes, paginación, redirecciones, límites y cancelación verificados.");
 } finally { server.closeAllConnections(); await new Promise((r) => server.close(r)); }

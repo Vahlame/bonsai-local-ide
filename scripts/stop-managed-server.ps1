@@ -11,9 +11,19 @@ param([Parameter(Mandatory=$true)][int]$Port, [switch]$CheckOnly)
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
 $Marker = Join-Path $RootDir "logs\servidor-administrado-$Port.json"
-$ExpectedExe = [IO.Path]::GetFullPath((Join-Path $RootDir "bin\llama-server.exe"))
+# Un servidor administrado puede usar el binario historico (bin\) o el optimizado
+# para sm89 (.local\opt\...\build-RTX4060-Opt-sm89\bin\). Ambos son validos.
+$ExpectedExes = @(
+    [IO.Path]::GetFullPath((Join-Path $RootDir "bin\llama-server.exe")),
+    [IO.Path]::GetFullPath((Join-Path $env:USERPROFILE ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe")),
+    [IO.Path]::GetFullPath((Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"))
+)
 $Catalogo = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
-$StartServer = Join-Path $RootDir "scripts\start-server.ps1"
+# Cualquiera de estos lanzadores es "nuestro" (historico u optimizado).
+$StartScripts = @(
+    (Join-Path $RootDir "scripts\start-server.ps1"),
+    (Join-Path $RootDir "scripts\start-gpu-model-rtx4060-optimized.ps1")
+)
 
 function Get-Win32Process([int]$Id) {
     if ($Id -le 0) { return $null }
@@ -42,7 +52,8 @@ function Get-ModelPathDelMarcador($Info) {
 }
 function Test-ServidorEsperado($Proceso, [string]$ModelPath) {
     if (-not $Proceso -or -not $Proceso.ExecutablePath) { return $false }
-    if ((Get-RealPath $Proceso.ExecutablePath) -ine $ExpectedExe) { return $false }
+    $exe = Get-RealPath $Proceso.ExecutablePath
+    if (-not ($ExpectedExes | Where-Object { $_ -ieq $exe })) { return $false }
     $cmd = [string]$Proceso.CommandLine
     if (-not $cmd) { return $false }
     if (-not ($cmd -match ("(?i)(?:^|\s)--port\s+" + $Port + "(?:\s|$)"))) { return $false }
@@ -58,7 +69,9 @@ function Test-Lanzador($Proceso, $Info) {
     $cmd = [string]$Proceso.CommandLine
     if (-not $cmd) { return $false }
     if ($cmd -notmatch '(?i)(?:^|\s)-ManagedByIDE(?:\s|$)') { return $false }
-    if ($cmd -notlike ("*" + $StartServer + "*")) { return $false }
+    $esNuestro = $false
+    foreach ($script in $StartScripts) { if ($cmd -like ("*" + $script + "*")) { $esNuestro = $true; break } }
+    if (-not $esNuestro) { return $false }
     $marcador = Read-Ticks ([string]$Info.iniciado)
     if ($marcador -le 0) { return $false }
     return ((Get-StartTicks ([int]$Proceso.ProcessId)) -eq $marcador)

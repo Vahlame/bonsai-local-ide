@@ -1,0 +1,44 @@
+{
+  "optimized": {
+    "label": "Optimizado RTX 4060",
+    "saltos": 32,
+    "avisos": 3,
+    "nota": "Perfil agresivo para RTX 4060 8GB. Más saltos, menos avisos. Confía en verificación automática.",
+    "strategy": "auto",
+    "maxSteps": 40,
+    "maxRepairs": 4,
+    "timeoutMs": 300000,
+    "repoMapTokens": 8000,
+    "toolResultTokens": 12000,
+    "verification": {
+      "autoRepair": true,
+      "runTests": true,
+      "speculativeCheck": true
+    }
+  },
+  "optimized-conservative": {
+    "label": "Optimizado Conservador",
+    "saltos": 24,
+    "avisos": 2,
+    "nota": "Balanceado: más saltos que legacy pero con verificaciones estrictas.",
+    "strategy": "auto",
+    "maxSteps": 30,
+    "maxRepairs": 3,
+    "timeoutMs": 240000,
+    "repoMapTokens": 6000,
+    "toolResultTokens": 10000
+  },
+  "optimized-speed": {
+    "label": "Optimizado Velocidad",
+    "saltos": 40,
+    "avisos": 4,
+    "nota": "Máxima velocidad. Menos verificaciones, más ejecución paralela.",
+    "strategy": "auto",
+    "maxSteps": 50,
+    "maxRepairs": 5,
+    "timeoutMs": 360000,
+    "repoMapTokens": 10000,
+    "toolResultTokens": 15000,
+    "parallelTools": true
+  }
+}

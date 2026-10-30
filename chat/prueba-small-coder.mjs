@@ -274,6 +274,19 @@ try {
   await task2.verify({ final: true });
   assert.equal(task2.state.phase,"REPAIR","exhausted repair attempts must retain the failure phase");
   assert.equal(task2.stopped, "repair_limit");
+  // P2-20: un cierre sin cambios ni archivos inspeccionados no es una verificación.
+  const vacio = path.join(temp, "empty-project");
+  fs.mkdirSync(vacio);
+  const sinEvidencia = await new CoderTask({
+    root: vacio,
+    goal: "Arregla el bug",
+  }).start();
+  const cierreSinEvidencia = await sinEvidencia.verify({ final: true });
+  assert.equal(cierreSinEvidencia.ok, false);
+  assert.equal(cierreSinEvidencia.changed, false);
+  assert.match(cierreSinEvidencia.summary, /no hay evidencia/i);
+  assert.notEqual(sinEvidencia.state.phase, "DONE");
+  assert.equal((await sinEvidencia.verify()).ok, true, "una comprobación no final sigue siendo un no-op");
   // An edit that grows beyond the indexing budget must still be detected and parsed.
   const limited = await new CoderTask({
     root,
@@ -492,7 +505,15 @@ try {
       res.writeHead(500,{"Content-Type":"application/json"});
       return res.end(JSON.stringify({error:{message:"CUDA out of memory"}}));
     }
+    const ultimoPedido = [...b.messages].reverse().find((m) => m.role === "user");
+    const pedidoActual = typeof ultimoPedido?.content === "string" ? ultimoPedido.content : "";
+    const respuestaPermiso = b.messages.some((m) => m.role === "tool" && m.tool_call_id === "permiso-edit");
     let delta =
+      pedidoActual.includes("PRUEBA_PERMISO_VERIFICACION")
+      ? (respuestaPermiso
+        ? {content:"Archivo creado; la verificación necesita autorización."}
+        : native("permiso-edit","archivo",{ruta:"permiso-verificacion.txt",contenido:"creado por la tarea\n"}))
+      :
       b.messages.some(m => typeof m.content === "string" && m.content.includes("PRUEBA_MCP_REAL"))
       ? (b.messages.some(m=>m.role === "tool" && m.tool_call_id === "mcp1")
         ? {content:"Página verificada."}
@@ -662,6 +683,53 @@ try {
     fs.readFileSync(path.join(state, "ui-session.json"), "utf8"),
   );
   assert.equal(metadatosSesion(persisted).taskState.phase, "DONE");
+  // P2-17: un comando de verificación definido por el repositorio pasa por el permiso
+  // del modo ask; denegarlo no ejecuta nada.
+  const marcadorVerificacion = path.join(ws, "permiso-verificacion-ejecutado.txt");
+  fs.writeFileSync(
+    path.join(ws, ".bonsai-coder.json"),
+    JSON.stringify({
+      verification: [{
+        file: process.execPath,
+        args: ["-e", "require('fs').writeFileSync('permiso-verificacion-ejecutado.txt','ejecutado')"],
+      }],
+    }),
+  );
+  await post("/api/permit", { mode: "ask" });
+  const eventosPermiso = [];
+  const respuestasPermiso = [];
+  const chatPermiso = await post("/api/chat", { text: "PRUEBA_PERMISO_VERIFICACION: crea permiso-verificacion.txt" });
+  await leerSSE(chatPermiso.body, {
+    exigirFin: false,
+    alEvento: (e) => {
+      eventosPermiso.push(e);
+      if (e.type === "action" && e.state === "permit") {
+        assert.equal(fs.existsSync(marcadorVerificacion), false, "la verificación no puede ejecutarse antes de autorizarla");
+        respuestasPermiso.push(post("/api/permit", { id: e.id, allow: false }));
+      }
+    },
+  });
+  await Promise.all(respuestasPermiso);
+  const filaPermiso = eventosPermiso.find((e) => e.type === "action" && e.kind === "cmd" && e.state === "permit");
+  assert.ok(filaPermiso, JSON.stringify(eventosPermiso.filter((e) => e.type === "action")).slice(0, 500));
+  assert.ok(!fs.existsSync(marcadorVerificacion), "una verificación denegada no debe ejecutar el comando");
+  const filaDenegada = eventosPermiso.findLast((e) => e.type === "action" && e.id === filaPermiso.id);
+  assert.equal(filaDenegada?.state, "denied");
+  assert.match(String(filaDenegada?.detail || ""), /Verificación no autorizada/);
+  fs.unlinkSync(path.join(ws, ".bonsai-coder.json"));
+  await post("/api/permit", { mode: "all" });
+  // P2-20: un turno sin herramientas, cambios ni archivos inspeccionados no termina DONE.
+  const vacioIntegracion = path.join(temp, "workspace-vacio");
+  fs.mkdirSync(vacioIntegracion);
+  assert.equal((await post("/api/workspace", { path: vacioIntegracion })).status, 200);
+  const sinEvidenciaIntegracion = await post("/api/chat", { text: "Arregla el bug" });
+  const eventosSinEvidencia = [];
+  await leerSSE(sinEvidenciaIntegracion.body, { exigirFin: false, alEvento: (e) => eventosSinEvidencia.push(e) });
+  const estadoSinEvidencia = JSON.parse(fs.readFileSync(path.join(state, "ui-session.json"), "utf8"));
+  assert.notEqual(metadatosSesion(estadoSinEvidencia).taskState.phase, "DONE", "sin evidencia no puede declararse DONE");
+  assert.equal(estadoSinEvidencia.lastStop?.motivo, "unresolved_verification");
+  assert.ok(!eventosSinEvidencia.some((e) => e.type === "done" && e.motivo === "completed"));
+  assert.equal((await post("/api/workspace", { path: ws })).status, 200);
   const antesMcp = bodies.length;
   const mcp = await post("/api/chat",{text:"PRUEBA_MCP_REAL: comprueba la página de prueba"});
   await leerSSE(mcp.body,{exigirFin:false,alEvento:()=>{}});

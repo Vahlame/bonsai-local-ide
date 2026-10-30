@@ -112,8 +112,6 @@
     return new Promise((resolve) => {
       const fondo = el("div", "dialogo-fondo");
       const caja = el("div", "dialogo");
-      caja.setAttribute("role", "dialog");
-      caja.setAttribute("aria-modal", "true");
       const h = el("h3", "", opciones.titulo);
       caja.append(h);
       if (opciones.texto) caja.append(el("p", "", opciones.texto));
@@ -131,6 +129,7 @@
       caja.append(botones);
       fondo.append(caja);
       document.body.append(fondo);
+      accesibilizarDialogo(fondo, caja, h);
       input.focus();
       input.select();
 
@@ -167,8 +166,75 @@
    * cerraba en el acto: el menú no llegaba a verse. Se ignora ese clic de apertura.
    */
   let ignorarClicDeApertura = false;
+  let dialogoSeq = 0;
+  /** Diálogos abiertos, del más antiguo al más reciente: solo el último atrapa Tab. */
+  const pilaDialogos = [];
+
+  /**
+   * Accesibilidad común de los diálogos: nombre accesible, modal real, foco atrapado
+   * mientras están abiertos y devuelto al cerrarse. No mueve el foco de un panel que
+   * el usuario esté usando al recargar contenido en segundo plano.
+   * @param {HTMLElement} fondo
+   * @param {HTMLElement} caja
+   * @param {HTMLElement} titulo
+   * @param {{onEscape?: () => void}} [opciones]
+   */
+  function accesibilizarDialogo(fondo, caja, titulo, { onEscape } = {}) {
+    const tituloId = `dialogo-titulo-${++dialogoSeq}`;
+    titulo.id = tituloId;
+    caja.setAttribute("role", "dialog");
+    caja.setAttribute("aria-modal", "true");
+    caja.setAttribute("aria-labelledby", tituloId);
+    const previo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const entrada = { fondo };
+    pilaDialogos.push(entrada);
+    const enfocables = () =>
+      [...caja.querySelectorAll("button,[href],input,select,textarea,[tabindex]:not([tabindex='-1'])")]
+        .filter((n) => !n.disabled && !n.hidden && n.getClientRects().length > 0);
+    /** @param {KeyboardEvent} e */
+    const tecla = (e) => {
+      if (pilaDialogos[pilaDialogos.length - 1] !== entrada) return;
+      if (e.key === "Escape" && onEscape) {
+        e.preventDefault();
+        e.stopPropagation();
+        onEscape();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const lista = enfocables();
+      if (!lista.length) {
+        e.preventDefault();
+        return;
+      }
+      const primero = lista[0];
+      const ultimo = lista[lista.length - 1];
+      const activo = document.activeElement;
+      if (e.shiftKey && (activo === primero || !caja.contains(activo))) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && (activo === ultimo || !caja.contains(activo))) {
+        e.preventDefault();
+        primero.focus();
+      }
+    };
+    document.addEventListener("keydown", tecla, true);
+    const observador = new MutationObserver(() => {
+      if (fondo.isConnected) return;
+      observador.disconnect();
+      document.removeEventListener("keydown", tecla, true);
+      const indice = pilaDialogos.indexOf(entrada);
+      if (indice >= 0) pilaDialogos.splice(indice, 1);
+      if (previo?.isConnected) previo.focus();
+    });
+    observador.observe(document.body, { childList: true });
+    const inicial = enfocables()[0];
+    if (inicial) inicial.focus();
+  }
+
   /**
    * Diálogo de sí/no (sin campo de texto), para confirmar borrados.
+   * El foco empieza en Cancelar y Enter solo acepta si nace en el botón de aceptar:
+   * así un Enter reflejo no borra nada.
    * @param {string} titulo
    * @param {string} texto
    * @param {string} [ok]
@@ -178,9 +244,8 @@
     return new Promise((resolve) => {
       const fondo = el("div", "dialogo-fondo");
       const caja = el("div", "dialogo");
-      caja.setAttribute("role", "dialog");
-      caja.setAttribute("aria-modal", "true");
-      caja.append(el("h3", "", titulo), el("p", "", texto));
+      const h = el("h3", "", titulo);
+      caja.append(h, el("p", "", texto));
       const botones = el("div", "d-botones");
       const no = el("button", "ghost", "Cancelar");
       no.type = "button";
@@ -190,6 +255,7 @@
       caja.append(botones);
       fondo.append(caja);
       document.body.append(fondo);
+      accesibilizarDialogo(fondo, caja, h);
       const cerrar = (valor) => {
         fondo.remove();
         document.removeEventListener("keydown", tecla, true);
@@ -198,9 +264,11 @@
       /** @param {KeyboardEvent} e */
       const tecla = (e) => {
         if (e.key === "Escape") {
+          e.preventDefault();
           e.stopPropagation();
           cerrar(false);
-        } else if (e.key === "Enter") {
+        } else if (e.key === "Enter" && e.target === si) {
+          e.preventDefault();
           e.stopPropagation();
           cerrar(true);
         }
@@ -211,7 +279,7 @@
       fondo.addEventListener("click", (e) => {
         if (e.target === fondo) cerrar(false);
       });
-      si.focus();
+      no.focus();
     });
   }
   function cerrarMenu() {
@@ -309,9 +377,32 @@
   }
 
   // ===================================================== pestañas + editor
-  /** @type {{rel: string, texto: string, guardado: string, truncado: boolean, bytes: number, cursor: number}[]} */
+  /** @type {{rel: string, texto: string, guardado: string, original: string, eol: string, truncado: boolean, bytes: number, cursor: number}[]} */
   const pestanas = [];
   let activa = -1;
+
+  /**
+   * El navegador convierte CRLF a LF dentro de un <textarea>. Se edita siempre en LF
+   * y se reconstruye el estilo original al guardar. En archivos mixtos se conserva el
+   * estilo dominante (política explícita: no se reescribe el archivo sin guardar).
+   * @param {string} texto
+   * @returns {{eol: string, mixto: boolean}}
+   */
+  function analizarSaltos(texto) {
+    const crlf = (texto.match(/\r\n/g) || []).length;
+    const lf = (texto.match(/(^|[^\r])\n/g) || []).length;
+    return { eol: crlf > lf ? "\r\n" : "\n", mixto: crlf > 0 && lf > 0 };
+  }
+
+  /** @param {string} texto */
+  function normalizarSaltos(texto) {
+    return texto.replace(/\r\n/g, "\n");
+  }
+
+  /** @param {string} texto @param {string} eol */
+  function restaurarSaltos(texto, eol) {
+    return eol === "\r\n" ? texto.replace(/\n/g, "\r\n") : texto;
+  }
 
   const editor = $("#editor");
   const code = $("#code");
@@ -417,8 +508,8 @@
     if (typeof paintTree === "function") paintTree();
   }
 
-  /** @param {number} i */
-  function mostrarPestana(i) {
+  /** @param {number} i @param {boolean} [enfocar] */
+  function mostrarPestana(i, enfocar = true) {
     if (i < 0 || i >= pestanas.length) return;
     clearTimeout(temporizadorResaltado);
     // Guarda dónde estaba el cursor en la pestaña que se deja.
@@ -435,7 +526,7 @@
     area.classList.toggle("plain", !esEditable(p.rel));
     pintarResaltado(p);
     pintarNota(p);
-    area.focus({ preventScroll: true });
+    if (enfocar) area.focus({ preventScroll: true });
     area.setSelectionRange(Math.min(p.cursor, p.texto.length), Math.min(p.cursor, p.texto.length));
     pintarPestanas();
     if (typeof paintAttached === "function") paintAttached();
@@ -556,12 +647,14 @@
         avisar(`No se pudo abrir ${rel}`, "error");
         return;
       }
-      const texto = await res.text();
+      const crudo = await res.text();
+      const saltos = analizarSaltos(crudo);
+      const texto = normalizarSaltos(crudo);
       const truncado = res.headers.get("X-Bonsai-Truncado") === "1";
       // Dos clics mientras carga no deben abrir dos copias del mismo documento.
       const existente = pestanas.findIndex((p) => p.rel === rel);
       if (existente >= 0) { mostrarPestana(existente); return; }
-      pestanas.push({ rel, texto, guardado: texto, truncado, bytes: Number(res.headers.get("X-Bonsai-Bytes")) || texto.length, cursor });
+      pestanas.push({ rel, texto, guardado: texto, original: crudo, eol: saltos.eol, truncado, bytes: Number(res.headers.get("X-Bonsai-Bytes")) || texto.length, cursor });
       mostrarPestana(pestanas.length - 1);
     } catch (err) {
       avisar(`No se pudo abrir ${rel}: ${err.message}`, "error");
@@ -586,13 +679,15 @@
       return true;
     }
     const enviado = p.texto;
+    const contenido = restaurarSaltos(enviado, p.eol);
     const ruta = p.rel;
-    const operacion = api("/api/file", { cuerpo: { path: ruta, content: enviado, before: p.guardado } });
+    const operacion = api("/api/file", { cuerpo: { path: ruta, content: contenido, before: p.original } });
     p.guardando = operacion.catch(() => {});
     try {
       await operacion;
       // Si se siguió escribiendo durante la petición, lo nuevo sigue sin guardar.
       p.guardado = enviado;
+      p.original = contenido;
       if (pestanas[activa] === p) pintarNota(p);
       pintarPestanas();
       if (!silencioso) avisar(`Guardado ${p.rel}`, "ok", 2200);
@@ -673,9 +768,16 @@
     try {
       const res = await fetch(`/api/file?path=${encodeURIComponent(p.rel)}`, { cache: "no-store" });
       if (!res.ok) return;
-      const texto = await res.text();
+      const crudo = await res.text();
+      const saltos = analizarSaltos(crudo);
+      const texto = normalizarSaltos(crudo);
       if (!pestanas.includes(p) || p.guardando) return;
-      if (texto === p.guardado) return;
+      if (texto === p.guardado) {
+        // El disco no cambió (o solo cambió su estilo de salto): refresca el original.
+        p.original = crudo;
+        p.eol = saltos.eol;
+        return;
+      }
       if (p.texto !== p.guardado) {
         if (p.conflicto === texto) return;
         p.conflicto = texto;
@@ -684,15 +786,19 @@
           hacer: () => {
             p.texto = texto;
             p.guardado = texto;
+            p.original = crudo;
+            p.eol = saltos.eol;
             p.conflicto = null;
-            if (pestanas[activa] === p) mostrarPestana(activa);
+            if (pestanas[activa] === p) mostrarPestana(activa, false);
           },
         });
         return;
       }
       p.texto = texto;
       p.guardado = texto;
-      if (pestanas[activa] === p) mostrarPestana(activa);
+      p.original = crudo;
+      p.eol = saltos.eol;
+      if (pestanas[activa] === p) mostrarPestana(activa, false);
       avisar(`«${p.rel}» se recargó: el agente lo reescribió.`, "", 2600);
     } catch {
       /* el servidor no responde: se reintenta en el siguiente ciclo */
@@ -924,13 +1030,19 @@
   /** @type {{repo: boolean, rama?: string, archivos?: {estado: string, rel: string}[], ultimo?: {hash: string, asunto: string, cuando: string}}} */
   let estadoGit = { repo: false };
 
+  let gitEnCurso = false;
   async function refrescarGit() {
+    if (gitEnCurso || document.hidden) return;
+    gitEnCurso = true;
     try {
       estadoGit = await api("/api/git");
+      pintarChipGit();
     } catch {
       estadoGit = { repo: false };
+      pintarChipGit();
+    } finally {
+      gitEnCurso = false;
     }
-    pintarChipGit();
   }
 
   function pintarChipGit() {
@@ -1006,7 +1118,8 @@
       const fondo = el("div", "dialogo-fondo");
       const caja = el("div", "dialogo");
       caja.style.width = "min(680px, 94vw)";
-      caja.append(el("h3", "", "Elegir archivos para el commit"));
+      const h = el("h3", "", "Elegir archivos para el commit");
+      caja.append(h);
       caja.append(el("p", "", "Marca solo los archivos que quieres incluir. Revisa especialmente los que contienen datos privados."));
       const lista = el("div");
       lista.style.cssText = "max-height:50vh;overflow:auto;font:12px/1.7 var(--mono);margin-bottom:16px";
@@ -1038,6 +1151,7 @@
       document.addEventListener("keydown", tecla, true);
       botones.append(cancelar, elegir);
       caja.append(botones); fondo.append(caja); document.body.append(fondo);
+      accesibilizarDialogo(fondo, caja, h);
       cancelar.focus();
     });
   }
@@ -1052,7 +1166,8 @@
     const caja = el("div", "dialogo");
     caja.classList.add("settings-dialog");
     caja.style.width = "min(620px, 94vw)";
-    caja.append(el("h3", "", "Cambios pendientes"));
+    const h = el("h3", "", "Cambios pendientes");
+    caja.append(h);
     const lista = el("div");
     lista.style.cssText = "max-height:50vh;overflow:auto;font:12px/1.7 var(--mono);margin-bottom:16px";
     for (const a of estadoGit.archivos) {
@@ -1071,6 +1186,7 @@
     caja.append(botones);
     fondo.append(caja);
     document.body.append(fondo);
+    accesibilizarDialogo(fondo, caja, h, { onEscape: () => fondo.remove() });
     cerrar.focus();
   }
 
@@ -1146,7 +1262,7 @@
   async function borrarArchivo(rel) {
     const ok = await confirmar(
       `Borrar «${rel}»`,
-      "Se quita de la carpeta de trabajo. Los archivos de texto se pueden restaurar con el botón Deshacer del aviso; las carpetas, no.",
+      "Se quita de la carpeta de trabajo. Solo los archivos de texto pequeños se pueden restaurar con el botón Deshacer del aviso; los binarios, los archivos grandes y las carpetas, no.",
       "Borrar",
     );
     if (!ok) return;
@@ -1236,14 +1352,15 @@
     const fondo = el("div", "dialogo-fondo");
     const caja = el("div", "dialogo");
     caja.style.width = "min(680px, 94vw)";
-    caja.append(el("h3", "", "Reglas del proyecto"));
+    const h = el("h3", "", "Convenios del proyecto");
+    caja.append(h);
     caja.append(
       el(
         "p",
         "",
         datos.fuentes.length
-          ? `Se están aplicando ${datos.fuentes.length} archivo(s): ${datos.fuentes.join(", ")}. Se meten en el mensaje de sistema del modelo.`
-          : "No hay ninguna. Crea BONSAI.md, AGENTS.md o .cursor/rules/*.mdc en la carpeta de trabajo y se aplicarán solas.",
+          ? `Se están aplicando ${datos.fuentes.length} archivo(s): ${datos.fuentes.join(", ")}. Son datos de convención del proyecto (no instrucciones nuevas) que se inyectan como referencia.`
+          : "No hay ninguna. Crea BONSAI.md, AGENTS.md o .cursor/rules/*.mdc en la carpeta de trabajo y se usarán como referencia.",
       ),
     );
     if (datos.texto) {
@@ -1260,6 +1377,7 @@
     caja.append(botones);
     fondo.append(caja);
     document.body.append(fondo);
+    accesibilizarDialogo(fondo, caja, h, { onEscape: () => fondo.remove() });
     cerrar.focus();
   }
 
@@ -1277,7 +1395,7 @@
         chip.innerHTML = "";
         chip.append(el("i", "dot"));
         chip.append(el("span", "", d.aplicado === false ? `Reglas: ${d.fuentes.length} (apagadas)` : `Reglas: ${d.fuentes.length}`));
-        chip.title = `${d.fuentes.join("\n")}\n\n${d.aplicado === false ? "No se están aplicando: el ajuste está desactivado." : `Se meten en el mensaje de sistema (tope ${d.topeTokens} tokens).`}`;
+        chip.title = `${d.fuentes.join("\n")}\n\n${d.aplicado === false ? "No se están aplicando: el ajuste está desactivado." : `Son datos de convención inyectados como referencia (tope ${d.topeTokens} tokens).`}`;
       })
       .catch(() => {
         chip.hidden = true;
@@ -1425,7 +1543,8 @@
     const fondo = el("div", "dialogo-fondo");
     const caja = el("div", "dialogo");
     caja.style.cssText = "width:min(760px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;box-sizing:border-box";
-    caja.append(el("h3", "", "Memoria global entre chats"));
+    const h = el("h3", "", "Memoria global entre chats");
+    caja.append(h);
     const estado = el("p");
     estado.style.cssText = "color:var(--muted);font-size:12px;line-height:1.5";
     caja.append(estado);
@@ -1586,13 +1705,15 @@
       clearTimeout(temporizador);
       temporizador = window.setTimeout(cargar, 250);
     });
-    cerrar.addEventListener("click", () => {
+    const cerrarDialogo = () => {
       clearTimeout(temporizador);
       fondo.remove();
-    });
-    fondo.addEventListener("click", (event) => { if (event.target === fondo) fondo.remove(); });
+    };
+    cerrar.addEventListener("click", cerrarDialogo);
+    fondo.addEventListener("click", (event) => { if (event.target === fondo) cerrarDialogo(); });
     fondo.append(caja);
     document.body.append(fondo);
+    accesibilizarDialogo(fondo, caja, h, { onEscape: cerrarDialogo });
     cerrar.focus();
     await cargar();
   }
@@ -1605,7 +1726,8 @@
     const fondo = el("div", "dialogo-fondo");
     const caja = el("div", "dialogo");
     caja.style.cssText="width:min(640px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;box-sizing:border-box";
-    caja.append(el("h3", "", "Ajustes"));
+    const h = el("h3", "", "Ajustes");
+    caja.append(h);
     caja.append(el("p", "", "Tu espacio y tu modelo. Los cambios se guardan automáticamente."));
 
     /** @param {string} etiqueta @param {HTMLElement} control */
@@ -1853,6 +1975,7 @@
     caja.append(botones);
     fondo.append(caja);
     document.body.append(fondo);
+    accesibilizarDialogo(fondo, caja, h, { onEscape: () => fondo.remove() });
     cerrar.focus();
   }
 
@@ -1867,7 +1990,8 @@
       const fondo = el("div", "dialogo-fondo");
       const caja = el("div", "dialogo");
       caja.style.width = "min(780px, 95vw)";
-      caja.append(el("h3", "", r.borra ? `Borrado propuesto en ${r.rel}` : `Cambio propuesto en ${r.rel}`));
+      const h = el("h3", "", r.borra ? `Borrado propuesto en ${r.rel}` : `Cambio propuesto en ${r.rel}`);
+      caja.append(h);
       caja.append(el("p", "", `Se aplicará el rango real de líneas ${r.start}-${r.end}. Nada se guarda hasta que aceptes.`));
       if (r.recortada) {
         const aviso = el(
@@ -1919,6 +2043,7 @@
       caja.append(botones);
       fondo.append(caja);
       document.body.append(fondo);
+      accesibilizarDialogo(fondo, caja, h);
       const cerrar = (valor) => {
         fondo.remove();
         document.removeEventListener("keydown", tecla, true);
@@ -2043,7 +2168,7 @@
       avisar("El servidor no devolvió la base de la propuesta: no se toca el archivo. Actualiza el servidor.", "error", 9000);
       return;
     }
-    if (r.base !== antes.guardado) {
+    if (normalizarSaltos(r.base) !== antes.guardado) {
       avisar(
         "El archivo cambió en disco desde que se abrió y la propuesta se hizo sobre otra versión. No se ha tocado nada: recarga el archivo y vuelve a intentarlo.",
         "warn",
@@ -2097,8 +2222,10 @@
       // El disco ya tiene r.texto. Si mientras se enviaba el guardado el usuario siguió
       // escribiendo, se conserva lo escrito como cambio sin guardar (no se pierde).
       const seguiaIgual = p.texto === antes.texto;
-      p.guardado = r.texto;
-      if (seguiaIgual) p.texto = r.texto;
+      const textoGuardado = normalizarSaltos(r.texto);
+      p.guardado = textoGuardado;
+      p.original = r.texto;
+      if (seguiaIgual) p.texto = textoGuardado;
       if (pestanas[activa] === p) mostrarPestana(activa);
       else pintarPestanas();
       avisar(`Editado ${antes.rel}`, "ok", 2400);
@@ -2126,9 +2253,11 @@
   let servidorEncendido = false;
   let cambiandoServidor = false;
 
+  let servidorEnCurso = false;
   async function refrescarServidor() {
     const boton = $("#servidor-toggle");
-    if (!boton || cambiandoServidor) return;
+    if (!boton || cambiandoServidor || servidorEnCurso || document.hidden) return;
+    servidorEnCurso = true;
     try {
       const estado = await api("/api/servidor");
       if (cambiandoServidor) return;
@@ -2137,6 +2266,7 @@
       boton.title = servidorEncendido ? "Apagar el servidor local de IA" : "Encender el servidor local de IA";
       boton.disabled = false;
     } catch { boton.textContent = "IA sin conexión"; boton.disabled = true; }
+    finally { servidorEnCurso = false; }
   }
 
   async function controlarServidor(accion) {
@@ -2166,17 +2296,23 @@
   void refrescarServidor();
   setInterval(() => void refrescarServidor(), 15000);
 
+  let modelosEnCurso = false;
   async function refrescarModelos() {
+    if (modelosEnCurso || document.hidden) return;
+    modelosEnCurso = true;
     const antes = estadoModelos && estadoModelos.actual;
     try {
       estadoModelos = await api("/api/modelos");
+      pintarChipModelo();
+      // Si el modelo cambió por fuera de la app, la ventana (y con ella el presupuesto de
+      // contexto) también: se refresca el chip en vez de enseñar el valor anterior.
+      if (antes !== estadoModelos.actual) void actualizarChipPresupuesto();
     } catch {
       estadoModelos = { actual: "", modelos: [] };
+      pintarChipModelo();
+    } finally {
+      modelosEnCurso = false;
     }
-    pintarChipModelo();
-    // Si el modelo cambió por fuera de la app, la ventana (y con ella el presupuesto de
-    // contexto) también: se refresca el chip en vez de enseñar el valor anterior.
-    if (antes !== estadoModelos.actual) void actualizarChipPresupuesto();
   }
 
   function pintarChipModelo() {
@@ -2480,6 +2616,14 @@
     // El modelo también puede cambiar por fuera de la app (start-server.ps1 -Modelo, otra
     // pestaña): el chip se refresca solo para no enseñar uno que ya no está cargado.
     setInterval(() => void refrescarModelos(), 15000);
+    // Los intervalos no trabajan con la pestaña oculta; al volver se refresca de inmediato.
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) return;
+      void refrescarServidor();
+      void refrescarModelos();
+      refrescarGit();
+      void comprobarCambiosExternos();
+    });
     pintarVacio();
     pintarPestanas();
     // Enlace directo: http://127.0.0.1:8787/#chat/ui/app.js abre ese archivo.
