@@ -1,0 +1,293 @@
+===FILE: package.json===
+{
+  "name": "taskforge",
+  "version": "1.0.0",
+  "description": "A priority-based async task scheduler.",
+  "type": "module",
+  "main": "src/scheduler.mjs",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
+===END FILE===
+
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this.heap = [];
+    this.counter = 0;
+    this.size = 0;
+  }
+
+  enqueue(item, priority) {
+    const entry = { item, priority, order: this.counter++ };
+    this.heap.push(entry);
+    this.size += 1;
+    this._bubbleUp(this.heap.length - 1);
+  }
+
+  dequeue() {
+    if (this.size === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const heap = this.heap;
+    const first = heap[0].item;
+    const last = heap.pop();
+    this.size -= 1;
+    if (this.size > 0) {
+      heap[0] = last;
+      this._sinkDown(0);
+    }
+    return first;
+  }
+
+  _bubbleUp(i) {
+    const heap = this.heap;
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (this._compare(heap[i], heap[parent]) < 0) {
+        [heap[i], heap[parent]] = [heap[parent], heap[i]];
+        i = parent;
+      } else {
+        break;
+      }
+    }
+  }
+
+  _sinkDown(i) {
+    const heap = this.heap;
+    const length = heap.length;
+    while (true) {
+      const left = 2 * i + 1;
+      const right = 2 * i + 2;
+      let smallest = i;
+      if (left < length && this._compare(heap[left], heap[smallest]) < 0) {
+        smallest = left;
+      }
+      if (right < length && this._compare(heap[right], heap[smallest]) < 0) {
+        smallest = right;
+      }
+      if (smallest === i) {
+        break;
+      }
+      [heap[i], heap[smallest]] = [heap[smallest], heap[i]];
+      i = smallest;
+    }
+  }
+
+  _compare(a, b) {
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority;
+    }
+    return a.order - b.order;
+  }
+}
+===END FILE===
+
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency = 1 } = {}) {
+    if (!(concurrency >= 1)) {
+      throw new Error('concurrency must be >= 1');
+    }
+    this.concurrency = concurrency;
+    this.queue = new PriorityQueue();
+    this.idCounter = 0;
+    this.results = [];
+    this.running = 0;
+    this._runScheduled = false;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    if (typeof fn !== 'function') {
+      throw new Error('fn must be a function');
+    }
+    const id = this.idCounter++;
+    this.queue.enqueue({ id, fn, priority, retries }, priority);
+  }
+
+  async run() {
+    this.results = [];
+    this.running = 0;
+    this._runScheduled = false;
+
+    const dispatch = (task) => {
+      this.running += 1;
+      Promise.resolve()
+        .then(() => task.fn())
+        .then(
+          (value) => this._finish(task, value),
+          (error) => this._retry(task, error)
+        )
+        .finally(() => {
+          this.running -= 1;
+          this._maybeSchedule();
+        });
+    };
+
+    const maybeSchedule = () => {
+      if (!this._runScheduled && this.queue.size > 0) {
+        this._runScheduled = true;
+        queueMicrotask(() => this._drain());
+      }
+    };
+
+    this._drain = () => {
+      while (this.running < this.concurrency && this.queue.size > 0) {
+        const task = this.queue.dequeue();
+        dispatch(task);
+      }
+      maybeSchedule();
+    };
+
+    this._maybeSchedule = maybeSchedule;
+    this._drain();
+  }
+
+  _finish(task, value) {
+    this.results.push({
+      id: task.id,
+      ok: true,
+      value,
+      attempts: 1,
+    });
+  }
+
+  _retry(task, error) {
+    if (task.retries > 0) {
+      task.retries -= 1;
+      queueMicrotask(() => this._drain());
+      return;
+    }
+    this.results.push({
+      id: task.id,
+      ok: false,
+      error,
+      attempts: task.retries + 2,
+    });
+  }
+}
+===END FILE===
+
+===FILE: test/priority-queue.test.mjs===
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { PriorityQueue } from '../src/priority-queue.mjs';
+
+test('dequeue returns lowest priority first', () => {
+  const pq = new PriorityQueue();
+  pq.enqueue('c', 3);
+  pq.enqueue('a', 1);
+  pq.enqueue('b', 2);
+  assert.equal(pq.dequeue(), 'a');
+  assert.equal(pq.dequeue(), 'b');
+  assert.equal(pq.dequeue(), 'c');
+  assert.equal(pq.size, 0);
+});
+
+test('ties are resolved by FIFO (insertion order)', () => {
+  const pq = new PriorityQueue();
+  pq.enqueue('first', 5);
+  pq.enqueue('second', 5);
+  pq.enqueue('third', 5);
+  assert.deepEqual([
+    pq.dequeue(),
+    pq.dequeue(),
+    pq.dequeue(),
+  ], ['first', 'second', 'third']);
+});
+
+test('size tracks the number of elements', () => {
+  const pq = new PriorityQueue();
+  assert.equal(pq.size, 0);
+  pq.enqueue('a', 1);
+  pq.enqueue('b', 2);
+  assert.equal(pq.size, 2);
+  pq.dequeue();
+  assert.equal(pq.size, 1);
+});
+
+test('dequeue on empty queue throws', () => {
+  const pq = new PriorityQueue();
+  assert.throws(() => pq.dequeue(), /empty/i);
+});
+===END FILE===
+
+===FILE: test/scheduler.test.mjs===
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { Scheduler } from '../src/scheduler.mjs';
+
+test('respects priority ordering', async () => {
+  const scheduler = new Scheduler({ concurrency: 1 });
+  scheduler.add(async () => 'low', { priority: 1 });
+  scheduler.add(async () => 'high', { priority: 10 });
+  scheduler.add(async () => 'mid', { priority: 5 });
+  const results = await scheduler.run();
+  assert.deepEqual(results.map((r) => r.value), ['high', 'mid', 'low']);
+});
+
+test('never runs more than concurrency tasks at once', async () => {
+  const scheduler = new Scheduler({ concurrency: 2 });
+  let maxSimultaneous = 0;
+  let active = 0;
+  for (let i = 0; i < 10; i++) {
+    scheduler.add(async () => {
+      active += 1;
+      maxSimultaneous = Math.max(maxSimultaneous, active);
+      await new Promise((resolve) => setTimeout(resolve, Math.random() * 20));
+      active -= 1;
+      return i;
+    });
+  }
+  const results = await scheduler.run();
+  assert.equal(maxSimultaneous, 2);
+  assert.deepEqual(results.map((r) => r.value), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+});
+
+test('retries twice and then succeeds', async () => {
+  const scheduler = new Scheduler({ concurrency: 1 });
+  let attempts = 0;
+  scheduler.add(async () => {
+    attempts += 1;
+    if (attempts < 3) {
+      throw new Error('transient');
+    }
+    return 'ok';
+  }, { retries: 2 });
+  const results = await scheduler.run();
+  const result = results[0];
+  assert.equal(result.ok, true);
+  assert.equal(result.value, 'ok');
+  assert.equal(result.attempts, 3);
+});
+
+test('definitive failure returns ok:false with error', async () => {
+  const scheduler = new Scheduler({ concurrency: 1 });
+  scheduler.add(async () => {
+    throw new Error('boom');
+  }, { retries: 2 });
+  const results = await scheduler.run();
+  const result = results[0];
+  assert.equal(result.ok, false);
+  assert.equal(result.error.message, 'boom');
+  assert.equal(result.attempts, 3);
+});
+
+test('results are ordered by completion duration', async () => {
+  const scheduler = new Scheduler({ concurrency: 1 });
+  scheduler.add(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return 'slow';
+  });
+  scheduler.add(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    return 'fast';
+  });
+  const results = await scheduler.run();
+  assert.deepEqual(results.map((r) => r.value), ['fast', 'slow']);
+});
+===END FILE===

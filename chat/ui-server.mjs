@@ -311,7 +311,8 @@ const UI_SERVIDOS = new Set([".js", ".mjs", ".css", ".html", ".svg", ".json", ".
  */
 function parseArgs(argv) {
   // think = presupuesto de razonamiento en tokens; 0 (por defecto) = APAGADO.
-  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 8192, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo", agentProfile:"optimized" };
+  // historyCap = 0 -> automático: el historial usa toda la ventana menos la reserva de salida.
+  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 0, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo", agentProfile:"optimized" };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--host") out.host = argv[++i] ?? out.host;
@@ -1257,12 +1258,12 @@ async function main(args) {
    * @returns {string}
    */
   function comandoServidorOptimizado(preset, puerto) {
-    const nombre = isNamedEnginePreset(preset) ? preset : "8GB-VISION-MAX-F16";
+    const nombre = isNamedEnginePreset(preset) ? preset : "8GB-VISION-MAX-Q8-100K";
     const p = engineProfile(nombre);
     const ctx = Number(p.context) || 16384;
     const kv = String(p.kv || "f16");
     const vision = Boolean(p.vision);
-    const estable = kv === "f16";
+    const estable = true;
 
     const modeloItem = (MODELO.catalogo && MODELO.catalogo.ornith9b) || {};
     const modelPath = path.join(PROJECT, "models", modeloItem.archivo || "Ornith-1.5-9B-Q4_K_M.gguf");
@@ -1285,7 +1286,7 @@ async function main(args) {
     if (!estable) a.push("--cache-ram", "0");
     a.push("-lv", "4",
       "--cors-origins", `http://127.0.0.1:${puerto},http://localhost:${puerto},http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788`,
-      "--temp", "0.6", "--top-p", "0.95", "--top-k", "20", "--min-p", "0",
+      "--temp", "0.6", "--top-p", "0.90", "--top-k", "20", "--min-p", "0.05",
       "--presence-penalty", "0", "--repeat-penalty", "1", "--spec-type", "none", "--no-context-shift");
     if (estable) a.push("--ctx-checkpoints", "0");
     // La plantilla se genera desde modelo.json para que exista al pegar el comando.
@@ -1296,7 +1297,12 @@ async function main(args) {
       }
     } catch { /* se intentara igualmente */ }
     a.push("--chat-template-file", templatePath);
-    if (vision && projPath) a.push("--mmproj", projPath, "--mmproj-offload", "--mmproj-device", "CUDA0", "--image-max-tokens", "512");
+    if (vision && projPath) {
+      a.push("--mmproj", projPath);
+      if (p.mmprojCPU) a.push("--no-mmproj-offload");
+      else a.push("--mmproj-offload", "--mmproj-device", "CUDA0");
+      a.push("--image-max-tokens", "512");
+    }
     if (p.spec === "draft" && p.draftModel) {
       const draftPath = path.join(PROJECT, "models", String(p.draftModel));
       try {
@@ -1324,7 +1330,7 @@ async function main(args) {
     const puerto = new URL(chat.base).port || "80";
     const preset = configuracion ? configuracion.enginePreset || "" : leerAjustes().enginePreset || "";
     // Presets optimizados RTX 4060 -> lanzador dedicado con binario sm89.
-    const optimizado = /^(8GB-VISION-MAX-F16|8GB-VISION-DEFAULT-F16|8GB-VISION-ULTRA-F16|8GB-VISION-HIGH|8GB-VISION-BALANCED|8GB-VISION-SAFE|8GB-CODE-MAX|8GB-CODE-HIGH|8GB-CODE-BALANCED|8GB-CODE-FAST|8GB-RESEARCH|8GB-VISION-QUALITY|8GB-VISION-ULTRA)$/.test(preset);
+    const optimizado = /^(8GB-VISION-MAX-Q8-100K|8GB-VISION-MAX-Q8|8GB-VISION-MAX-Q4|8GB-VISION-MAX-F16|8GB-VISION-DEFAULT-F16|8GB-VISION-ULTRA-F16|8GB-VISION-HIGH|8GB-VISION-BALANCED|8GB-VISION-SAFE|8GB-CODE-MAX|8GB-CODE-HIGH|8GB-CODE-BALANCED|8GB-CODE-FAST|8GB-RESEARCH|8GB-VISION-QUALITY|8GB-VISION-ULTRA)$/.test(preset);
     const script = path.join(PROJECT, "scripts", optimizado ? "start-gpu-model-rtx4060-optimized.ps1" : "start-server.ps1");
     const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-ManagedByIDE", "-Modelo", clave, "-Port", puerto];
     try {
@@ -1715,7 +1721,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: DEFAULT_HISTORY_CAP, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy", memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480 };
+  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy", memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480 };
   // Los ajustes guardados en la interfaz (perfil de muestreo, tope de historial, pensar)
   // mandan sobre los valores por defecto de la línea de comandos. Va AQUÍ y no al principio
   // de main(): `AJUSTES_DEFECTO` es un `const` y llamarlo antes revienta el arranque con
@@ -1731,7 +1737,7 @@ async function main(args) {
       if (modeloListo && (chat.nCtx !== p.context || chat.vision !== Boolean(p.vision))) {
         throw new Error("El motor en ejecución no coincide con el perfil solicitado; vuelve a iniciarlo desde el lanzador.");
       }
-      inicial = guardarAjustes({ enginePreset: args.enginePreset, coderContextTokens: p.context, historial: p.context, ...(args.thinkProvided ? { pensar: args.think } : {}) });
+      inicial = guardarAjustes({ enginePreset: args.enginePreset, coderContextTokens: p.context, historial: 0, ...(args.thinkProvided ? { pensar: args.think } : {}) });
     }
   } else if (args.thinkProvided) inicial = guardarAjustes({ pensar: args.think });
   aplicarAjustesAlChat(inicial);
@@ -1766,15 +1772,21 @@ async function main(args) {
     if (["legacy", "small-local-coder"].includes(agentProfile)) chat.agentProfile = agentProfile;
     const engine = (ajustes.enginePreset && isNamedEnginePreset(ajustes.enginePreset)) ? engineProfile(ajustes.enginePreset) : null;
     const ctxTokens = Number(ajustes.coderContextTokens) || engine?.context || chat.nCtx || 16384;
-    const histTokens = Number(ajustes.historial) || ctxTokens;
+    // historial 0 (o vacío) = AUTOMÁTICO: se usa la ventana menos la reserva de salida
+    // (pensamiento + respuesta). Es el reparto de los modelos frontera; el usuario solo
+    // fija el techo si de verdad quiere dejar contexto sin usar.
+    const histPedido = Number(ajustes.historial);
+    const histAuto = !Number.isFinite(histPedido) || histPedido <= 0;
+    const histTokens = histAuto ? ctxTokens : Math.min(histPedido, ctxTokens);
     const salidaTokens = histTokens >= ctxTokens ? Math.min(18000, Math.max(256, Math.floor(ctxTokens / 2) - 128)) : Math.max(256, ctxTokens - histTokens);
-    const outTokens = engine && histTokens === ctxTokens ? (engine.coderOutputTokens || salidaTokens) : salidaTokens;
+    const outTokens = histAuto && engine ? (engine.coderOutputTokens || salidaTokens) : salidaTokens;
     chat.coderConfig = { ...CODER_CONFIG, contextTokens: ctxTokens, outputTokens: outTokens, toolResultTokens: Math.max(1000, Math.min(6000, Math.floor(ctxTokens / 10))), thinkingTokens: Number(ajustes.pensar) > 0 ? Number(ajustes.pensar) : 2048, ...(engine?.thinkingTokens ? {thinkingTokens:engine.thinkingTokens} : {}), ...coderOptions(process.env.BONSAI_CODER_OPTIONS), ...(ajustes.coderContextTokens ? { contextTokens: ajustes.coderContextTokens } : {}) };
     chat.imageMaxTokens = Number(MODELO.catalogo?.[modeloActualClave()]?.vision?.imageMaxTokens) || 1024;
     const perfil = typeof ajustes.perfil === "string" ? ajustes.perfil : "";
     if (perfil && MODELO.muestreo[perfil]) chat.perfil = perfil;
     const tope = Number(ajustes.historial);
-    if (Number.isFinite(tope) && tope >= 512) chat.configuredCap = tope;
+    // 0 = automático (ventana - reserva). Un valor >= 512 fija un techo manual.
+    chat.configuredCap = Number.isFinite(tope) && tope > 0 ? Math.max(512, tope) : 0;
     // Razonamiento: el que pidió el usuario, pero SOLO si el modelo cargado lo admite
     // (catalogo.<clave>.pensar). Con bolding_v1 se queda apagado aunque esté pedido.
     const capacidadPensar = pensarDe(modeloActualClave());
@@ -2486,7 +2498,7 @@ async function main(args) {
       // ================================================================
       if (req.method === "GET" && url.pathname === "/api/server/command") {
         // Devuelve un comando PowerShell listo para pegar, con rutas absolutas.
-        const preset = url.searchParams.get("preset") || "8GB-VISION-MAX-F16";
+        const preset = url.searchParams.get("preset") || "8GB-VISION-MAX-Q8-100K";
         const comando = comandoServidorOptimizado(preset, args.llamaPort);
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
         res.end(JSON.stringify({ command: comando, preset }));
@@ -2497,11 +2509,11 @@ async function main(args) {
         busy = true;
         try {
           const raw = JSON.parse(await readBody(req));
-          const preset = raw?.preset || "8GB-VISION-MAX-F16";
+          const preset = raw?.preset || "8GB-VISION-MAX-Q8-100K";
           const modelo = raw?.model || "ornith9b";
           
           const validPresets = [
-            "8GB-VISION-MAX-F16",
+            "8GB-VISION-MAX-Q8-100K", "8GB-VISION-MAX-Q8", "8GB-VISION-MAX-Q4", "8GB-VISION-MAX-F16",
             "8GB-VISION-DEFAULT-F16", "8GB-VISION-ULTRA-F16", "8GB-VISION-HIGH",
             "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
             "8GB-CODE-MAX", "8GB-CODE-HIGH", "8GB-CODE-BALANCED", "8GB-CODE-FAST",
@@ -2571,8 +2583,8 @@ async function main(args) {
         // CUSTOM: apply the same validations as named presets (context range, KV type, vision boolean).
         if (raw.enginePreset === "CUSTOM") {
           const contexto = Number(raw.contexto ?? raw.context ?? 16384);
-          if (!Number.isInteger(contexto) || contexto < 4096 || contexto > 65536) {
-            res.writeHead(400).end("Ventana de contexto inválida (4096-65536)"); return;
+          if (!Number.isInteger(contexto) || contexto < 4096 || contexto > 131072) {
+            res.writeHead(400).end("Ventana de contexto inválida (4096-131072)"); return;
           }
           const kv = String(raw.kv ?? "f16");
           if (!["f16", "q8_0", "q4_0"].includes(kv)) {
@@ -2720,8 +2732,10 @@ async function main(args) {
         if ("modoRespuesta" in limpio && !["agente","consulta"].includes(limpio.modoRespuesta)) {
           res.writeHead(400).end("Modo de respuesta inválido"); return;
         }
-        if ("coderContextTokens" in limpio && ![4096,8192,16384,32768,36864,39936,43008].includes(limpio.coderContextTokens)) {
-          res.writeHead(400).end("Contexto coding inválido"); return;
+        if ("coderContextTokens" in limpio) {
+          const n = Number(limpio.coderContextTokens);
+          if (!Number.isInteger(n) || n < 4096 || n > 131072) { res.writeHead(400).end("Contexto coding inválido (4096-131072)"); return; }
+          limpio.coderContextTokens = n;
         }
         if ("enginePreset" in limpio && limpio.enginePreset !== "CUSTOM" && limpio.enginePreset !== "" && !isNamedEnginePreset(limpio.enginePreset)) {
           res.writeHead(400).end("Perfil de motor inválido"); return;

@@ -1,0 +1,322 @@
+===FILE: package.json===
+{
+  "name": "taskforge",
+  "version": "1.0.0",
+  "description": "Priority-based async task scheduler",
+  "type": "module",
+  "main": "src/scheduler.mjs",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
+===END FILE===
+
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  /**
+   * Min-heap priority queue.
+   * Smallest priority is dequeued first. On equal priority, FIFO order
+   * (earlier enqueued item comes out first) is preserved.
+   */
+  constructor() {
+    this.heap = [];
+    this._counter = 0;
+  }
+
+  get size() {
+    return this.heap.length;
+  }
+
+  enqueue(item, priority) {
+    const node = { priority, seq: this._counter++, item };
+    this.heap.push(node);
+    this._bubbleUp(this.heap.length - 1);
+  }
+
+  dequeue() {
+    if (this.heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const [root] = this.heap;
+    const last = this.heap.pop();
+    if (this.heap.length > 0) {
+      this.heap[0] = last;
+      this._bubbleDown(0);
+    }
+    return last.item;
+  }
+
+  _less(a, b) {
+    if (a.priority !== b.priority) {
+      return a.priority < b.priority;
+    }
+    return a.seq < b.seq;
+  }
+
+  _bubbleUp(idx) {
+    const node = this.heap[idx];
+    while (idx > 0) {
+      const parent = (idx - 1) >> 1;
+      if (this._less(node, this.heap[parent])) {
+        [this.heap[idx], this.heap[parent]] = [this.heap[parent], this.heap[idx]];
+        idx = parent;
+      } else {
+        break;
+      }
+    }
+  }
+
+  _bubbleDown(idx) {
+    const node = this.heap[idx];
+    const length = this.heap.length;
+    while (true) {
+      const left = 2 * idx + 1;
+      const right = 2 * idx + 2;
+      let smallest = idx;
+      if (left < length && this._less(this.heap[left], node)) {
+        smallest = left;
+      }
+      if (right < length && this._less(this.heap[right], node)) {
+        smallest = right;
+      }
+      if (smallest === idx) {
+        break;
+      }
+      [this.heap[idx], this.heap[smallest]] = [this.heap[smallest], this.heap[idx]];
+      idx = smallest;
+    }
+  }
+}
+===END FILE===
+
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+/**
+ * Runs async tasks respecting priority and a concurrency limit.
+ *
+ * - Tasks are stored in a priority queue (priority-queue.mjs).
+ * - At most `concurrency` tasks run at the same time.
+ * - A task is retried up to `retries` times; if it still throws, the
+ *   result is { ok: false, error }.
+ * - Results are returned in order of completion.
+ */
+export class Scheduler {
+  constructor({ concurrency = 1 } = {}) {
+    if (!Number.isInteger(concurrency) || concurrency < 1) {
+      throw new Error('concurrency must be an integer >= 1');
+    }
+    this.concurrency = concurrency;
+    this._pq = new PriorityQueue();
+    this._maxActive = 0;
+    this._active = 0;
+    this._counter = 0;
+    this._finished = [];
+    this._stopped = false;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    if (typeof fn !== 'function') {
+      throw new Error('fn must be a function');
+    }
+    const id = ++this._counter;
+    const entry = { id, fn, priority, retries, attempts: 0 };
+    this._pq.enqueue(entry, priority);
+    return id;
+  }
+
+  async run() {
+    this._stopped = false;
+    this._active = 0;
+    this._maxActive = 0;
+    this._finished = [];
+
+    const worker = async () => {
+      while (true) {
+        if (this._stopped) {
+          return;
+        }
+        const entry = this._pq.dequeue();
+        if (!entry) {
+          return;
+        }
+        this._active++;
+        if (this._active > this._maxActive) {
+          this._maxActive = this._active;
+        }
+        try {
+          const value = await entry.fn();
+          this._finished.push({
+            id: entry.id,
+            ok: true,
+            value,
+            attempts: entry.attempts + 1,
+          });
+        } catch (err) {
+          if (entry.attempts < entry.retries) {
+            entry.attempts++;
+            continue;
+          }
+          this._finished.push({
+            id: entry.id,
+            ok: false,
+            error: err,
+            attempts: entry.attempts + 1,
+          });
+        } finally {
+          this._active--;
+        }
+      }
+    };
+
+    const workers = [];
+    for (let i = 0; i < this.concurrency; i++) {
+      workers.push(worker());
+    }
+    await Promise.all(workers);
+    return this._finished;
+  }
+
+  get maxActive() {
+    return this._maxActive;
+  }
+}
+===END FILE===
+
+===FILE: test/priority-queue.test.mjs===
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { PriorityQueue } from '../src/priority-queue.mjs';
+
+test('dequeue returns items in priority order', () => {
+  const pq = new PriorityQueue();
+  pq.enqueue('low', 10);
+  pq.enqueue('high', 1);
+  pq.enqueue('mid', 5);
+
+  assert.equal(pq.dequeue(), 'high');
+  assert.equal(pq.dequeue(), 'mid');
+  assert.equal(pq.dequeue(), 'low');
+});
+
+test('equal priority is FIFO (earlier item comes out first)', () => {
+  const pq = new PriorityQueue();
+  pq.enqueue('first', 2);
+  pq.enqueue('second', 2);
+  pq.enqueue('third', 2);
+
+  assert.deepEqual([pq.dequeue(), pq.dequeue(), pq.dequeue()], [
+    'first',
+    'second',
+    'third',
+  ]);
+});
+
+test('size reflects number of enqueued items', () => {
+  const pq = new PriorityQueue();
+  assert.equal(pq.size, 0);
+  pq.enqueue('a', 1);
+  pq.enqueue('b', 2);
+  assert.equal(pq.size, 2);
+  pq.dequeue();
+  assert.equal(pq.size, 1);
+});
+
+test('dequeue on empty queue throws Error', () => {
+  const pq = new PriorityQueue();
+  assert.throws(() => pq.dequeue(), Error);
+});
+===END FILE===
+
+===FILE: test/scheduler.test.mjs===
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { Scheduler } from '../src/scheduler.mjs';
+
+test('runs tasks respecting priority', async () => {
+  const results = await new Scheduler({ concurrency: 1 }).run();
+  const order = results.map((r) => r.id);
+
+  // ids are assigned in insertion order (1..3); priority 2 must run first.
+  assert.deepEqual(order, [2, 1, 3]);
+});
+
+test('never runs more than concurrency tasks at once', async () => {
+  const scheduler = new Scheduler({ concurrency: 2 });
+  let maxConcurrent = 0;
+  const inFlight = new Set();
+
+  const ids = [];
+  for (let i = 0; i < 10; i++) {
+    ids.push(
+      scheduler.add(async () => {
+        inFlight.add(i);
+        maxConcurrent = Math.max(maxConcurrent, inFlight.size);
+        await new Promise((r) => setTimeout(r, 20));
+        inFlight.delete(i);
+        return i;
+      })
+    );
+  }
+
+  await scheduler.run();
+  assert.equal(maxConcurrent, 2);
+  assert.equal(inFlight.size, 0);
+});
+
+test('retries a failing task and succeeds after retries', async () => {
+  let attempts = 0;
+  const scheduler = new Scheduler({ concurrency: 1 });
+  scheduler.add(async () => {
+    attempts++;
+    if (attempts < 3) {
+      throw new Error('boom');
+    }
+    return 'ok';
+  }, { retries: 2 });
+
+  const [result] = await scheduler.run();
+  assert.deepEqual(result, { id: 1, ok: true, value: 'ok', attempts: 3 });
+});
+
+test('a task that keeps failing returns ok:false with error', async () => {
+  const scheduler = new Scheduler({ concurrency: 1 });
+  scheduler.add(async () => {
+    throw new Error('permanent');
+  }, { retries: 2 });
+
+  const [result] = await scheduler.run();
+  assert.deepEqual(result, { id: 1, ok: false, error: new Error('permanent'), attempts: 3 });
+});
+
+test('results are returned in order of completion', async () => {
+  const scheduler = new Scheduler({ concurrency: 2 });
+  const finish = [];
+
+  scheduler.add(async () => {
+    await new Promise((r) => setTimeout(r, 100));
+    finish.push(1);
+    return 'one';
+  }, { priority: 0 });
+
+  scheduler.add(async () => {
+    await new Promise((r) => setTimeout(r, 10));
+    finish.push(2);
+    return 'two';
+  }, { priority: 0 });
+
+  scheduler.add(async () => {
+    await new Promise((r) => setTimeout(r, 50));
+    finish.push(3);
+    return 'three';
+  }, { priority: 0 });
+
+  const results = await scheduler.run();
+  assert.deepEqual(finish, [2, 3, 1]);
+  assert.equal(results.length, 3);
+  assert.equal(results[0].value, 'two');
+  assert.equal(results[1].value, 'three');
+  assert.equal(results[2].value, 'one');
+});
+===END FILE===

@@ -1,0 +1,327 @@
+{
+  "stamp": "20261030194958",
+  "think": 2048,
+  "maxTokens": 8000,
+  "reps": 2,
+  "rows": [
+    {
+      "name": "8GB-VISION-MAX-Q8 · T0.6 p0.90 k20 m0.05",
+      "total": 18,
+      "pass": 6,
+      "score": 33.33333333333333,
+      "allPass": false,
+      "vision": false,
+      "runs": [
+        {
+          "rep": 1,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 9,
+          "pass": 2,
+          "fail": 7,
+          "code": 1,
+          "ms": 108919,
+          "tps": 41.62486847627508,
+          "finish": "stop",
+          "genTokens": 4524
+        },
+        {
+          "rep": 2,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 9,
+          "pass": 4,
+          "fail": 5,
+          "code": 1,
+          "ms": 104463,
+          "tps": 41.74792567932755,
+          "finish": "stop",
+          "genTokens": 4352
+        }
+      ]
+    },
+    {
+      "name": "8GB-VISION-MAX-F16 · T0.6 p0.90 k20 m0.05",
+      "total": 14,
+      "pass": 8,
+      "score": 57.14285714285714,
+      "allPass": false,
+      "vision": false,
+      "runs": [
+        {
+          "rep": 1,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 9,
+          "pass": 4,
+          "fail": 5,
+          "code": 1,
+          "ms": 113130,
+          "tps": 41.892285152916934,
+          "finish": "stop",
+          "genTokens": 4729
+        },
+        {
+          "rep": 2,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 5,
+          "pass": 4,
+          "fail": 1,
+          "code": 1,
+          "ms": 102602,
+          "tps": 41.95316670494299,
+          "finish": "stop",
+          "genTokens": 4295
+        }
+      ]
+    },
+    {
+      "name": "8GB-VISION-MAX-Q4 · T0.6 p0.90 k20 m0.05",
+      "total": 9,
+      "pass": 2,
+      "score": 22.22222222222222,
+      "allPass": false,
+      "vision": false,
+      "runs": [
+        {
+          "rep": 1,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 9,
+          "pass": 2,
+          "fail": 7,
+          "code": 1,
+          "ms": 108704,
+          "tps": 41.72934637355888,
+          "finish": "stop",
+          "genTokens": 4526
+        },
+        {
+          "rep": 2,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 0,
+          "pass": 0,
+          "fail": 0,
+          "code": 1,
+          "ms": 113799,
+          "tps": 41.67042870267583,
+          "finish": "stop",
+          "genTokens": 4733
+        }
+      ]
+    }
+  ],
+  "full": [
+    {
+      "name": "8GB-VISION-MAX-Q8 · T0.6 p0.90 k20 m0.05",
+      "profile": {
+        "preset": "8GB-VISION-MAX-Q8",
+        "temperature": 0.6,
+        "top_p": 0.9,
+        "top_k": 20,
+        "min_p": 0.05,
+        "name": "8GB-VISION-MAX-Q8 · T0.6 p0.90 k20 m0.05"
+      },
+      "runs": [
+        {
+          "rep": 1,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 9,
+          "pass": 2,
+          "fail": 7,
+          "code": 1,
+          "ms": 108919,
+          "tps": 41.62486847627508,
+          "finish": "stop",
+          "genTokens": 4524
+        },
+        {
+          "rep": 2,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 9,
+          "pass": 4,
+          "fail": 5,
+          "code": 1,
+          "ms": 104463,
+          "tps": 41.74792567932755,
+          "finish": "stop",
+          "genTokens": 4352
+        }
+      ],
+      "vision": {
+        "ok": false,
+        "hits": [],
+        "reply": "error: HTTP 500: {\"error\":{\"code\":500,\"message\":\"failed to process mtmd chunk\",\"type\":\"",
+        "ms": 0
+      },
+      "total": 18,
+      "pass": 6,
+      "score": 33.33333333333333,
+      "allPass": false
+    },
+    {
+      "name": "8GB-VISION-MAX-F16 · T0.6 p0.90 k20 m0.05",
+      "profile": {
+        "preset": "8GB-VISION-MAX-F16",
+        "temperature": 0.6,
+        "top_p": 0.9,
+        "top_k": 20,
+        "min_p": 0.05,
+        "name": "8GB-VISION-MAX-F16 · T0.6 p0.90 k20 m0.05"
+      },
+      "runs": [
+        {
+          "rep": 1,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 9,
+          "pass": 4,
+          "fail": 5,
+          "code": 1,
+          "ms": 113130,
+          "tps": 41.892285152916934,
+          "finish": "stop",
+          "genTokens": 4729
+        },
+        {
+          "rep": 2,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 5,
+          "pass": 4,
+          "fail": 1,
+          "code": 1,
+          "ms": 102602,
+          "tps": 41.95316670494299,
+          "finish": "stop",
+          "genTokens": 4295
+        }
+      ],
+      "vision": {
+        "ok": false,
+        "hits": [
+          "historial"
+        ],
+        "reply": "Paneles/zonas visibles: **Encabezado del panel (MODELO Y RESPUESTA)**, Perfil de muestreo, Agente, Modo de respuesta, Motor · reinicia el modelo (con botón \"Apl",
+        "ms": 12777
+      },
+      "total": 14,
+      "pass": 8,
+      "score": 57.14285714285714,
+      "allPass": false
+    },
+    {
+      "name": "8GB-VISION-MAX-Q4 · T0.6 p0.90 k20 m0.05",
+      "profile": {
+        "preset": "8GB-VISION-MAX-Q4",
+        "temperature": 0.6,
+        "top_p": 0.9,
+        "top_k": 20,
+        "min_p": 0.05,
+        "name": "8GB-VISION-MAX-Q4 · T0.6 p0.90 k20 m0.05"
+      },
+      "runs": [
+        {
+          "rep": 1,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 9,
+          "pass": 2,
+          "fail": 7,
+          "code": 1,
+          "ms": 108704,
+          "tps": 41.72934637355888,
+          "finish": "stop",
+          "genTokens": 4526
+        },
+        {
+          "rep": 2,
+          "files": [
+            "package.json",
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs",
+            "test/priority-queue.test.mjs",
+            "test/scheduler.test.mjs"
+          ],
+          "tests": 0,
+          "pass": 0,
+          "fail": 0,
+          "code": 1,
+          "ms": 113799,
+          "tps": 41.67042870267583,
+          "finish": "stop",
+          "genTokens": 4733
+        }
+      ],
+      "vision": {
+        "ok": false,
+        "hits": [],
+        "reply": "error: HTTP 500: {\"error\":{\"code\":500,\"message\":\"failed to process mtmd chunk\",\"type\":\"",
+        "ms": 0
+      },
+      "total": 9,
+      "pass": 2,
+      "score": 22.22222222222222,
+      "allPass": false
+    }
+  ]
+}

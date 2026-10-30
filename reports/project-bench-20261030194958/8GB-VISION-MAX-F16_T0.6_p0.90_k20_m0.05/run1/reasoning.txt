@@ -1,0 +1,169 @@
+The user wants me to create a Node.js (ESM) project called "taskforge" with multiple files. Let me write complete, correct, executable code following the exact format requested.
+
+Let me go through each file:
+
+1) package.json with {"type":"module"} and script test.
+2) src/priority-queue.mjs: PriorityQueue class
+3) src/scheduler.mjs: Scheduler class
+4) test/priority-queue.test.mjs and test/scheduler.test.mjs
+
+Let me write each file carefully.
+
+**package.json:**
+```json
+{
+  "name": "taskforge",
+  "version": "1.0.0",
+  "description": "Task scheduler with priority queue",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
+```
+
+Wait, the test script. `node --test` runs all test files in the test directory. Let me make sure the test files are named properly. Node's test runner discovers files matching patterns like `*.test.js`, `*.test.mjs`, etc. Actually, `node --test` by default runs files matching test patterns. Let me use `node --test` which should find the `.test.mjs` files.
+
+Actually, to be safe, I could specify the test files explicitly, but `node --test` with no arguments runs test files. Let me think about what patterns node --test uses. By default, `node --test` searches for files matching:
+- `**/*.test.{js,cjs,mjs}`
+- `**/*-test.{js,cjs,mjs}`
+- `**/test-*.{js,cjs,mjs}`
+- `**/test.{js,cjs,mjs}`
+- `**/test/**/*.{js,cjs,mjs}` (files inside test directories)
+
+So `test/priority-queue.test.mjs` and `test/scheduler.test.mjs` would be found by both patterns. Good.
+
+Let me use `"test": "node --test"`.
+
+**src/priority-queue.mjs:**
+
+A min-heap. enqueue(item, priority), dequeue(), size. Min-heap: smallest priority comes out first; on tie, FIFO (the one that arrived first). dequeue() on empty throws Error.
+
+```js
+export class PriorityQueue {
+  constructor() {
+    this.heap = [];
+    this.count = 0;
+  }
+
+  enqueue(item, priority) {
+    this.heap.push({ item, priority, seq: this.count++ });
+    this._bubbleUp(this.heap.length - 1);
+  }
+
+  dequeue() {
+    if (this.heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const [first] = this.heap;
+    const last = this.heap.pop();
+    if (this.heap.length > 0) {
+      this.heap[0] = last;
+      this._sinkDown(0);
+    }
+    return first.item;
+  }
+
+  get size() {
+    return this.heap.length;
+  }
+
+  _compare(a, b) {
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority;
+    }
+    return a.seq - b.seq;
+  }
+
+  _bubbleUp(start) {
+    let i = start;
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (this._compare(this.heap[i], this.heap[parent]) >= 0) break;
+      [this.heap[i], this.heap[parent]] = [this.heap[parent], this.heap[i]];
+      i = parent;
+    }
+  }
+
+  _sinkDown(start) {
+    const length = this.heap.length;
+    let i = start;
+    while (true) {
+      const left = 2 * i + 1;
+      const right = 2 * i + 2;
+      let smallest = i;
+      if (left < length && this._compare(this.heap[left], this.heap[smallest]) < 0) {
+        smallest = left;
+      }
+      if (right < length && this._compare(this.heap[right], this.heap[smallest]) < 0) {
+        smallest = right;
+      }
+      if (smallest === i) break;
+      [this.heap[i], this.heap[smallest]] = [this.heap[smallest], this.heap[i]];
+      i = smallest;
+    }
+  }
+}
+```
+
+Wait, there's a subtle issue with the `_compare` using `seq` for FIFO. Since `seq` is assigned at enqueue time (this.count++), and I push to the end of the array, the seq will be monotonically increasing. So on ties, the one with smaller seq (arrived first) comes first. That's correct FIFO.
+
+But wait, when I swap elements during heap operations, the seq stays with the element, so the ordering is preserved. Good.
+
+Let me double check the bubbleUp condition. When `i = 0`, the while loop `i > 0` is false, so it doesn't execute. Good.
+
+Actually, let me reconsider. The `_compare` returns `a.seq - b.seq`. If a arrived before b, a.seq < b.seq, so compare returns negative, meaning a < b, so a should come first. In bubbleUp, we break when compare >= 0, so we stop when the child is not smaller. Correct.
+
+Let me verify with a simple example. Enqueue(1, priority=5), Enqueue(2, priority=3), Enqueue(3, priority=3).
+
+- Enqueue(1, 5): heap = [{item:1, priority:5, seq:0}]. count=1.
+- Enqueue(2, 3): push {item:2, priority:3, seq:1}. heap = [{1,5,0}, {2,3,1}]. bubbleUp(1): parent = 0. compare(heap[1], heap[0]) = compare({2,3,1}, {1,5,0}) = priority 3 - 5 = -2 < 0, so swap. heap = [{2,3,1}, {1,5,0}]. i=0, stop.
+- Enqueue(3, 3): push {item:3, priority:3, seq:2}. heap = [{2,3,1}, {1,5,0}, {3,3,2}]. bubbleUp(2): parent = 0. compare(heap[2], heap[0]) = compare({3,3,2}, {2,3,1}) = priority 3-3=0, seq 2-1=1, so 1 >= 0, break. heap = [{2,3,1}, {1,5,0}, {3,3,2}].
+
+Dequeue: first = {2,3,1}, last = {3,3,2}. pop last, heap = [{2,3,1}, {1,5,0}]. length 2 > 0, heap[0] = {3,3,2}, heap = [{3,3,2}, {1,5,0}]. sinkDown(0): left=1, right=2. smallest=0. compare(heap[1], heap[0]) = compare({1,5,0}, {3,3,2}) = priority 5-3 = 2 >= 0, so left doesn't become smallest. right=2 out of bounds. smallest=0, break. heap = [{3,3,2}, {1,5,0}].
+
+Return first.item = 2. Correct (priority 3, arrived first).
+
+Next dequeue: first = {3,3,2}, last = {1,5,0}. pop last, heap = [{3,3,2}]. length 1, not > 0, so don't sinkDown. Return 3. Correct (priority 3, arrived second).
+
+Next dequeue: first = {1,5,0}. pop, heap = []. Return 1. Correct.
+
+Order: 2, 3, 1. Correct min-heap with FIFO tie-break.
+
+**src/scheduler.mjs:**
+
+```js
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency = 1 } = {}) {
+    this.concurrency = concurrency;
+    this.queue = new PriorityQueue();
+    this.results = [];
+    this.running = 0;
+    this.active = 0;
+    this.maxActive = 0;
+    this.finished = false;
+    this._onDrain = null;
+    this._idle = null;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    this.queue.enqueue(fn, priority);
+  }
+
+  async run() {
+    this.finished = false;
+    this.results = [];
+
+    // ... 
+  }
+}
+```
+
+Hmm, let me think about the design more carefully. The requirements:
+
+- constructor({concurrency})
+- add(fn, {priority=0, retries=0}) registers an async task
+- run

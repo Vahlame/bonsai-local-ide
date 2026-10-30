@@ -330,8 +330,8 @@ const hayTool = (messages) => messages.some((msg) => msg.role === "tool");
       const presupuesto = chat.presupuestoContexto();
       capsPorFase[fase].push(cap);
       presPorFase[fase].push(presupuesto);
-      check(`presupuesto ${fase}: claves exactas`, Object.keys(presupuesto).join(",") === "ventana,solicitado,efectivo,reservaSalida", Object.keys(presupuesto).join(","));
-      check(`presupuesto ${fase}: ventana y solicitado`, presupuesto.ventana === nCtx && presupuesto.solicitado === 32768, JSON.stringify(presupuesto));
+      check(`presupuesto ${fase}: claves exactas`, Object.keys(presupuesto).join(",") === "ventana,solicitado,auto,efectivo,reservaSalida", Object.keys(presupuesto).join(","));
+      check(`presupuesto ${fase}: ventana y solicitado`, presupuesto.ventana === nCtx && presupuesto.solicitado === 32768 && presupuesto.auto === false, JSON.stringify(presupuesto));
       check(`presupuesto ${fase}: efectivo = historyCap()`, presupuesto.efectivo === cap, `${presupuesto.efectivo} vs ${cap}`);
       check(`presupuesto ${fase}: salida y margen caben en la ventana`, presupuesto.reservaSalida >= 0 && presupuesto.reservaSalida === chat.reservaSalida() && cap + presupuesto.reservaSalida + 128 <= nCtx, JSON.stringify(presupuesto));
     }

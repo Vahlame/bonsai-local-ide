@@ -60,7 +60,7 @@ const profiles = (arg("profiles", DEFAULT_PROFILES) || "").split(";").filter(Boo
 function buildArgs(preset) {
   const p = PRESETS[preset];
   if (!p) throw new Error(`Preset desconocido: ${preset}`);
-  const kv = String(p.kv); const stable = kv === "f16";
+  const kv = String(p.kv); const stable = true; const _unused = kv;
   const a = ["-m", MODEL, "--gpu-layers", "99"];
   if (!stable) a.push("--fit", "off", "--kv-offload");
   a.push("--flash-attn", "on", "-c", String(p.context), "-ctk", kv, "-ctv", kv);

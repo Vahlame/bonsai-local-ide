@@ -11,7 +11,7 @@ param (
     [string]$ContextSize = "auto",   # auto = el mejor perfil de contexto/KV que quepa; o un numero de tokens
     [int]$Port = 8080,
     [int]$UiPort = 8787,
-    [int]$PromptCap = 8192,
+    [int]$PromptCap = 0,          # 0 = automatico: historial = ventana menos reserva de salida
     [ValidateSet("auto", "f16", "q8_0", "q4_0")][string]$KVCacheType = "auto",
     [int]$Pensar = -1,            # -1 = auto (ajuste "Modo razonamiento" de la interfaz, solo si el modelo lo admite). 0 = apagado. N>0 = tope de N tokens
     [ValidateSet("", "legacy", "small-local-coder")][string]$AgentProfile = "",
@@ -23,6 +23,20 @@ param (
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
 $SettingsPath = Join-Path $RootDir 'chat\ui-settings.json'
+
+# Presets de motor: el fichero historico y el optimizado de la RTX 4060. Los nombres
+# optimizados (8GB-VISION-MAX-Q8-100K, ...) solo existen en el segundo; si un ajuste
+# guardado apunta a uno de ellos, este lanzador tambien tiene que conocerlo.
+function Get-PresetTabla {
+    $tabla = @{}
+    foreach ($rel in @('config\local-engine-presets.json', 'config\local-engine-presets-rtx4060-optimized.json')) {
+        $ruta = Join-Path $RootDir $rel
+        if (-not (Test-Path -LiteralPath $ruta)) { continue }
+        $json = Get-Content -LiteralPath $ruta -Raw | ConvertFrom-Json
+        foreach ($prop in $json.PSObject.Properties) { $tabla[$prop.Name] = $prop.Value }
+    }
+    return $tabla
+}
 $SavedSettings = $null
 if (Test-Path -LiteralPath $SettingsPath) {
     try { $SavedSettings = Get-Content -LiteralPath $SettingsPath -Raw | ConvertFrom-Json } catch { $SavedSettings = $null }
@@ -34,8 +48,8 @@ if (-not $EnginePreset -and $SavedSettings -and $SavedSettings.enginePreset) {
     if ($SavedPreset -eq 'CUSTOM') {
         $EnginePreset = 'CUSTOM'
     } else {
-        $KnownPresets = Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json
-        if (-not $KnownPresets.PSObject.Properties[$SavedPreset]) { throw 'El perfil de motor guardado no existe' }
+        $KnownPresets = Get-PresetTabla
+        if (-not $KnownPresets.ContainsKey($SavedPreset)) { throw 'El perfil de motor guardado no existe' }
         $EnginePreset = [string]$SavedPreset
     }
 }
@@ -57,7 +71,8 @@ if ($EnginePreset -eq 'CUSTOM' -and $ContextSize -eq 'auto' -and $SavedContext -
 }
 if ($AgentProfile) { $env:BONSAI_AGENT_PROFILE = $AgentProfile }
 if ($EnginePreset -and $EnginePreset -ne 'CUSTOM' -and -not $PSBoundParameters.ContainsKey('SinVision')) {
-    $SinVision = -not [bool](Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json).$EnginePreset.vision
+    $PresetActual = (Get-PresetTabla)[$EnginePreset]
+    $SinVision = -not [bool]$PresetActual.vision
 }
 if ($EnginePreset -and $AgentProfile -eq 'small-local-coder') {
     if ($EnginePreset -eq 'CUSTOM') {
@@ -65,13 +80,13 @@ if ($EnginePreset -and $AgentProfile -eq 'small-local-coder') {
         $ExplicitContext = 0
         if ($ContextSize -ne 'auto' -and [int]::TryParse([string]$ContextSize, [ref]$ExplicitContext) -and $ExplicitContext -ge 4096) { $CoderContext = $ExplicitContext }
     } else {
-        $CoderContext = [int]((Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json).$EnginePreset.context)
+        $CoderContext = [int]((Get-PresetTabla)[$EnginePreset].context)
     }
     $CoderOptions = if ($env:BONSAI_CODER_OPTIONS) { $env:BONSAI_CODER_OPTIONS | ConvertFrom-Json } else { [pscustomobject]@{} }
     $CoderOptions | Add-Member -NotePropertyName contextTokens -NotePropertyValue $CoderContext -Force
     $env:BONSAI_CODER_OPTIONS = $CoderOptions | ConvertTo-Json -Compress
     if (-not $PSBoundParameters.ContainsKey('PromptCap')) {
-        $PromptCap = if ($EnginePreset -eq 'CUSTOM' -and $SavedHistorial -gt 0) { [Math]::Min($SavedHistorial, $CoderContext) } else { $CoderContext }
+        $PromptCap = if ($EnginePreset -eq 'CUSTOM' -and $SavedHistorial -gt 0) { [Math]::Min($SavedHistorial, $CoderContext) } else { 0 }
     }
 }
 $Server = Join-Path $RootDir "chat\ui-server.mjs"

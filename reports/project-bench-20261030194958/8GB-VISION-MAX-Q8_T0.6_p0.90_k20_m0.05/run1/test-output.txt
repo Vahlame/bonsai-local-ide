@@ -1,0 +1,186 @@
+TAP version 13
+# Subtest: dequeue returns items in priority order
+not ok 1 - dequeue returns items in priority order
+  ---
+  duration_ms: 2.0456
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05\\run1\\test\\priority-queue.test.mjs:5:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    'mid' !== 'high'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'high'
+  actual: 'mid'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/test/priority-queue.test.mjs:11:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: equal priority is FIFO (earlier item comes out first)
+not ok 2 - equal priority is FIFO (earlier item comes out first)
+  ---
+  duration_ms: 1.3077
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05\\run1\\test\\priority-queue.test.mjs:16:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    -   'first',
+    -   'second',
+        'third',
+    +   'third',
+    +   'third'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'first'
+    1: 'second'
+    2: 'third'
+  actual:
+    0: 'third'
+    1: 'third'
+    2: 'third'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/test/priority-queue.test.mjs:22:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: size reflects number of enqueued items
+ok 3 - size reflects number of enqueued items
+  ---
+  duration_ms: 0.2202
+  type: 'test'
+  ...
+# Subtest: dequeue on empty queue throws Error
+ok 4 - dequeue on empty queue throws Error
+  ---
+  duration_ms: 1.4515
+  type: 'test'
+  ...
+# Subtest: runs tasks respecting priority
+not ok 5 - runs tasks respecting priority
+  ---
+  duration_ms: 0.9772
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05\\run1\\test\\scheduler.test.mjs:5:1'
+  failureType: 'testCodeFailure'
+  error: 'PriorityQueue is empty'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    PriorityQueue.dequeue (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/priority-queue.mjs:24:13)
+    worker (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:47:32)
+    Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:82:20)
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/test/scheduler.test.mjs:6:59)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: never runs more than concurrency tasks at once
+not ok 6 - never runs more than concurrency tasks at once
+  ---
+  duration_ms: 128.0996
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05\\run1\\test\\scheduler.test.mjs:13:1'
+  failureType: 'testCodeFailure'
+  error: 'PriorityQueue is empty'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    PriorityQueue.dequeue (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/priority-queue.mjs:24:13)
+    worker (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:47:32)
+    runNextTicks (node:internal/process/task_queues:65:5)
+    listOnTimeout (node:internal/timers:567:9)
+    process.processTimers (node:internal/timers:541:7)
+    async Promise.all (index 0)
+    async Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:84:5)
+    async TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/test/scheduler.test.mjs:31:3)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: retries a failing task and succeeds after retries
+not ok 7 - retries a failing task and succeeds after retries
+  ---
+  duration_ms: 1.2717
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05\\run1\\test\\scheduler.test.mjs:36:1'
+  failureType: 'testCodeFailure'
+  error: 'PriorityQueue is empty'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    PriorityQueue.dequeue (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/priority-queue.mjs:24:13)
+    worker (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:47:32)
+    runNextTicks (node:internal/process/task_queues:65:5)
+    listOnTimeout (node:internal/timers:567:9)
+    process.processTimers (node:internal/timers:541:7)
+    async Promise.all (index 0)
+    async Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:84:5)
+    async TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/test/scheduler.test.mjs:47:20)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: a task that keeps failing returns ok:false with error
+not ok 8 - a task that keeps failing returns ok:false with error
+  ---
+  duration_ms: 0.4039
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05\\run1\\test\\scheduler.test.mjs:51:1'
+  failureType: 'testCodeFailure'
+  error: 'PriorityQueue is empty'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    PriorityQueue.dequeue (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/priority-queue.mjs:24:13)
+    worker (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:47:32)
+    runNextTicks (node:internal/process/task_queues:65:5)
+    listOnTimeout (node:internal/timers:567:9)
+    process.processTimers (node:internal/timers:541:7)
+    async Promise.all (index 0)
+    async Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:84:5)
+    async TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/test/scheduler.test.mjs:57:20)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: results are returned in order of completion
+not ok 9 - results are returned in order of completion
+  ---
+  duration_ms: 65.8796
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05\\run1\\test\\scheduler.test.mjs:61:1'
+  failureType: 'testCodeFailure'
+  error: 'PriorityQueue is empty'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    PriorityQueue.dequeue (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/priority-queue.mjs:24:13)
+    worker (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:47:32)
+    async Promise.all (index 1)
+    async Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/src/scheduler.mjs:84:5)
+    async TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q8_T0.6_p0.90_k20_m0.05/run1/test/scheduler.test.mjs:83:19)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 2
+# fail 7
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 335.8104
+

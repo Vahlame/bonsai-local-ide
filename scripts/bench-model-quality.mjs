@@ -102,7 +102,7 @@ function buildArgs(preset) {
   if (!p) throw new Error(`Preset desconocido: ${preset}`);
   const ctx = Number(p.context);
   const kv = String(p.kv);
-  const stable = kv === "f16";
+  const stable = true;
   const a = ["-m", MODEL, "--gpu-layers", "99"];
   if (!stable) a.push("--fit", "off", "--kv-offload");
   a.push("--flash-attn", "on", "-c", String(ctx), "-ctk", kv, "-ctv", kv);

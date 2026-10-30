@@ -296,8 +296,8 @@ export function selfTest() {
   check("con más VRAM libre, más contexto", maxContexto({ libreMiB: 8100 }) > maxContexto({ libreMiB: 7800 }));
   check("-ub mayor pide más VRAM", estimarVramMiB({ ctx: 8192, kv: "q4_0", ubatch: 1024 }) > estimarVramMiB({ ctx: 8192, kv: "q4_0" }));
 
-  check("perfil codigo", muestreo("codigo").temperature === 0.5 && muestreo("codigo").top_p === 0.85);
-  check("perfil razonar", muestreo("razonar").temperature === 1 && muestreo("razonar").min_p === 0.05);
+  check("perfil codigo", muestreo("codigo").temperature === 0.6 && muestreo("codigo").top_p === 0.9 && muestreo("codigo").min_p === 0.05);
+  check("perfil razonar", muestreo("razonar").temperature === 0.6 && muestreo("razonar").min_p === 0.05);
   let rejected = false;
   try {
     muestreo("inventado");
