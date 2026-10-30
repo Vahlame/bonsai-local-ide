@@ -196,6 +196,7 @@ const ui = spawn(
       BONSAI_TS_LSP_CLI: createRequire(import.meta.url).resolve(
         "typescript-language-server/lib/cli.mjs",
       ),
+      BONSAI_MCP_NODE_MODULES: fileURLToPath(new URL("../node_modules", import.meta.url)),
       BONSAI_AGENT_PROFILE: profile,
       BONSAI_STATE: state,
       BONSAI_SALIDA: path.join(out, "outputs"),

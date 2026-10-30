@@ -322,6 +322,36 @@ try {
   const releidos = JSON.parse((await pedir("GET", "/api/settings")).body);
   check("los límites de ejecución sobreviven a una recarga", releidos.comandoSegundos === 900 && releidos.saltosTope === 288);
 
+  // --- memoria global entre chats ------------------------------------------
+  const memoriaInicial = JSON.parse((await pedir("GET", "/api/memoria")).body);
+  check("la memoria global arranca vacía y con presupuesto explícito", memoriaInicial.total === 0 && memoriaInicial.config.presupuesto === 480, JSON.stringify(memoriaInicial).slice(0, 160));
+  const agregada = await pedir("POST", "/api/memoria", { op: "add", texto: "En este proyecto usamos pnpm para instalar dependencias.", tags: ["proyecto", "paquetes"], fijada: true });
+  const agregadaJson = JSON.parse(agregada.body);
+  check("añade una nota de memoria global", agregada.status === 200 && agregadaJson.total === 1, `HTTP ${agregada.status} ${agregada.body.slice(0, 120)}`);
+  const idMemoria = agregadaJson.entrada?.id || "";
+  const secreto = await pedir("POST", "/api/memoria", { op: "add", texto: "api key = sk-abcdefghijklmnopqrstuv" });
+  check("rechaza secretos en la memoria", secreto.status === 400, `HTTP ${secreto.status} ${secreto.body.slice(0, 80)}`);
+  const memoriaConNota = JSON.parse((await pedir("GET", "/api/memoria")).body);
+  check("la nota se puede inspeccionar", memoriaConNota.entradas.some((entrada) => entrada.id === idMemoria && entrada.fijada === true), JSON.stringify(memoriaConNota.entradas));
+  const seleccion = JSON.parse((await pedir("GET", `/api/memoria?q=${encodeURIComponent("pnpm dependencias")}`)).body);
+  check("la vista previa selecciona lo relevante dentro del presupuesto", seleccion.seleccion?.texto?.includes("pnpm") && seleccion.seleccion.entradas.includes(idMemoria) && seleccion.seleccion.tokens <= seleccion.seleccion.presupuesto, JSON.stringify(seleccion.seleccion).slice(0, 160));
+  const estadoConMemoria = JSON.parse((await pedir("GET", "/api/state")).body);
+  check("el estado enseña la memoria global", estadoConMemoria.memoriaGlobal?.total === 1 && estadoConMemoria.memoriaGlobal.activa === true, JSON.stringify(estadoConMemoria.memoriaGlobal).slice(0, 160));
+  const editada = await pedir("POST", "/api/memoria", { op: "edit", id: idMemoria, texto: "En este proyecto usamos pnpm; npm está prohibido.", tags: ["proyecto"], fijada: false });
+  check("edita una nota de memoria global", editada.status === 200 && JSON.parse(editada.body).entrada?.texto?.includes("npm está prohibido"), `HTTP ${editada.status} ${editada.body.slice(0, 120)}`);
+  const presupuestoInvalido = await pedir("POST", "/api/settings", { memoriaGlobalTokens: 9999 });
+  check("rechaza un presupuesto de memoria fuera de rango", presupuestoInvalido.status === 400, `HTTP ${presupuestoInvalido.status}`);
+  const apagada = JSON.parse((await pedir("POST", "/api/settings", { memoriaGlobal: false })).body);
+  check("la memoria global se puede apagar", apagada.memoriaGlobal === false, JSON.stringify(apagada).slice(0, 120));
+  await pedir("POST", "/api/settings", { memoriaGlobal: true });
+  const borrada = await pedir("POST", "/api/memoria", { op: "delete", id: idMemoria });
+  check("borra una nota de memoria global", borrada.status === 200 && JSON.parse(borrada.body).total === 0, `HTTP ${borrada.status} ${borrada.body.slice(0, 120)}`);
+  await pedir("POST", "/api/memoria", { op: "add", texto: "El proyecto usa SQLite para el estado local." });
+  const sinConfirmar = await pedir("POST", "/api/memoria", { op: "clear" });
+  check("no vacía toda la memoria sin confirmación", sinConfirmar.status === 400, `HTTP ${sinConfirmar.status}`);
+  const vaciada = await pedir("POST", "/api/memoria", { op: "clear", confirm: true });
+  check("vacía toda la memoria con confirmación", vaciada.status === 200 && JSON.parse(vaciada.body).total === 0, `HTTP ${vaciada.status}`);
+
   // --- modelos: catálogo y cambio (sin reiniciar si ya está cargado) --------
   const modelos = await pedir("GET", "/api/modelos");
   const mj = modelos.status === 200 ? JSON.parse(modelos.body) : { modelos: [] };
@@ -374,6 +404,17 @@ try {
   check("reabre el chat pendiente", (await pedir("POST", "/api/chats", { op: "open", id: chats.active })).status === 200);
   const reabierto = JSON.parse(fs.readFileSync(path.join(tmp, "estado", "ui-session.json"), "utf8"));
   check("cambiar de chat conserva el plan y el motivo de parada", JSON.stringify(reabierto.plan) === JSON.stringify(planGuardado) && JSON.stringify(reabierto.lastStop) === JSON.stringify(paradaGuardada));
+  check("detecta servidor de IA encendido", JSON.parse((await pedir("GET", "/api/servidor")).body).encendido === true);
+  if (process.platform === "win32") {
+    const ajeno = await pedir("POST", "/api/servidor", { accion: "apagar" });
+    check("no apaga un servidor ajeno", ajeno.status !== 200 && JSON.parse((await pedir("GET", "/api/servidor")).body).encendido === true);
+    await new Promise((resolve) => { falsoLlama.close(resolve); falsoLlama.closeAllConnections(); });
+    check("detecta servidor de IA apagado", JSON.parse((await pedir("GET", "/api/servidor")).body).encendido === false);
+    const cierre = await pedir("POST", "/api/servidor", { accion: "cerrar" });
+    check("cierra el IDE con IA apagada", cierre.status === 200, cierre.body);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    check("el IDE dejó de escuchar", (await pedir("GET", "/api/state")).status === 0);
+  }
 } finally {
   hijo.kill();
   falsoLlama.close();

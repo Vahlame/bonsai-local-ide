@@ -1,9 +1,15 @@
 # Bonsai Local IDE
 
-**Actualización de contexto y agente:** el prompt de sistema distingue conversación y
-trabajo sobre el proyecto; el historial se conserva mientras quepa y el conteo usa el
-tokenizer de llama-server cuando está disponible. El perfil local configurado en esta
-máquina utiliza Ornith con visión, pensamiento y 43.008 tokens de ventana. Las métricas,
+**Versión 1.2.0 · 30 de octubre de 2026.** Esta entrega añade **memoria global entre
+chats** (selectiva, con presupuesto y editable), control del servidor desde la interfaz,
+un **navegador Playwright MCP aislado**, cierre seguro de turnos y varias correcciones
+de robustez del agente. Notas completas: [RELEASE-1.2.0.md](docs/RELEASE-1.2.0.md).
+Evidencia de las pruebas: [docs/evidencia/2026-10-30](docs/evidencia/2026-10-30/RESUMEN.md).
+
+**Contexto y agente:** el prompt de sistema distingue conversación y trabajo sobre el
+proyecto; el historial se conserva mientras quepa y el conteo usa el tokenizer de
+llama-server cuando está disponible. El perfil local configurado en esta máquina
+utiliza Ornith con visión, pensamiento y 43.008 tokens de ventana. Las métricas,
 límites y pasos de diagnóstico están en [contexto y diagnósticos](docs/CONTEXTO-Y-DIAGNOSTICO.md).
 La configuración local se guarda fuera de Git: una instalación nueva no hereda esos ajustes.
 La [auditoría y hoja de ruta](docs/AUDITORIA-PROFUNDA-2026-10-29.md) recoge riesgos y trabajo pendiente.
@@ -11,14 +17,16 @@ Las cifras y recomendaciones históricas de las secciones siguientes pueden corr
 perfiles anteriores.
 
 **Coding con contexto selectivo:** `small-local-coder` añade Tree-sitter en CPU,
-mapa selectivo, catorce herramientas con validación de schema, estado externo y
+mapa selectivo, dieciocho herramientas con validación de schema, estado externo y
 verificación/reparación automática. Se selecciona en Ajustes → Agente o con
 `scripts/start-ui.ps1 -AgentProfile small-local-coder -EnginePreset 8GB-BALANCED`.
 Los perfiles actuales admiten visión cuando el modelo y su proyector lo permiten;
 incluyen opciones de 16k F16, 32k Q8 y **32k/36k F16**. El ajuste personalizado
-de esta máquina usa 43.008 tokens, KV F16 y visión; alcanzó solo 106 MiB libres
-en pruebas y no garantiza estabilidad bajo todas las cargas. No existe una reserva
-obligatoria de 400 MiB. Entrada, imágenes y generación comparten la ventana.
+de esta máquina usa 43.008 tokens, KV F16 y visión. En la verificación final de la
+1.2.0 quedaron **476 MiB libres** como mínimo; otra pasada de la misma sesión, con
+más carga externa, midió **62 MiB**. Es un perfil manual con margen limitado y no
+garantiza estabilidad bajo todas las cargas. No existe una reserva obligatoria de
+400 MiB. Entrada, imágenes y generación comparten la ventana.
 El modo Consulta permite combinar
 imágenes y texto sin editar el proyecto. El modo Agente conserva la imagen durante
 las ediciones y reparaciones. La selección se guarda después de cargar correctamente.
@@ -123,32 +131,52 @@ es un servidor Node propio.
 - Puertos por defecto: **8080** API (`/v1`) y **8787** interfaz. La API es compatible con
   OpenAI, así que también sirve para Cursor/Aider (`scripts/start-cursor-bridge.ps1`,
   `scripts/start-aider.ps1`). Detalle de integración: [INTEGRACION-MODELO.md](INTEGRACION-MODELO.md).
-- La caché anterior de 32.768 se migra al cambiar el perfil del catálogo. Los siguientes
-  arranques conservan 39.936/q8_0 mientras quepa. **No aumentar el techo de visión**:
-  40.960 falló con imagen grande. El techo histórico sin visión (53.248) es otro perfil.
+- El perfil elegido se guarda en `logs/perfil-servidor-<puerto>.json` y se reutiliza en
+  el siguiente arranque. Para reproducir el perfil de esta máquina:
+  `.\scripts\start-ui.ps1 -EnginePreset CUSTOM -ContextSize 43008 -KVCacheType f16`
+  (la visión se activa si el proyector está en `models/`). **No aumentar el techo de
+  visión**: 44.032 falló con error CUDA de memoria. El techo histórico sin visión
+  (53.248) es otro perfil.
 
 ## Pruebas
 
 ```powershell
-npm test                 # suites aisladas: sin GPU ni llama-server real (~85 s)
-npm run test:navegador   # Edge/Chrome headless: UI, Ctrl+K, humo (~6 s)
+npm test                 # suites aisladas: sin GPU ni llama-server real (~120 s)
+npm run test:navegador   # Edge/Chrome headless: UI, Ctrl+K, humo (~15 s)
 npm run test:gpu         # necesita el modelo real arrancado (lento; opcional)
-npm run test:todo        # las tres familias
+npm run test:gpu-exclusiva  # calidad KV: exige la GPU libre, sin servidor en 8080
+npm run test:todo        # las cuatro familias
 node scripts/run-tests.mjs --listar   # ver qué suites hay en cada grupo
 ```
+
+Resultado de la verificación de la **1.2.0** (30-oct-2026, RTX 4060 Laptop 8 GB,
+Ornith-1.5-9B-Q4_K_M, 43.008 tokens, KV F16, visión y pensamiento 4.096):
+
+| Grupo | Resultado | Tiempo |
+| --- | ---: | ---: |
+| `npm test` (aisladas) | **40/40** | 125,3 s |
+| `npm run test:navegador` | **5/5** | 16,4 s |
+| `npm run test:gpu` (servidor cargado) | **4/4** | 95,4 s |
+| `npm run test:gpu-exclusiva` (GPU libre) | **1/1** | 89,6 s |
+
+Son pasadas únicas, no una medida estadística. Los JSON saneados, la configuración
+exacta y los límites están en
+[la evidencia de la release](docs/evidencia/2026-10-30/RESUMEN.md).
 
 Validación del perfil final, usando el servidor existente en 8080 sin reiniciarlo
 ni comparar otras configuraciones:
 
 ```powershell
-node chat/prueba-gpu-real.mjs --log logs/ornith-39936-final.err.log --salida logs/ornith-validacion-39936.json
-node chat/prueba-vision.mjs --puerto 8080 --numero 4758 --escala 48 --texto-largo --sin-ocr --exigir --salida logs/ornith-vision-ide-39936.json
+node chat/prueba-gpu-real.mjs --log logs/ornith-gpu.err.log --salida logs/gpu-real-43008.json
+node chat/prueba-vision.mjs --puerto 8080 --texto-largo --sin-ocr --exigir --salida logs/vision-43008.json
 ```
 
 La segunda prueba usa adjuntos y `/api/chat` de un IDE con proyecto y estado temporales,
 conserva el texto largo durante la lectura visual y exige visión activa. `--sin-ocr`
-desactiva la transcripción solo en ese proceso de prueba. El grupo GPU completo también
-compara perfiles y cambia modelos; no es necesario para esta validación.
+desactiva la transcripción solo en ese proceso de prueba. Sin `--numero` lee dos imágenes
+de un solo dígito; `--numero` permite comprobar manualmente un caso de tres o cuatro
+cifras, que este modelo no garantiza. El grupo GPU completo añade el cambio de modelo en
+caliente y la observación real; no es necesario para esta validación.
 
 - `npm test` ejecuta cada suite en su propio proceso, captura su salida y resume OK/FALLO
   (código 0/1). Incluye, entre otras: `modelo.mjs`, `actions.mjs` (diff), `editar.mjs`
@@ -167,9 +195,14 @@ compara perfiles y cambia modelos; no es necesario para esta validación.
 - Sueltas también se pueden ejecutar: `node chat/editar.mjs`, `node chat/actions.mjs`,
   `node chat/prueba-ui.mjs`, `node chat/prueba-ui-humo.mjs`…
 - `npm run test:gpu` no se ejecuta por defecto: `prueba-gpu-real.mjs`, `prueba-vision.mjs`,
-  `prueba-modelos.mjs --real`, `prueba-observacion.mjs --real` y `prueba-calidad-kv.mjs --real`
-  validan residencia CUDA, visión, cambio de modelo en caliente, navegación con el modelo real
-  y la calidad del KV cuantizado (q8_0 ≈ f16; ver `docs/CALIDAD-KV-2026-10-27.md`).
+  `prueba-modelos.mjs --real` y `prueba-observacion.mjs --real` validan residencia CUDA,
+  visión, cambio de modelo en caliente y navegación con el modelo real. Necesitan el
+  servidor ya arrancado.
+- `npm run test:gpu-exclusiva` ejecuta `prueba-calidad-kv.mjs --real` y exige la GPU
+  libre: arranca sus propios servidores en puertos libres, así que hay que detener antes
+  el de 8080 (`.\scripts\stop-managed-server.ps1 -Port 8080`). Compara q8_0 ≈ f16; ver
+  `docs/CALIDAD-KV-2026-10-27.md`. El grupo `todo` las ejecuta en ese orden, pero deja de
+  ser una pasada desatendida si el servidor de 8080 está ocupando la GPU.
 - El cierre real de un `llama-server` huérfano (BUG-05) se validó una vez en esta máquina con
   `node chat/prueba-servidor-administrado.mjs --gpu`; se recomienda repetirlo tras cambiar
   los scripts de arranque. `prueba-ocr.mjs` se ejecuta aparte cuando toca tocar el OCR.
@@ -184,13 +217,16 @@ chat/ui/         index.html + chat-core.js (script clásico), app.js, ide.js, pa
 scripts/         arranque (start-*.ps1), calibración y run-tests.mjs (ejecutor de pruebas)
 bin/             llama.cpp con CUDA (llama-server y DLL)
 models/          GGUF del modelo y del proyector de visión
-docs/            documentación histórica
+docs/            documentación técnica, notas de release y evidencia de pruebas
 reports/         investigación comparativa de modelos
 salida/          adjuntos y artefactos de las pruebas del agente (no es la carpeta de trabajo)
 ```
 
 ## Documentación
 
+- **Novedades de esta versión:** [docs/RELEASE-1.2.0.md](docs/RELEASE-1.2.0.md) y
+  [CHANGELOG.md](CHANGELOG.md).
+- **Evidencia de pruebas:** [docs/evidencia/2026-10-30](docs/evidencia/2026-10-30/RESUMEN.md).
 - **Histórico de la etapa anterior (27B):** [docs/HISTORICO-2026-10-27-27b.md](docs/HISTORICO-2026-10-27-27b.md)
   — configuración antigua con CPU parcial; **no** representa el arranque actual.
 - Arquitectura, decisiones y plan: [ARQUITECTURA-Y-PLAN-MAESTRO.md](ARQUITECTURA-Y-PLAN-MAESTRO.md).
@@ -222,3 +258,10 @@ salida/          adjuntos y artefactos de las pruebas del agente (no es la carpe
 - El medidor informa si el equipo limita la potencia de la GPU muy por debajo de su límite
   habitual (se observó 10 W frente a 80 W): revisa el modo de rendimiento y la alimentación
   si vuelve a ocurrir.
+
+## Licencia
+
+El código de este repositorio se publica bajo la licencia **MIT** (ver
+[LICENSE](LICENSE)). Los pesos del modelo, los binarios de `llama.cpp` y las
+dependencias de `chat/package.json` no están cubiertos por esa licencia y conservan
+sus propios términos. El repositorio no incluye modelos, binarios ni datos locales.

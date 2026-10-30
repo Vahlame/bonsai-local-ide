@@ -1701,10 +1701,31 @@
         }
       });
     }
-    document.querySelector("#nuevo").addEventListener("click", async () => {
-      current?.abort();
+    // El botón Detener ya no confía solo en cerrar el fetch: avisa al servidor por
+    // `/api/stop` para que aborte la inferencia y las herramientas aunque el socket
+    // tarde en cerrarse. Después espera a que el turno libere el servidor antes de
+    // cambiar de chat (antes el POST /api/chats contestaba 409 y no abría el nuevo).
+    async function cortarTurno() {
       queue = [];
       paintQueue();
+      const aviso = fetch("/api/stop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+        keepalive: true,
+      }).catch(() => null);
+      current?.abort();
+      await aviso;
+      for (let i = 0; i < 50; i += 1) {
+        try {
+          const estado = await fetch("/api/servidor", { cache: "no-store" });
+          if (estado.ok && !(await estado.json()).ocupado) return;
+        } catch { /* el servidor aún está cerrando el turno */ }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+    document.querySelector("#nuevo").addEventListener("click", async () => {
+      await cortarTurno();
       const res = await fetch("/api/chats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1722,9 +1743,7 @@
       await reloadConversation();
     });
     document.querySelector("#stop")?.addEventListener("click", () => {
-      queue = [];
-      current?.abort();
-      paintQueue();
+      void cortarTurno();
     });
     const paneKey = "bonsai-panes";
     /** @type {Record<string, boolean>} */

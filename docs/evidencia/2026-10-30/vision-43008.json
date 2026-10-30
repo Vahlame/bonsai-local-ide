@@ -1,0 +1,99 @@
+{
+  "fecha": "2026-10-30T03:49:29.901Z",
+  "contexto": 43008,
+  "modelo": "Ornith-1.5-9B-Q4_K_M.gguf",
+  "imagen": {
+    "ancho": 168,
+    "alto": 264,
+    "numeros": [
+      "4",
+      "2"
+    ]
+  },
+  "sinOcr": false,
+  "checks": [
+    {
+      "nombre": "visión mediante adjunto y /api/chat del IDE (1/2)",
+      "ok": true,
+      "respuesta": "4",
+      "intentos": [
+        "intento 1: \"4\""
+      ]
+    },
+    {
+      "nombre": "visión mediante adjunto y /api/chat del IDE (2/2)",
+      "ok": true,
+      "respuesta": "2",
+      "intentos": [
+        "intento 1: \"2\""
+      ]
+    }
+  ],
+  "ultimoUso": {
+    "type": "usage",
+    "prompt": 4189,
+    "generated": 1,
+    "cap": 32768,
+    "nCtx": 43008,
+    "folded": 0,
+    "turns": 1,
+    "memory": 0,
+    "globalMemory": 0,
+    "globalMemoryEntries": 0
+  },
+  "lecturas": [
+    {
+      "objetivo": "4",
+      "ok": true,
+      "respuesta": "4",
+      "intentos": [
+        "intento 1: \"4\""
+      ]
+    },
+    {
+      "objetivo": "2",
+      "ok": true,
+      "respuesta": "2",
+      "intentos": [
+        "intento 1: \"2\""
+      ]
+    }
+  ],
+  "estresCuatroDigitos": {
+    "numero": "5383",
+    "ok": false,
+    "respuesta": ""
+  },
+  "ok": true,
+  "fallos": [],
+  "timings": [
+    {
+      "t": "2026-10-30T03:49:34.341Z",
+      "cache_n": 0,
+      "prompt_n": 3655,
+      "prompt_ps": 1477,
+      "prompt_ms": 2474.528,
+      "predicted_n": 39,
+      "predicted_ps": 40.4,
+      "predicted_ms": 941.059,
+      "prompt_tokens": 3655,
+      "n_ctx": 43008,
+      "continued": false
+    },
+    {
+      "t": "2026-10-30T03:49:36.395Z",
+      "cache_n": 3568,
+      "prompt_n": 87,
+      "prompt_ps": 436.7,
+      "prompt_ms": 199.222,
+      "predicted_n": 55,
+      "predicted_ps": 40.7,
+      "predicted_ms": 1326.466,
+      "prompt_tokens": 3655,
+      "n_ctx": 43008,
+      "continued": false
+    }
+  ],
+  "vramLibreMinMiB": 432,
+  "nota": "Evidencia de la release 1.2.0. La ruta local del modelo se sustituyó por el nombre del archivo; las mediciones no se alteraron."
+}

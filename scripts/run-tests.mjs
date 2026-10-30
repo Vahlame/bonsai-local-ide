@@ -3,9 +3,10 @@
  * Ejecutor de las suites de Bonsai IDE.
  *
  *   node scripts/run-tests.mjs              # suites aisladas (sin GPU, sin llama-server real)
- *   node scripts/run-tests.mjs gpu          # solo las que necesitan el modelo/GPU reales
+ *   node scripts/run-tests.mjs gpu          # suites que usan el modelo real ya cargado
+ *   node scripts/run-tests.mjs gpu-exclusiva # calidad KV: exige la GPU libre y arranca sus servidores
  *   node scripts/run-tests.mjs navegador    # solo las que abren Edge/Chrome
- *   node scripts/run-tests.mjs todo         # las tres familias
+ *   node scripts/run-tests.mjs todo         # las cuatro familias
  *   node scripts/run-tests.mjs --listar     # enseña qué se ejecutaría, sin ejecutar
  *
  * Cada suite se ejecuta en su PROPIO proceso (Node), en secuencia, para que no compartan
@@ -44,6 +45,9 @@ const AISLADAS = [
   { archivo: "chat/prueba-ui.mjs" },
   { archivo: "chat/prueba-editor.mjs" },
   { archivo: "chat/prueba-contexto.mjs" },
+  { archivo: "chat/prueba-compactacion.mjs" },
+  { archivo: "chat/prueba-memoria-global.mjs" },
+  { archivo: "chat/prueba-registros.mjs" },
   { archivo: "chat/prueba-stream.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-lecturas.mjs" },
   { archivo: "chat/prueba-markdown-seguro.mjs" },
@@ -65,24 +69,34 @@ const AISLADAS = [
   { archivo: "chat/prueba-perfil-gpu.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-copia-evaluacion.mjs" },
   { archivo: "chat/prueba-small-coder.mjs" },
+  { archivo: "chat/prueba-cancelacion-y-cierre.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-benchmark-coder.mjs" },
   { archivo: "chat/prueba-python-coder.mjs" },
   { archivo: "chat/prueba-code-intelligence.mjs" },
 ];
 
-/** Suites que necesitan el modelo real cargado (GPU). No forman parte de `npm test`. */
+/** Suites que necesitan el modelo real ya cargado y escuchando. No forman parte de `npm test`. */
 /** @type {Suite[]} */
 const GPU = [
   { archivo: "chat/prueba-gpu-real.mjs", timeout: 600_000 },
   { archivo: "chat/prueba-vision.mjs", timeout: 600_000 },
   { archivo: "chat/prueba-modelos.mjs", args: ["--real"], timeout: 600_000 },
   { archivo: "chat/prueba-observacion.mjs", args: ["--real"], timeout: 600_000 },
+];
+
+/**
+ * Suites que arrancan sus propios llama-server y exigen la GPU exclusiva: no
+ * pueden convivir con el servidor de 8080. Se ejecutan después de detenerlo.
+ * @type {Suite[]}
+ */
+const GPU_EXCLUSIVA = [
   { archivo: "chat/prueba-calidad-kv.mjs", args: ["--real"], timeout: 900_000 },
 ];
 
 /** Suites que abren un navegador real (Edge/Chrome headless). No forman parte de `npm test`. */
 /** @type {Suite[]} */
 const NAVEGADOR = [
+  { archivo: "chat/prueba-mcp-playwright.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-navegador-desarrollo.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-navegador.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-navegador-aislamiento.mjs", timeout: 180_000 },
@@ -90,9 +104,14 @@ const NAVEGADOR = [
 ];
 
 /** @type {Record<string, Suite[]>} */
-const GRUPOS = { aisladas: AISLADAS, gpu: GPU, navegador: NAVEGADOR };
-const NOMBRES = { aisladas: "aisladas (sin GPU ni servidor real)", gpu: "GPU (modelo real)", navegador: "navegador (Edge/Chrome)" };
-const ALIAS = { todos: "todo", all: "todo", unitarias: "aisladas", "sin-gpu": "aisladas", default: "aisladas" };
+const GRUPOS = { aisladas: AISLADAS, gpu: GPU, "gpu-exclusiva": GPU_EXCLUSIVA, navegador: NAVEGADOR };
+const NOMBRES = {
+  aisladas: "aisladas (sin GPU ni servidor real)",
+  gpu: "GPU (modelo real cargado)",
+  "gpu-exclusiva": "GPU exclusiva (calidad KV, sin servidor en 8080)",
+  navegador: "navegador (Edge/Chrome)",
+};
+const ALIAS = { todos: "todo", all: "todo", unitarias: "aisladas", "sin-gpu": "aisladas", default: "aisladas", "gpu-exclusivo": "gpu-exclusiva" };
 
 const argv = process.argv.slice(2);
 if (argv.includes("--listar")) {

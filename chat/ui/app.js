@@ -39,7 +39,7 @@
    * @param {{metodo?: string, cuerpo?: unknown}} [opciones]
    */
   async function api(ruta, opciones = {}) {
-    const timeout = ruta === "/api/modelos" ? 300000 : ruta === "/api/edit" ? 180000 : 15000;
+    const timeout = ruta === "/api/modelos" || ruta === "/api/servidor" ? 300000 : ruta === "/api/edit" ? 180000 : 15000;
     const init = { method: opciones.metodo || "GET", cache: "no-store", signal: AbortSignal.timeout(timeout) };
     if (opciones.cuerpo !== undefined) {
       init.method = opciones.metodo || "POST";
@@ -1416,6 +1416,190 @@
     }
   }
 
+  // ============================================================ memoria global
+  /**
+   * Revisa, añade, edita y borra las notas que se comparten entre conversaciones.
+   * El archivo vive en el estado local del IDE, nunca en el proyecto del usuario.
+   */
+  async function abrirMemoriaGlobal() {
+    const fondo = el("div", "dialogo-fondo");
+    const caja = el("div", "dialogo");
+    caja.style.cssText = "width:min(760px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;box-sizing:border-box";
+    caja.append(el("h3", "", "Memoria global entre chats"));
+    const estado = el("p");
+    estado.style.cssText = "color:var(--muted);font-size:12px;line-height:1.5";
+    caja.append(estado);
+    const preview = el("p");
+    preview.style.cssText = "color:var(--muted);font-size:12px;line-height:1.5";
+    caja.append(preview);
+
+    const buscar = el("input");
+    buscar.type = "search";
+    buscar.placeholder = "Probar relevancia: escribe un pedido y mira qué se inyectaría…";
+    buscar.style.cssText = "width:100%;box-sizing:border-box;margin:4px 0 10px";
+    caja.append(buscar);
+
+    const nuevo = el("textarea");
+    nuevo.rows = 2;
+    nuevo.placeholder = "Nueva nota: una preferencia, una convención del proyecto o una decisión estable…";
+    nuevo.style.cssText = "width:100%;box-sizing:border-box;resize:vertical";
+    const etiquetas = el("input");
+    etiquetas.placeholder = "etiquetas separadas por comas (opcional)";
+    etiquetas.style.cssText = "flex:1;min-width:160px";
+    const fijarNueva = el("input");
+    fijarNueva.type = "checkbox";
+    const agregar = el("button", "primary", "Añadir nota");
+    agregar.type = "button";
+    const controlesNueva = el("div");
+    controlesNueva.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 14px";
+    const fijarNuevaEtiqueta = el("label", "", "fijar");
+    fijarNuevaEtiqueta.style.cssText = "display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted)";
+    fijarNuevaEtiqueta.prepend(fijarNueva);
+    controlesNueva.append(etiquetas, fijarNuevaEtiqueta, agregar);
+    caja.append(nuevo, controlesNueva);
+
+    const lista = el("div");
+    lista.style.cssText = "display:flex;flex-direction:column;gap:10px";
+    caja.append(lista);
+
+    const pie = el("div", "d-botones");
+    pie.style.cssText = "margin-top:16px;justify-content:space-between;flex-wrap:wrap;gap:8px";
+    const vaciar = el("button", "ghost", "Borrar toda la memoria");
+    vaciar.type = "button";
+    const cerrar = el("button", "primary", "Cerrar");
+    cerrar.type = "button";
+    const accionesPie = el("div");
+    accionesPie.style.cssText = "display:flex;gap:8px;flex-wrap:wrap";
+    accionesPie.append(vaciar, cerrar);
+    pie.append(accionesPie);
+    caja.append(pie);
+
+    let temporizador = 0;
+    const cargar = async () => {
+      try {
+        const consulta = buscar.value.trim();
+        const datos = await api(`/api/memoria${consulta ? `?q=${encodeURIComponent(consulta)}` : ""}`);
+        pintar(datos);
+      } catch (err) {
+        avisar(`No se pudo leer la memoria global: ${err.message}`, "error", 6000);
+      }
+    };
+
+    function pintar(datos) {
+      estado.textContent = `${datos.total} nota(s) · ${datos.fijadas} fijada(s) · ${datos.automaticas} automática(s) · ${formatoTokens(datos.tokensTotales)} tokens guardados · presupuesto ${formatoTokens(datos.config?.presupuesto ?? 0)} tokens por turno · ${datos.archivo}`;
+      if (datos.seleccion) {
+        preview.textContent = datos.seleccion.razon
+          ? `Para ese pedido no se inyectaría nada: ${datos.seleccion.razon}.`
+          : `Para ese pedido se inyectarían ${datos.seleccion.entradas.length} nota(s): ${formatoTokens(datos.seleccion.tokens)} de ${formatoTokens(datos.seleccion.presupuesto)} tokens.`;
+      } else {
+        preview.textContent = "Solo se envía lo relevante al pedido de cada turno (más las notas fijadas), nunca toda la memoria.";
+      }
+      lista.replaceChildren();
+      if (!datos.entradas.length) {
+        const vacio = el("p", "", "Todavía no hay notas. Se crean al pulsar «Añadir nota» o, si la captura automática está activa, al decir cosas como «prefiero…» o «recuerda que…».");
+        vacio.style.cssText = "color:var(--muted);font-size:13px";
+        lista.append(vacio);
+        return;
+      }
+      for (const entrada of datos.entradas) {
+        const fila = el("div");
+        fila.style.cssText = "border:1px solid var(--line);border-radius:8px;padding:9px;display:flex;flex-direction:column;gap:6px";
+        const cabecera = el("div");
+        cabecera.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--muted)";
+        const tipo = el("span", "badge", entrada.origen?.tipo === "auto" ? "auto" : "manual");
+        const fecha = el("span", "", new Date(entrada.actualizada || entrada.creada).toLocaleString("es-ES"));
+        const tokens = el("span", "", `${formatoTokens(estimateTokensUi(entrada.texto))} tok`);
+        cabecera.append(tipo, fecha, tokens);
+        if (entrada.fijada) cabecera.append(el("span", "badge git-a", "fijada"));
+        const texto = el("textarea");
+        texto.value = entrada.texto;
+        texto.rows = 2;
+        texto.style.cssText = "width:100%;box-sizing:border-box;resize:vertical";
+        const pieFila = el("div");
+        pieFila.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap";
+        const tags = el("input");
+        tags.value = (entrada.tags || []).join(", ");
+        tags.placeholder = "etiquetas";
+        tags.style.cssText = "flex:1;min-width:140px;font-size:12px";
+        const fijada = el("input");
+        fijada.type = "checkbox";
+        fijada.checked = Boolean(entrada.fijada);
+        const etiquetaFijada = el("label", "", "fijar");
+        etiquetaFijada.style.cssText = "display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted)";
+        etiquetaFijada.prepend(fijada);
+        const guardar = el("button", "", "Guardar");
+        guardar.type = "button";
+        const borrar = el("button", "ghost", "Eliminar");
+        borrar.type = "button";
+        guardar.addEventListener("click", async () => {
+          try {
+            await api("/api/memoria", { cuerpo: { op: "edit", id: entrada.id, texto: texto.value, tags: tags.value, fijada: fijada.checked } });
+            avisar("Nota actualizada.", "ok", 2200);
+            await cargar();
+          } catch (err) {
+            avisar(`No se pudo guardar: ${err.message}`, "error", 6000);
+          }
+        });
+        borrar.addEventListener("click", async () => {
+          if (!(await confirmar("Borrar nota de memoria", entrada.texto.slice(0, 240), "Borrar"))) return;
+          try {
+            await api("/api/memoria", { cuerpo: { op: "delete", id: entrada.id } });
+            avisar("Nota borrada.", "ok", 2200);
+            await cargar();
+          } catch (err) {
+            avisar(`No se pudo borrar: ${err.message}`, "error", 6000);
+          }
+        });
+        pieFila.append(tags, etiquetaFijada, guardar, borrar);
+        fila.append(cabecera, texto, pieFila);
+        lista.append(fila);
+      }
+    }
+
+    agregar.addEventListener("click", async () => {
+      if (!nuevo.value.trim()) {
+        avisar("Escribe la nota antes de añadirla.", "warn", 3000);
+        return;
+      }
+      try {
+        await api("/api/memoria", { cuerpo: { op: "add", texto: nuevo.value, tags: etiquetas.value, fijada: fijarNueva.checked } });
+        nuevo.value = "";
+        etiquetas.value = "";
+        fijarNueva.checked = false;
+        avisar("Nota añadida a la memoria global.", "ok", 2500);
+        await cargar();
+      } catch (err) {
+        avisar(`No se pudo añadir: ${err.message}`, "error", 6000);
+      }
+    });
+    vaciar.addEventListener("click", async () => {
+      if (!(await confirmar("Borrar toda la memoria global", "Se borrarán todas las notas guardadas entre chats. No se puede deshacer.", "Borrar todo"))) return;
+      try {
+        await api("/api/memoria", { cuerpo: { op: "clear", confirm: true } });
+        avisar("Memoria global vaciada.", "ok", 2500);
+        await cargar();
+      } catch (err) {
+        avisar(`No se pudo vaciar: ${err.message}`, "error", 6000);
+      }
+    });
+    buscar.addEventListener("input", () => {
+      clearTimeout(temporizador);
+      temporizador = window.setTimeout(cargar, 250);
+    });
+    cerrar.addEventListener("click", () => {
+      clearTimeout(temporizador);
+      fondo.remove();
+    });
+    fondo.addEventListener("click", (event) => { if (event.target === fondo) fondo.remove(); });
+    fondo.append(caja);
+    document.body.append(fondo);
+    cerrar.focus();
+    await cargar();
+  }
+
+  /** Estimación local para mostrar el tamaño de una nota (3 caracteres ≈ 1 token). */
+  const estimateTokensUi = (texto) => Math.ceil(String(texto || "").length / 3);
+
   // ================================================================== ajustes
   function abrirAjustes() {
     const fondo = el("div", "dialogo-fondo");
@@ -1546,7 +1730,7 @@
     // una PETICIÓN al servidor; el tope real lo recorta historyCap() según la ventana que
     // arrancó llama-server (por eso abajo se enseñan los cuatro valores reales).
     const historial = el("select");
-    const topes = [[8192, "8192 tokens"], [16384, "16384 tokens"], [32768, "32768 tokens"], [36864, "36864 tokens"], [39936, "39936 tokens"], [43008, "43008 tokens"]];
+    const topes = [[8192, "8192 tokens"], [16384, "16384 tokens"], [28672, "28672 tokens (2/3 de 43008)"], [32768, "32768 tokens"], [36864, "36864 tokens"], [39936, "39936 tokens"], [43008, "43008 tokens"]];
     if (Number.isFinite(Number(ajustes.historial)) && !topes.some(([v]) => v === Number(ajustes.historial))) topes.push([Number(ajustes.historial), `${ajustes.historial} tokens`]);
     for (const [v, t] of topes) {
       const o = el("option", "", String(t));
@@ -1606,6 +1790,27 @@
     }
     tiempo.addEventListener("change", () => guardarAjustes({ comandoSegundos: Number(tiempo.value) }));
 
+    // Memoria global entre chats: apagable, con presupuesto explícito y revisable.
+    const memoriaActiva = el("input");
+    memoriaActiva.type = "checkbox";
+    memoriaActiva.checked = ajustes.memoriaGlobal !== false;
+    memoriaActiva.addEventListener("change", () => guardarAjustes({ memoriaGlobal: memoriaActiva.checked }));
+    const memoriaAuto = el("input");
+    memoriaAuto.type = "checkbox";
+    memoriaAuto.checked = ajustes.memoriaGlobalAuto !== false;
+    memoriaAuto.addEventListener("change", () => guardarAjustes({ memoriaGlobalAuto: memoriaAuto.checked }));
+    const memoriaTokens = el("select");
+    for (const v of [0, 240, 480, 800, 1200, 2000]) {
+      const o = el("option", "", v === 0 ? "0 · no inyectar" : `${v} tokens`);
+      o.value = String(v);
+      if (Number(ajustes.memoriaGlobalTokens ?? 480) === v) o.selected = true;
+      memoriaTokens.append(o);
+    }
+    memoriaTokens.addEventListener("change", () => guardarAjustes({ memoriaGlobalTokens: Number(memoriaTokens.value) }));
+    const revisarMemoria = el("button", "", "Revisar y editar…");
+    revisarMemoria.type = "button";
+    revisarMemoria.addEventListener("click", () => void abrirMemoriaGlobal());
+
     caja.append(
       el("h4","settings-section","Apariencia"),
       fila("Tema", tema),
@@ -1622,8 +1827,13 @@
       fila("Continuar solo hasta terminar", seguir),
       fila("Pasos del agente por turno", pasos),
       fila("Tiempo máximo por comando", tiempo),
+      el("h4","settings-section","Memoria entre chats"),
+      fila("Usar memoria global", memoriaActiva),
+      fila("Aprender preferencias automáticamente", memoriaAuto),
+      fila("Presupuesto por turno", memoriaTokens),
+      fila("Notas guardadas", revisarMemoria),
     );
-    const aviso = el("p", "", "El perfil se aplica en cada petición. El razonamiento solo lo usan los modelos que lo admiten. «Continuar solo» encadena hasta 3 turnos internos si el agente se queda sin pasos o se atasca; los procesos lanzados en segundo plano ya no se cierran al acabar el turno.");
+    const aviso = el("p", "", "El perfil se aplica en cada petición. El razonamiento solo lo usan los modelos que lo admiten. «Continuar solo» encadena hasta 3 turnos internos si el agente se queda sin pasos o se atasca; los procesos lanzados en segundo plano ya no se cierran al acabar el turno. La memoria global solo inyecta las notas relevantes al pedido (más las fijadas), dentro del presupuesto elegido; se guarda fuera del proyecto y de Git.");
     aviso.style.marginTop = "12px";
     caja.append(aviso);
 
@@ -1913,6 +2123,48 @@
   let estadoModelos = { actual: "", modelos: [] };
   /** Nombre del modelo que se está cargando ("" si no hay cambio en curso). */
   let cargandoModelo = "";
+  let servidorEncendido = false;
+  let cambiandoServidor = false;
+
+  async function refrescarServidor() {
+    const boton = $("#servidor-toggle");
+    if (!boton || cambiandoServidor) return;
+    try {
+      const estado = await api("/api/servidor");
+      if (cambiandoServidor) return;
+      servidorEncendido = estado.encendido;
+      boton.textContent = servidorEncendido ? "Apagar IA" : "Encender IA";
+      boton.title = servidorEncendido ? "Apagar el servidor local de IA" : "Encender el servidor local de IA";
+      boton.disabled = false;
+    } catch { boton.textContent = "IA sin conexión"; boton.disabled = true; }
+  }
+
+  async function controlarServidor(accion) {
+    if (cambiandoServidor) return;
+    if (accion === "cerrar") {
+      const sucias = pestanas.filter((p) => p.texto !== p.guardado && !p.truncado).length;
+      if (!(await confirmar("Cerrar IDE e IA", sucias ? `Hay ${sucias} archivo(s) con cambios sin guardar. Se perderán al cerrar.` : "Se apagará la IA y se cerrará el servidor del IDE.", "Cerrar ambos"))) return;
+    }
+    cambiandoServidor = true;
+    const boton = $("#servidor-toggle"), cerrar = $("#cerrar-bonsai");
+    boton.disabled = true; cerrar.disabled = true;
+    boton.textContent = accion === "encender" ? "Encendiendo IA…" : "Apagando IA…";
+    try {
+      await api("/api/servidor", { cuerpo: { accion } });
+      if (accion === "cerrar") {
+        document.body.innerHTML = "<main style='padding:2rem;font-family:sans-serif'>IDE e IA cerrados. Puedes cerrar esta pestaña.</main>";
+        return;
+      }
+      avisar(accion === "encender" ? "Servidor de IA encendido" : "Servidor de IA apagado", "ok");
+      await refrescarModelos();
+    } catch (err) { avisar(`No se pudo completar la operación: ${err.message}`, "error", 10000); }
+    finally { cambiandoServidor = false; cerrar.disabled = false; void refrescarServidor(); }
+  }
+
+  $("#servidor-toggle")?.addEventListener("click", () => void controlarServidor(servidorEncendido ? "apagar" : "encender"));
+  $("#cerrar-bonsai")?.addEventListener("click", () => void controlarServidor("cerrar"));
+  void refrescarServidor();
+  setInterval(() => void refrescarServidor(), 15000);
 
   async function refrescarModelos() {
     const antes = estadoModelos && estadoModelos.actual;

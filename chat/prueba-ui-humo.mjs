@@ -269,6 +269,11 @@ try {
   const perfiles=ajustesDialogo.getByRole("combobox",{name:"Perfil de motor",exact:true});
   check("hay perfiles simultáneos de visión con 16k y 32k",await perfiles.locator('option[value="8GB-VISION"]').count()===1&&await perfiles.locator('option[value="8GB-VISION-CONTEXT"]').count()===1);
   check("está disponible 32k F16 con pensamiento",await perfiles.locator('option[value="8GB-VISION-QUALITY"]').count()===1&&await ajustesDialogo.locator('select option[value="1024"]').count()===1);
+  await ajustesDialogo.getByRole("button",{name:"Revisar y editar…",exact:true}).click();
+  const memoriaDialogo=pagina.locator(".dialogo").last();
+  await memoriaDialogo.getByRole("heading",{name:"Memoria global entre chats",exact:true}).waitFor({timeout:15000});
+  check("Ajustes abre el editor de memoria global",(await memoriaDialogo.textContent()).includes("presupuesto"));
+  await memoriaDialogo.getByRole("button",{name:"Cerrar",exact:true}).click();
   const temas=ajustesDialogo.getByRole("combobox",{name:"Tema visual",exact:true});
   for(const tema of ['ocean','forest','sand','light','dark','slate']) {
     await temas.selectOption(tema);

@@ -1,0 +1,103 @@
+{
+  "fecha": "2026-10-30T03:42:56.651Z",
+  "base": "http://127.0.0.1:8080",
+  "checks": [
+    {
+      "nombre": "servidor anuncia Ornith",
+      "ok": true
+    },
+    {
+      "nombre": "contexto minimo de 16K",
+      "ok": true,
+      "detalle": 43008
+    },
+    {
+      "nombre": "proyector de visión en CUDA si está activado",
+      "ok": true
+    },
+    {
+      "nombre": "todas las capas en GPU",
+      "ok": true,
+      "detalle": "offloaded 34/34 layers"
+    },
+    {
+      "nombre": "sin pesos de cálculo en buffers CPU o host",
+      "ok": true,
+      "detalle": []
+    },
+    {
+      "nombre": "pesos en CUDA0",
+      "ok": true
+    },
+    {
+      "nombre": "cache KV en CUDA0",
+      "ok": true
+    },
+    {
+      "nombre": "sin cache KV en CPU",
+      "ok": true
+    },
+    {
+      "nombre": "llamada nativa con argumentos correctos",
+      "ok": true,
+      "detalle": {
+        "type": "function",
+        "function": {
+          "name": "sumar",
+          "arguments": "{\"a\":19,\"b\":23}"
+        },
+        "id": "M7L42FVf3wSuqGSv0MKDKOglStIDtMKv"
+      }
+    },
+    {
+      "nombre": "continua tras el resultado de la herramienta",
+      "ok": true,
+      "detalle": "El resultado de sumar 19 + 23 es **42**."
+    },
+    {
+      "nombre": "prompt representativo ocupa mas del 60% de la ventana",
+      "ok": true,
+      "detalle": 30205
+    },
+    {
+      "nombre": "prefill largo y generacion completan en GPU",
+      "ok": true,
+      "detalle": "VALIDADO_42"
+    },
+    {
+      "nombre": "VRAM dedicada sin agotarse durante la carga",
+      "ok": true,
+      "detalle": {
+        "usadaPico": 7481,
+        "libreMin": 476
+      }
+    },
+    {
+      "nombre": "VRAM dedicada con margen holgado",
+      "ok": true,
+      "detalle": {
+        "usadaPico": 7481,
+        "libreMin": 476
+      }
+    }
+  ],
+  "avisos": [],
+  "contexto": 43008,
+  "modelo": "Ornith-1.5-9B-Q4_K_M.gguf",
+  "mmapMiB": 545.62,
+  "timings": {
+    "cache_n": 0,
+    "prompt_n": 30205,
+    "prompt_ms": 18234.881,
+    "prompt_per_token_ms": 0.6037040556199306,
+    "prompt_per_second": 1656.4407522045249,
+    "predicted_n": 6,
+    "predicted_ms": 160.196,
+    "predicted_per_token_ms": 32.0392,
+    "predicted_per_second": 31.211765587155735
+  },
+  "vramPicoMiB": 7481,
+  "vramLibreMinMiB": 476,
+  "vramObjetivoMiB": 180,
+  "nota": "Evidencia de la release 1.2.0. La ruta local del modelo se sustituyó por el nombre del archivo; las mediciones no se alteraron."
+}

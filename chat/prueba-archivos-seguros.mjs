@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { rutaSegura, escribirAtomico } from "./archivos-seguros.mjs";
+import { rutaSegura, escribirAtomico, escribirAtomicoCondicional, escribirAtomicoNuevo } from "./archivos-seguros.mjs";
 import { writeOutputs } from "./actions.mjs";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bonsai-archivos-"));
@@ -54,6 +54,18 @@ try {
   assert.deepEqual(fs.readdirSync(root).filter((n) => n.startsWith(".bonsai-")), []);
   escribirAtomico(original, "nuevo");
   assert.equal(fs.readFileSync(original, "utf8"), "nuevo");
+  await assert.rejects(() => escribirAtomicoCondicional(root, "normal.txt", "original", "otro"), /cambió en disco/);
+  assert.equal(fs.readFileSync(original, "utf8"), "nuevo");
+  fs.writeFileSync(path.join(root, "paralelo.txt"), "antes");
+  await Promise.all([
+    escribirAtomicoCondicional(root, "normal.txt", "nuevo", "final"),
+    escribirAtomicoCondicional(root, "paralelo.txt", "antes", "después"),
+  ]);
+  assert.equal(fs.readFileSync(original, "utf8"), "final");
+  assert.equal(fs.readFileSync(path.join(root,"paralelo.txt"), "utf8"), "después");
+  await Promise.all([escribirAtomicoNuevo(root,"nuevo/uno.txt","uno"),escribirAtomicoNuevo(root,"nuevo/dos.txt","dos")]);
+  await assert.rejects(()=>escribirAtomicoNuevo(root,"nuevo/uno.txt","sobrescrito"),/EEXIST/);
+  assert.equal(fs.readFileSync(path.join(root,"nuevo/uno.txt"),"utf8"),"uno");
   writeOutputs(root, [{ rel: "sub/codigo.py", content: "print(1)" }]);
   assert.equal(fs.readFileSync(path.join(root, "sub/codigo.py"), "utf8"), "print(1)");
   console.log("prueba archivos seguros ok");

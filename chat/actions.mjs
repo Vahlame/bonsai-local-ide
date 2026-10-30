@@ -304,6 +304,9 @@ export function impliedAction(text) {
 
 export const PC_TOOLS = [
   {
+    type:"function", function:{name:"mcp_playwright", description:"Navegador Playwright MCP aislado para probar páginas HTTP/HTTPS: abre, inspecciona el árbol accesible, pulsa, escribe y revisa consola/red. Para HTML local sin servidor usa navegador.", parameters:{type:"object",properties:{accion:{type:"string",enum:["abrir","inspeccionar","clic","escribir","tecla","esperar","consola","red","cerrar"]},url:{type:"string"},selector:{type:"string",description:"Referencia o selector del snapshot"},texto:{type:"string"},segundos:{type:"integer",minimum:0}},required:["accion"]}}
+  },
+  {
     type: "function",
     function: {
       name: "navegador",
@@ -417,8 +420,8 @@ export const PC_TOOLS = [
     type: "function",
     function: {
       name: "escribir_partes",
-      description: "Crea un archivo nuevo grande por partes. iniciar(ruta) devuelve id; continuar(id,offset,contenido) añade UTF-8; finalizar(id,offset) guarda. Offset es el siguiente byte devuelto.",
-      parameters: { type: "object", properties: { accion: { type: "string", enum: ["iniciar", "continuar", "finalizar"] }, ruta: { type: "string" }, id: { type: "string" }, offset: { type: "integer" }, contenido: { type: "string" } }, required: ["accion"] },
+      description: "Crea un archivo nuevo grande por partes. iniciar(ruta) devuelve id; continuar(id,offset,contenido) añade UTF-8; estado(id) recupera el offset tras interrupción; finalizar(id,offset) guarda; cancelar(id) descarta las partes. Offset es el siguiente byte devuelto.",
+      parameters: { type: "object", properties: { accion: { type: "string", enum: ["iniciar", "continuar", "estado", "finalizar", "cancelar"] }, ruta: { type: "string" }, id: { type: "string" }, offset: { type: "integer" }, contenido: { type: "string" } }, required: ["accion"] },
     },
   },
   {
@@ -812,7 +815,7 @@ export function aplicarReemplazo(texto, buscar, poner) {
 export function esCharla(texto) {
   const t = String(texto || "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   if (!t || t.length > 400) return false;
-  if (/^[¡¿\s]*(hola|buenas|buenos dias|buenas tardes|buenas noches|hey|gracias|muchas gracias|adios|hasta luego)[!¡?.\s]*$/.test(t)) return true;
+  if (/^[¡¿\s]*(hola|hi|hello|hey|buenas|buenos dias|buenas tardes|buenas noches|gracias|muchas gracias|adios|hasta luego)[!¡?.\s]*$/.test(t)) return true;
   if (/[\w-]+\.[a-z0-9]{1,5}\b/.test(t)) return false; // nombra un archivo
   if (/\b(archivo|carpeta|proyecto|repo|repositorio|mi codigo|este codigo|el codigo de|script|tests?|error|falla|fallo|bug|arregl|corrig|crea|crear|creame|haz|hazme|escrib|ejecut|corre|instal|guard|modific|cambi|renombr|lee|leer|abre|abrir|busca|buscar|gener|implement|anad|agreg|borr|elimin|descarg|compil|prueb|calcula|convierte|traduce este)\w*/.test(t)) return false;
   return /^[¿¡\s]*(explica|explicame|que es|que son|que significa|que diferencia|cual es la diferencia|diferencia entre|por que|como funciona|como funcionan|para que sirve|cuando se usa|cuando usar|que opinas|define|resume)\b/.test(t);
@@ -1436,6 +1439,7 @@ export function selfTest() {
   check("si nombra un archivo no es charla", !esCharla("Explícame en 3 frases qué hace la función de algoritmo.py y cuál es su complejidad."));
   check("si hay algo que hacer no es charla", !esCharla("¿En qué archivo está definida la función conectar_db?") && !esCharla("Explica el error y arréglalo") && !esCharla("Crea un ejemplo de closure") && !esCharla("¿Qué es lo que falla en mis tests?"));
   check("un pedido normal no es charla", !esCharla("necesito que me hagas un modelo 3d en un archivo html") && esCharla("hola"));
+  check("saludos breves no activan tareas", esCharla("hi") && esCharla("Hello!") && !esCharla("hi, crea un archivo"));
   const conEdit = nativeToolEffects([{ id: "e1", name: "reemplazar", arguments: { ruta: "a.py", buscar: "x = 1", poner: "x = 2" } }, { id: "e2", name: "reemplazar", arguments: { ruta: "a.py" } }]);
   check("reemplazar llega como edición con su id", conEdit.edits.length === 1 && conEdit.edits[0].poner === "x = 2" && conEdit.ids.get("edit:0") === "e1");
   check("reemplazar sin buscar/poner avisa", conEdit.notes.some((n) => /reemplazar necesita/.test(n)) && conEdit.notesIds[0] === "e2");

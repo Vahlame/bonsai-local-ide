@@ -36,6 +36,15 @@ export class EscrituraIncremental {
     fs.appendFileSync(s.data, bytes);
     return { id, ruta: s.rel, bytes: s.bytes + bytes.length, siguiente: s.bytes + bytes.length, terminado: false };
   }
+  estado(id) {
+    const s = this.leer(id);
+    return {id, ruta:s.rel, bytes:s.bytes, siguiente:s.bytes, terminado:false, maxBytes:1500000};
+  }
+  cancelar(id) {
+    const s = this.leer(id);
+    this.borrar(id);
+    return {id, ruta:s.rel, cancelado:true};
+  }
   preparar(id, offset) {
     const s = this.leer(id);
     if (!Number.isInteger(offset) || offset !== s.bytes) throw new Error(`Offset incorrecto; el siguiente byte es ${s.bytes}`);

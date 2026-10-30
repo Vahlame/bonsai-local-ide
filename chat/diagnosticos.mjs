@@ -716,6 +716,47 @@ function comprobarHtml(archivo, texto, fuente) {
   return diags;
 }
 
+/**
+ * Comprueba además el JavaScript inline de un HTML con `node --check`. La
+ * comprobación de etiquetas por sí sola no detecta un script roto, que es un fallo
+ * habitual al editar una interfaz y solo aparecería al abrir la página.
+ * Solo se revisan scripts ejecutables (sin `src`, con tipo JS o `module`); JSON,
+ * plantillas y otros tipos se dejan intactos.
+ * @param {string} archivo
+ * @param {string} texto
+ * @returns {Promise<Array<object>>}
+ */
+async function diagnosticarHtml(archivo, texto) {
+  const diags = comprobarHtml(archivo, texto, "html");
+  const scripts = [];
+  const re = /<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi;
+  for (const m of texto.matchAll(re)) {
+    const atributos = m[1] || "";
+    if (/\bsrc\s*=/i.test(atributos)) continue;
+    const tipo = /\btype\s*=\s*(["'])(.*?)\1/i.exec(atributos)?.[2]?.trim().toLowerCase() || "";
+    const ejecutable = !tipo || ["module", "text/javascript", "application/javascript", "text/ecmascript", "application/ecmascript"].includes(tipo);
+    const contenido = m[2] || "";
+    if (!ejecutable || !contenido.trim()) continue;
+    const finEtiqueta = finDeEtiqueta(texto, m.index + "<script".length);
+    const inicio = (finEtiqueta >= 0 ? finEtiqueta : m.index + m[0].indexOf(">")) + 1;
+    const linea = (texto.slice(0, inicio).match(/\n/g) || []).length + 1;
+    scripts.push({ contenido, linea, module: tipo === "module" });
+  }
+  for (const script of scripts) {
+    if (diags.length >= 20) break;
+    const salida = await conArchivoTemporal(script.contenido, script.module ? ".mjs" : ".js", (tmp) =>
+      ejecutar(process.execPath, ["--check", tmp], { cwd: path.dirname(tmp) })
+    );
+    if (salida.fallo || salida.status === null || salida.status === 0) continue;
+    const diag = interpretarErrorNode(salida.stderr, archivo);
+    if (!diag) continue;
+    diag.linea += script.linea - 1;
+    diag.mensaje = `script inline: ${diag.mensaje}`;
+    diags.push(diag);
+  }
+  return diags.slice(0, 20);
+}
+
 /** Pares apertura -> cierre y nombre legible de cada delimitador. */
 const PAREJAS_DELIMITADOR = new Map([
   ["{", "}"],
@@ -1210,7 +1251,7 @@ export async function diagnosticarArchivo(abs, texto) {
       case "json":
         return diagnosticoJson(archivo, contenido, "json");
       case "html":
-        return comprobarHtml(archivo, contenido, "html");
+        return await diagnosticarHtml(archivo, contenido);
       case "css":
         return comprobarDelimitadores(archivo, limpiarCss(contenido), "css");
       case "md":

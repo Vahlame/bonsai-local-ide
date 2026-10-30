@@ -183,6 +183,21 @@ try {
     "<!DOCTYPE html>\n<html>\n  <head><title>Hola</title></head>\n  <body>\n    <div id=\"a\">hola</div>\n    <br>\n    <input name=\"x\">\n    <script>var s = \"<div>\";</script>\n  </body>\n</html>\n"
   );
   check("HTML correcto no produce diagnósticos", (await diagnosticarArchivo(htmlBueno)).length === 0);
+  const htmlScriptRoto = escribir(
+    "html/script-roto.html",
+    "<!DOCTYPE html>\n<html>\n  <body>\n    <h1>Hola</h1>\n    <script>\n      const = ;\n    </script>\n  </body>\n</html>\n"
+  );
+  const diagnosticoScript = await diagnosticarArchivo(htmlScriptRoto);
+  check(
+    "HTML con JavaScript inline roto produce un error con su línea real",
+    diagnosticoScript.length === 1 && diagnosticoScript[0].severidad === "error" && diagnosticoScript[0].linea === 6 && /script inline/.test(diagnosticoScript[0].mensaje),
+    JSON.stringify(diagnosticoScript)
+  );
+  const htmlModuloBueno = escribir(
+    "html/modulo.html",
+    "<!DOCTYPE html>\n<html><body>\n<script type=\"module\">import { x } from \"./x.js\"; console.log(x);</script>\n<script type=\"application/json\">{\"roto\": }</script>\n</body></html>\n"
+  );
+  check("HTML: un script module válido y un JSON de plantilla no se marcan como error", (await diagnosticarArchivo(htmlModuloBueno)).length === 0);
 
   const cssRoto = escribir("css/roto.css", ".a {\n  color: red;\n");
   const diagnosticoCss = await diagnosticarArchivo(cssRoto);

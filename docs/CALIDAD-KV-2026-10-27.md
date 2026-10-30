@@ -85,9 +85,11 @@ Con ~7.956 MiB libres, A (32K/q8_0/visión) necesita ~7.821 MiB de presupuesto c
 ## Reproducir
 
 ```powershell
-cd C:\Users\user\Documents\prject_local_AI
-npm run test:gpu        # incluye chat/prueba-calidad-kv.mjs (largo: ~8-10 min)
-# o solo la prueba de calidad:
+cd C:\ruta\a\bonsai-local-ide
+# Detén antes el servidor de 8080: esta prueba arranca los suyos y exige la GPU libre.
+.\scripts\stop-managed-server.ps1 -Port 8080
+npm run test:gpu-exclusiva   # chat/prueba-calidad-kv.mjs --real (~90 s)
+# o solo la prueba, sin el runner:
 node chat/prueba-calidad-kv.mjs --real
 ```
 

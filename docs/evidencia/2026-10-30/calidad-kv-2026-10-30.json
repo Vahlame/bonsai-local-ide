@@ -1,0 +1,88 @@
+{
+  "fecha": "2026-10-30T03:52:27.916Z",
+  "modelo": "ornith9b",
+  "resultados": [
+    {
+      "config": "A · 32K · q8_0 · visión",
+      "nCtx": 32768,
+      "arranqueMs": 6064,
+      "niahCorto": {
+        "alfa": true,
+        "gamma": true,
+        "json": true,
+        "detalle": {
+          "alfaResp": "AMBAR-7391",
+          "gammaResp": "CEDRO-8155",
+          "jsonResp": "```json\n{\n  \"alfa\": \"AMBAR-7391\",\n  \"gamma\": \"CEDRO-8155\"\n}\n```"
+        }
+      },
+      "niahLargo": {
+        "alfa": true,
+        "gamma": true,
+        "json": true,
+        "detalle": {
+          "alfaResp": "AMBAR-7391",
+          "gammaResp": "CEDRO-8155",
+          "jsonResp": "```json\n{\n  \"alfa\": \"AMBAR-7391\",\n  \"gamma\": \"CEDRO-8155\"\n}\n```"
+        }
+      },
+      "codigo": {
+        "python": true,
+        "javascript": true,
+        "ms": 2909
+      }
+    },
+    {
+      "config": "B · 16K · f16 · visión",
+      "nCtx": 16384,
+      "arranqueMs": 6024,
+      "niahCorto": {
+        "alfa": true,
+        "gamma": true,
+        "json": true,
+        "detalle": {
+          "alfaResp": "AMBAR-7391",
+          "gammaResp": "CEDRO-8155",
+          "jsonResp": "```json\n{\n  \"alfa\": \"AMBAR-7391\",\n  \"gamma\": \"CEDRO-8155\"\n}\n```"
+        }
+      },
+      "niahLargo": null,
+      "codigo": {
+        "python": true,
+        "javascript": false,
+        "ms": 2879
+      }
+    },
+    {
+      "config": "C · 32K · f16 · sin visión",
+      "nCtx": 32768,
+      "arranqueMs": 4526,
+      "niahCorto": {
+        "alfa": true,
+        "gamma": true,
+        "json": true,
+        "detalle": {
+          "alfaResp": "AMBAR-7391",
+          "gammaResp": "CEDRO-8155",
+          "jsonResp": "```json\n{\n  \"alfa\": \"AMBAR-7391\",\n  \"gamma\": \"CEDRO-8155\"\n}\n```"
+        }
+      },
+      "niahLargo": {
+        "alfa": true,
+        "gamma": true,
+        "json": true,
+        "detalle": {
+          "alfaResp": "AMBAR-7391",
+          "gammaResp": "CEDRO-8155",
+          "jsonResp": "```json\n{\n  \"alfa\": \"AMBAR-7391\",\n  \"gamma\": \"CEDRO-8155\"\n}\n```"
+        }
+      },
+      "codigo": {
+        "python": false,
+        "javascript": false,
+        "ms": 2889
+      }
+    }
+  ],
+  "nota": "Evidencia de la release 1.2.0. Pasada única de calidad KV; no es una medida estadística. A es la configuración recomendada."
+}

@@ -1,11 +1,15 @@
 .aider*
 chat/session.json
 chat/session.json.tmp
+chat/session.json.corrupto-*
 chat/ui-session.json
 chat/ui-session.json.tmp
+chat/ui-session.json.corrupto-*
 chat/ui-workspace.json
 chat/ui-workspace.json.tmp
 chat/ui-settings.json
+chat/memoria-global.json
+chat/memoria-global.json.corrupto-*
 chat/ui-chats/
 chat/ui-permit.json
 chat/modelo-activo.json

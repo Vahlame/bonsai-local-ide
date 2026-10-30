@@ -15,12 +15,12 @@ let ui, nav, modelo;
 try {
   // El origen ficticio se crea sin copiar ningún estado personal real.
   copiarApp(chat, origen);
-  for (const rel of ["undo/1.json", "ui-chats/index.json", "ui-settings.json", "ui-workspace.json", "modelo-activo.json", "timings.jsonl", "secreto-inesperado.mjs", "ui/privado.txt", "node_modules/pkg/index.js"]) {
+  for (const rel of ["undo/1.json", "ui-chats/index.json", "ui-settings.json", "ui-workspace.json", "modelo-activo.json", "timings.jsonl", "memoria-global.json", "secreto-inesperado.mjs", "ui/privado.txt", "node_modules/pkg/index.js"]) {
     const archivo = path.join(origen, rel); fs.mkdirSync(path.dirname(archivo), { recursive: true }); fs.writeFileSync(archivo, "DATO_PERSONAL_FICTICIO");
   }
   copiarApp(origen, copia);
   assert.equal(fs.readFileSync(path.join(copia, "ui/index.html"), "utf8"), fs.readFileSync(path.join(origen, "ui/index.html"), "utf8"));
-  for (const rel of ["undo", "ui-chats", "ui-settings.json", "ui-workspace.json", "modelo-activo.json", "timings.jsonl", "secreto-inesperado.mjs", "ui/privado.txt", "node_modules"]) assert.equal(fs.existsSync(path.join(copia, rel)), false, `${rel} no debe copiarse`);
+  for (const rel of ["undo", "ui-chats", "ui-settings.json", "ui-workspace.json", "modelo-activo.json", "timings.jsonl", "memoria-global.json", "secreto-inesperado.mjs", "ui/privado.txt", "node_modules"]) assert.equal(fs.existsSync(path.join(copia, rel)), false, `${rel} no debe copiarse`);
   assert.throws(() => copiarApp(origen, copia), /ya existe/, "no mezclar resultados de evaluaciones anteriores");
 
   const portServer = http.createServer();

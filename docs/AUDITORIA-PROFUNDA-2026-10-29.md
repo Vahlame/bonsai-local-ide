@@ -1,6 +1,79 @@
 # Auditoría técnica y plan de continuidad · 29 de octubre de 2026
 
-Este documento es un encargo ejecutable para la próxima sesión. Describe el código y las mediciones disponibles al preparar la versión 1.1.0; distingue observaciones de hipótesis y pendientes. No reemplaza una prueba real bajo carga. Prioridad: **correctitud, contexto, herramientas, edición, estabilidad de GPU, visión, velocidad y simplicidad**.
+Este documento es un encargo ejecutable para la próxima sesión. Describe el código y las mediciones disponibles al preparar la versión 1.2.0; distingue observaciones de hipótesis y pendientes. No reemplaza una prueba real bajo carga. Prioridad: **correctitud, contexto, herramientas, edición, estabilidad de GPU, visión, velocidad y simplicidad**.
+
+## Avance de la revisión posterior
+
+Se ajustó el perfil local a 28.672 tokens solicitados de entrada y 14.336 de salida
+en una ventana de 43.008; el margen y las imágenes se descuentan dentro de la misma
+ventana. Se incorporaron llamadas múltiples, ediciones concurrentes de archivos
+distintos, comprobación de cambios externos, navegación Playwright MCP aislada,
+investigación web para el perfil de programación, reanudación/cancelación de
+escrituras por partes y lectura acotada de registros. El estado de tarea se guarda
+ante errores y se avisa de posibles errores de memoria. Los detalles y limitaciones
+de compactación constan en [contexto y diagnóstico](CONTEXTO-Y-DIAGNOSTICO.md).
+
+Pruebas reales puntuales con Ornith y la configuración elegida: una tarea entre
+archivos pasó sus pruebas originales; otra con historial sintético compactó de
+32.212 a 28.123 tokens contados y conservó la clave y el pendiente. Con visión,
+se completaron entradas reales de 20.911, 33.741 y 40.249 tokens. El caso de una
+imagen leyó correctamente 4758 al 50 % y al 95 %; el caso con dos imágenes y
+~80 % de contexto leyó 2245 en lugar de 2345. Una prueba aparte con dos imágenes
+en la interfaz y OCR activado devolvió ambas cifras. El mínimo de VRAM libre
+muestreado fue 262 MiB. No se generaron 4.096 tokens completos de pensamiento ni
+se demostró estabilidad sostenida; los casos de imagen no son pruebas generales
+de calidad visual. El informe local está en `logs/carga-vision-contexto-20261029.json`.
+
+La verificación final de esta revisión ejecutó **40/40 suites aisladas** (120,1 s) y
+**5/5 suites de navegador** (15,4 s), todas en verde. Incluye una suite nueva de
+memoria global entre chats y comprobaciones de su API, de la inyección real en el
+cuerpo enviado al modelo simulado y del editor en Ajustes. Las suites simuladas cubren
+la cancelación real del turno, el cierre tras verificar, la reescritura de un archivo
+recién creado, la compactación con presupuesto y la lectura acotada de registros; las
+mediciones con Ornith siguen siendo puntuales y no sustituyen una carga sostenida.
+
+La pasada real se hizo con Ornith-1.5-9B-Q4_K_M, 43.008 tokens, KV F16, visión y
+pensamiento 4.096; `/props` confirmó `n_ctx: 43008`, `vision: true` y el GGUF esperado.
+El grupo funcional **`npm run test:gpu` pasó 4/4 en 95,4 s**: residencia CUDA (34/34
+capas, KV en CUDA0, sin pesos de cálculo en CPU/host; los 545,62 MiB de `CPU_Mapped`
+son el mmap de apoyo, no cómputo), llamada nativa y continuación tras herramienta,
+prefill de 30.205 tokens con respuesta correcta, dos lecturas visuales de un dígito por
+el flujo de adjuntos del IDE, rechazo del cambio a `override6` sin perfil GPU con el
+servidor de Ornith intacto, y observación real de una palabra y cuatro dígitos. La
+suite exclusiva **`npm run test:gpu-exclusiva` pasó 1/1 en 89,6 s**: 32K/q8_0/visión
+superó 8/8 (NIAH de 4K y 12K, JSON y las dos tareas de código); 16K/f16/visión quedó
+6/8 y 32K/f16 sin visión 6/8, con fallos de código registrados y no usados como
+criterio de la configuración recomendada. Son pasadas únicas, no una medida
+estadística de calidad.
+
+La VRAM libre mínima de la pasada final de 43K fue **476 MiB**; una pasada anterior
+de la misma sesión, con más carga externa en la GPU, midió **62 MiB**. El objetivo de
+aviso de la prueba sigue en 180 MiB y no se rebajó: si no se alcanza, se imprime un
+aviso con la cifra, y solo se falla si la VRAM se agota o no puede medirse. 43K sigue
+siendo una selección manual con margen limitado, no una garantía de estabilidad.
+
+La prueba de visión ya no usa varias cifras del fixture como criterio: una sonda con
+el modelo real midió **5/21 lecturas exactas** de cadenas de 3–5 caracteres y **6/6**
+de un solo dígito a escala 24. Por eso lee dos imágenes de un dígito en sesiones
+separadas y mide las cuatro cifras como estrés informativo; la lectura de cuatro
+dígitos con texto Arial la cubre `prueba-observacion`. Esto no demuestra OCR general.
+
+La memoria global es una capa aparte de la memoria de sesión: guarda preferencias y
+decisiones estables en `memoria-global.json` dentro del estado local (fuera de Git),
+selecciona por relevancia léxica contra el pedido y el objetivo, respeta un presupuesto
+explícito (480 tokens por defecto, 0–2000), incluye las notas fijadas y no inyecta
+nada si no hay coincidencia. Se inspecciona y edita desde Ajustes y `GET/POST
+/api/memoria`; la captura automática es conservadora, rechaza secretos y solo actúa
+tras turnos completos. No sustituye el historial ni demuestra memoria semántica
+completa: una nota obsoleta permanece hasta que el usuario la corrige o la borra.
+
+**La auditoría no está cerrada por estas pruebas.** Siguen pendientes, entre otros,
+una recuperación de OOM real durante una operación en curso, comparación visual
+512/1024 con la configuración de GPU correspondiente, mediciones prolongadas
+p50/p95 y térmicas, pruebas manuales de accesibilidad y pantalla pequeña, y una
+política de caducidad de trazas y archivos pendientes. La lectura de registros es
+acotada, pero su escritura sigue siendo síncrona. La protección frente a cambios
+de enlaces por otro proceso es best-effort, no una barrera completa TOCTOU.
 
 ## Condiciones que deben conservarse
 
