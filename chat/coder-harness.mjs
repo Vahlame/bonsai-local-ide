@@ -6,11 +6,20 @@ import { execFileSync, spawn } from "node:child_process";
 import { CodeContext, parseCode, projectFiles } from "./code-context.mjs";
 import { rutaProyecto } from "./archivos-seguros.mjs";
 import { diagnosticarArchivo } from "./diagnosticos.mjs";
-import { estimateTokens, takeHeadByTokens } from "./context.mjs";
+import { SYSTEM_RULES, AGENT_WORKFLOW, TOOL_WORKFLOW, CODER_TOOL_WORKFLOW, estimateTokens, takeHeadByTokens } from "./context.mjs";
 import { PC_TOOLS, unifiedDiff } from "./actions.mjs";
 import { matarArbol } from "./procesos.mjs";
 import { verificationCommands } from "./project-verification.mjs";
 import { TypeScriptLsp, typeScriptProject } from "./code-intelligence.mjs";
+
+/**
+ * Identidad completa de un diagnóstico para no confundir dos errores con el mismo
+ * mensaje en líneas distintas (el bug que ocultaba errores nuevos).
+ * @param {{archivo?: string, linea?: number, columna?: number, mensaje?: string, fuente?: string}} d
+ */
+export function identidadDiagnostico(d) {
+  return [d.archivo || "", d.linea ?? "", d.columna ?? "", d.fuente || "", d.mensaje || ""].join("|");
+}
 
 export const CODER_CONFIG = Object.freeze(
   JSON.parse(
@@ -79,6 +88,10 @@ const tool = (name, description, properties, required = []) => ({
 const base = (name) =>
   structuredClone(PC_TOOLS.find((t) => t.function.name === name));
 export const CODER_TOOLS = [
+  base("mcp_playwright"),
+  base("navegador"),
+  base("buscar"),
+  base("leer_web"),
   tool(
     "indice",
     "Mapa compacto de archivos, símbolos y dependencias relevantes.",
@@ -111,16 +124,21 @@ export const CODER_TOOLS = [
   base("reemplazar"),
   tool(
     "archivo",
-    "Crea texto o reemplaza un archivo pequeño ya inspeccionado. Para modificar usa reemplazar.",
+    "Crea o reemplaza texto; para cambios localizados usa reemplazar y para archivos nuevos grandes escribir_partes.",
     { ruta: str, contenido: str },
     ["ruta", "contenido"],
   ),
+  base("escribir_partes"),
+  base("consultar_salida"),
   tool(
     "ejecutar",
     "Ejecuta un comando de desarrollo o tests en la shell del proyecto; salida acotada.",
-    { comando: str },
+    { comando: str, segundo_plano: { type: "boolean" }, repetir: { type: "boolean" } },
     ["comando"],
   ),
+  base("proceso"),
+  base("borrar"),
+  base("mover"),
   tool("git_diff", "Diff actual de Git (incluye cambios preexistentes).", {
     ruta: str,
   }),
@@ -135,16 +153,16 @@ export const CODER_TOOLS = [
 }));
 
 export const CODER_SYSTEM =
-  "Eres un agente de programación local. Usa herramientas para comprobar rutas, símbolos e imports. Lee el fragmento mínimo necesario. Conserva APIs y abstracciones existentes. Prefiere reemplazar con texto exacto único. No cambies archivos ajenos ni reformatees código sin necesidad. El host verifica cambios y comunica fallos: repáralos antes de cerrar. No repitas llamadas idénticas sin nueva evidencia. No inventes resultados. Cuando todo esté comprobado, resume brevemente y termina.";
+  [SYSTEM_RULES, AGENT_WORKFLOW, TOOL_WORKFLOW, CODER_TOOL_WORKFLOW].join("\n\n");
 export const PHASE_PROMPTS = Object.freeze({
   DISCOVER: "Localiza archivos y símbolos reales. Pide contexto solo si falta.",
   PLAN: "Usa plan con cambios mínimos, archivos/símbolos y verificación. Solo decisiones operativas breves.",
-  EDIT: "Implementa el siguiente paso pendiente con operaciones estructuradas. No repitas el plan. El host ya ejecuta tests después de editar; utiliza su resultado.",
+  EDIT: "Edita los archivos con las herramientas. Si plan es null, elige el siguiente cambio concreto según el pedido y lo inspeccionado; no necesitas crear un plan. No repitas el análisis. El host ejecuta tests después de editar; utiliza su resultado.",
   VERIFY:
     "La última versión pasó la verificación automática. Contrasta el diff con el pedido original: si todos sus requisitos están resueltos, resume y termina ahora. Si falta un requisito concreto, implementa solo ese paso. No inventes requisitos ni repitas comprobaciones sin nueva evidencia.",
   REPAIR:
     "Corrige exclusivamente los fallos presentados; inspecciona sus líneas si hace falta.",
-  DONE: "Resume cambios y verificaciones; indica lo no comprobado.",
+  DONE: "Da la respuesta final al usuario usando el estado disponible. Indica lo pendiente o no comprobado. No vuelvas a llamar herramientas en esta fase ni inventes resultados.",
 });
 
 const hash = (s) => crypto.createHash("sha256").update(s).digest("hex");
@@ -158,10 +176,11 @@ export function validateCall(call, tools = CODER_TOOLS) {
     };
   let args;
   try {
-    args =
-      typeof call.arguments === "string"
-        ? JSON.parse(call.arguments)
-        : call.arguments;
+    if (typeof call.arguments === "string") {
+      const text = call.arguments.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i, "$1");
+      args = JSON.parse(text);
+      if (typeof args === "string" && /^\s*\{/.test(args)) args = JSON.parse(args);
+    } else args = call.arguments;
   } catch {
     return {
       ok: false,
@@ -356,6 +375,7 @@ export class CoderTask {
       currentFile: this.currentFile,
     });
     this.state.inspected = [...(this.context.lastSnippetFiles || [])];
+    this.snippetVersions = new Map(this.state.inspected.map(rel => [rel, this.context.versions.get(rel)]));
     const pkg = this.context.entries.get("package.json");
     if (pkg) {
       try {
@@ -395,50 +415,59 @@ export class CoderTask {
       throw new Error("Tiempo máximo de tarea agotado");
     const valid = [],
       errors = [];
+    const batchFiles = new Map();
+    const batchCounts = new Map();
     for (const call of calls) {
       const r = validateCall(call);
       let error = r.ok ? "" : r.error;
       if (r.ok) {
         const a = r.args,
           abs = a.ruta ? rutaProyecto(this.root, a.ruta) : null;
+        const limit = {archivo:6,reemplazar:8,ejecutar:6,buscar:4,borrar:6,mover:6,proceso:6}[call.name];
+        if (limit) {
+          const count = (batchCounts.get(call.name) || 0) + 1;
+          batchCounts.set(call.name, count);
+          if (count > limit) error = `El lote admite como máximo ${limit} llamadas ${call.name}; envía las restantes en el siguiente paso`;
+        }
         if (["archivo", "reemplazar"].includes(call.name)) {
-          if (!abs) error = "ruta: fuera del proyecto o enlace no permitido";
+          if (!error && !abs) error = "ruta: fuera del proyecto o enlace no permitido";
           else if (
-            call.name === "archivo" &&
-            (Buffer.byteLength(a.contenido) > this.config.wholeFileMaxBytes ||
-              (fs.existsSync(abs) &&
-                fs.statSync(abs).size > this.config.wholeFileMaxBytes))
-          )
-            error =
-              "archivo: máximo 12000 bytes; usa reemplazar con un anchor único";
-          else if (
+            !error &&
             fs.existsSync(abs) &&
             !this.state.inspected.includes(
               path.relative(this.root, abs).replace(/\\/g, "/"),
             )
           )
-            error = "Inspecciona primero ese archivo con leer";
+            error = `Inspecciona primero ${path.relative(this.root, abs).replace(/\\/g, "/")} con leer antes de sobrescribirlo`;
           else if (call.name === "reemplazar" && !a.buscar)
             error = "buscar: anchor vacío";
+          if (!error && abs) {
+            const key = path.resolve(abs).toLowerCase();
+            const previous = batchFiles.get(key);
+            if (previous && (previous === "archivo" || call.name === "archivo"))
+              error = "Varias escrituras completas o una escritura y un reemplazo afectan al mismo archivo en el mismo lote; aplícalas en pasos separados";
+            else batchFiles.set(key, call.name);
+          }
         }
-        const key = hash(JSON.stringify([call.name, a])),
-          revision = this.revision();
-        const old = this.calls.get(key);
-        const n = old?.revision === revision ? old.n + 1 : 1;
-        this.calls.set(key, { revision, n });
-        const repetitionLimit = [
-          "leer",
-          "indice",
-          "buscar_codigo",
-          "simbolo",
-          "git_diff",
-        ].includes(call.name)
-          ? 6
-          : 2;
-        if (n > repetitionLimit)
-          error =
-            "Llamada idéntica repetida sin cambio del proyecto. Usa otra evidencia o termina.";
-        if (!error) valid.push({ ...call, arguments: JSON.stringify(a) });
+        if (!error) {
+          const key = hash(JSON.stringify([call.name, a])),
+            revision = this.revision();
+          const old = this.calls.get(key);
+          const n = old?.revision === revision ? old.n + 1 : 1;
+          this.calls.set(key, { revision, n });
+          const repetitionLimit = [
+            "leer",
+            "indice",
+            "buscar_codigo",
+            "simbolo",
+            "git_diff",
+          ].includes(call.name)
+            ? 6
+            : 2;
+          if (n > repetitionLimit)
+            error = `Llamada idéntica a ${call.name} repetida ${n} veces sin cambios en el proyecto. No la ejecuté; usa el resultado anterior, cambia los argumentos o pasa a otra comprobación`;
+          else valid.push({ ...call, arguments: JSON.stringify(a) });
+        }
       }
       if (error) {
         errors.push({
@@ -449,11 +478,22 @@ export class CoderTask {
       }
     }
     this.invalid = errors.length ? this.invalid + 1 : 0;
-    if (this.invalid > 1) {
+    if (this.invalid > 4) {
       this.stopped = "invalid_tool_limit";
       this.state.errors = errors.map((e) => e.error);
     }
     return { valid, errors };
+  }
+  /**
+   * Un archivo que este turno acaba de crear o escribir ya es conocido: no hace falta
+   * volver a `leer` para poder corregirlo. Antes solo `leer` añadía a `inspected`, así
+   * que el agente quedaba bloqueado al intentar arreglar su propio archivo recién creado.
+   * @param {string} rel
+   */
+  noteWritten(rel) {
+    const limpia = String(rel || "").replace(/\\/g, "/").replace(/^\.\//, "");
+    if (!limpia) return;
+    if (!this.state.inspected.includes(limpia)) this.state.inspected.push(limpia);
   }
   revision() {
     return hash(
@@ -615,6 +655,20 @@ export class CoderTask {
     const signature = this.revision();
     if (!files.length) {
       this.needsFinalVerification = false;
+      // A finish claim without a diff or inspected evidence cannot prove that an
+      // edit request was completed. Non-final calls still report "nothing to do".
+      if (final) {
+        this.verificationSummary =
+          "No se modificó ni inspeccionó ningún archivo: no hay evidencia para dar la tarea por terminada.";
+        this.trace("verified", {
+          ok: false,
+          files: [],
+          tests: [],
+          summary: this.verificationSummary,
+          reason: "no_evidence",
+        });
+        return { ok: false, summary: this.verificationSummary, changed: false };
+      }
       return {
         ok: true,
         summary: "Sin cambios que verificar.",
@@ -683,7 +737,7 @@ export class CoderTask {
           }
         }
       }
-      if (ast.syntaxErrors && !before?.syntaxErrors)
+      if (ast.syntaxErrors)
         errors.push(
           `${rel}: Tree-sitter detectó error de sintaxis; usa leer para localizarlo.`,
         );
@@ -695,11 +749,11 @@ export class CoderTask {
           )
         : [];
       const prior = new Set(
-        oldDiags.filter((d) => d.severidad === "error").map((d) => d.mensaje),
+        oldDiags.filter((d) => d.severidad === "error").map(identidadDiagnostico),
       );
       for (const d of diags.filter((d) => d.severidad === "error")) {
         const msg = `${rel}:${d.linea} ${d.mensaje}`;
-        (prior.has(d.mensaje) ? preexisting : errors).push(msg);
+        (prior.has(identidadDiagnostico(d)) ? preexisting : errors).push(msg);
       }
     }
     if (!errors.length) {
@@ -812,7 +866,7 @@ export class CoderTask {
     // Keep the complete state and logs on the host. Render a bounded view, never a
     // sliced JSON object or a second copy of the same failed-test stack trace.
     const s = this.state;
-    const complete = JSON.stringify({ phase: s.phase, inspected: s.inspected.slice(-12), modified: s.modified, plan: s.plan, tests: s.tests, errors: s.errors, repairs: s.repairs, previousTask: s.previousTask, lastDiff: s.phase === "REPAIR" ? s.lastDiff : undefined });
+    const complete = JSON.stringify({ phase: s.phase, inspected: s.inspected.slice(-12), symbols: s.symbols, modified: s.modified, plan: s.plan, tests: s.tests, errors: s.errors, actions: s.actions, repairs: s.repairs, previousTask: s.previousTask, lastDiff: s.lastDiff || undefined });
     // Preserve the established representation when it already fits. Compact only
     // oversized state, avoiding needless prompt changes on ordinary iterations.
     if (estimateTokens(complete) <= budget) return complete;
@@ -827,11 +881,13 @@ export class CoderTask {
       phase: s.phase, repairs: s.repairs, compact: true,
       inspected: s.inspected.slice(-8).map(p => brief(p, 45)),
       modified: s.modified.slice(0, 8).map(p => brief(p, 45)),
+      symbols: s.symbols.slice(-8).map(p => brief(p, 30)),
+      actions: s.actions.slice(-4).map(a => ({ kind: a.kind, title: brief(a.title, 40), state: a.state, code: a.code })),
       plan: s.plan ? brief(s.plan, 100) : undefined,
       tests: s.tests.slice(-2).map(t => ({ command: brief(t.command, 65), code: t.code })),
       errors: s.errors.slice(0, 2).map(e => brief(e, 120)),
       previousTask: s.previousTask ? brief(s.previousTask, 60) : undefined,
-      lastDiff: s.phase === "REPAIR" && s.lastDiff ? brief(s.lastDiff, 120) : undefined,
+      lastDiff: s.lastDiff ? brief(s.lastDiff, 120) : undefined,
     };
     const render = () => JSON.stringify({ ...view, omitted: {
       inspected: s.inspected.length - view.inspected.length,
@@ -839,14 +895,15 @@ export class CoderTask {
       tests: s.tests.length - view.tests.length,
       errors: s.errors.length - view.errors.length,
     } });
-    for (const key of ["lastDiff", "previousTask", "plan"])
+    for (const key of ["lastDiff", "previousTask"])
       if (estimateTokens(render()) > budget) delete view[key];
-    for (const key of ["inspected", "tests", "modified", "errors"])
+    for (const key of ["inspected", "symbols", "actions", "tests", "modified", "errors"])
       while (estimateTokens(render()) > budget && view[key].length > (key === "errors" ? 1 : 0))
         view[key].pop();
     // The first failure is essential even with many long paths/diagnostics.
     for (let cap = 100; estimateTokens(render()) > budget && cap >= 10; cap -= 10)
       view.errors = view.errors.map(e => brief(e, cap));
+    if (estimateTokens(render()) > budget) delete view.plan;
     return render();
   }
   dynamic() {

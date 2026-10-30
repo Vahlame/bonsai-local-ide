@@ -89,3 +89,53 @@ export function escribirAtomico(abs, contenido) {
     try { fs.unlinkSync(tmp); } catch (err) { if (err.code !== "ENOENT") throw err; }
   }
 }
+
+// Concurrent writes to different files use independent sibling temporaries. The
+// precondition detects ordinary external edits before the atomic replacement.
+export async function escribirAtomicoCondicional(root, rel, antes, contenido, signal) {
+  const abs = rutaSegura(root, rel);
+  if (!abs) throw new Error("ruta no permitida");
+  const body = Buffer.from(contenido, "utf8");
+  if (body.includes(0) || body.length > 1_500_000) throw new Error("Contenido binario o demasiado grande");
+  const temp = path.join(path.dirname(abs), `.bonsai-${crypto.randomBytes(12).toString("hex")}.tmp`);
+  let fd;
+  try {
+    const stat = await fs.promises.stat(abs);
+    fd = await fs.promises.open(temp, "wx", stat.mode & 0o777);
+    await fd.writeFile(body); await fd.sync(); await fd.close(); fd = undefined;
+    signal?.throwIfAborted();
+    if (!rutaSegura(root, rel)) throw new Error("La ruta cambió; no se guardó");
+    const actual = await fs.promises.readFile(abs, "utf8");
+    if (actual !== antes) throw new Error("El archivo cambió en disco durante la edición; no se sobrescribió");
+    signal?.throwIfAborted();
+    await fs.promises.rename(temp, abs);
+    const canonical = path.relative(root, abs).split(path.sep).join("/");
+    return {rel:canonical, bytes:body.length, url:`/p/${canonical.split("/").map(encodeURIComponent).join("/")}`};
+  } finally {
+    if (fd) await fd.close();
+    try { await fs.promises.unlink(temp); } catch (err) { if (err.code !== "ENOENT") throw err; }
+  }
+}
+
+export async function escribirAtomicoNuevo(root, rel, contenido, signal) {
+  const abs = rutaSegura(root, rel);
+  if (!abs) throw new Error("ruta no permitida");
+  const body = Buffer.from(contenido, "utf8");
+  if (body.includes(0) || body.length > 1_500_000) throw new Error("Contenido binario o demasiado grande");
+  await fs.promises.mkdir(path.dirname(abs),{recursive:true});
+  if (!rutaSegura(root,rel)) throw new Error("La ruta cambió; no se guardó");
+  const temp = path.join(path.dirname(abs), `.bonsai-${crypto.randomBytes(12).toString("hex")}.tmp`);
+  let fd;
+  try {
+    fd = await fs.promises.open(temp,"wx");
+    await fd.writeFile(body); await fd.sync(); await fd.close(); fd=undefined;
+    signal?.throwIfAborted();
+    if (!rutaSegura(root,rel)) throw new Error("La ruta cambió; no se guardó");
+    await fs.promises.link(temp,abs);
+    const canonical = path.relative(root,abs).split(path.sep).join("/");
+    return {rel:canonical,bytes:body.length,url:`/p/${canonical.split("/").map(encodeURIComponent).join("/")}`};
+  } finally {
+    if (fd) await fd.close();
+    try { await fs.promises.unlink(temp); } catch (err) { if (err.code !== "ENOENT") throw err; }
+  }
+}

@@ -422,8 +422,13 @@ export class CodeContext {
   }
   map(task, hints = {}, budget = this.config.repoMapTokens) {
     if (budget <= 0) return "";
+    const carpeta = String(hints.carpeta || "")
+      .replace(/\\/g, "/")
+      .replace(/^\.\/+|\/+$/g, "");
     const lines = [];
     for (const e of this.rank(task, hints)) {
+      if (carpeta && e.rel !== carpeta && !e.rel.startsWith(`${carpeta}/`))
+        continue;
       const s = e.symbols
         .slice(0, 6)
         .map(

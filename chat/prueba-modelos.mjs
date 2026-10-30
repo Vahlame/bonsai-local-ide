@@ -2,12 +2,14 @@
  * Prueba del CAMBIO DE MODELO en caliente, con el modelo real:
  *   node chat/prueba-modelos.mjs --real [--puerto 8080]
  *
- * Apaga el llama-server que esté corriendo, carga el OTRO modelo del catálogo y
- * comprueba que el servidor quedó sirviendo ese archivo; al final vuelve a dejar el
- * que estaba. Necesita el servidor real: si no hay ninguno escuchando, avisa y
- * termina bien (así puede vivir en la suite sin GPU).
+ * Si hay un segundo modelo con perfil de GPU completa, apaga el llama-server,
+ * lo carga y comprueba que queda sirviendo ese archivo; al final vuelve al que
+ * estaba. Si no lo hay, comprueba que cambiar a un modelo sin perfil se rechaza
+ * con 409 y que el servidor actual sigue sirviendo. Necesita el servidor real:
+ * si no hay ninguno escuchando, avisa y termina bien (así puede vivir en la
+ * suite sin GPU).
  *
- * OJO: por definición reinicia llama-server dos veces (≈40-60 s cada carga).
+ * OJO: con dos modelos GPU reinicia llama-server dos veces (≈40-60 s cada carga).
  */
 
 import fs from "node:fs";
@@ -149,8 +151,13 @@ const disponibles = Object.keys(MODELO.catalogo)
     }
   });
 const actual = disponibles.find((m) => m.archivo === antes);
-const otro = disponibles.find((m) => m.archivo !== antes);
-if (!otro || !actual) {
+const otroGpu = disponibles.find((m) => m.archivo !== antes && m.servidor?.tipo === "gpu-completa");
+const sinPerfil = disponibles.find((m) => m.archivo !== antes && m.servidor?.tipo !== "gpu-completa");
+if (!actual) {
+  process.stdout.write(`(el modelo servido ${antes} no está entero en el catálogo; no se prueba el cambio)\n`);
+  process.exit(0);
+}
+if (!otroGpu && !sinPerfil) {
   process.stdout.write(`(el catálogo no tiene otro modelo con el GGUF entero; cargado: ${antes})\n`);
   process.exit(0);
 }
@@ -200,8 +207,24 @@ try {
   const claveActual = catalogo.actual;
   if (claveActual !== actual.clave) fallos.push(`el catálogo dice que está cargado ${claveActual}, y el servidor sirve ${antes}`);
 
-  await cambiar(otro.clave, otro.archivo, `cambio a ${otro.clave}`);
-  await cambiar(actual.clave, actual.archivo, `vuelta a ${actual.clave}`);
+  if (otroGpu) {
+    await cambiar(otroGpu.clave, otroGpu.archivo, `cambio a ${otroGpu.clave}`);
+    await cambiar(actual.clave, actual.archivo, `vuelta a ${actual.clave}`);
+  } else {
+    // Solo hay un modelo con perfil GPU completa. El cambio a otro modelo sin
+    // perfil debe rechazarse antes de tocar el servidor que ya funciona.
+    const r = await post(`http://127.0.0.1:${args.ui}/api/modelos`, { clave: sinPerfil.clave });
+    if (r.status !== 409) {
+      fallos.push(`el cambio a ${sinPerfil.clave} (sin perfil GPU) debía rechazarse con 409, respondió ${r.status}: ${r.body.slice(0, 160)}`);
+    } else {
+      process.stdout.write(`rechazo correcto de ${sinPerfil.clave} sin perfil GPU (409)\n`);
+      const servido = await modeloServido(args.puerto);
+      if (servido !== antes) fallos.push(`tras rechazar ${sinPerfil.clave}, el servidor sirve ${servido} y se esperaba ${antes}`);
+      else process.stdout.write(`el servidor sigue sirviendo ${antes} tras el rechazo\n`);
+      const estado = await pedir(`http://127.0.0.1:${args.ui}/api/state`);
+      if (estado.status !== 200) fallos.push(`/api/state no responde tras el rechazo: HTTP ${estado.status}`);
+    }
+  }
 } catch (err) {
   fallos.push(err instanceof Error ? err.message : String(err));
 } finally {

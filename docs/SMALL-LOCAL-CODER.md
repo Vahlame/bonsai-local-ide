@@ -196,6 +196,11 @@ lanzador registra fallos en `logs/ide-launcher.log`, comprueba que el puerto sea
 del IDE y reutiliza una instancia sana. El acceso directo del escritorio apunta
 a ese lanzador, sin consola permanente.
 
+El arranque con navegador conserva `--open` como un argumento completo en
+Windows PowerShell 5.1. `node chat/prueba-lanzador.mjs` comprueba esa frontera
+PowerShell/Node tanto con apertura del navegador como con `-NoBrowser`, sin
+arrancar modelos ni tocar el workspace.
+
 ## Evaluación y alcance
 
 ```powershell

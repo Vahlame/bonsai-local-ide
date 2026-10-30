@@ -598,6 +598,7 @@
   <script src="/ui/iconos.js"></script>
 </head>
 <body>
+  <div class="avisos" id="avisos"></div>
   <header class="top">
     <div class="brand"><span class="mark"></span><div><strong>Bonsai</strong><small>tu espacio de desarrollo</small></div></div>
     <span class="muted" id="meta"></span>
@@ -612,6 +613,39 @@
       <button class="ghost" id="permit-ask" type="button">Preguntar</button>
       <button class="ghost" id="permit-all" type="button">Ejecutar todo</button>
     </div>
+    <div class="server-panel" role="group" aria-label="Servidor IA">
+      <button class="ghost server-btn" id="server-start" type="button" title="Iniciar servidor optimizado (RTX 4060)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        <span>Iniciar</span>
+      </button>
+      <button class="ghost server-btn" id="server-stop" type="button" hidden title="Detener servidor">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+        <span>Detener</span>
+      </button>
+      <button class="ghost server-btn" id="server-terminal" type="button" title="Abrir terminal con comando del servidor (copia y pega en PowerShell)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <span>Terminal</span>
+      </button>
+      <select class="server-preset" id="server-preset" title="Preset de motor" aria-label="Preset de motor optimizado">
+        <option value="8GB-VISION-DEFAULT-F16">✅ Default: 16k f16 KV + Vision</option>
+        <option value="8GB-VISION-ULTRA-F16">🔥 Ultra F16: 32k f16 KV + Vision</option>
+        <option value="8GB-VISION-ULTRA">⚡ Ultra: 36k IQ4_XS + Vision + SpecDecode</option>
+        <option value="8GB-VISION-HIGH">🚀 High: 32k IQ4_XS + Vision</option>
+        <option value="8GB-VISION-BALANCED">⚖️ Balanced: 28k q4_0 + Vision</option>
+        <option value="8GB-VISION-SAFE">🛡️ Safe: 24k q4_0 + Vision</option>
+        <option value="8GB-VISION-QUALITY">🎨 Vision Quality: 32k f16 + Vision</option>
+        <option value="8GB-CODE-MAX">💻 Code Max: 48k IQ2_XS + SpecDecode</option>
+        <option value="8GB-CODE-HIGH">💻 Code High: 40k q4_0</option>
+        <option value="8GB-CODE-BALANCED">💻 Code Balanced: 32k q8_0</option>
+        <option value="8GB-CODE-FAST">⚡ Code Fast: 16k f16 + SpecDecode</option>
+        <option value="8GB-RESEARCH">🔬 Research: 64k IQ1_S</option>
+      </select>
+      <span class="server-status" id="server-status" title="Estado del servidor">
+        <i class="dot"></i>
+        <span>Desconectado</span>
+      </span>
+    </div>
+    <button class="ghost" id="cerrar-bonsai" type="button" title="Apagar el servidor de IA y cerrar el IDE">Cerrar IDE e IA</button>
     <button class="ghost" id="carpeta" type="button" title="Cambiar carpeta de trabajo">Carpeta</button>
     <button class="ghost" id="ayuda" type="button" aria-controls="help" aria-expanded="false">Ayuda</button>
   </header>
@@ -646,7 +680,7 @@
         <div class="msg" id="empty">Escribe el cambio; un clic abre el archivo y el círculo o Adjuntar lo incluye en el mensaje.</div>
       </div>
       <div id="suggest"></div>
-      <div id="error"></div>
+      <div id="error" role="alert" aria-live="assertive"></div>
       <form id="composer">
         <div id="box">
           <div id="attach-menu" hidden>
@@ -713,7 +747,10 @@
   <script src="/ui/chat-core.js"></script>
   <script id="stats-boot">
     const statsLine = document.querySelector("#stats-line");
+    let statsEnCurso = false;
     async function loadStats() {
+      if (statsEnCurso || document.hidden) return;
+      statsEnCurso = true;
       try {
         const res = await fetch("/api/stats");
         if (!res.ok || !statsLine) return;
@@ -725,9 +762,11 @@
         const archivos = data.saved?.count ?? 0;
         statsLine.textContent = `${data.turns ?? 0} turnos · ${archivos} archivos · memoria ${data.memory ?? 0} tok · sesión ${tiempo}`;
       } catch { /* el siguiente intervalo reintenta */ }
+      finally { statsEnCurso = false; }
     }
     loadStats();
     setInterval(loadStats, 5000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) loadStats(); });
   </script>
   <script src="/ui/ide.js"></script>
   <!-- Editor con pestanas, paleta de comandos, busqueda, git y ajustes -->

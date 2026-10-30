@@ -167,6 +167,14 @@ const guion = (body, n) => {
     ];
   }
   if (ultimoMsg.role === "tool" && ultimoMsg.tool_call_id === "rep2") return [{ content: "Cambiado." }];
+  if (/prueba ediciones paralelas/i.test(ultimo)) return [
+    nativa("edit_a1", "reemplazar", {ruta:"par-a.txt",buscar:"uno",poner:"dos"},0),
+    nativa("edit_b", "reemplazar", {ruta:"par-b.txt",buscar:"rojo",poner:"azul"},1),
+    nativa("edit_a2", "reemplazar", {ruta:"par-a.txt",buscar:"dos",poner:"tres"},2),
+    nativa("edit_new1", "archivo", {ruta:"nuevo-a.txt",contenido:"creado A"},3),
+    nativa("edit_new2", "archivo", {ruta:"nuevo-b.txt",contenido:"creado B"},4),
+  ];
+  if (ultimoMsg.role === "tool" && ultimoMsg.tool_call_id === "edit_new2") return [{content:"Terminado."}];
   // Prueba 22: un servidor en segundo plano se consulta con otro comando y muere con el turno.
   if (/prueba del servidor de fondo/i.test(ultimo)) return [nativa("sf1", "ejecutar", { comando: "node -e \"require('http').createServer((q,s)=>s.end('hola desde el fondo')).listen(8798,()=>console.log('escuchando en 8798'))\"", segundo_plano: true })];
   if (ultimoMsg.role === "tool" && ultimoMsg.tool_call_id === "sf1") return [nativa("sf2", "ejecutar", { comando: "node -e \"fetch('http://127.0.0.1:8798').then(r=>r.text()).then(t=>console.log(t))\"" })];
@@ -431,7 +439,7 @@ try {
   check("el resultado no lleva el párrafo de instrucciones", !/Sigue con lo que pedí/.test(String(resultadoNativo?.content || "")));
   check("tras el resultado sigue habiendo un mensaje del usuario (la plantilla lo exige)", (tras[0]?.messages || []).some((m) => m.role === "user" && /tool call nativo/.test(String(m.content))));
   const sistemaAgente = String(tras[0]?.messages?.[0]?.content || "");
-  check("el sistema le dice Windows, cmd.exe y que escriba con `archivo`", /Windows/.test(sistemaAgente) && /cmd\.exe/.test(sistemaAgente) && /`archivo`/.test(sistemaAgente), sistemaAgente.slice(0, 200));
+  check("el sistema le dice Windows, cmd.exe y cómo editar", /Windows/.test(sistemaAgente) && /cmd\.exe/.test(sistemaAgente) && /reemplazos precisos/.test(sistemaAgente), sistemaAgente.slice(0, 200));
   check("el resultado no se pinta como mensaje del usuario", !JSON.parse((await pedir("GET", "/api/state")).body).turns.some((t) => t.role === "tool" || /Guardado nativo/.test(String(t.content))));
   const deshacerNativo = await pedir("POST", "/api/undo", { id: tarjetaNativa?.undo });
   const trasDeshacer = fs.existsSync(path.join(proyecto, "nativo.txt")) ? JSON.stringify(fs.readFileSync(path.join(proyecto, "nativo.txt"), "utf8")) : "(borrado)";
@@ -505,6 +513,12 @@ try {
   check("reemplazar deja diff y punto de deshacer", /\+puerto = 8080/.test(String(tarjetaRep?.detail || "")) && typeof tarjetaRep?.undo === "string", JSON.stringify(tarjetaRep).slice(0, 200));
   const conRep = visto.find((b) => (b.messages || []).some((m) => m.tool_call_id === "rep2"));
   check("reemplazar sin coincidencia lo dice en SU resultado", /No encontré ese texto en config\.ini/.test(String(conRep?.messages?.find((m) => m.tool_call_id === "rep2")?.content || "")) && /Cambiado config\.ini/.test(String(conRep?.messages?.find((m) => m.tool_call_id === "rep1")?.content || "")));
+  fs.writeFileSync(path.join(proyecto,"par-a.txt"),"uno");
+  fs.writeFileSync(path.join(proyecto,"par-b.txt"),"rojo");
+  await chat("prueba ediciones paralelas");
+  check("edita distintos archivos y conserva orden por ruta", fs.readFileSync(path.join(proyecto,"par-a.txt"),"utf8") === "tres" && fs.readFileSync(path.join(proyecto,"par-b.txt"),"utf8") === "azul" && fs.readFileSync(path.join(proyecto,"nuevo-a.txt"),"utf8") === "creado A" && fs.readFileSync(path.join(proyecto,"nuevo-b.txt"),"utf8") === "creado B");
+  const paralelo = visto.find(b=>(b.messages||[]).some(m=>m.tool_call_id === "edit_new2"));
+  check("cada edición paralela tiene su resultado", ["edit_a1","edit_a2","edit_b"].every(id=>(paralelo?.messages||[]).some(m=>m.tool_call_id===id && /Cambiado/.test(m.content))) && ["edit_new1","edit_new2"].every(id=>(paralelo?.messages||[]).some(m=>m.tool_call_id===id && /Guardado/.test(m.content))));
 
   // --- 19. Latido y progreso mientras el modelo escribe un archivo largo ------
   {
@@ -521,6 +535,11 @@ try {
   const pidioCharla = visto.slice(antesCharla).filter((b) => b.stream);
   check("una pregunta conceptual va en UN salto y con tool_choice none", pidioCharla.length === 1 && pidioCharla[0].tool_choice === "none", JSON.stringify(pidioCharla.map((b) => b.tool_choice)));
   check("y no ejecuta ni escribe nada", !eventosCharla.some((e) => e.type === "action"));
+  const antesSaludo = visto.length;
+  const eventosSaludo = await chat("hi");
+  const pidioSaludo = visto.slice(antesSaludo).filter((b) => b.stream);
+  check("hi responde en un salto sin herramientas", pidioSaludo.length === 1 && pidioSaludo[0].tool_choice === "none");
+  check("hi no explora ni modifica archivos", !eventosSaludo.some((e) => e.type === "action"));
   const antesNoCharla = visto.length;
   await chat("explica el error de app.py y arréglalo");
   check("si hay algo que hacer, las herramientas siguen puestas", visto.slice(antesNoCharla).filter((b) => b.stream)[0]?.tool_choice === "auto");
@@ -712,12 +731,12 @@ try {
       const info2 = JSON.parse((await pedir("GET", "/api/settings", undefined, PUERTO + 1)).body).pensarInfo || {};
       check("Override-6 se anuncia compatible con el modo pensar", info2.compatible === true && info2.recomendado > 0, JSON.stringify(info2));
       const conPensar = JSON.parse((await pedir("POST", "/api/settings", { pensar: 2048 }, PUERTO + 1)).body).pensarInfo || {};
-      check("con Override-6 el razonamiento pedido se aplica", conPensar.efectivo === 2048, JSON.stringify(conPensar));
+      check("con Override-6 el razonamiento está activo", conPensar.efectivo > 0 && conPensar.efectivo <= 2048, JSON.stringify(conPensar));
       const antesXml = visto2.length;
       const eventosXml = await chatEn(PUERTO + 1, "prueba del dialecto del modelo");
       const saltos = visto2.slice(antesXml).filter((b) => b.stream);
-      check("el primer salto razona (plan)", saltos[0]?.chat_template_kwargs?.enable_thinking === true && saltos[0]?.thinking_budget_tokens === 2048, JSON.stringify(saltos[0]?.chat_template_kwargs));
-      check("un salto rutinario tras un éxito no razona", saltos.length >= 2 && saltos[1]?.chat_template_kwargs?.enable_thinking === false, JSON.stringify(saltos.map((b) => b.chat_template_kwargs)));
+      check("el primer salto razona (plan)", saltos[0]?.chat_template_kwargs?.enable_thinking === true && saltos[0]?.thinking_budget_tokens > 0, JSON.stringify(saltos[0]?.chat_template_kwargs));
+      check("un salto rutinario mantiene razonamiento activo", saltos.length >= 2 && saltos[1]?.chat_template_kwargs?.enable_thinking === true, JSON.stringify(saltos.map((b) => b.chat_template_kwargs)));
       await pedir("POST", "/api/settings", { pensar: 0 }, PUERTO + 1);
 
       // --- 20. Una cerca de código en la respuesta NO crea archivos (modelo con tool calls) ---

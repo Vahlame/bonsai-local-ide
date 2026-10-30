@@ -1,0 +1,105 @@
+# Changelog
+
+Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato sigue
+[Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
+versionado semántico.
+
+## [1.2.0] - 2026-10-30
+
+### Añadido
+
+- **Memoria global entre chats**: capa separada de la memoria de sesión, guardada en el
+  estado local fuera de Git. Selección por relevancia léxica contra el pedido y el
+  objetivo, notas fijadas siempre dentro del presupuesto y nada inyectado si no hay
+  coincidencia. Presupuesto configurable por turno (0–2.000 tokens), captura automática
+  conservadora de preferencias y decisiones duraderas, y editor para revisar, añadir,
+  editar, fijar, borrar y vaciar notas. API `GET/POST /api/memoria`.
+- **Navegador Playwright MCP aislado** (`mcp_playwright`): abre páginas HTTP/HTTPS,
+  inspecciona el árbol accesible, pulsa, escribe, envía teclas, espera y consulta
+  consola y red. Usa un perfil efímero por turno, bloquea los puertos del IDE y del
+  modelo y no habilita evaluación arbitraria de código.
+- **Control del servidor desde la interfaz**: `GET/POST /api/servidor` permite consultar,
+  detener y volver a arrancar el servidor administrado sin cerrar el IDE.
+- **Cancelación real del turno** (`POST /api/stop`): aborta la inferencia, las
+  herramientas y los procesos del turno de forma idempotente.
+- **Escritura por partes recuperable**: `estado` recupera el offset tras una interrupción
+  y `cancelar` descarta las partes pendientes.
+- **Diagnóstico de JavaScript inline en HTML** con `node --check`, además de la
+  comprobación estructural.
+- Suites nuevas para memoria global, compactación, cancelación y cierre, registros,
+  Playwright MCP y pruebas reales opcionales de contexto, carga y multivisión.
+- Evidencia publicable de la release en `docs/evidencia/2026-10-30/`.
+
+### Cambiado
+
+- **Prompt del agente** dividido en reglas generales, flujo de trabajo y uso de
+  herramientas; las fases del coder distinguen conversación, edición, verificación y
+  cierre. El coder recibe además `navegador`, `buscar`, `leer_web` y `mcp_playwright`.
+- **Validación de lotes de herramientas**: límites por tipo de llamada, rechazo de
+  escrituras conflictivas sobre el mismo archivo y límites de repetición con mensajes
+  que explican cómo continuar.
+- **Estado del coder** más útil y acotado: símbolos, acciones y último diff, con
+  compactación por presupuesto y conservación del plan cuando cabe.
+- Un archivo escrito en el turno queda marcado como inspeccionado: corregirlo ya no
+  exige volver a leerlo.
+- **Escrituras concurrentes** en archivos distintos con colas por ruta, temporales
+  independientes y precondición contra cambios externos.
+- Los diagnósticos de contexto incluyen memoria global (tokens, entradas y presupuesto)
+  y detalles de compactación.
+- `start-ui.ps1` propaga `KVCacheType` en perfiles `CUSTOM`, respeta el KV y la visión
+  guardados y falla si la visión configurada no tiene proyector.
+- Saludos breves como `hi`, `hello` o `hey` se reconocen como conversación y no activan
+  una tarea sobre el proyecto.
+- El runner separa **`test:gpu`** (servidor cargado) de **`test:gpu-exclusiva`**
+  (calidad KV, GPU libre); `test:todo` ejecuta las cuatro familias.
+- La prueba de GPU trata `CPU_Mapped` como mmap de apoyo del GGUF, no como pesos de
+  cálculo; conserva el aviso de 180 MiB de VRAM y solo falla si la memoria se agota o no
+  puede medirse. La prueba de visión lee dos imágenes de un dígito y mide las cuatro
+  cifras como estrés informativo. El cambio de modelo sin segundo perfil GPU verifica el
+  rechazo 409 sin tumbar el servidor.
+
+### Corregido
+
+- El botón **Detener** ya no deja el servidor generando ni `busy` bloqueado en 409.
+- Tras una verificación correcta y sin escrituras nuevas, el agente cierra y pide el
+  resumen en lugar de encadenar lecturas indefinidamente.
+- Reescribir un archivo recién creado por el propio agente ya no se bloquea por no
+  haberlo leído antes.
+- Las lecturas de registros están acotadas en líneas y longitud, incluso con líneas de
+  decenas de MiB, y decodifican UTF-8 entre bloques.
+- Los errores de memoria de GPU se señalan como tales y dejan la tarea incompleta sin
+  perder el estado guardado.
+- Los diagnósticos HTML detectan scripts inline rotos que antes solo aparecían al abrir
+  la página.
+
+### Seguridad
+
+- La memoria global rechaza secretos, vive fuera del proyecto y de Git, y nunca se
+  inyecta completa.
+- El navegador MCP no se conecta al perfil del usuario, no evalúa código arbitrario y
+  protege los puertos del IDE y del modelo.
+- Las escrituras atómicas comprueban la ruta y el contenido previo antes de sustituir.
+
+### Pruebas
+
+- `npm test`: **40/40** suites, 125,3 s.
+- `npm run test:navegador`: **5/5** suites, 16,4 s.
+- `npm run test:gpu`: **4/4** suites, 95,4 s.
+- `npm run test:gpu-exclusiva`: **1/1** suite, 89,6 s.
+- Calidad KV: A (32K, q8_0, visión) **8/8**; B (16K, f16, visión) 6/8; C (32K, f16,
+  sin visión) 6/8. Pasada única, no medida estadística.
+
+## [1.1.0] - 2026-10-29
+
+### Añadido
+
+- Prompt de sistema más claro y selección de herramientas orientada a la intención.
+- Conservación y diagnóstico del contexto, presupuesto de salida y conteo mediante
+  llama-server cuando está disponible.
+- Escritura incremental para archivos nuevos grandes y consulta de salidas de comandos.
+- Perfiles de GPU, visión, pensamiento y perfil manual de 43.008 tokens para el equipo
+  probado.
+- Auditoría técnica y hoja de ruta en `docs/AUDITORIA-PROFUNDA-2026-10-29.md`.
+
+[1.2.0]: https://github.com/Vahlame/bonsai-local-ide/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/Vahlame/bonsai-local-ide/releases/tag/v1.1.0

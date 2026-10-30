@@ -767,6 +767,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .hud{gap:12px}.hud .cell{gap:6px}.hud .vram-free{color:var(--ok);font-weight:550}.hud .vram-free.low{color:var(--danger)}
 .hud-bar{opacity:.7}.pill{background:var(--raised);border-color:var(--line);border-radius:7px}
 .hud .cell:nth-child(3),.hud .cell:nth-child(4),.hud .cell:nth-child(6){display:none}
+.hud .cell.warn{display:flex}
 #stats-line{margin-left:auto;max-width:25ch;overflow:hidden;text-overflow:ellipsis}
 .dialogo-fondo{background:#11172165;backdrop-filter:blur(7px)}
 .dialogo{background:var(--panel);border:1px solid var(--line-strong);border-radius:16px;padding:24px;box-shadow:var(--sh-3)}

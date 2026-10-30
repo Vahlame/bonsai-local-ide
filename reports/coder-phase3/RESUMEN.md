@@ -77,6 +77,15 @@ Se conserva localmente en `runs/final-36k-vision/vision.json` y en el resumen de
 modelo, visión, KV F16, pensamiento 4k, perfil/contexto/tema guardados y carpeta
 original conservada. El lanzador se comprobó reutilizando el IDE.
 
+Corrección posterior del acceso directo: PowerShell 5.1 convertía la opción
+`--open` en argumentos de un carácter y Node rechazaba `-`. Se conservaron arrays
+tipados en el arranque y se añadió `prueba-lanzador.mjs` para ambos modos. También
+se ejecutó el `.lnk` real desde servicios detenidos: el IDE abrió el navegador,
+cargó 36.864/F16 y conservó el razonamiento 4.096. Esta comprobación no hizo
+inferencias adicionales. Los 594 MiB de la medición anterior corresponden al
+navegador cerrado; la UI abierta puede reducir ese margen y se mantiene la
+comprobación de 464 MiB antes de admitir imágenes.
+
 La suite focalizada `prueba-small-coder.mjs` pasa, incluyendo 4k de pensamiento
 con 2k protegidos para editar. Pasan las comprobaciones de sintaxis de los archivos
 modificados. La prueba UI ya pasó los seis temas, streaming seguro del pensamiento,

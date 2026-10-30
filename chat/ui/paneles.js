@@ -102,8 +102,17 @@
   }
 
   /** Sondeo de la salida y de los procesos en segundo plano del agente. */
+  let sondeoEnCurso = false;
   async function sondear() {
-    if (drawer.hidden || panelActivo !== "terminal") return;
+    if (sondeoEnCurso || document.hidden || drawer.hidden || panelActivo !== "terminal") return;
+    sondeoEnCurso = true;
+    try {
+      await sondearAhora();
+    } finally {
+      sondeoEnCurso = false;
+    }
+  }
+  async function sondearAhora() {
     const mío = generacion;
     if (termId) {
       try {
@@ -365,7 +374,7 @@
   function programarRefresh() {
     clearTimeout(timerRefresh);
     timerRefresh = window.setTimeout(() => {
-      if (drawer.hidden) return;
+      if (document.hidden || drawer.hidden) return;
       const ed = window.bonsaiEditor?.();
       if (!ed) return;
       const cambioArchivo = ed.rel !== ultimoRel || ed.texto !== ultimoTexto;
@@ -393,4 +402,9 @@
   window.setInterval(() => {
     if (!drawer.hidden && panelActivo !== "terminal") programarRefresh();
   }, 2500);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    programarRefresh();
+    void sondear();
+  });
 })();

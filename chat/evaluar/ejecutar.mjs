@@ -224,7 +224,7 @@ async function main() {
   const base = `http://127.0.0.1:${args.uiPort}`;
   const logUi = fs.openSync(path.join(salida, "ui.log"), "w");
   const ui = spawn(process.execPath, [path.join(appDir, "ui-server.mjs"), "--port", String(args.uiPort), "--llama-port", String(args.llamaPort), "--prompt-cap", "8192"], {
-    env: { ...process.env, BONSAI_STATE: estado, BONSAI_SALIDA: path.join(salida, "salida"), BONSAI_OCR_SCRIPT: path.join(CHAT, "..", "scripts", "ocr-winrt.ps1"), BONSAI_PLAYWRIGHT_MODULE: path.join(CHAT, "node_modules", "playwright-core", "index.mjs") },
+    env: { ...process.env, BONSAI_STATE: estado, BONSAI_SALIDA: path.join(salida, "salida"), BONSAI_OCR_SCRIPT: path.join(CHAT, "..", "scripts", "ocr-winrt.ps1"), BONSAI_PLAYWRIGHT_MODULE: path.join(CHAT, "node_modules", "playwright-core", "index.mjs"), BONSAI_MCP_NODE_MODULES: path.join(CHAT, "node_modules") },
     stdio: ["ignore", logUi, logUi],
   });
   const cerrar = () => { try { ui.kill(); } catch { /* ya cerrada */ } };

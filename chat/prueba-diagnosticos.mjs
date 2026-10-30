@@ -24,6 +24,7 @@ import {
   lenguajeDe,
   simbolos,
 } from "./diagnosticos.mjs";
+import { identidadDiagnostico } from "./coder-harness.mjs";
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "bonsai-diagnosticos-prueba-"));
 /** Escribe un archivo dentro del temporal y devuelve su ruta absoluta. */
@@ -183,6 +184,21 @@ try {
     "<!DOCTYPE html>\n<html>\n  <head><title>Hola</title></head>\n  <body>\n    <div id=\"a\">hola</div>\n    <br>\n    <input name=\"x\">\n    <script>var s = \"<div>\";</script>\n  </body>\n</html>\n"
   );
   check("HTML correcto no produce diagnósticos", (await diagnosticarArchivo(htmlBueno)).length === 0);
+  const htmlScriptRoto = escribir(
+    "html/script-roto.html",
+    "<!DOCTYPE html>\n<html>\n  <body>\n    <h1>Hola</h1>\n    <script>\n      const = ;\n    </script>\n  </body>\n</html>\n"
+  );
+  const diagnosticoScript = await diagnosticarArchivo(htmlScriptRoto);
+  check(
+    "HTML con JavaScript inline roto produce un error con su línea real",
+    diagnosticoScript.length === 1 && diagnosticoScript[0].severidad === "error" && diagnosticoScript[0].linea === 6 && /script inline/.test(diagnosticoScript[0].mensaje),
+    JSON.stringify(diagnosticoScript)
+  );
+  const htmlModuloBueno = escribir(
+    "html/modulo.html",
+    "<!DOCTYPE html>\n<html><body>\n<script type=\"module\">import { x } from \"./x.js\"; console.log(x);</script>\n<script type=\"application/json\">{\"roto\": }</script>\n</body></html>\n"
+  );
+  check("HTML: un script module válido y un JSON de plantilla no se marcan como error", (await diagnosticarArchivo(htmlModuloBueno)).length === 0);
 
   const cssRoto = escribir("css/roto.css", ".a {\n  color: red;\n");
   const diagnosticoCss = await diagnosticarArchivo(cssRoto);
@@ -374,6 +390,29 @@ try {
   check("abs vacío devuelve []", (await diagnosticarArchivo("")).length === 0 && (await diagnosticarArchivo(null)).length === 0);
   check("texto solo de espacios devuelve []", (await diagnosticarArchivo(path.join(root, "x.py"), "   \n\t\n")).length === 0);
   check("un archivo ilegible (nombre raro) no lanza", Array.isArray(await diagnosticarArchivo(path.join(root, "carpeta/"))));
+
+  // =====================================================================
+  // 11. Identidad de diagnóstico: el mismo mensaje en otra línea es otro error
+  // =====================================================================
+  const diagBase = { archivo: "src/a.mjs", linea: 1, columna: 1, fuente: "node", mensaje: "SyntaxError: Unexpected end of input" };
+  check(
+    "la identidad del diagnóstico es estable para el mismo error",
+    identidadDiagnostico(diagBase) === identidadDiagnostico({ ...diagBase }),
+  );
+  check(
+    "la identidad distingue el mismo mensaje en otra línea",
+    identidadDiagnostico(diagBase) !== identidadDiagnostico({ ...diagBase, linea: 2 }),
+  );
+  check(
+    "la identidad distingue archivo, columna, fuente y mensaje",
+    new Set([
+      identidadDiagnostico(diagBase),
+      identidadDiagnostico({ ...diagBase, archivo: "src/b.mjs" }),
+      identidadDiagnostico({ ...diagBase, columna: 2 }),
+      identidadDiagnostico({ ...diagBase, fuente: "py_compile" }),
+      identidadDiagnostico({ ...diagBase, mensaje: "otro" }),
+    ]).size === 5,
+  );
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

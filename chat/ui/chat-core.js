@@ -58,6 +58,10 @@
     /** Continuaciones automáticas seguidas del mismo pedido (se reinicia con cada mensaje real). */
     let autoContinuaciones = 0;
     let pumping = false;
+    /** El servidor tiene un turno en marcha (también tras recargar la página). */
+    let serverBusy = false;
+    let busyTimer = 0;
+    let initialLoadDone = false;
     /** @type {Map<string, string>} */
     const oldText = new Map();
 
@@ -1084,15 +1088,26 @@
     }
 
     async function loadState() {
-      const [stateRes, treeRes, chatRes] = await Promise.all([fetch("/api/state"), fetch("/api/workspace"), fetch("/api/chats")]);
-      if (stateRes.ok) {
-        const data = await stateRes.json();
-        document.querySelector("#meta").textContent = `ventana ${data.nCtx}`;
-        paintUsage(data.usage || { nCtx: data.nCtx, cap: data.historyCap });
-        paintConversation(data);
+      try {
+        const [stateRes, treeRes, chatRes] = await Promise.all([fetch("/api/state"), fetch("/api/workspace"), fetch("/api/chats")]);
+        if (stateRes.ok) {
+          const data = await stateRes.json();
+          document.querySelector("#meta").textContent = `ventana ${data.nCtx}`;
+          paintUsage(data.usage || { nCtx: data.nCtx, cap: data.historyCap });
+          paintConversation(data);
+          if (data.busy) {
+            serverBusy = true;
+            addStatus("Hay un turno en marcha en el servidor. Puedes esperar o pulsar Detener.");
+            vigilarTurno();
+          }
+        }
+        if (treeRes.ok) applyWorkspace(await treeRes.json(), false);
+        if (chatRes.ok) paintChats(await chatRes.json());
+      } finally {
+        initialLoadDone = true;
+        input.disabled = false;
+        paintQueue();
       }
-      if (treeRes.ok) applyWorkspace(await treeRes.json(), false);
-      if (chatRes.ok) paintChats(await chatRes.json());
     }
 
     /**
@@ -1161,9 +1176,36 @@
         row.append(label, drop);
         list.append(row);
       });
-      if (send instanceof HTMLButtonElement) send.textContent = pumping ? "Encolar" : "Enviar";
+      if (send instanceof HTMLButtonElement) {
+        send.textContent = pumping ? "Encolar" : "Enviar";
+        send.disabled = !initialLoadDone || (serverBusy && !pumping);
+      }
       const stop = document.querySelector("#stop");
-      if (stop instanceof HTMLElement) stop.hidden = !pumping;
+      if (stop instanceof HTMLElement) stop.hidden = !(pumping || serverBusy);
+    }
+
+    /**
+     * Tras un F5 el turno sigue vivo en el servidor. Sondea solo mientras está ocupado
+     * y, al terminar, refresca la conversación (no prometemos stream en vivo).
+     */
+    function vigilarTurno() {
+      if (busyTimer || !serverBusy) return;
+      busyTimer = window.setInterval(async () => {
+        try {
+          const res = await fetch("/api/state", { cache: "no-store" });
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data.busy) return;
+          window.clearInterval(busyTimer);
+          busyTimer = 0;
+          serverBusy = false;
+          addStatus("El turno terminó mientras la página estaba recargada.");
+          paintQueue();
+          await reloadConversation().catch(() => {});
+        } catch {
+          /* se reintenta en el siguiente ciclo */
+        }
+      }, 2000);
     }
 
     async function pump() {
@@ -1180,11 +1222,25 @@
         pumping = false;
         paintQueue();
         if (queue.length) void pump();
-        else input.focus();
+        else {
+          // No robar el cursor si mientras terminaba el turno el usuario se puso a
+          // escribir en el editor, el terminal o cualquier otro panel.
+          const activo = document.activeElement;
+          const compositor = input.closest("form");
+          if (!activo || activo === document.body || compositor?.contains(activo)) input.focus();
+        }
       }
     }
 
     function enqueue() {
+      if (!initialLoadDone) {
+        errorBox.textContent = "La interfaz aún está cargando: espera un momento.";
+        return;
+      }
+      if (serverBusy) {
+        errorBox.textContent = "El servidor sigue ocupado con un turno anterior. Espera a que termine o pulsa Detener.";
+        return;
+      }
       const text = input.value.trim();
       if (!text) return;
       const packed = outgoingContext();
@@ -1701,10 +1757,40 @@
         }
       });
     }
-    document.querySelector("#nuevo").addEventListener("click", async () => {
-      current?.abort();
+    // El botón Detener ya no confía solo en cerrar el fetch: avisa al servidor por
+    // `/api/stop` para que aborte la inferencia y las herramientas aunque el socket
+    // tarde en cerrarse. Después espera a que el turno libere el servidor antes de
+    // cambiar de chat (antes el POST /api/chats contestaba 409 y no abría el nuevo).
+    async function cortarTurno() {
+      const teniaStream = Boolean(current);
       queue = [];
       paintQueue();
+      const aviso = fetch("/api/stop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+        keepalive: true,
+      }).catch(() => null);
+      current?.abort();
+      await aviso;
+      for (let i = 0; i < 50; i += 1) {
+        try {
+          const estado = await fetch("/api/servidor", { cache: "no-store" });
+          if (estado.ok && !(await estado.json()).ocupado) break;
+        } catch { /* el servidor aún está cerrando el turno */ }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      if (busyTimer) {
+        window.clearInterval(busyTimer);
+        busyTimer = 0;
+      }
+      serverBusy = false;
+      paintQueue();
+      // Sin stream vivo (página recargada) el log no se actualizó solo: relee el estado.
+      if (!teniaStream) await reloadConversation().catch(() => {});
+    }
+    document.querySelector("#nuevo").addEventListener("click", async () => {
+      await cortarTurno();
       const res = await fetch("/api/chats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1722,9 +1808,7 @@
       await reloadConversation();
     });
     document.querySelector("#stop")?.addEventListener("click", () => {
-      queue = [];
-      current?.abort();
-      paintQueue();
+      void cortarTurno();
     });
     const paneKey = "bonsai-panes";
     /** @type {Record<string, boolean>} */
@@ -1804,6 +1888,8 @@
     fetch("/api/permit").then(async (res) => {
       if (res.ok) paintPermitMode((await res.json()).mode === "all" ? "all" : "ask");
     }).catch(() => { paintPermitMode("ask"); });
+    input.disabled = true;
+    send.disabled = true;
     loadState().catch((err) => {
       errorBox.textContent = err instanceof Error ? err.message : String(err);
     });

@@ -63,7 +63,7 @@ export function recortarCentro(texto, max, cabeza = 0.3) {
  * @param {number} [cabeza] fraccion para la cabeza (el resto va a la cola)
  * @returns {{take: (texto: string) => void, texto: () => string}}
  */
-function crearSalida(max, cabeza = 0.3) {
+function crearSalida(max, cabeza = 0.3, guardar = null) {
   const capCabeza = Math.max(0, Math.floor(max * cabeza));
   const capCola = Math.max(0, Math.floor(max) - capCabeza);
   let inicio = "";
@@ -74,6 +74,7 @@ function crearSalida(max, cabeza = 0.3) {
     take(texto) {
       const limpio = String(texto || "");
       if (!limpio) return;
+      if (guardar) guardar(limpio);
       total += limpio.length;
       let resto = limpio;
       if (inicio.length < capCabeza) {
@@ -254,7 +255,7 @@ export function lanzarEnFondo(command, opts = {}) {
     const { child, cleanup } = lanzado;
     let notificarFin;
     const finalizado = new Promise((resolve) => { notificarFin = resolve; });
-    const salida = crearSalida(maxBytes);
+    const salida = crearSalida(maxBytes, 0.3, opts.onOutput);
     const decodificadorOut = new TextDecoder();
     const decodificadorErr = new TextDecoder();
     // Decodificacion INCREMENTAL: un caracter UTF-8 puede quedar partido entre dos
@@ -322,7 +323,7 @@ export function ejecutarComando(command, opts = {}) {
       return;
     }
     const { child, cleanup } = lanzado;
-    const salida = crearSalida(maxBytes);
+    const salida = crearSalida(maxBytes, 0.3, opts.onOutput);
     const decodificadorOut = new TextDecoder();
     const decodificadorErr = new TextDecoder();
     let settled = false;

@@ -1,13 +1,23 @@
 {
   "name": "bonsai-local-ide",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Bonsai Local IDE: agente de desarrollo local con llama-server para Windows 10 y 11",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vahlame/bonsai-local-ide.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Vahlame/bonsai-local-ide/issues"
+  },
+  "homepage": "https://github.com/Vahlame/bonsai-local-ide#readme",
   "scripts": {
     "benchmark:coder": "node chat/evaluar/coder.mjs",
     "benchmark:engine": "node scripts/benchmark-local-engine.mjs",
     "test": "node scripts/run-tests.mjs",
     "test:gpu": "node scripts/run-tests.mjs gpu",
+    "test:gpu-exclusiva": "node scripts/run-tests.mjs gpu-exclusiva",
     "test:navegador": "node scripts/run-tests.mjs navegador",
     "test:todo": "node scripts/run-tests.mjs todo",
     "test:listar": "node scripts/run-tests.mjs --listar"

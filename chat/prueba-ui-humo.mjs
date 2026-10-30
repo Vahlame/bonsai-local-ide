@@ -67,7 +67,7 @@ fs.writeFileSync(path.join(estado, "ui-settings.json"), JSON.stringify({ histori
 fs.writeFileSync(path.join(estado, "ui-permit.json"), JSON.stringify({ mode: "ask" }));
 fs.writeFileSync(path.join(proyecto, "x.txt"), "uno\ndos\ntres\n", "utf8");
 fs.writeFileSync(path.join(proyecto, "y.txt"), "alfa\r\nbeta\r\n", "utf8");
-fs.writeFileSync(path.join(proyecto, "nota.md"), "# nota\n", "utf8");
+fs.writeFileSync(path.join(proyecto, "nota.md"), "# nota\r\n", "utf8");
 
 let peticionesChat = 0;
 /** Respuesta del modelo para /api/edit (tool_choice "none"). */
@@ -217,6 +217,39 @@ try {
     return Boolean(t) && !t.querySelector(".dirty");
   }));
 
+  // ---- 2b. Guardar un archivo CRLF conserva los saltos de línea ----
+  await pagina.locator("#tree .row .name", { hasText: "nota.md" }).click();
+  await pagina.waitForFunction(() => (document.querySelector(".editor-wrap textarea")?.value || "").startsWith("# nota"), null, { timeout: 10000 });
+  await pagina.locator(".editor-wrap textarea").fill("# nota\nnueva\n");
+  await pagina.keyboard.press("Control+s");
+  await pagina.waitForFunction(() => (document.querySelector(".avisos")?.textContent || "").includes("Guardado nota.md"), null, { timeout: 20000 });
+  const notaGuardada = fs.readFileSync(path.join(proyecto, "nota.md"), "utf8");
+  check("guardar un archivo CRLF conserva los saltos", notaGuardada === "# nota\r\nnueva\r\n", JSON.stringify(notaGuardada));
+
+  // ---- 2c. El diálogo de borrado no acepta un Enter reflejo ----
+  const filaNota = pagina.locator("#tree .row", { hasText: "nota.md" });
+  await filaNota.click({ button: "right" });
+  await pagina.locator(".menu button", { hasText: "Borrar" }).click();
+  const dialogoBorrado = pagina.locator(".dialogo-fondo").last();
+  await dialogoBorrado.waitFor({ timeout: 10000 });
+  check(
+    "el diálogo de borrado enfoca Cancelar",
+    await dialogoBorrado.getByRole("button", { name: "Cancelar" }).evaluate((boton) => boton === document.activeElement),
+  );
+  await pagina.keyboard.press("Enter");
+  await pagina.waitForFunction(() => !document.querySelector(".dialogo-fondo"), null, { timeout: 5000 });
+  check("Enter en Cancelar no borra el archivo", fs.existsSync(path.join(proyecto, "nota.md")));
+
+  await filaNota.click({ button: "right" });
+  await pagina.locator(".menu button", { hasText: "Borrar" }).click();
+  const dialogoBorrado2 = pagina.locator(".dialogo-fondo").last();
+  await dialogoBorrado2.waitFor({ timeout: 10000 });
+  await dialogoBorrado2.getByRole("button", { name: "Borrar" }).focus();
+  await pagina.keyboard.press("Enter");
+  await pagina.waitForFunction(() => !document.querySelector(".dialogo-fondo"), null, { timeout: 5000 });
+  await esperar(200);
+  check("Enter en Borrar borra el archivo", !fs.existsSync(path.join(proyecto, "nota.md")));
+
   // ---- 3. Hallazgo 8: el archivo cambia en disco antes de aceptar -> 409 sin pisar ----
   await pagina.locator("#tree .row .name", { hasText: "y.txt" }).click();
   await pagina.waitForFunction(() => (document.querySelector(".editor-wrap textarea")?.value || "").startsWith("alfa"), null, { timeout: 10000 });
@@ -245,6 +278,52 @@ try {
     (await pagina.locator(".editor-wrap textarea").inputValue()).startsWith("alfa\n"),
   );
 
+  // ---- 3b. El compositor espera al estado inicial antes de aceptar envíos ----
+  const paginaCarga = await navegador.newPage({ viewport: { width: 1440, height: 900 } });
+  let liberarEstado = () => {};
+  const esperaEstado = new Promise((resolver) => { liberarEstado = resolver; });
+  await paginaCarga.route("**/api/state", async (route) => {
+    await esperaEstado;
+    await route.continue();
+  });
+  await paginaCarga.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+  await paginaCarga.waitForSelector("#input", { timeout: 10000 });
+  check(
+    "con /api/state pendiente, escribir y enviar siguen desactivados",
+    (await paginaCarga.locator("#input").isDisabled()) && (await paginaCarga.locator("#send").isDisabled()),
+  );
+  liberarEstado();
+  await paginaCarga.waitForFunction(
+    () => !document.querySelector("#input")?.disabled && !document.querySelector("#send")?.disabled,
+    null,
+    { timeout: 20000 },
+  );
+  check("el compositor se activa al terminar la carga inicial", !(await paginaCarga.locator("#input").isDisabled()));
+  await paginaCarga.close();
+
+  // ---- 3c. Tras recargar con un turno vivo, Detener sigue disponible ----
+  const estadoBase = await (await fetch(`${url}api/state`, { cache: "no-store" })).json();
+  const paginaOcupada = await navegador.newPage({ viewport: { width: 1440, height: 900 } });
+  await paginaOcupada.route("**/api/state", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ...estadoBase, busy: true }),
+    }),
+  );
+  await paginaOcupada.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+  await paginaOcupada.locator("#stop:not([hidden])").waitFor({ timeout: 15000 });
+  check("con un turno vivo tras recargar, Detener está visible", await paginaOcupada.locator("#stop").isVisible());
+  check("con un turno vivo tras recargar, Enviar está bloqueado", await paginaOcupada.locator("#send").isDisabled());
+  await paginaOcupada.locator("#stop").click();
+  await paginaOcupada.waitForFunction(
+    () => Boolean(document.querySelector("#stop")?.hidden) && !document.querySelector("#send")?.disabled,
+    null,
+    { timeout: 15000 },
+  );
+  check("Detener limpia el estado ocupado y reactiva el compositor", !(await paginaOcupada.locator("#send").isDisabled()));
+  await paginaOcupada.close();
+
   // ---- 4. Hallazgo 16: Ajustes enseña los cuatro valores reales ----
   await pagina.locator('button[title="Ajustes"]').click();
   const presupuesto = pagina.locator("#ajustes-presupuesto");
@@ -269,6 +348,11 @@ try {
   const perfiles=ajustesDialogo.getByRole("combobox",{name:"Perfil de motor",exact:true});
   check("hay perfiles simultáneos de visión con 16k y 32k",await perfiles.locator('option[value="8GB-VISION"]').count()===1&&await perfiles.locator('option[value="8GB-VISION-CONTEXT"]').count()===1);
   check("está disponible 32k F16 con pensamiento",await perfiles.locator('option[value="8GB-VISION-QUALITY"]').count()===1&&await ajustesDialogo.locator('select option[value="1024"]').count()===1);
+  await ajustesDialogo.getByRole("button",{name:"Revisar y editar…",exact:true}).click();
+  const memoriaDialogo=pagina.locator(".dialogo").last();
+  await memoriaDialogo.getByRole("heading",{name:"Memoria global entre chats",exact:true}).waitFor({timeout:15000});
+  check("Ajustes abre el editor de memoria global",(await memoriaDialogo.textContent()).includes("presupuesto"));
+  await memoriaDialogo.getByRole("button",{name:"Cerrar",exact:true}).click();
   const temas=ajustesDialogo.getByRole("combobox",{name:"Tema visual",exact:true});
   for(const tema of ['ocean','forest','sand','light','dark','slate']) {
     await temas.selectOption(tema);

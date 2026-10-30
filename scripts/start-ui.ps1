@@ -12,36 +12,67 @@ param (
     [int]$Port = 8080,
     [int]$UiPort = 8787,
     [int]$PromptCap = 8192,
+    [ValidateSet("auto", "f16", "q8_0", "q4_0")][string]$KVCacheType = "auto",
     [int]$Pensar = -1,            # -1 = auto (ajuste "Modo razonamiento" de la interfaz, solo si el modelo lo admite). 0 = apagado. N>0 = tope de N tokens
     [ValidateSet("", "legacy", "small-local-coder")][string]$AgentProfile = "",
-    [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG")][string]$EnginePreset = "",
+    [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG", "CUSTOM")][string]$EnginePreset = "",
     [switch]$SinVision,           # por defecto la vision se enciende sola si el proyector esta descargado
     [switch]$NoBrowser
 )
 
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
-if (-not $EnginePreset) {
-    $SettingsPath=Join-Path $RootDir 'chat\ui-settings.json'
-    if (Test-Path -LiteralPath $SettingsPath) {
-        $SavedPreset=(Get-Content -LiteralPath $SettingsPath -Raw | ConvertFrom-Json).enginePreset
-        if ($SavedPreset) {
-            $KnownPresets=Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json
-            if (-not $KnownPresets.PSObject.Properties[$SavedPreset]) { throw 'El perfil de motor guardado no existe' }
-            $EnginePreset=[string]$SavedPreset
-        }
+$SettingsPath = Join-Path $RootDir 'chat\ui-settings.json'
+$SavedSettings = $null
+if (Test-Path -LiteralPath $SettingsPath) {
+    try { $SavedSettings = Get-Content -LiteralPath $SettingsPath -Raw | ConvertFrom-Json } catch { $SavedSettings = $null }
+}
+# Un preset guardado "CUSTOM" no tiene ficha en local-engine-presets.json: la ventana y el
+# historial los fijo el usuario en la interfaz y viven en ui-settings.json.
+if (-not $EnginePreset -and $SavedSettings -and $SavedSettings.enginePreset) {
+    $SavedPreset = [string]$SavedSettings.enginePreset
+    if ($SavedPreset -eq 'CUSTOM') {
+        $EnginePreset = 'CUSTOM'
+    } else {
+        $KnownPresets = Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json
+        if (-not $KnownPresets.PSObject.Properties[$SavedPreset]) { throw 'El perfil de motor guardado no existe' }
+        $EnginePreset = [string]$SavedPreset
     }
 }
+$SavedContext = 0
+$SavedHistorial = 0
+if ($SavedSettings) {
+    [void][int]::TryParse([string]$SavedSettings.coderContextTokens, [ref]$SavedContext)
+    [void][int]::TryParse([string]$SavedSettings.historial, [ref]$SavedHistorial)
+}
+if ($EnginePreset -eq 'CUSTOM' -and -not $PSBoundParameters.ContainsKey('KVCacheType')) {
+    $KVCacheType = if ($SavedSettings -and $SavedSettings.engineKv -in @('f16','q8_0','q4_0')) { [string]$SavedSettings.engineKv } else { 'f16' }
+}
+if ($EnginePreset -eq 'CUSTOM' -and -not $PSBoundParameters.ContainsKey('SinVision') -and $SavedSettings -and $SavedSettings.engineVision -eq $false) { $SinVision = $true }
+if ($SavedContext -lt 4096 -or $SavedContext -gt 65536) { $SavedContext = 0 }
+if ($SavedHistorial -lt 512) { $SavedHistorial = 0 }
+if ($EnginePreset -eq 'CUSTOM' -and $ContextSize -eq 'auto' -and $SavedContext -gt 0) {
+    # El servidor tiene que arrancar con la misma ventana que el perfil personalizado.
+    $ContextSize = [string]$SavedContext
+}
 if ($AgentProfile) { $env:BONSAI_AGENT_PROFILE = $AgentProfile }
-if ($EnginePreset -and -not $PSBoundParameters.ContainsKey('SinVision')) {
+if ($EnginePreset -and $EnginePreset -ne 'CUSTOM' -and -not $PSBoundParameters.ContainsKey('SinVision')) {
     $SinVision = -not [bool](Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json).$EnginePreset.vision
 }
 if ($EnginePreset -and $AgentProfile -eq 'small-local-coder') {
-    $EngineOptions = (Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json).$EnginePreset
+    if ($EnginePreset -eq 'CUSTOM') {
+        $CoderContext = if ($SavedContext -gt 0) { $SavedContext } else { 16384 }
+        $ExplicitContext = 0
+        if ($ContextSize -ne 'auto' -and [int]::TryParse([string]$ContextSize, [ref]$ExplicitContext) -and $ExplicitContext -ge 4096) { $CoderContext = $ExplicitContext }
+    } else {
+        $CoderContext = [int]((Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json).$EnginePreset.context)
+    }
     $CoderOptions = if ($env:BONSAI_CODER_OPTIONS) { $env:BONSAI_CODER_OPTIONS | ConvertFrom-Json } else { [pscustomobject]@{} }
-    $CoderOptions | Add-Member -NotePropertyName contextTokens -NotePropertyValue ([int]$EngineOptions.context) -Force
+    $CoderOptions | Add-Member -NotePropertyName contextTokens -NotePropertyValue $CoderContext -Force
     $env:BONSAI_CODER_OPTIONS = $CoderOptions | ConvertTo-Json -Compress
-    if (-not $PSBoundParameters.ContainsKey('PromptCap')) { $PromptCap = [int]$EngineOptions.context }
+    if (-not $PSBoundParameters.ContainsKey('PromptCap')) {
+        $PromptCap = if ($EnginePreset -eq 'CUSTOM' -and $SavedHistorial -gt 0) { [Math]::Min($SavedHistorial, $CoderContext) } else { $CoderContext }
+    }
 }
 $Server = Join-Path $RootDir "chat\ui-server.mjs"
 
@@ -64,6 +95,9 @@ if (-not $SinVision) {
     if (-not $visionConfig -or $visionConfig -eq $false) { $visionConfig = $null }
     $mmproj = [string]$visionConfig.archivo
     if ($mmproj -and (Test-Path (Join-Path $RootDir ("models\" + $mmproj)))) { $VisionFlags = @("-Vision") }
+}
+if ($EnginePreset -eq 'CUSTOM' -and -not $SinVision -and $SavedSettings -and $SavedSettings.engineVision -eq $true -and $VisionFlags.Count -eq 0) {
+    throw 'La vision guardada requiere el proyector del modelo. No se arrancara sin vision.'
 }
 $VisionArgs = if ($VisionFlags.Count -gt 0) { " " + ($VisionFlags -join " ") } else { "" }
 if ($SinVision) { $VisionArgs = ' -SinVision' }
@@ -90,60 +124,99 @@ Write-Host "==========================================================" -Foregro
 $serverState = & "$RootDir\scripts\stop-managed-server.ps1" -Port $Port -CheckOnly
 if ($serverState -eq 'managed' -and $EnginePreset) {
     $CurrentMarker = Get-Content -LiteralPath (Join-Path $RootDir "logs\servidor-administrado-$Port.json") -Raw | ConvertFrom-Json
-    if ($CurrentMarker.enginePreset -ne $EnginePreset -or ($Pensar -ge 0 -and $CurrentMarker.pensar -ne $Pensar)) {
+    $IncompatibleCustom = $EnginePreset -eq 'CUSTOM' -and (($ContextSize -ne 'auto' -and [int]$CurrentMarker.contexto -ne [int]$ContextSize) -or ($KVCacheType -ne 'auto' -and $CurrentMarker.kv -ne $KVCacheType) -or ([bool]$CurrentMarker.vision -ne ($VisionFlags.Count -gt 0)))
+    if ($CurrentMarker.enginePreset -ne $EnginePreset -or ($Pensar -ge 0 -and $CurrentMarker.pensar -ne $Pensar) -or $IncompatibleCustom) {
         & "$RootDir\scripts\stop-managed-server.ps1" -Port $Port
         if ($LASTEXITCODE -ne 0) { throw 'No se pudo detener el servidor administrado anterior.' }
         $serverState = 'empty'
     }
 }
 if ($serverState -eq "empty") {
-    # Comprobacion previa a la vista: si la VRAM no alcanza, el servidor minimizado fallaria sin que se vea.
-    # OJO: @VisionFlags es splatting de ARRAY y pasa los elementos como POSICIONALES: `-Vision`
-    # acababa siendo el valor de `-HostIP` (verificado en PowerShell 5.1), así que la
-    # precomprobacion de VRAM medía una configuración distinta de la que luego se lanza.
-    & "$RootDir\scripts\start-server.ps1" -ContextSize $ContextSize -Port $Port -Pensar $Pensar -DryRun -Vision:($VisionFlags.Count -gt 0) -EnginePreset $EnginePreset
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    # El DryRun acaba de persistir el perfil elegido: se muestra para que el usuario sepa que
-    # contexto/KV se va a cargar (y que no se vuelve en silencio a 16K/f16).
-    if ($ContextSize -eq "auto" -and -not $EnginePreset) {
-        $perfilPath = Join-Path $RootDir "logs\perfil-servidor-$Port.json"
-        if (Test-Path $perfilPath) {
-            try {
-                $perfil = Get-Content $perfilPath -Raw | ConvertFrom-Json
-                Write-Host "Perfil de arranque: contexto $($perfil.contexto) | KV $($perfil.kv) | vision $($perfil.vision)" -ForegroundColor Gray
-            } catch { }
+    # P2-13: comparar modelo del marcador con el activo; sacar $activeKey del bloque de visión
+    $activeKey = $null
+    if ($VisionFlags.Count -gt 0) {
+        $Catalogo = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+        $Item = $Catalogo.catalogo.$Modelo
+        if ($Item -and $Item.vision -and $Item.vision.archivo) {
+            $activeKey = $Item.vision.archivo
         }
     }
-    Write-Host "[1/2] Iniciando llama-server (contexto: $ContextSize)..." -ForegroundColor Green
-    Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$RootDir\scripts\start-server.ps1`" -ManagedByIDE -ContextSize $ContextSize -Port $Port$PensarArgs$VisionArgs$EngineArgs -Log `"$RootDir\logs\arranque-modelo.log`"" -WindowStyle Hidden
+    $CurrentMarker = $null
+    if (Test-Path -LiteralPath (Join-Path $RootDir "logs\servidor-administrado-$Port.json")) {
+        $CurrentMarker = Get-Content -LiteralPath (Join-Path $RootDir "logs\servidor-administrado-$Port.json") -Raw | ConvertFrom-Json
+    }
+    if ($CurrentMarker -and $CurrentMarker.modelo -ne $Modelo) {
+        Write-Host "Marcador modelo ($($CurrentMarker.modelo)) distinto del solicitado ($Modelo): no se reutiliza." -ForegroundColor Yellow
+        $serverState = 'empty'
+        $CurrentMarker = $null
+    } elseif ($CurrentMarker -and $activeKey -and $CurrentMarker.activeKey -ne $activeKey) {
+        Write-Host "Marcador activeKey ($($CurrentMarker.activeKey)) distinto del solicitado ($activeKey): no se reutiliza." -ForegroundColor Yellow
+        $serverState = 'empty'
+        $CurrentMarker = $null
+    }
+    if ($serverState -eq "empty") {
+        # Comprobacion previa a la vista: si la VRAM no alcanza, el servidor minimizado fallaria sin que se vea.
+        # OJO: @VisionFlags es splatting de ARRAY y pasa los elementos como POSICIONALES: `-Vision`
+        # acababa siendo el valor de `-HostIP` (verificado en PowerShell 5.1), así que la
+        # precomprobacion de VRAM medía una configuración distinta de la que luego se lanza.
+        & "$RootDir\scripts\start-server.ps1" -ContextSize $ContextSize -KVCacheType $KVCacheType -Port $Port -Pensar $Pensar -DryRun -Vision:($VisionFlags.Count -gt 0) -EnginePreset $EnginePreset
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        # El DryRun acaba de persistir el perfil elegido: se muestra para que el usuario sepa que
+        # contexto/KV se va a cargar (y que no se vuelve en silencio a 16K/f16).
+        if ($ContextSize -eq "auto" -and -not $EnginePreset) {
+            $perfilPath = Join-Path $RootDir "logs\perfil-servidor-$Port.json"
+            if (Test-Path $perfilPath) {
+                try {
+                    $perfil = Get-Content $perfilPath -Raw | ConvertFrom-Json
+                    Write-Host "Perfil de arranque: contexto $($perfil.contexto) | KV $($perfil.kv) | vision $($perfil.vision)" -ForegroundColor Gray
+                } catch { }
+            }
+        }
+        Write-Host "[1/2] Iniciando llama-server (contexto: $ContextSize)..." -ForegroundColor Green
+        # P2-11: usar -PassThru + sondeo de proceso en lugar de esperar 3 min a ciegas
+        $ProcArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$RootDir\scripts\start-server.ps1`" -ManagedByIDE -ContextSize $ContextSize -KVCacheType $KVCacheType -Port $Port$PensarArgs$VisionArgs$EngineArgs -Log `"$RootDir\logs\arranque-modelo.log`""
+        $Launcher = Start-Process -FilePath "powershell.exe" -ArgumentList $ProcArgs -PassThru -WindowStyle Hidden
+        Write-Host "[2/2] Esperando a que el modelo cargue en la GPU (PID launcher $($Launcher.Id))..." -ForegroundColor Green
+        $deadline = (Get-Date).AddMinutes(2)
+        $ready = $false
+        while ((Get-Date) -lt $deadline) {
+            if (-not (Get-Process -Id $Launcher.Id -ErrorAction SilentlyContinue)) {
+                Write-Error "El lanzador murió antes de que el servidor respondiera (PID $($Launcher.Id)). Revisa $RootDir\logs\arranque-modelo.log"
+                exit 1
+            }
+            try {
+                $health = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/health" -UseBasicParsing -TimeoutSec 3
+                if ($health.StatusCode -eq 200) {
+                    $ready = $true
+                    break
+                }
+            } catch {
+                Start-Sleep -Seconds 2
+            }
+        }
+        if (-not $ready) {
+            $launcherVivo = $null -ne (Get-Process -Id $Launcher.Id -ErrorAction SilentlyContinue)
+            Write-Error "El servidor no respondio en http://127.0.0.1:$Port/health (launcher PID $($Launcher.Id) sigue vivo: $launcherVivo)"
+            exit 1
+        }
+    }
 } else {
     Write-Host "[1/2] llama-server ya esta en ejecucion." -ForegroundColor Yellow
-}
-
-Write-Host "[2/2] Esperando a que el modelo cargue en la GPU..." -ForegroundColor Green
-$deadline = (Get-Date).AddMinutes(3)
-$ready = $false
-while ((Get-Date) -lt $deadline) {
-    try {
-        $health = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/health" -UseBasicParsing -TimeoutSec 3
-        if ($health.StatusCode -eq 200) {
-            $ready = $true
-            break
-        }
-    } catch {
-        Start-Sleep -Seconds 2
+    # P2-13: verificar que el modelo activo coincide con el marcador
+    if ($CurrentMarker -and $CurrentMarker.modelo -ne $Modelo) {
+        Write-Host "Aviso: modelo en marcador ($($CurrentMarker.modelo)) != solicitado ($Modelo)." -ForegroundColor Yellow
     }
-}
-if (-not $ready) {
-    Write-Error "El servidor no respondio en http://127.0.0.1:$Port/health"
-    exit 1
 }
 
 Write-Host "Abriendo http://127.0.0.1:$UiPort" -ForegroundColor Gray
 Write-Host "Los archivos que pidas se guardan en la carpeta salida." -ForegroundColor Gray
 Write-Host ""
 
-$UiEngineArgs = if ($EnginePreset) { @('--engine-preset', $EnginePreset) } else { @() }
-$BrowserArgs = if ($NoBrowser) { @() } else { @('--open') }
+# Keep arrays even for a single value: PowerShell 5.1 splats a scalar string
+# character by character into native commands ("--open" became "-", "-", "o", ...).
+[string[]]$UiEngineArgs = @()
+if ($EnginePreset) { $UiEngineArgs = @('--engine-preset', $EnginePreset) }
+[string[]]$BrowserArgs = @()
+if (-not $NoBrowser) { $BrowserArgs = @('--open') }
 & node $Server --port $UiPort --llama-port $Port --prompt-cap $PromptCap @ThinkArgs @UiEngineArgs @BrowserArgs
 exit $LASTEXITCODE

@@ -6,6 +6,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import crypto from "node:crypto";
 import { rutaSegura, rutaProyecto, escribirAtomico } from "./archivos-seguros.mjs";
 
 // Solo texto (código, datos, configuración). Faltaban formatos corrientes y el agente no
@@ -303,6 +304,9 @@ export function impliedAction(text) {
 
 export const PC_TOOLS = [
   {
+    type:"function", function:{name:"mcp_playwright", description:"Navegador Playwright MCP aislado para probar páginas HTTP/HTTPS: abre, inspecciona el árbol accesible, pulsa, escribe y revisa consola/red. Para HTML local sin servidor usa navegador.", parameters:{type:"object",properties:{accion:{type:"string",enum:["abrir","inspeccionar","clic","escribir","tecla","esperar","consola","red","cerrar"]},url:{type:"string"},selector:{type:"string",description:"Referencia o selector del snapshot"},texto:{type:"string"},segundos:{type:"integer",minimum:0}},required:["accion"]}}
+  },
+  {
     type: "function",
     function: {
       name: "navegador",
@@ -407,6 +411,22 @@ export const PC_TOOLS = [
   {
     type: "function",
     function: {
+      name: "consultar_salida",
+      description: "Consulta un registro de salida por id, desde una línea o buscando texto literal.",
+      parameters: { type: "object", properties: { id: { type: "string" }, desde: { type: "integer" }, consulta: { type: "string" } }, required: ["id"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "escribir_partes",
+      description: "Crea un archivo nuevo grande por partes. iniciar(ruta) devuelve id; continuar(id,offset,contenido) añade UTF-8; estado(id) recupera el offset tras interrupción; finalizar(id,offset) guarda; cancelar(id) descarta las partes. Offset es el siguiente byte devuelto.",
+      parameters: { type: "object", properties: { accion: { type: "string", enum: ["iniciar", "continuar", "estado", "finalizar", "cancelar"] }, ruta: { type: "string" }, id: { type: "string" }, offset: { type: "integer" }, contenido: { type: "string" } }, required: ["accion"] },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "proceso",
       description: "Gestiona procesos lanzados con segundo_plano: true. listar devuelve ids/pids; leer con id devuelve salida actual, estado y código de salida, también tras terminar; detener para ese proceso y sus hijos. Sobreviven al turno. Útil para servidores y compilaciones o instalaciones largas.",
       parameters: {
@@ -423,7 +443,7 @@ export const PC_TOOLS = [
     type: "function",
     function: {
       name: "borrar",
-      description: "Borra un archivo (o una carpeta VACÍA) del proyecto. Se guarda copia para deshacer. No borra carpetas con contenido: borra antes sus archivos uno a uno.",
+      description: "Borra un archivo (o una carpeta VACÍA) del proyecto. Solo los archivos de texto dentro del límite se guardan para deshacer; los binarios, los archivos grandes y las carpetas vacías se borran sin copia. No borra carpetas con contenido: borra antes sus archivos uno a uno.",
       parameters: {
         type: "object",
         properties: { ruta: { type: "string" } },
@@ -703,6 +723,22 @@ export function nativeToolEffects(calls) {
     notes.push(`quedaron ${searches.length - 4} búsquedas sin hacer`);
     notesIds.push(ids.get(`search:${searches[4]}`) || "");
   }
+  if (writes.length > 6) {
+    notes.push(`quedaron ${writes.length - 6} escrituras sin lanzar; pídelas en el siguiente paso`);
+    notesIds.push(ids.get(`write:${writes[6].rel}`) || "");
+  }
+  if (edits.length > 8) {
+    notes.push(`quedaron ${edits.length - 8} ediciones sin lanzar; pídelas en el siguiente paso`);
+    notesIds.push(ids.get(`edit:${edits.length - 9}`) || "");
+  }
+  if (borrados.length > 6) {
+    notes.push(`quedaron ${borrados.length - 6} borrados sin lanzar; pídelos en el siguiente paso`);
+    notesIds.push(ids.get(`del:${borrados[6]}`) || "");
+  }
+  if (movidos.length > 6) {
+    notes.push(`quedaron ${movidos.length - 6} movimientos sin lanzar; pídelos en el siguiente paso`);
+    notesIds.push(ids.get(`move:${movidos[6].origen}`) || "");
+  }
   return {
     navegaciones,
     commands: commands.slice(0, 6),
@@ -795,6 +831,7 @@ export function aplicarReemplazo(texto, buscar, poner) {
 export function esCharla(texto) {
   const t = String(texto || "").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   if (!t || t.length > 400) return false;
+  if (/^[¡¿\s]*(hola|hi|hello|hey|buenas|buenos dias|buenas tardes|buenas noches|gracias|muchas gracias|adios|hasta luego)[!¡?.\s]*$/.test(t)) return true;
   if (/[\w-]+\.[a-z0-9]{1,5}\b/.test(t)) return false; // nombra un archivo
   if (/\b(archivo|carpeta|proyecto|repo|repositorio|mi codigo|este codigo|el codigo de|script|tests?|error|falla|fallo|bug|arregl|corrig|crea|crear|creame|haz|hazme|escrib|ejecut|corre|instal|guard|modific|cambi|renombr|lee|leer|abre|abrir|busca|buscar|gener|implement|anad|agreg|borr|elimin|descarg|compil|prueb|calcula|convierte|traduce este)\w*/.test(t)) return false;
   return /^[¿¡\s]*(explica|explicame|que es|que son|que significa|que diferencia|cual es la diferencia|diferencia entre|por que|como funciona|como funcionan|para que sirve|cuando se usa|cuando usar|que opinas|define|resume)\b/.test(t);
@@ -1244,6 +1281,26 @@ export function writeOutputs(root, writes) {
   return saved;
 }
 
+/** Publica un archivo nuevo sin sobrescribir otro creado durante la operación. */
+export function writeNewOutput(root, rel, contenido) {
+  const abs = resolveInside(root, rel), body = Buffer.from(contenido, "utf8");
+  if (body.includes(0) || body.length > MAX_BYTES) throw new Error("Contenido binario o demasiado grande");
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  if (!rutaSegura(root, path.relative(root, abs))) throw new Error("ruta no permitida");
+  const tmp = path.join(path.dirname(abs), `.bonsai-${crypto.randomBytes(12).toString("hex")}.tmp`);
+  let fd;
+  try {
+    fd = fs.openSync(tmp, "wx");
+    fs.writeFileSync(fd, body); fs.fsyncSync(fd); fs.closeSync(fd); fd = undefined;
+    fs.linkSync(tmp, abs); // link atómico: falla si el destino ya existe
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd);
+    try { fs.unlinkSync(tmp); } catch (err) { if (err.code !== "ENOENT") throw err; }
+  }
+  const ruta = path.relative(root, abs).split(path.sep).join("/");
+  return { rel: ruta, bytes: body.length, url: `/p/${ruta.split("/").map(encodeURIComponent).join("/")}` };
+}
+
 /**
  * @returns {string[]}
  */
@@ -1397,7 +1454,8 @@ export function selfTest() {
   check("una pregunta conceptual es charla", esCharla("Explica qué es una closure en JavaScript y dame un ejemplo corto.") && esCharla("¿Qué es un decorador en Python?") && esCharla("¿Cuál es la diferencia entre let y var?"));
   check("si nombra un archivo no es charla", !esCharla("Explícame en 3 frases qué hace la función de algoritmo.py y cuál es su complejidad."));
   check("si hay algo que hacer no es charla", !esCharla("¿En qué archivo está definida la función conectar_db?") && !esCharla("Explica el error y arréglalo") && !esCharla("Crea un ejemplo de closure") && !esCharla("¿Qué es lo que falla en mis tests?"));
-  check("un pedido normal no es charla", !esCharla("necesito que me hagas un modelo 3d en un archivo html") && !esCharla("hola"));
+  check("un pedido normal no es charla", !esCharla("necesito que me hagas un modelo 3d en un archivo html") && esCharla("hola"));
+  check("saludos breves no activan tareas", esCharla("hi") && esCharla("Hello!") && !esCharla("hi, crea un archivo"));
   const conEdit = nativeToolEffects([{ id: "e1", name: "reemplazar", arguments: { ruta: "a.py", buscar: "x = 1", poner: "x = 2" } }, { id: "e2", name: "reemplazar", arguments: { ruta: "a.py" } }]);
   check("reemplazar llega como edición con su id", conEdit.edits.length === 1 && conEdit.edits[0].poner === "x = 2" && conEdit.ids.get("edit:0") === "e1");
   check("reemplazar sin buscar/poner avisa", conEdit.notes.some((n) => /reemplazar necesita/.test(n)) && conEdit.notesIds[0] === "e2");

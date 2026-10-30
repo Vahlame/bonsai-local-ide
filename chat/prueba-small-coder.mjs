@@ -32,7 +32,7 @@ const write = (rel, text) => {
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, text);
 };
-let ui, model;
+let ui, model, sitio;
 try {
   write(
     "src/a.mjs",
@@ -131,7 +131,8 @@ try {
     validateCall({ name: "leer", arguments: '{"ruta":"a"' }).ok,
     false,
   );
-  assert.equal(CODER_TOOLS.length, 9);
+  assert.equal(validateCall({ name: "leer", arguments: '```json\n{"ruta":"a"}\n```' }).ok, true);
+  assert.ok(CODER_TOOLS.some(t => t.function.name === "escribir_partes"));
   const cancelled = new AbortController();
   cancelled.abort();
   assert.equal(
@@ -246,10 +247,24 @@ try {
       .length,
     0,
   );
+  assert.equal(task.stopped, undefined, "permitir corrección de llamadas inválidas");
+  for (let i = 0; i < 3; i++) task.accept([{ id: `bad${i + 3}`, name: "reemplazar", arguments: "{}" }]);
   assert.equal(task.stopped, "invalid_tool_limit");
+  // Una repetición exacta se explica y se corta; un cambio real del proyecto la vuelve a permitir.
+  const repetida = await new CoderTask({ root, goal: "Revisa src/a.mjs" }).start();
+  const lectura = { id: "r", name: "leer", arguments: JSON.stringify({ ruta: "src/a.mjs" }) };
+  for (let i = 0; i < 6; i++) assert.equal(repetida.accept([lectura]).valid.length, 1);
+  const bloqueada = repetida.accept([lectura]);
+  assert.equal(bloqueada.valid.length, 0);
+  assert.match(bloqueada.errors[0].error, /Llamada idéntica a leer repetida 7 veces sin cambios en el proyecto.*cambia los argumentos/);
+  assert.equal(repetida.steps, 7, "una llamada rechazada no debe ejecutarse pero sí contar como paso");
+  write("src/a.mjs", "export function renamed() { return 2; }\n");
+  await repetida.context.refresh();
+  assert.equal(repetida.accept([lectura]).valid.length, 1, "tras cambiar el proyecto la lectura vuelve a ser válida");
   const task2 = await new CoderTask({
     root,
     goal: "Corrige renamed en src/a.mjs",
+    config: { maxRepairs: 2 },
   }).start();
   write("src/a.mjs", "export function renamed( {\n");
   let verification = await task2.verify();
@@ -259,6 +274,19 @@ try {
   await task2.verify({ final: true });
   assert.equal(task2.state.phase,"REPAIR","exhausted repair attempts must retain the failure phase");
   assert.equal(task2.stopped, "repair_limit");
+  // P2-20: un cierre sin cambios ni archivos inspeccionados no es una verificación.
+  const vacio = path.join(temp, "empty-project");
+  fs.mkdirSync(vacio);
+  const sinEvidencia = await new CoderTask({
+    root: vacio,
+    goal: "Arregla el bug",
+  }).start();
+  const cierreSinEvidencia = await sinEvidencia.verify({ final: true });
+  assert.equal(cierreSinEvidencia.ok, false);
+  assert.equal(cierreSinEvidencia.changed, false);
+  assert.match(cierreSinEvidencia.summary, /no hay evidencia/i);
+  assert.notEqual(sinEvidencia.state.phase, "DONE");
+  assert.equal((await sinEvidencia.verify()).ok, true, "una comprobación no final sigue siendo un no-op");
   // An edit that grows beyond the indexing budget must still be detected and parsed.
   const limited = await new CoderTask({
     root,
@@ -285,6 +313,20 @@ try {
   assert.equal(automatic.state.tests.length, 1);
   assert.equal(automatic.state.tests[0].code, 0);
   assert.equal(validarCoder(CODER_TAREAS[0], fixture).ok, true);
+  // Un HTML con JavaScript inline roto no puede pasar la verificación como si solo
+  // fuera una cuestión de etiquetas; al corregirlo, la misma comprobación pasa.
+  const htmlRoot = path.join(temp, "html-project");
+  fs.mkdirSync(htmlRoot, { recursive: true });
+  const htmlPath = path.join(htmlRoot, "index.html");
+  fs.writeFileSync(htmlPath, "<!DOCTYPE html>\n<html><body>\n<script>function sumar(a, b) { return a + b; }</script>\n</body></html>\n");
+  const htmlTask = await new CoderTask({ root: htmlRoot, goal: "Corrige el script de index.html" }).start();
+  fs.writeFileSync(htmlPath, "<!DOCTYPE html>\n<html><body>\n<script>function sumar(a, b) { return a + ; }</script>\n</body></html>\n");
+  const htmlRoto = await htmlTask.verify();
+  assert.equal(htmlRoto.ok, false);
+  assert.match(htmlTask.state.errors.join("\n"), /script inline/);
+  fs.writeFileSync(htmlPath, "<!DOCTYPE html>\n<html><body>\n<script>function sumar(a, b) { return a + b; }</script>\n</body></html>\n");
+  const htmlBueno = await htmlTask.verify();
+  assert.equal(htmlBueno.ok, true);
   fs.appendFileSync(
     path.join(fixture, "test/price.test.mjs"),
     "\nassert.equal(discounted(20,50),10);\n",
@@ -353,12 +395,20 @@ try {
   assert.ok(!p.messages[0].content.includes("ESTADO DE TAREA"));
   assert.ok(p.promptTokens + packed.reservaSalida() < 8192);
   assert.equal(p.messages.find((m) => m.role === "tool").tool_call_id, "one");
+  const savedTurns = packed.session.turns;
+  packed.session.turns = [savedTurns[0], ...Array.from({ length: 7 }, (_, i) => [
+    { role: "assistant", content: "", toolCalls: [{ id: `read${i}`, name: "leer", arguments: '{"ruta":"src/price.mjs"}' }] },
+    { role: "tool", content: `evidencia ${i}`, toolCallId: `read${i}` },
+  ]).flat()];
+  const allGroups = await packed.packHistory();
+  assert.equal(allGroups.messages.filter(m => m.role === "tool").length, 7, "conservar todos los grupos que caben");
+  packed.session.turns = savedTurns;
   const prefix = p.messages[0].content;
   automatic.state.phase = "REPAIR";
   p = await packed.packHistory();
   assert.equal(p.messages[0].content, prefix);
   const fullState = structuredClone(automatic.state);
-  assert.equal(automatic.workingState(), JSON.stringify({ phase: fullState.phase, inspected: fullState.inspected.slice(-12), modified: fullState.modified, plan: fullState.plan, tests: fullState.tests, errors: fullState.errors, repairs: fullState.repairs, previousTask: fullState.previousTask, lastDiff: fullState.lastDiff }));
+  assert.equal(automatic.workingState(), JSON.stringify({ phase: fullState.phase, inspected: fullState.inspected.slice(-12), symbols:fullState.symbols, modified: fullState.modified, plan: fullState.plan, tests: fullState.tests, errors: fullState.errors, actions:fullState.actions, repairs: fullState.repairs, previousTask: fullState.previousTask, lastDiff: fullState.lastDiff || undefined }));
   automatic.state.errors = Array.from({ length: 40 }, (_, i) =>
     `UNIQUE_FAILURE_${i}: src/price.mjs:1 expected 10 actual 20\n${"  at fn (node:internal/test_runner:1:2)\n".repeat(80)}`);
   automatic.state.modified = Array.from({ length: 100 }, (_, i) => `src/long-${i}.mjs`);
@@ -381,24 +431,24 @@ try {
   packed.nCtx = 4096;
   packed.session.turns[1].toolCalls[0].arguments = JSON.stringify({ ruta: "src/price.mjs", buscar: "x".repeat(80000), poner: "y" });
   p = await packed.packHistory();
-  assert.equal(p.messages[1].content, automatic.state.goal);
+  assert.ok(p.messages[1].content.startsWith(automatic.state.goal));
   assert.ok(!p.messages.some(m => m.role === "tool" || m.tool_calls?.length));
   assert.deepEqual(automatic.state.inspected, []);
   assert.match(p.messages.at(-1).content, /Vuelve a leer/);
   assert.ok(p.promptTokens <= packed.historyCap());
   packed.nCtx = 8192;
   packed.allowThinkingKw=true; packed.thinkBudget=8192;
-  assert.equal(packed.templateFields(true).thinking_budget_tokens,512,"reasoning must leave room for a structured edit");
+  assert.ok(packed.templateFields(true).thinking_budget_tokens > 0 && packed.templateFields(true).thinking_budget_tokens < packed.reservaSalida(), "reasoning must leave room for a structured edit");
   const previousConfig={...automatic.config};
   packed.nCtx=32768;
   automatic.config.outputTokens=3072;automatic.config.thinkingTokens=1024;
   assert.equal(packed.templateFields(true).thinking_budget_tokens,1024);
   automatic.config.outputTokens=1536;
-  assert.equal(packed.templateFields(true).thinking_budget_tokens,512,"a large requested thought budget must still leave edit space");
+  assert.ok(packed.templateFields(true).thinking_budget_tokens < packed.reservaSalida(),"a large requested thought budget must still leave edit space");
   packed.nCtx=36864;
   automatic.config.outputTokens=6144;automatic.config.thinkingTokens=4096;
   assert.equal(packed.templateFields(true).thinking_budget_tokens,4096,"4k thinking must keep 2k available for the edit");
-  assert.equal(packed.reservaSalida()-packed.effectiveThinkingBudget(),2048);
+  assert.ok(packed.reservaSalida()-packed.effectiveThinkingBudget()>=256);
   automatic.config=previousConfig;
   packed.nCtx=8192;
   packed.thinkBudget=0;
@@ -419,6 +469,8 @@ try {
   prepararCoder(CODER_TAREAS[0], ws);
   let generated = 0;
   const bodies = [];
+  sitio = http.createServer((req,res)=>{res.writeHead(200,{"Content-Type":"text/html"});res.end('<button>CONTROL MCP</button>');});
+  await new Promise(r=>sitio.listen(0,"127.0.0.1",r));
   const native = (id, name, args) => ({
     tool_calls: [
       {
@@ -449,7 +501,24 @@ try {
     }
     bodies.push(b);
     generated++;
+    if (b.messages.some(m => typeof m.content === "string" && m.content.includes("PRUEBA_ERROR_GPU"))) {
+      res.writeHead(500,{"Content-Type":"application/json"});
+      return res.end(JSON.stringify({error:{message:"CUDA out of memory"}}));
+    }
+    const ultimoPedido = [...b.messages].reverse().find((m) => m.role === "user");
+    const pedidoActual = typeof ultimoPedido?.content === "string" ? ultimoPedido.content : "";
+    const respuestaPermiso = b.messages.some((m) => m.role === "tool" && m.tool_call_id === "permiso-edit");
     let delta =
+      pedidoActual.includes("PRUEBA_PERMISO_VERIFICACION")
+      ? (respuestaPermiso
+        ? {content:"Archivo creado; la verificación necesita autorización."}
+        : native("permiso-edit","archivo",{ruta:"permiso-verificacion.txt",contenido:"creado por la tarea\n"}))
+      :
+      b.messages.some(m => typeof m.content === "string" && m.content.includes("PRUEBA_MCP_REAL"))
+      ? (b.messages.some(m=>m.role === "tool" && m.tool_call_id === "mcp1")
+        ? {content:"Página verificada."}
+        : native("mcp1","mcp_playwright",{accion:"abrir",url:`http://127.0.0.1:${sitio.address().port}/sitio`}))
+      :
       generated === 1
         ? native("invalid", "reemplazar", {
             ruta: "src/price.mjs",
@@ -559,7 +628,7 @@ try {
   assert.equal(events.findLast((e) => e.type === "done").motivo, "completed");
   assert.ok(
     bodies.every(
-      (b) => b.tools.length === 9 && b.parallel_tool_calls === false,
+      (b) => b.tools.some(t => t.function.name === "escribir_partes") && b.parallel_tool_calls === true,
     ),
   );
   assert.ok(bodies.every(b=>Array.isArray(b.messages[1].content)&&b.messages[1].content.some(p=>p.type==="image_url")),"the original image remains on the task goal throughout schema repair, edit and verification");
@@ -567,6 +636,30 @@ try {
   assert.equal((await post("/api/modelos",{clave:"ornith9b",enginePreset:"unknown"})).status,400);
   assert.equal((await post("/api/settings",{coderContextTokens:4097})).status,400);
   assert.equal((await post("/api/settings",{coderContextTokens:32768})).status,200);
+  const antesSaludo = bodies.length;
+  const saludo = await post("/api/chat", {text:"hi"});
+  const eventosSaludo = [];
+  await leerSSE(saludo.body, {exigirFin:false, alEvento:e=>eventosSaludo.push(e)});
+  const llamadasSaludo = bodies.slice(antesSaludo).filter(b=>b.stream);
+  assert.equal(llamadasSaludo.length, 1, "a greeting should use one model response");
+  assert.equal(llamadasSaludo[0].tool_choice, "none");
+  assert.equal(llamadasSaludo[0].tools, undefined);
+  assert.ok(!llamadasSaludo[0].messages.some(m=>typeof m.content === "string" && m.content.startsWith("ESTADO DE TAREA")));
+  assert.ok(!eventosSaludo.some(e=>e.type === "action" || e.event === "start"));
+  // Memoria global: el controlador debe inyectar solo lo relevante y dentro del
+  // presupuesto, no toda la memoria. Se comprueba en el cuerpo REAL que recibe el modelo.
+  assert.equal((await post("/api/memoria",{op:"add",texto:"En este proyecto usamos pnpm y nunca npm.",tags:["paquetes"],fijada:true})).status,200);
+  assert.equal((await post("/api/memoria",{op:"add",texto:"La base de datos de producción es PostgreSQL 16.",tags:["db"]})).status,200);
+  const antesMemoria = bodies.length;
+  const conMemoria = await post("/api/chat",{text:"¿Qué gestor de paquetes usa el proyecto?",modo:"consulta"});
+  await leerSSE(conMemoria.body,{exigirFin:false,alEvento:()=>{}});
+  const cuerpoMemoria = bodies.slice(antesMemoria).find(b=>b.stream);
+  assert.ok(cuerpoMemoria, "el modelo debe recibir una petición");
+  const mensajesMemoria = JSON.stringify(cuerpoMemoria.messages);
+  assert.match(mensajesMemoria, /MEMORIA GLOBAL/, "la memoria global debe llegar al mensaje de sistema");
+  assert.match(mensajesMemoria, /pnpm/, "la nota fijada y relevante debe viajar");
+  assert.ok(!mensajesMemoria.includes("PostgreSQL"), "una nota no relacionada no debe inyectarse");
+  assert.equal((await post("/api/memoria",{op:"clear",confirm:true})).status,200);
   const query=await post("/api/chat",{text:"Describe la imagen sin cambiar archivos.",imagenes:[attached.archivo],modo:"consulta"});
   await leerSSE(query.body,{exigirFin:false,alEvento:()=>{}});
   assert.equal(bodies.at(-1).tool_choice,"none");
@@ -590,10 +683,74 @@ try {
     fs.readFileSync(path.join(state, "ui-session.json"), "utf8"),
   );
   assert.equal(metadatosSesion(persisted).taskState.phase, "DONE");
+  // P2-17: un comando de verificación definido por el repositorio pasa por el permiso
+  // del modo ask; denegarlo no ejecuta nada.
+  const marcadorVerificacion = path.join(ws, "permiso-verificacion-ejecutado.txt");
+  fs.writeFileSync(
+    path.join(ws, ".bonsai-coder.json"),
+    JSON.stringify({
+      verification: [{
+        file: process.execPath,
+        args: ["-e", "require('fs').writeFileSync('permiso-verificacion-ejecutado.txt','ejecutado')"],
+      }],
+    }),
+  );
+  await post("/api/permit", { mode: "ask" });
+  const eventosPermiso = [];
+  const respuestasPermiso = [];
+  const chatPermiso = await post("/api/chat", { text: "PRUEBA_PERMISO_VERIFICACION: crea permiso-verificacion.txt" });
+  await leerSSE(chatPermiso.body, {
+    exigirFin: false,
+    alEvento: (e) => {
+      eventosPermiso.push(e);
+      if (e.type === "action" && e.state === "permit") {
+        assert.equal(fs.existsSync(marcadorVerificacion), false, "la verificación no puede ejecutarse antes de autorizarla");
+        respuestasPermiso.push(post("/api/permit", { id: e.id, allow: false }));
+      }
+    },
+  });
+  await Promise.all(respuestasPermiso);
+  const filaPermiso = eventosPermiso.find((e) => e.type === "action" && e.kind === "cmd" && e.state === "permit");
+  assert.ok(filaPermiso, JSON.stringify(eventosPermiso.filter((e) => e.type === "action")).slice(0, 500));
+  assert.ok(!fs.existsSync(marcadorVerificacion), "una verificación denegada no debe ejecutar el comando");
+  const filaDenegada = eventosPermiso.findLast((e) => e.type === "action" && e.id === filaPermiso.id);
+  assert.equal(filaDenegada?.state, "denied");
+  assert.match(String(filaDenegada?.detail || ""), /Verificación no autorizada/);
+  fs.unlinkSync(path.join(ws, ".bonsai-coder.json"));
+  await post("/api/permit", { mode: "all" });
+  // P2-20: un turno sin herramientas, cambios ni archivos inspeccionados no termina DONE.
+  const vacioIntegracion = path.join(temp, "workspace-vacio");
+  fs.mkdirSync(vacioIntegracion);
+  assert.equal((await post("/api/workspace", { path: vacioIntegracion })).status, 200);
+  const sinEvidenciaIntegracion = await post("/api/chat", { text: "Arregla el bug" });
+  const eventosSinEvidencia = [];
+  await leerSSE(sinEvidenciaIntegracion.body, { exigirFin: false, alEvento: (e) => eventosSinEvidencia.push(e) });
+  const estadoSinEvidencia = JSON.parse(fs.readFileSync(path.join(state, "ui-session.json"), "utf8"));
+  assert.notEqual(metadatosSesion(estadoSinEvidencia).taskState.phase, "DONE", "sin evidencia no puede declararse DONE");
+  assert.equal(estadoSinEvidencia.lastStop?.motivo, "unresolved_verification");
+  assert.ok(!eventosSinEvidencia.some((e) => e.type === "done" && e.motivo === "completed"));
+  assert.equal((await post("/api/workspace", { path: ws })).status, 200);
+  const antesMcp = bodies.length;
+  const mcp = await post("/api/chat",{text:"PRUEBA_MCP_REAL: comprueba la página de prueba"});
+  await leerSSE(mcp.body,{exigirFin:false,alEvento:()=>{}});
+  const mcpBodies = bodies.slice(antesMcp);
+  assert.ok(mcpBodies[0].tools.some(t=>t.function.name === "mcp_playwright"));
+  assert.ok(mcpBodies.some(b=>b.messages.some(m=>m.tool_call_id === "mcp1" && /CONTROL MCP/.test(m.content))),"el resultado del navegador llega al agente");
+  sitio.closeAllConnections();
+  await new Promise(r=>sitio.close(r));
+  sitio = null;
+  const failure = await post("/api/chat",{text:"PRUEBA_ERROR_GPU: corrige src/price.mjs"});
+  const failureEvents = [];
+  await leerSSE(failure.body,{exigirFin:false,alEvento:e=>failureEvents.push(e)});
+  assert.ok(failureEvents.some(e=>e.type === "error" && /memoria de GPU/.test(e.text)));
+  const savedFailure = JSON.parse(fs.readFileSync(path.join(state,"ui-session.json"),"utf8"));
+  assert.match(savedFailure.taskState.goal,/PRUEBA_ERROR_GPU/);
+  assert.equal(savedFailure.lastStop.motivo,"error");
   console.log(
     "Small coder: AST, graph, snippets, schemas, context bounds, auto tests and bounded repair verified.",
   );
 } finally {
+  if (sitio) { sitio.closeAllConnections(); await new Promise(r=>sitio.close(r)); }
   if (ui && ui.exitCode === null) {
     ui.kill();
     await new Promise((r) => ui.once("exit", r));

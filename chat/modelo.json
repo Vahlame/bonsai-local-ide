@@ -1,6 +1,5 @@
 {
   "_nota": "Fuente única de los datos del modelo. La leen chat/modelo.mjs y scripts/start-server.ps1. Los números de arquitectura salen del encabezado del GGUF; el muestreo, de las fichas de PrismML (ver 'fuente').",
-
   "modeloPredeterminado": "ornith9b",
   "modelo": {
     "archivo": "Ternary-Bonsai-2-27B-PTQ1_0-abliterated-Override6.gguf",
@@ -15,7 +14,6 @@
     "dimCabeza": 256,
     "fuente": "metadatos del GGUF: qwen35.block_count, attention.head_count(_kv), key_length, full_attention_interval"
   },
-
   "catalogo": {
     "ornith9b": {
       "archivo": "Ornith-1.5-9B-Q4_K_M.gguf",
@@ -25,8 +23,14 @@
       "rol": "codigo GPU",
       "uso": "Programacion y herramientas; todos los pesos y el contexto en la GPU de 8 GB",
       "toolcalls": "xml-funcion",
-      "agente": { "saltos": 24, "avisos": 2 },
-      "pensar": { "compatible": true, "presupuesto": 2048 },
+      "agente": {
+        "saltos": 24,
+        "avisos": 2
+      },
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 2048
+      },
       "origen": "https://huggingface.co/ornith-ai/Ornith-1.5-9B-GGUF",
       "revision": "abdd624b12ebf020b767fff532ff44fe552b28c3",
       "sha256": "70c112196e0b7023803c9762752e46d29e612a92c83f995bc3ba1ceb07e8fab6",
@@ -39,6 +43,8 @@
         "imageMaxTokens": 512,
         "reservaMiB": 900,
         "contexto": 39936,
+        "contextoMaximoManual": 43008,
+        "contextoMaximoManualNota": "Uso elegido explícitamente: 43008/F16 y visión pasó tres pruebas de contexto largo, pero el mínimo muestreado fue 106 MiB; 44032 falló por memoria CUDA. El perfil automático conserva el techo anterior.",
         "vramLibreMinMiBMedida": 426,
         "validacionIDE": {
           "textoLargoPromptTokens": 28057,
@@ -49,13 +55,41 @@
           "evidencia": "logs/ornith-vision-ide-39936.json",
           "residenciaGPU": "logs/ornith-validacion-39936.json"
         },
-        "calibrado": "2026-10-28"
+        "calibrado": "2026-10-28",
+        "notaReserva": "reservaMiB=900 (≈ 879 MiB del proyector + ~21 MiB de buffer) cubre la carga en GPU del mmproj BF16 sin offload. El valor proviene del tamaño en disco del mmproj (921 704 672 bytes) y se mantiene mientras no se mida un pico superior en producción."
       },
-      "servidor": { "pesosGpuEstandarMiB": 4864, "pesosGpuEstandarEvidencia": "CUDA0 4812.25 MiB medidos + 51.75 MiB de margen, adfffbe41, GGUF 70c112196e0b7023803c9762752e46d29e612a92c83f995bc3ba1ceb07e8fab6; solo colocacion estandar", "tipo": "gpu-completa", "contexto": 53248, "capasAtencionCompleta": 8, "cabezasKV": 4, "dimCabeza": 256, "reservaMiB": 620, "ubatch": 128, "margenObjetivoMiB": 200, "nota": "Perfil final elegido el 28-oct-2026: 39936 tokens, KV q8_0 y vision completa en CUDA0. Imagen 1200x528: leyo 4758, 539 tokens de entrada, minimo 426 MiB libres (logs/ornith-39936-final.err.log). 40960 fallo con imagen grande; no aumentar ni recalibrar. El techo historico de texto sin vision es 53248/q8_0; el presupuesto de VRAM es una estimacion, no una garantia de carga." },
+      "servidor": {
+        "pesosGpuEstandarMiB": 4864,
+        "pesosGpuEstandarEvidencia": "CUDA0 4812.25 MiB medidos + 51.75 MiB de margen, adfffbe41, GGUF 70c112196e0b7023803c9762752e46d29e612a92c83f995bc3ba1ceb07e8fab6; solo colocacion estandar",
+        "tipo": "gpu-completa",
+        "contexto": 53248,
+        "capasAtencionCompleta": 8,
+        "cabezasKV": 4,
+        "dimCabeza": 256,
+        "reservaMiB": 620,
+        "ubatch": 128,
+        "margenObjetivoMiB": 200,
+        "nota": "Perfil final elegido el 28-oct-2026: 39936 tokens, KV q8_0 y vision completa en CUDA0. Imagen 1200x528: leyo 4758, 539 tokens de entrada, minimo 426 MiB libres (logs/ornith-39936-final.err.log). 40960 fallo con imagen grande; no aumentar ni recalibrar. El techo historico de texto sin vision es 53248/q8_0; el presupuesto de VRAM es una estimacion, no una garantia de carga."
+      },
       "muestreo": {
-        "codigo": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0, "presence_penalty": 0, "repeat_penalty": 1 },
-        "razonar": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0, "presence_penalty": 0, "repeat_penalty": 1 }
-      }
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "chat_template": "{%- set image_count = namespace(value=0) %}\n{%- set video_count = namespace(value=0) %}\n{%- macro render_content(content, do_vision_count, is_system_content=false) %}\n    {%- if content is string %}\n        {{- content }}\n    {%- elif content is iterable and content is not mapping %}\n        {%- for item in content %}\n            {%- if 'image' in item or 'image_url' in item or item.type == 'image' %}\n                {%- if is_system_content %}\n                    {{- raise_exception('System message cannot contain images.') }}\n                {%- endif %}\n                {%- if do_vision_count %}\n                    {%- set image_count.value = image_count.value + 1 %}\n                {%- endif %}\n                {%- if add_vision_id %}\n                    {{- 'Picture ' ~ image_count.value ~ ': ' }}\n                {%- endif %}\n                {{- '<|vision_start|><|image_pad|><|vision_end|>' }}\n            {%- elif 'video' in item or item.type == 'video' %}\n                {%- if is_system_content %}\n                    {{- raise_exception('System message cannot contain videos.') }}\n                {%- endif %}\n                {%- if do_vision_count %}\n                    {%- set video_count.value = video_count.value + 1 %}\n                {%- endif %}\n                {%- if add_vision_id %}\n                    {{- 'Video ' ~ video_count.value ~ ': ' }}\n                {%- endif %}\n                {{- '<|vision_start|><|video_pad|><|vision_end|>' }}\n            {%- elif 'text' in item %}\n                {{- item.text }}\n            {%- else %}\n                {{- raise_exception('Unexpected item type in content.') }}\n            {%- endif %}\n        {%- endfor %}\n    {%- elif content is none or content is undefined %}\n        {{- '' }}\n    {%- else %}\n        {{- raise_exception('Unexpected content type.') }}\n    {%- endif %}\n{%- endmacro %}\n{%- if not messages %}\n    {{- raise_exception('No messages provided.') }}\n{%- endif %}\n{%- set num_sys = 0 %}\n{%- set merged_system = '' %}\n{%- if messages[0].role == 'system' or messages[0].role == 'developer' %}\n    {%- set first = render_content(messages[0].content, false, true)|trim %}\n    {%- if messages|length > 1 and (messages[1].role == 'system' or messages[1].role == 'developer') %}\n        {%- set second = render_content(messages[1].content, false, true)|trim %}\n        {%- set merged_system = first + '\\n' + second %}\n        {%- set num_sys = 2 %}\n    {%- else %}\n        {%- set merged_system = first %}\n        {%- set num_sys = 1 %}\n    {%- endif %}\n{%- endif %}\n{%- if tools and tools is iterable and tools is not mapping %}\n    {{- '<|im_start|>system\\n' }}\n    {{- \"# Tools\\n\\nYou have access to the following functions:\\n\\n<tools>\" }}\n    {%- for tool in tools %}\n        {{- \"\\n\" }}\n        {{- tool | tojson }}\n    {%- endfor %}\n    {{- \"\\n</tools>\" }}\n    {{- '\\n\\nIf you choose to call a function ONLY reply in the following format with NO suffix:\\n\\n<tool_call>\\n<function=example_function_name>\\n<parameter=example_parameter_1>\\nvalue_1\\n</parameter>\\n<parameter=example_parameter_2>\\nThis is the value for the second parameter\\nthat can span\\nmultiple lines\\n</parameter>\\n</function>\\n</tool_call>\\n\\n<IMPORTANT>\\nReminder:\\n- Function calls MUST follow the specified format: an inner <function=...></function> block must be nested within <tool_call></tool_call> XML tags\\n- Required parameters MUST be specified\\n- You may provide optional reasoning for your function call in natural language BEFORE the function call, but NOT after\\n- If there is no function call available, answer the question like normal with your current knowledge and do not tell the user about function calls\\n</IMPORTANT>' }}\n    {%- if merged_system %}\n        {{- '\\n\\n' + merged_system }}\n    {%- endif %}\n    {{- '<|im_end|>\\n' }}\n{%- else %}\n    {%- if merged_system %}\n        {{- '<|im_start|>system\\n' + merged_system + '<|im_end|>\\n' }}\n    {%- endif %}\n{%- endif %}\n{%- set ns = namespace(multi_step_tool=true, last_query_index=messages|length - 1) %}\n{%- for message in messages[::-1] %}\n    {%- set index = (messages|length - 1) - loop.index0 %}\n    {%- if ns.multi_step_tool and message.role == \"user\" %}\n        {%- set content = render_content(message.content, false)|trim %}\n        {%- if not(content.startswith('<tool_response>') and content.endswith('</tool_response>')) %}\n            {%- set ns.multi_step_tool = false %}\n            {%- set ns.last_query_index = index %}\n        {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- for message in messages %}\n    {%- if loop.index0 >= num_sys and message.role != \"system\" and message.role != \"developer\" %}\n    {%- set content = render_content(message.content, true)|trim %}\n    {%- if message.role == \"user\" %}\n        {{- '<|im_start|>' + message.role + '\\n' + content + '<|im_end|>' + '\\n' }}\n    {%- elif message.role == \"assistant\" %}\n        {%- set reasoning_content = '' %}\n        {%- if message.reasoning_content is string %}\n            {%- set reasoning_content = message.reasoning_content %}\n        {%- else %}\n            {%- if '</think>' in content %}\n                {%- set reasoning_content = content.split('</think>')[0].rstrip('\\n').split('<think>')[-1].lstrip('\\n') %}\n                {%- set content = content.split('</think>')[-1].lstrip('\\n') %}\n            {%- endif %}\n        {%- endif %}\n        {%- set reasoning_content = reasoning_content|trim %}\n        {{- '<|im_start|>' + message.role + '\\n<think>\\n' + reasoning_content + '\\n</think>\\n\\n' + content }}\n        {%- if message.tool_calls and message.tool_calls is iterable and message.tool_calls is not mapping %}\n            {%- for tool_call in message.tool_calls %}\n                {%- if tool_call.function is defined %}\n                    {%- set tool_call = tool_call.function %}\n                {%- endif %}\n                {%- if loop.first %}\n                    {%- if content|trim %}\n                        {{- '\\n\\n<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                    {%- else %}\n                        {{- '<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                    {%- endif %}\n                {%- else %}\n                    {{- '\\n<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                {%- endif %}\n                {%- if tool_call.arguments is mapping %}\n                    {%- for args_name in tool_call.arguments %}\n                        {%- set args_value = tool_call.arguments[args_name] %}\n                        {{- '<parameter=' + args_name + '>\\n' }}\n                        {%- set args_value = args_value | tojson | safe if args_value is mapping or (args_value is sequence and args_value is not string) else args_value | string %}\n                        {{- args_value }}\n                        {{- '\\n</parameter>\\n' }}\n                    {%- endfor %}\n                {%- endif %}\n                {{- '</function>\\n</tool_call>' }}\n            {%- endfor %}\n        {%- endif %}\n        {{- '<|im_end|>\\n' }}\n    {%- elif message.role == \"tool\" %}\n        {%- if loop.previtem and loop.previtem.role != \"tool\" %}\n            {{- '<|im_start|>user' }}\n        {%- endif %}\n        {{- '\\n<tool_response>\\n' }}\n        {{- content }}\n        {{- '\\n</tool_response>' }}\n        {%- if not loop.last and loop.nextitem.role != \"tool\" %}\n            {{- '<|im_end|>\\n' }}\n        {%- elif loop.last %}\n            {{- '<|im_end|>\\n' }}\n        {%- endif %}\n    {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '<|im_start|>assistant\\n' }}\n    {%- if enable_thinking is defined and enable_thinking is false %}\n        {{- '<think>\\n\\n</think>\\n\\n' }}\n    {%- else %}\n        {{- '<think>\\n' }}\n    {%- endif %}\n{%- endif %}\n{#- Unsloth fixes - developer role, tool calling #}"
     },
     "_nota": "La eleccion guardada prevalece sobre modeloPredeterminado. Solo se pueden iniciar modelos con perfil gpu-completa. Las cuentas globales de VRAM y modelo describen los Bonsai historicos. Ornith usa sus propios perfiles, con tensores, KV y proyector en CUDA0.",
     "override6": {
@@ -66,8 +100,16 @@
       "uso": "No disponible: este perfil usa CPU para parte del modelo o la vision",
       "toolcalls": "xml-funcion",
       "toolcalls_evidencia": "salida CRUDA capturada en este repo: salida/eval-4/tarea-lru-cache.json:669 y chat/evaluar/resultados/2026-10-04-eval-3-modelo-override6-prompt-arreglado.json:400",
-      "agente": { "saltos": 24, "avisos": 2, "nota": "Medido 2026-10-06 con chat/medir-agente.mjs (6 tareas largas): lru-ttl 8 saltos, arreglar-bugs OK, csv-sucio 4 saltos; FALLA el parser recursivo. En 20 tareas simples: 18 nativas + 2 solo texto." },
-      "pensar": { "compatible": true, "presupuesto": 2048, "nota": "El autor midio 0 respuestas vacias de 104 con thinking encendido (el modelo anterior dejaba 19). Encendido a peticion del usuario el 2026-10-08; en el agente razona al planificar y tras un fallo, no en cada salto." },
+      "agente": {
+        "saltos": 24,
+        "avisos": 2,
+        "nota": "Medido 2026-10-06 con chat/medir-agente.mjs (6 tareas largas): lru-ttl 8 saltos, arreglar-bugs OK, csv-sucio 4 saltos; FALLA el parser recursivo. En 20 tareas simples: 18 nativas + 2 solo texto."
+      },
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 2048,
+        "nota": "El autor midio 0 respuestas vacias de 104 con thinking encendido (el modelo anterior dejaba 19). Encendido a peticion del usuario el 2026-10-08; en el agente razona al planificar y tras un fallo, no en cada salto."
+      },
       "origen": "https://huggingface.co/Override-6/Ternary-Bonsai-2-27B-abliterated-gguf",
       "sha256": "0b3106548351a309b080951705cf978bf3d49288df127d8f99e39d7af47378ed",
       "metodo": "edicion directa de los trits con volteos estocasticos insesgados (capas 16-48) + 'healing' por ridge least squares solo de las escalas por grupo; pipeline publicado en scripts/",
@@ -83,8 +125,15 @@
       "uso": "No disponible: este perfil usa CPU para parte del modelo o la vision",
       "toolcalls": "xml-funcion",
       "toolcalls_evidencia": "VERIFICADO el 2026-10-06 (chat/medir-formato.mjs + chat/medir-agente.mjs): en 26 tareas, 20 simples y 6 largas, emitio SIEMPRE tool_calls NATIVAS (delta.tool_calls con index/id/type/function), 0 en XML y 0 en cercas. Crudo en salida/formato/crudo-boldingv1-*.jsonl y agente-bolding_v1-*.jsonl.",
-      "agente": { "saltos": 32, "avisos": 4, "nota": "Medido 2026-10-06: necesito 14 saltos para el LRU (override6: 8) y ABANDONO arreglar-bugs en 6 saltos; resuelve 5 de 6 tareas largas con mas paciencia que el otro. De ahi el margen extra." },
-      "pensar": { "compatible": false, "nota": "Con thinking encendido y 4.096 tokens deja sin respuesta el 24% de los prompts (63% con greedy): siempre sin razonamiento." },
+      "agente": {
+        "saltos": 32,
+        "avisos": 4,
+        "nota": "Medido 2026-10-06: necesito 14 saltos para el LRU (override6: 8) y ABANDONO arreglar-bugs en 6 saltos; resuelve 5 de 6 tareas largas con mas paciencia que el otro. De ahi el margen extra."
+      },
+      "pensar": {
+        "compatible": false,
+        "nota": "Con thinking encendido y 4.096 tokens deja sin respuesta el 24% de los prompts (63% con greedy): siempre sin razonamiento."
+      },
       "origen": "https://huggingface.co/BoldingBuilds/Ternary-Bonsai-2-27B-Abliterated-PTQ1_0-GGUF",
       "sha256": "94dd53cbad55db5a515f245887c9f0317484502a451ccc0424c7d7788b52900a",
       "sha256_nota": "calculado en esta maquina; coincide con el que anclo el shootout publico",
@@ -94,49 +143,82 @@
       "licencia": "Apache-2.0"
     }
   },
-
   "vram": {
     "totalMiB": 8188,
     "pesosMiB": 5395,
     "estadoRecurrenteMiB": 150,
     "fijoCudaMiB": 138,
-    "computo": { "pisoMiB": 255, "baseMiB": 40, "porMilTokensMiB": 4.5 },
-    "ubatch": { "referencia": 256, "extraPorTokenMiB": 0.302 },
+    "computo": {
+      "pisoMiB": 255,
+      "baseMiB": 40,
+      "porMilTokensMiB": 4.5
+    },
+    "ubatch": {
+      "referencia": 256,
+      "extraPorTokenMiB": 0.302
+    },
     "margenMiB": 100,
     "ctxAutoMax": 131072,
     "nota": "Calibrado con el servidor REAL el 2026-10-04 (nvidia-smi): con -ub 256 y KV q4_0 la VRAM usada fue 7163 / 7253 / 7343 / 7433 / 7523 MiB a 64k / 68k / 72k / 76k / 80k (22 MiB por cada 1k: 18 de KV + 4.4 del buffer de computo, que crece con el contexto porque la atencion descuantiza el KV); -ub 1024 a 64k = 7394 (+0.30 MiB por token de -ub). pesos = lo que va a la GPU (los 276 MiB de token_embd se quedan en RAM); estado recurrente = 48 capas x ~3.1 MiB (f32); fijoCuda = contexto CUDA. Al ARRANCAR se reserva a la vez dos veces la parte del buffer de computo que depende de la ventana, asi que el pico es el uso estable + esa parte: 81920 arranca (pico 7923 con 7956 libres) y 83968 falla (pico 7977, que sigue pasando de 7956); -ub 1024 con 64k arranco con 7947 libres porque el extra de -ub no se duplica. Eso, y no el uso estable, decide si arranca. llama-fit-params sobreestima el efecto de -ub (de 256 a 1024 estima +682 y se midieron +232) y es demasiado conservador con el contexto, por eso no se usa para elegirlo."
   },
-
   "kv": {
-    "bytesPorElemento": { "f16": 2, "q8_0": 1.0625, "q4_0": 0.5625 },
-    "orden": ["f16", "q8_0", "q4_0"],
+    "bytesPorElemento": {
+      "f16": 2,
+      "q8_0": 1.0625,
+      "q4_0": 0.5625
+    },
+    "orden": [
+      "f16",
+      "q8_0",
+      "q4_0"
+    ],
     "nota": "Solo parejas iguales K=V: las mezclas (p. ej. q8_0/q4_0) necesitan GGML_CUDA_FA_ALL_QUANTS en la compilación y q5_x es varias veces más lento (KNOWN_ISSUES de prism-ml). Con --kv-mean-center la K tiene que ser q4_0."
   },
-
   "muestreo": {
     "codigo": {
-      "temperature": 0.5, "top_p": 0.85, "top_k": 20, "min_p": 0, "presence_penalty": 0, "repeat_penalty": 1,
+      "temperature": 0.5,
+      "top_p": 0.85,
+      "top_k": 20,
+      "min_p": 0,
+      "presence_penalty": 0,
+      "repeat_penalty": 1,
       "fuente": "docs.prismml.com/run/llamacpp: --temp 0.5 --top-p 0.85 --top-k 20 --min-p 0 (sin razonamiento)"
     },
     "chat": {
-      "temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0, "presence_penalty": 1.5, "repeat_penalty": 1,
+      "temperature": 0.7,
+      "top_p": 0.8,
+      "top_k": 20,
+      "min_p": 0,
+      "presence_penalty": 1.5,
+      "repeat_penalty": 1,
       "fuente": "ficha de Ternary-Bonsai-2-27B / Qwen3.8-27B, modo instruct (sin razonamiento)"
     },
     "razonar": {
-      "temperature": 1.0, "top_p": 0.95, "top_k": 20, "min_p": 0.05, "presence_penalty": 0, "repeat_penalty": 1,
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "top_k": 20,
+      "min_p": 0.05,
+      "presence_penalty": 0,
+      "repeat_penalty": 1,
       "fuente": "ficha de Ternary-Bonsai-2-27B, modo thinking; es también lo que lleva el GGUF en general.sampling.*"
     }
   },
-
   "razonamiento": {
     "porDefecto": false,
     "esfuerzo": "medium",
-    "presupuestos": { "bajo": 512, "medio": 2048, "alto": 8192 },
+    "presupuestos": {
+      "bajo": 512,
+      "medio": 2048,
+      "alto": 8192
+    },
     "nota": "APAGADO por defecto. La plantilla solo acepta reasoning_effort xhigh|medium|low (high da HTTP 500; low no reduce nada). medium gasta ~1/3 menos tokens que xhigh con precisión parecida. El presupuesto va como thinking_budget_tokens en la raíz de la petición, no dentro de chat_template_kwargs."
   },
-
   "servidor": {
-    "cacheRam": { "fraccionRam": 0.25, "minMiB": 2048, "maxMiB": 24576 },
+    "cacheRam": {
+      "fraccionRam": 0.25,
+      "minMiB": 2048,
+      "maxMiB": 24576
+    },
     "nota": "Medido con el servidor real (prompt de ~4.8k tokens, 3 turnos y prefijo reescrito): los valores por defecto de llama.cpp para checkpoints (-ctxcp 32 -cms 8192) YA reutilizan el prefijo (4749 de 4839 tokens en caché), asi que no se tocan. Solo se limita --cache-ram (por defecto 8192 MiB) a un cuarto de la RAM para no ahogar una maquina de 16 GB: el proceso ya ronda 6.7 GB residentes."
   },
   "vision": {
