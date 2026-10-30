@@ -443,7 +443,7 @@ export const PC_TOOLS = [
     type: "function",
     function: {
       name: "borrar",
-      description: "Borra un archivo (o una carpeta VACÍA) del proyecto. Se guarda copia para deshacer. No borra carpetas con contenido: borra antes sus archivos uno a uno.",
+      description: "Borra un archivo (o una carpeta VACÍA) del proyecto. Solo los archivos de texto dentro del límite se guardan para deshacer; los binarios, los archivos grandes y las carpetas vacías se borran sin copia. No borra carpetas con contenido: borra antes sus archivos uno a uno.",
       parameters: {
         type: "object",
         properties: { ruta: { type: "string" } },

@@ -285,6 +285,15 @@ try {
   const deshacerBorrado = await pedir("POST", "/api/undo", { id: borrado.undo });
   check("deshacer un borrado lo restaura", deshacerBorrado.status === 200 && fs.readFileSync(path.join(proyecto, "saludo.txt"), "utf8") === antesDeBorrar, `HTTP ${deshacerBorrado.status}`);
 
+  // P1-08: el endpoint no debe prometer una copia que no existe.
+  const binario = JSON.parse((await pedir("POST", "/api/fs", { op: "borrar", path: "binario.bin" })).body);
+  check("borrar un binario no promete deshacer", binario.undo === false && !fs.existsSync(path.join(proyecto, "binario.bin")), JSON.stringify(binario));
+  const grandeBorrado = JSON.parse((await pedir("POST", "/api/fs", { op: "borrar", path: "grande-borrar.txt" })).body);
+  check("borrar un archivo grande no promete deshacer", grandeBorrado.undo === false && !fs.existsSync(path.join(proyecto, "grande-borrar.txt")), JSON.stringify(grandeBorrado));
+  fs.mkdirSync(path.join(proyecto, "vacia"));
+  const carpetaBorrada = JSON.parse((await pedir("POST", "/api/fs", { op: "borrar", path: "vacia" })).body);
+  check("borrar una carpeta no promete deshacer", carpetaBorrada.carpeta === true && carpetaBorrada.undo === false, JSON.stringify(carpetaBorrada));
+
   // --- sin escrituras del agente, "revertir el turno" avisa ------------------
   const nadaQueRevertir = await pedir("POST", "/api/undo", { turno: true });
   check("revertir el turno sin escrituras da 409", nadaQueRevertir.status === 409, `HTTP ${nadaQueRevertir.status}`);

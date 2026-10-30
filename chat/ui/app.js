@@ -1194,7 +1194,7 @@
   async function borrarArchivo(rel) {
     const ok = await confirmar(
       `Borrar «${rel}»`,
-      "Se quita de la carpeta de trabajo. Los archivos de texto se pueden restaurar con el botón Deshacer del aviso; las carpetas, no.",
+      "Se quita de la carpeta de trabajo. Solo los archivos de texto pequeños se pueden restaurar con el botón Deshacer del aviso; los binarios, los archivos grandes y las carpetas, no.",
       "Borrar",
     );
     if (!ok) return;

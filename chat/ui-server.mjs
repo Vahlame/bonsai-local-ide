@@ -2127,7 +2127,7 @@ async function main(args) {
           }
           fs.rmSync(abs, { recursive: true, force: true });
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-          res.end(JSON.stringify({ ok: true, op, rel, carpeta, undo: undoId }));
+          res.end(JSON.stringify({ ok: true, op, rel, carpeta, undo: undoId || false }));
           return;
         }
         res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("operacion desconocida");
@@ -3354,7 +3354,7 @@ async function main(args) {
               }
               step += 1;
               /** @type {ActionRow} */
-              const rowBorrar = { id: `${idTurno}-a${step}`, kind: "cmd", title: `borrar ${rel}`, state: "done", detail: st.isDirectory() ? "Carpeta vacía borrada." : "Archivo borrado (hay copia para deshacer)." };
+              const rowBorrar = { id: `${idTurno}-a${step}`, kind: "cmd", title: `borrar ${rel}`, state: "done", detail: st.isDirectory() ? "Carpeta vacía borrada." : undoId ? "Archivo borrado (hay copia para deshacer)." : "Archivo borrado (sin copia: no se puede deshacer)." };
               if (undoId) rowBorrar.undo = undoId;
               actions.push(rowBorrar);
               emitAction(rowBorrar);
@@ -3362,7 +3362,7 @@ async function main(args) {
               const conocido = new Map((chat.session.files || []).map((file) => [file.rel, file]));
               conocido.delete(rel);
               chat.session.files = [...conocido.values()];
-              poner(clave, `Borrado ${rel}. Hay punto de deshacer (botón en la tarjeta).`);
+              poner(clave, undoId ? `Borrado ${rel}. Hay punto de deshacer (botón en la tarjeta).` : `Borrado ${rel}. No hay copia: este borrado no se puede deshacer.`);
               wrote = true;
               progresoPaso = true;
               accionPaso = "write";
