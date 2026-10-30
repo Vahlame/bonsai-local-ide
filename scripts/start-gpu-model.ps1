@@ -15,7 +15,9 @@ param (
     [switch]$ManagedByIDE,
     [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG", "CUSTOM")][string]$EnginePreset = "",
     # SOLO PRUEBAS: sustituye la VRAM libre medida por nvidia-smi. Se ignora sin -DryRun.
-    [int]$FreeMiBOverride = 0
+    [int]$FreeMiBOverride = 0,
+    # Margen de VRAM en MiB. -1 = usar el del catálogo (margenObjetivoMiB) o el del preset.
+    [int]$MarginOverrideMiB = -1
 )
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
@@ -62,6 +64,15 @@ if (-not $UsandoOverride) {
 }
 
 $GpuProfile = $Item.servidor
+# El catálogo declara un colchón objetivo (200 MiB). Antes solo existía como dato y el
+# arranque comparaba con SafetyMiB = 0, así que un perfil podía aceptarse sin margen.
+# Los presets con nombre conservan su marginMiB; CUSTOM y el perfil automático usan el
+# del catálogo. -MarginOverrideMiB permite una excepción consciente y visible.
+if ($MarginOverrideMiB -ge 0) {
+    $SafetyMiB = $MarginOverrideMiB
+} elseif (-not $EngineOptions -and $GpuProfile.margenObjetivoMiB) {
+    $SafetyMiB = [int]$GpuProfile.margenObjetivoMiB
+}
 $VisionProfile = if ($Vision) { $Item.vision } else { $null }
 $VisionMiB = 0
 if ($Vision) {
@@ -196,7 +207,7 @@ if ($AutoContexto -or $AutoKv) {
 }
 if ($ContextTokens -lt 4096 -or $ContextTokens -gt $TechoContexto) { throw "Contexto admitido para este perfil: 4096 a $TechoContexto tokens (vision: $Vision)." }
 $RequiredMiB = Get-RequiredMiB $ContextTokens $KvType
-if ($RequiredMiB -gt $FreeMiB) { throw "No cabe todo en GPU: hacen falta ~$RequiredMiB MiB y hay $FreeMiB MiB libres. No se usa CPU como respaldo." }
+if ($RequiredMiB -gt $FreeMiB) { throw "No cabe todo en GPU: hacen falta ~$RequiredMiB MiB (incluye margen de $SafetyMiB MiB) y hay $FreeMiB MiB libres. No se usa CPU como respaldo. Si el margen no es necesario, indícalo explícitamente con -MarginOverrideMiB." }
 
 $SampleProfile = if ($Pensar -gt 0) { "razonar" } else { "codigo" }
 $Sampling = $Item.muestreo.$SampleProfile
