@@ -2,18 +2,22 @@
 # Crea el acceso directo "Bonsai IDE" en el escritorio.
 #   .\scripts\crear-acceso-directo.ps1
 #
-# El acceso directo abre la interfaz completa: arranca llama-server si no está
-# (con visión, si el mmproj está descargado), levanta la interfaz y abre el navegador.
+# El acceso directo abre el IDE en su VENTANA DE APLICACIÓN (sin GPU) y deja el
+# servidor Node en segundo plano; el modelo se arranca con "Iniciar" en la barra.
+#
+# IMPORTANTE: no añadir -NoBrowser. Con ese flag el lanzador arranca la interfaz
+# pero no abre ninguna ventana, que es justo el síntoma de "le doy doble clic y no
+# se abre nada".
 # ==============================================================================
 
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
 $Icono = Join-Path $RootDir "recursos\bonsai-ide.ico"
-$StartUi = Join-Path $RootDir "scripts\start-ui.ps1"
+$Launcher = Join-Path $RootDir "scripts\bonsai-rtx4060.ps1"
 $Escritorio = [Environment]::GetFolderPath("Desktop")
 $Destino = Join-Path $Escritorio "Bonsai IDE.lnk"
 
-if (-not (Test-Path $StartUi)) { Write-Error "No está $StartUi"; exit 1 }
+if (-not (Test-Path $Launcher)) { Write-Error "No está $Launcher"; exit 1 }
 if (-not (Test-Path $Icono)) {
     Write-Host "No hay icono en $Icono; se genera con: python scripts\crear-icono.py" -ForegroundColor Yellow
 }
@@ -21,11 +25,11 @@ if (-not (Test-Path $Icono)) {
 $shell = New-Object -ComObject WScript.Shell
 $lnk = $shell.CreateShortcut($Destino)
 $lnk.TargetPath = Join-Path $env:SystemRoot "System32\WindowsPowerShell\v1.0\powershell.exe"
-$lnk.Arguments = "-NoExit -ExecutionPolicy Bypass -File `"$StartUi`""
+$lnk.Arguments = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$Launcher`" launch"
 $lnk.WorkingDirectory = $RootDir
 if (Test-Path $Icono) { $lnk.IconLocation = "$Icono,0" }
-$lnk.Description = "Bonsai IDE: chat local con el modelo en la GPU (abre la interfaz en el navegador)"
-$lnk.WindowStyle = 1
+$lnk.Description = "Bonsai IDE: abre el IDE en su ventana (sin GPU); el modelo se inicia desde la barra"
+$lnk.WindowStyle = 7
 $lnk.Save()
 
 $comprobado = $shell.CreateShortcut($Destino)

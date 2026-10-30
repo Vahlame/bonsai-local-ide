@@ -5,17 +5,16 @@ Chat con agente, editor con pestañas, diffs, git, terminal integrado, navegador
 controlado y visión — todo en tu GPU, sin nube.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-1.6.1-cde86e">
+  <img alt="version" src="https://img.shields.io/badge/version-1.6.2-cde86e">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v1.6.1** — **110.592 tokens con visión y KV q8_0** en la RTX 4060 (proyector de
-> visión en RAM), reparto de contexto automático estilo frontera, compactación
-> estructurada y un IDE que se abre en **ventana propia sin GPU** (0 MiB de VRAM).
-> Notas: [RELEASE-1.6.1](docs/RELEASE-1.6.1.md).
+> **v1.6.2** — **110.592 tokens con visión y KV q8_0** en la RTX 4060 (proyector de
+> visión en RAM), reparto de contexto automático, compactación estructurada y un IDE
+> en **ventana propia sin GPU** (0 MiB de VRAM). Notas: [RELEASE-1.6.2](docs/RELEASE-1.6.2.md).
 
 ---
 
@@ -82,6 +81,10 @@ GPU**: `scripts/open-ide.ps1` usa Edge/Chrome con `--disable-gpu` y un perfil ai
 así que la NVIDIA queda entera para el modelo. Comprobado con la ventana abierta:
 **0 MiB de VRAM**. La barra de estado muestra «UI · CPU». ¿Prefieres una pestaña
 normal? `.\scripts\open-ide.ps1 -Tab`.
+
+> **Si el acceso directo no abre nada:** no debe llevar `-NoBrowser` (arranca la
+> interfaz pero no abre ventana). Regenéralo con
+> `.\scripts\crear-acceso-directo.ps1`.
 
 ```mermaid
 flowchart TD
@@ -397,6 +400,7 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 
 | Documento | Contenido |
 |---|---|
+| [RELEASE-1.6.2](docs/RELEASE-1.6.2.md) | Acceso directo: abre el IDE de verdad (sin `-NoBrowser`) |
 | [RELEASE-1.6.1](docs/RELEASE-1.6.1.md) | IDE sin GPU, ventana propia y pulido de interfaz |
 | [RELEASE-1.6.0](docs/RELEASE-1.6.0.md) | 110k con visión, reparto de contexto automático y compactación |
 | [RELEASE-1.5.1](docs/RELEASE-1.5.1.md) | KV preset fix y benchmark de calidad |

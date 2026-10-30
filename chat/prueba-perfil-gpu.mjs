@@ -74,7 +74,7 @@ function perfilDryRun({ libre, vision = false, puerto, contexto, kv, margen }) {
 
 // Los scripts que toca esta tarea deben ser PowerShell válido (no se ejecuta nada real).
 {
-  const scripts = ["start-gpu-model.ps1", "stop-managed-server.ps1", "start-ui.ps1", "open-ide.ps1"].map((n) => path.join(root, "scripts", n));
+  const scripts = ["start-gpu-model.ps1", "stop-managed-server.ps1", "start-ui.ps1", "open-ide.ps1", "crear-acceso-directo.ps1"].map((n) => path.join(root, "scripts", n));
   const codigo = [
     "$ErrorActionPreference = 'Stop'",
     "foreach ($ruta in @(" + scripts.map((s) => `'${s}'`).join(", ") + ")) {",
@@ -94,7 +94,14 @@ function perfilDryRun({ libre, vision = false, puerto, contexto, kv, margen }) {
   assert.match(abridor, /--disable-gpu-rasterization/, "open-ide.ps1 debe desactivar el rasterizado por GPU");
   assert.match(abridor, /--app=/, "open-ide.ps1 debe abrir una ventana de aplicacion");
   assert.match(abridor, /uicpu=1/, "open-ide.ps1 debe avisar a la UI de que corre en CPU");
-  console.log("OK: start-gpu-model.ps1, stop-managed-server.ps1, start-ui.ps1 y open-ide.ps1 son válidos y el IDE va sin GPU");
+
+  // El acceso directo no debe llevar -NoBrowser: arrancaría la interfaz SIN abrir
+  // ninguna ventana (síntoma: doble clic y no se abre nada).
+  const acceso = fs.readFileSync(path.join(root, "scripts", "crear-acceso-directo.ps1"), "utf8");
+  assert.match(acceso, /bonsai-rtx4060\.ps1/, "el acceso directo debe usar el lanzador RTX 4060");
+  const lineaArgs = acceso.split(/\r?\n/).find((linea) => linea.includes("$lnk.Arguments")) || "";
+  assert.ok(lineaArgs && !lineaArgs.includes("-NoBrowser"), "el acceso directo no debe pasar -NoBrowser");
+  console.log("OK: start-gpu-model.ps1, stop-managed-server.ps1, start-ui.ps1, open-ide.ps1 y crear-acceso-directo.ps1 son válidos y el IDE va sin GPU");
 }
 
 assert.equal(MODELO.catalogo.ornith9b.vision.contexto, 71680, "el techo de visión medido con q8_0 coincide con el perfil final validado");

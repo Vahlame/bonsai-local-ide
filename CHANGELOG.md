@@ -4,6 +4,15 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [1.6.2] - 2026-10-30
+
+### Corregido
+
+- **El acceso directo del escritorio no abría ninguna ventana**: llevaba
+  `-NoBrowser`, que arranca la interfaz pero no abre el IDE. Ahora abre la ventana de
+  aplicación sin GPU; `scripts/crear-acceso-directo.ps1` genera el acceso correcto y
+  la prueba de perfiles comprueba que no vuelva a colarse ese flag.
+
 ## [1.6.1] - 2026-10-30
 
 ### Añadido
