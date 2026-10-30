@@ -273,9 +273,14 @@ $WrapperTicks = $Wrapper.StartTime.ToUniversalTime().Ticks.ToString()
 $Marker = Join-Path $RootDir "logs\servidor-administrado-$Port.json"
 $MarkerTmp = $Marker + ".tmp"
 
-# P2-10: capturar versión de llama.cpp
-$LlamaVersion = & $BinPath --version 2>&1 | Select-Object -First 1
-if (-not $LlamaVersion) { $LlamaVersion = "desconocida" }
+# P2-10: capturar versión de llama.cpp (usa stderr; no romper con ErrorActionPreference=Stop)
+$LlamaVersion = "desconocida"
+try {
+    $out = & $BinPath --version 2>&1
+    if ($out) { $LlamaVersion = ($out -split "`r?`n" | Select-Object -First 1).Trim() }
+} catch {
+    # ignorar; version se queda como "desconocida"
+}
 
 # P2-13: activeKey para reutilización (proyector de visión si está activo)
 $ActiveKey = $null
