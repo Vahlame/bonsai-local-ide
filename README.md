@@ -124,9 +124,9 @@ flowchart TD
 
 ## 📊 Rendimiento medido (RTX 4060 Laptop 8 GB)
 
-### Techo de contexto con f16 + visión + pensamiento
+### Techo de contexto con f16 (histórico, 28-oct-2026)
 
-![Techo de contexto](docs/graficos/context-ceiling.svg)
+![Techo de contexto f16](docs/graficos/context-ceiling.svg)
 
 | Contexto | Resultado | VRAM pico |
 |---:|:--:|---:|
@@ -136,9 +136,10 @@ flowchart TD
 | **43.008** | **PASS** | **7.481 MiB** |
 | 45.056 | **OOM** | — |
 
-**43.008 es el techo real.** 45k falla con `CUDA error: out of memory` en prefill
-largo. El antiguo fallo en reposo a contexto alto era por *context checkpoints*;
-el lanzador usa `--ctx-checkpoints 0` para f16 y desaparece.
+**43.008 es el techo con KV f16** (45k falla con `CUDA error: out of memory` en
+prefill largo). Por eso f16 ya no es el preset por defecto: con q8_0/q4_0 la ventana
+sube a 71k/110k. El antiguo fallo en reposo a contexto alto era por *context
+checkpoints*; el lanzador usa `--ctx-checkpoints 0` para todos los KV.
 
 ### Ajuste de parámetros (llama-bench, f16)
 
@@ -225,6 +226,8 @@ tarda **~15 s** (captura 1200×528 + respuesta de 120 tokens), frente a ~2 s con
 proyector en GPU. Si usas capturas constantemente, el preset de 71k con visión en
 GPU es más cómodo; si quieres contexto máximo, el de 110k.
 
+![Proyector de visión: GPU vs CPU](docs/graficos/vision-projector.svg)
+
 Por eso el preset por defecto es **`8GB-VISION-MAX-Q8-100K`** (110.592 · q8_0 ·
 visión · 4096 de pensamiento). Alternativas: `8GB-VISION-MAX-Q8` (71k, visión
 rápida), `8GB-VISION-MAX-Q4` (110k, visión en GPU), `8GB-VISION-MAX-F16` (43k, f16).
@@ -235,6 +238,8 @@ Reproducir: `scripts/probe-rtx4060-context.ps1` y `scripts/probe-longctx.ps1 -Im
 La ventana no se reparte a mano: **historial = ventana − reserva de salida − margen**.
 La reserva incluye el pensamiento, así que el razonamiento no se come la respuesta.
 Con el preset por defecto (110.592):
+
+![Context split](docs/graficos/context-split.svg)
 
 | Parte | Tokens | Qué es |
 |---|---:|---|
