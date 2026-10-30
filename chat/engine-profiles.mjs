@@ -1,8 +1,61 @@
 import fs from "node:fs";
+import path from "node:path";
 
 const frozen = new URL("./engine-presets.json", import.meta.url);
 export const ENGINE_PROFILES = Object.freeze(JSON.parse(fs.readFileSync(
   fs.existsSync(frozen) ? frozen : new URL("../config/local-engine-presets.json", import.meta.url), "utf8")));
+
+const MODELO_FILE = new URL("../chat/modelo.json", import.meta.url);
+let MODELO_CACHE = null;
+function cargarModelo() {
+  if (!MODELO_CACHE) {
+    MODELO_CACHE = JSON.parse(fs.readFileSync(MODELO_FILE, "utf8"));
+  }
+  return MODELO_CACHE;
+}
+
+/**
+ * Catálogo de modelos simplificado para validación de techo.
+ * @returns {Array<{clave: string, ctxNativo: number, nombre: string}>}
+ */
+function catalogoModelosValidacion() {
+  const modelo = cargarModelo();
+  const cat = modelo.catalogo || {};
+  const out = [];
+  for (const clave of Object.keys(cat)) {
+    if (clave.startsWith("_")) continue;
+    const row = cat[clave];
+    if (!row || typeof row.archivo !== "string") continue;
+    out.push({
+      clave,
+      ctxNativo: Number(row.ctxNativo) || 262144,
+      nombre: typeof row.nombre === "string" && row.nombre ? row.nombre : clave,
+    });
+  }
+  return out;
+}
+
+/**
+ * Valida que el contexto solicitado quepa en el techo del modelo.
+ * Para modelos con visión, el techo es 43008 (manual) o 39936 (auto).
+ * Para modelos sin visión, el techo es 53248 (texto) o 262144 (nativo).
+ * @param {string} clave
+ * @param {number} contexto
+ * @param {boolean} vision
+ * @returns {{ok: boolean, techo: number, motivo?: string}}
+ */
+export function validarTechoModelo(clave, contexto, vision) {
+  const item = catalogoModelosValidacion().find((m) => m.clave === clave);
+  if (!item) return { ok: true, techo: 65536 }; // desconocido: no bloquear
+  const nativo = item.ctxNativo;
+  const techo = vision
+    ? Math.min(43008, nativo) // visión: tope manual validado 43008
+    : Math.min(53248, nativo); // texto: tope histórico 53248
+  if (contexto > techo) {
+    return { ok: false, techo, motivo: `El contexto ${contexto} supera el techo ${techo} del modelo ${item.nombre} (${vision ? "con" : "sin"} visión)` };
+  }
+  return { ok: true, techo };
+}
 
 export const CUSTOM_ENGINE = "CUSTOM";
 const KV = new Set(["f16", "q8_0", "q4_0"]);
