@@ -228,7 +228,7 @@ try {
   const fuente = http.createServer((_req, res) => res.writeHead(200, { "content-type": "text/html" }).end("<title>Fuente de prueba</title><main>REFERENCIA_TECNICA_VERIFICADA</main>"));
   await new Promise((r) => fuente.listen(0, "127.0.0.1", r));
   try {
-    const leida = await integracion("leer-fuente-web", (n) => n === 1 ? tool("fuente", "leer_web", { url: `http://127.0.0.1:${fuente.address().port}/docs` }) : { content: "Fuente leída y comprobada." });
+    const leida = await integracion("leer-fuente-web", (n) => n === 1 ? tool("fuente", "leer_web", { url: `http://127.0.0.1:${fuente.address().port}/docs`, allowPrivate: true }) : { content: "Fuente leída y comprobada." });
     check("web: el texto real llega al modelo como resultado de su llamada", leida.resultadosHerramienta.some((t) => t.includes("REFERENCIA_TECNICA_VERIFICADA") && t.includes("no confiables")) && leida.done?.motivo === "completed");
   } finally { fuente.closeAllConnections(); await new Promise((r) => fuente.close(r)); }
   const privados = await integracion("web-puertos-protegidos", (n, _body, puertos) => n <= 2
