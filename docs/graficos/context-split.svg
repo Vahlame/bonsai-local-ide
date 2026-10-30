@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="380" viewBox="0 0 920 380" font-family="Segoe UI, system-ui, sans-serif">
+  <rect width="920" height="380" fill="#0d100b"/>
+  <text x="24" y="34" fill="#e9eee0" font-size="18" font-weight="600">Cómo se reparte la ventana de contexto</text>
+  <text x="24" y="54" fill="#8d9680" font-size="12">historial = ventana − pensamiento − respuesta − margen · el pensamiento NO se come la respuesta</text>
+
+  <g font-size="10" fill="#8d9680">
+    <rect x="440" y="26" width="12" height="12" rx="3" fill="#82b8d0"/><text x="458" y="36">historial</text>
+    <rect x="530" y="26" width="12" height="12" rx="3" fill="#cde86e"/><text x="548" y="36">pensamiento</text>
+    <rect x="650" y="26" width="12" height="12" rx="3" fill="#e8c06a"/><text x="668" y="36">respuesta / edición</text>
+    <rect x="810" y="26" width="12" height="12" rx="3" fill="#6f7a64"/><text x="828" y="36">margen 128</text>
+  </g>
+
+  <!-- escala: 112.000 tokens en 620 px desde x=210 (0,0055357 px/token) -->
+  <!-- 110.592 -->
+  <text x="24" y="108" fill="#e9eee0" font-size="13" font-weight="700">110.592 ★ por defecto</text>
+  <text x="24" y="124" fill="#8d9680" font-size="10">q8_0 + visión (proyector en CPU)</text>
+  <rect x="210" y="92" width="543" height="26" rx="3" fill="#82b8d0"/>
+  <rect x="753" y="92" width="23" height="26" fill="#cde86e"/>
+  <rect x="776" y="92" width="44" height="26" fill="#e8c06a"/>
+  <rect x="820" y="92" width="3" height="26" fill="#6f7a64"/>
+  <text x="210" y="136" fill="#e9eee0" font-size="10">98.176 historial</text>
+  <text x="822" y="136" font-size="10" text-anchor="end"><tspan fill="#cde86e">4.096 pensar</tspan><tspan fill="#8d9680"> + </tspan><tspan fill="#e8c06a">7.936 respuesta</tspan></text>
+
+  <!-- 71.680 -->
+  <text x="24" y="212" fill="#e9eee0" font-size="13" font-weight="700">71.680</text>
+  <text x="24" y="228" fill="#8d9680" font-size="10">q8_0 + visión (proyector en GPU)</text>
+  <rect x="210" y="196" width="328" height="26" rx="3" fill="#82b8d0"/>
+  <rect x="538" y="196" width="23" height="26" fill="#cde86e"/>
+  <rect x="561" y="196" width="44" height="26" fill="#e8c06a"/>
+  <rect x="605" y="196" width="3" height="26" fill="#6f7a64"/>
+  <text x="210" y="240" fill="#e9eee0" font-size="10">59.264 historial</text>
+  <text x="607" y="240" font-size="10" text-anchor="end"><tspan fill="#cde86e">4.096</tspan><tspan fill="#8d9680"> + </tspan><tspan fill="#e8c06a">7.936</tspan></text>
+
+  <!-- 43.008 -->
+  <text x="24" y="300" fill="#e9eee0" font-size="13" font-weight="700">43.008</text>
+  <text x="24" y="316" fill="#8d9680" font-size="10">f16 (máxima precisión de KV)</text>
+  <rect x="210" y="284" width="169" height="26" rx="3" fill="#82b8d0"/>
+  <rect x="379" y="284" width="23" height="26" fill="#cde86e"/>
+  <rect x="402" y="284" width="44" height="26" fill="#e8c06a"/>
+  <rect x="446" y="284" width="3" height="26" fill="#6f7a64"/>
+  <text x="210" y="328" fill="#e9eee0" font-size="10">30.592 historial</text>
+  <text x="448" y="328" font-size="10" text-anchor="end"><tspan fill="#cde86e">4.096</tspan><tspan fill="#8d9680"> + </tspan><tspan fill="#e8c06a">7.936</tspan></text>
+
+  <text x="24" y="362" fill="#5c6554" font-size="10">Mismo reparto en los tres: la diferencia es cuánto historial cabe. Los turnos viejos se compactan a notas (~6 % de la ventana) en vez de tirarse.</text>
+</svg>
