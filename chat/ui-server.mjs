@@ -1771,7 +1771,19 @@ async function main(args) {
           return;
         }
         const type = TYPES[path.extname(abs).toLowerCase()] || "application/octet-stream";
-        res.writeHead(200, { "Content-Type": type });
+        /** @type {Record<string, string>} */
+        const headers = { "Content-Type": type, "X-Content-Type-Options": "nosniff" };
+        // HTML/SVG de artefactos se abren a veces en una pestaña. Con `sandbox` el
+        // documento recibe un origen opaco: sus scripts pueden correr, pero fetch/XHR
+        // contra /api/* es cross-origin y el navegador lo bloquea. El iframe inline
+        // conserva además su propio sandbox. Los recursos relativos del artefacto
+        // dejan de cargarse: es el precio de no ejecutar contenido no confiable en el
+        // origen del IDE.
+        if (type.startsWith("text/html") || type === "image/svg+xml") {
+          headers["Content-Security-Policy"] = "sandbox allow-scripts";
+          headers["Referrer-Policy"] = "no-referrer";
+        }
+        res.writeHead(200, headers);
         fs.createReadStream(abs).pipe(res);
         return;
       }

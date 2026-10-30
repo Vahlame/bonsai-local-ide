@@ -47,6 +47,10 @@ fs.writeFileSync(path.join(proyecto, ".cursor", "rules", "ignorada.mdc"), "---\n
 const grande = `${"x".repeat(70_000)}\nfinal\n`;
 fs.writeFileSync(path.join(proyecto, "grande.txt"), grande, "utf8");
 fs.writeFileSync(path.join(proyecto, "demasiado-grande.txt"), "x".repeat(2_000_001), "utf8");
+fs.writeFileSync(path.join(proyecto, "binario.bin"), Buffer.from([0, 1, 2, 255]));
+fs.writeFileSync(path.join(proyecto, "grande-borrar.txt"), "y".repeat(2_000_001), "utf8");
+fs.writeFileSync(path.join(proyecto, "arte.html"), "<!doctype html><script>fetch('/api/state')</script>", "utf8");
+fs.writeFileSync(path.join(proyecto, "arte.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>", "utf8");
 
 // llama-server de mentira: la API de la interfaz no necesita el modelo real, solo
 // que `connect()` encuentre /health, /props y /v1/models. Antes la prueba dependía
@@ -146,6 +150,18 @@ try {
   const idUndo = guardado.status === 200 ? JSON.parse(guardado.body).undo : "";
   check("devuelve id de deshacer", typeof idUndo === "string" && idUndo.length > 4, idUndo);
   check("el archivo cambia en disco", fs.readFileSync(path.join(proyecto, "saludo.txt"), "utf8") === "adios mundo\n");
+
+  // --- artefactos HTML/SVG: origen opaco, sin acceso a la API del IDE --------
+  const html = await pedir("GET", "/p/arte.html");
+  const svg = await pedir("GET", "/p/arte.svg");
+  const htmlCsp = String(html.headers["content-security-policy"] || "");
+  check(
+    "el HTML de artefacto se sirve con sandbox y sin referrer",
+    html.status === 200 && /sandbox/.test(htmlCsp) && !/allow-same-origin/.test(htmlCsp) && html.headers["referrer-policy"] === "no-referrer",
+    `${html.status} ${htmlCsp} ${html.headers["referrer-policy"] || ""}`,
+  );
+  check("el SVG de artefacto también se aísla", svg.status === 200 && /sandbox/.test(String(svg.headers["content-security-policy"] || "")));
+  check("los artefactos no se adivinan como otro tipo", html.headers["x-content-type-options"] === "nosniff");
 
   // --- deshacer ------------------------------------------------------------
   const deshecho = await pedir("POST", "/api/undo", { id: idUndo });
