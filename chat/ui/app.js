@@ -167,8 +167,12 @@
    * cerraba en el acto: el menú no llegaba a verse. Se ignora ese clic de apertura.
    */
   let ignorarClicDeApertura = false;
+  let dialogoSeq = 0;
+
   /**
    * Diálogo de sí/no (sin campo de texto), para confirmar borrados.
+   * El foco empieza en Cancelar y Enter solo acepta si nace en el botón de aceptar:
+   * así un Enter reflejo no borra nada.
    * @param {string} titulo
    * @param {string} texto
    * @param {string} [ok]
@@ -180,7 +184,11 @@
       const caja = el("div", "dialogo");
       caja.setAttribute("role", "dialog");
       caja.setAttribute("aria-modal", "true");
-      caja.append(el("h3", "", titulo), el("p", "", texto));
+      const tituloId = `dialogo-titulo-${++dialogoSeq}`;
+      const h = el("h3", "", titulo);
+      h.id = tituloId;
+      caja.setAttribute("aria-labelledby", tituloId);
+      caja.append(h, el("p", "", texto));
       const botones = el("div", "d-botones");
       const no = el("button", "ghost", "Cancelar");
       no.type = "button";
@@ -198,9 +206,11 @@
       /** @param {KeyboardEvent} e */
       const tecla = (e) => {
         if (e.key === "Escape") {
+          e.preventDefault();
           e.stopPropagation();
           cerrar(false);
-        } else if (e.key === "Enter") {
+        } else if (e.key === "Enter" && e.target === si) {
+          e.preventDefault();
           e.stopPropagation();
           cerrar(true);
         }
@@ -211,7 +221,7 @@
       fondo.addEventListener("click", (e) => {
         if (e.target === fondo) cerrar(false);
       });
-      si.focus();
+      no.focus();
     });
   }
   function cerrarMenu() {
@@ -309,9 +319,32 @@
   }
 
   // ===================================================== pestañas + editor
-  /** @type {{rel: string, texto: string, guardado: string, truncado: boolean, bytes: number, cursor: number}[]} */
+  /** @type {{rel: string, texto: string, guardado: string, original: string, eol: string, truncado: boolean, bytes: number, cursor: number}[]} */
   const pestanas = [];
   let activa = -1;
+
+  /**
+   * El navegador convierte CRLF a LF dentro de un <textarea>. Se edita siempre en LF
+   * y se reconstruye el estilo original al guardar. En archivos mixtos se conserva el
+   * estilo dominante (política explícita: no se reescribe el archivo sin guardar).
+   * @param {string} texto
+   * @returns {{eol: string, mixto: boolean}}
+   */
+  function analizarSaltos(texto) {
+    const crlf = (texto.match(/\r\n/g) || []).length;
+    const lf = (texto.match(/(^|[^\r])\n/g) || []).length;
+    return { eol: crlf > lf ? "\r\n" : "\n", mixto: crlf > 0 && lf > 0 };
+  }
+
+  /** @param {string} texto */
+  function normalizarSaltos(texto) {
+    return texto.replace(/\r\n/g, "\n");
+  }
+
+  /** @param {string} texto @param {string} eol */
+  function restaurarSaltos(texto, eol) {
+    return eol === "\r\n" ? texto.replace(/\n/g, "\r\n") : texto;
+  }
 
   const editor = $("#editor");
   const code = $("#code");
@@ -556,12 +589,14 @@
         avisar(`No se pudo abrir ${rel}`, "error");
         return;
       }
-      const texto = await res.text();
+      const crudo = await res.text();
+      const saltos = analizarSaltos(crudo);
+      const texto = normalizarSaltos(crudo);
       const truncado = res.headers.get("X-Bonsai-Truncado") === "1";
       // Dos clics mientras carga no deben abrir dos copias del mismo documento.
       const existente = pestanas.findIndex((p) => p.rel === rel);
       if (existente >= 0) { mostrarPestana(existente); return; }
-      pestanas.push({ rel, texto, guardado: texto, truncado, bytes: Number(res.headers.get("X-Bonsai-Bytes")) || texto.length, cursor });
+      pestanas.push({ rel, texto, guardado: texto, original: crudo, eol: saltos.eol, truncado, bytes: Number(res.headers.get("X-Bonsai-Bytes")) || texto.length, cursor });
       mostrarPestana(pestanas.length - 1);
     } catch (err) {
       avisar(`No se pudo abrir ${rel}: ${err.message}`, "error");
@@ -586,13 +621,15 @@
       return true;
     }
     const enviado = p.texto;
+    const contenido = restaurarSaltos(enviado, p.eol);
     const ruta = p.rel;
-    const operacion = api("/api/file", { cuerpo: { path: ruta, content: enviado, before: p.guardado } });
+    const operacion = api("/api/file", { cuerpo: { path: ruta, content: contenido, before: p.original } });
     p.guardando = operacion.catch(() => {});
     try {
       await operacion;
       // Si se siguió escribiendo durante la petición, lo nuevo sigue sin guardar.
       p.guardado = enviado;
+      p.original = contenido;
       if (pestanas[activa] === p) pintarNota(p);
       pintarPestanas();
       if (!silencioso) avisar(`Guardado ${p.rel}`, "ok", 2200);
@@ -673,9 +710,16 @@
     try {
       const res = await fetch(`/api/file?path=${encodeURIComponent(p.rel)}`, { cache: "no-store" });
       if (!res.ok) return;
-      const texto = await res.text();
+      const crudo = await res.text();
+      const saltos = analizarSaltos(crudo);
+      const texto = normalizarSaltos(crudo);
       if (!pestanas.includes(p) || p.guardando) return;
-      if (texto === p.guardado) return;
+      if (texto === p.guardado) {
+        // El disco no cambió (o solo cambió su estilo de salto): refresca el original.
+        p.original = crudo;
+        p.eol = saltos.eol;
+        return;
+      }
       if (p.texto !== p.guardado) {
         if (p.conflicto === texto) return;
         p.conflicto = texto;
@@ -684,6 +728,8 @@
           hacer: () => {
             p.texto = texto;
             p.guardado = texto;
+            p.original = crudo;
+            p.eol = saltos.eol;
             p.conflicto = null;
             if (pestanas[activa] === p) mostrarPestana(activa);
           },
@@ -692,6 +738,8 @@
       }
       p.texto = texto;
       p.guardado = texto;
+      p.original = crudo;
+      p.eol = saltos.eol;
       if (pestanas[activa] === p) mostrarPestana(activa);
       avisar(`«${p.rel}» se recargó: el agente lo reescribió.`, "", 2600);
     } catch {
@@ -2043,7 +2091,7 @@
       avisar("El servidor no devolvió la base de la propuesta: no se toca el archivo. Actualiza el servidor.", "error", 9000);
       return;
     }
-    if (r.base !== antes.guardado) {
+    if (normalizarSaltos(r.base) !== antes.guardado) {
       avisar(
         "El archivo cambió en disco desde que se abrió y la propuesta se hizo sobre otra versión. No se ha tocado nada: recarga el archivo y vuelve a intentarlo.",
         "warn",
@@ -2097,8 +2145,10 @@
       // El disco ya tiene r.texto. Si mientras se enviaba el guardado el usuario siguió
       // escribiendo, se conserva lo escrito como cambio sin guardar (no se pierde).
       const seguiaIgual = p.texto === antes.texto;
-      p.guardado = r.texto;
-      if (seguiaIgual) p.texto = r.texto;
+      const textoGuardado = normalizarSaltos(r.texto);
+      p.guardado = textoGuardado;
+      p.original = r.texto;
+      if (seguiaIgual) p.texto = textoGuardado;
       if (pestanas[activa] === p) mostrarPestana(activa);
       else pintarPestanas();
       avisar(`Editado ${antes.rel}`, "ok", 2400);

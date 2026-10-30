@@ -67,7 +67,7 @@ fs.writeFileSync(path.join(estado, "ui-settings.json"), JSON.stringify({ histori
 fs.writeFileSync(path.join(estado, "ui-permit.json"), JSON.stringify({ mode: "ask" }));
 fs.writeFileSync(path.join(proyecto, "x.txt"), "uno\ndos\ntres\n", "utf8");
 fs.writeFileSync(path.join(proyecto, "y.txt"), "alfa\r\nbeta\r\n", "utf8");
-fs.writeFileSync(path.join(proyecto, "nota.md"), "# nota\n", "utf8");
+fs.writeFileSync(path.join(proyecto, "nota.md"), "# nota\r\n", "utf8");
 
 let peticionesChat = 0;
 /** Respuesta del modelo para /api/edit (tool_choice "none"). */
@@ -216,6 +216,39 @@ try {
     const t = document.querySelector(".tabs .tab-item.on");
     return Boolean(t) && !t.querySelector(".dirty");
   }));
+
+  // ---- 2b. Guardar un archivo CRLF conserva los saltos de línea ----
+  await pagina.locator("#tree .row .name", { hasText: "nota.md" }).click();
+  await pagina.waitForFunction(() => (document.querySelector(".editor-wrap textarea")?.value || "").startsWith("# nota"), null, { timeout: 10000 });
+  await pagina.locator(".editor-wrap textarea").fill("# nota\nnueva\n");
+  await pagina.keyboard.press("Control+s");
+  await pagina.waitForFunction(() => (document.querySelector(".avisos")?.textContent || "").includes("Guardado nota.md"), null, { timeout: 20000 });
+  const notaGuardada = fs.readFileSync(path.join(proyecto, "nota.md"), "utf8");
+  check("guardar un archivo CRLF conserva los saltos", notaGuardada === "# nota\r\nnueva\r\n", JSON.stringify(notaGuardada));
+
+  // ---- 2c. El diálogo de borrado no acepta un Enter reflejo ----
+  const filaNota = pagina.locator("#tree .row", { hasText: "nota.md" });
+  await filaNota.click({ button: "right" });
+  await pagina.locator(".menu button", { hasText: "Borrar" }).click();
+  const dialogoBorrado = pagina.locator(".dialogo-fondo").last();
+  await dialogoBorrado.waitFor({ timeout: 10000 });
+  check(
+    "el diálogo de borrado enfoca Cancelar",
+    await dialogoBorrado.getByRole("button", { name: "Cancelar" }).evaluate((boton) => boton === document.activeElement),
+  );
+  await pagina.keyboard.press("Enter");
+  await pagina.waitForFunction(() => !document.querySelector(".dialogo-fondo"), null, { timeout: 5000 });
+  check("Enter en Cancelar no borra el archivo", fs.existsSync(path.join(proyecto, "nota.md")));
+
+  await filaNota.click({ button: "right" });
+  await pagina.locator(".menu button", { hasText: "Borrar" }).click();
+  const dialogoBorrado2 = pagina.locator(".dialogo-fondo").last();
+  await dialogoBorrado2.waitFor({ timeout: 10000 });
+  await dialogoBorrado2.getByRole("button", { name: "Borrar" }).focus();
+  await pagina.keyboard.press("Enter");
+  await pagina.waitForFunction(() => !document.querySelector(".dialogo-fondo"), null, { timeout: 5000 });
+  await esperar(200);
+  check("Enter en Borrar borra el archivo", !fs.existsSync(path.join(proyecto, "nota.md")));
 
   // ---- 3. Hallazgo 8: el archivo cambia en disco antes de aceptar -> 409 sin pisar ----
   await pagina.locator("#tree .row .name", { hasText: "y.txt" }).click();
