@@ -1,0 +1,293 @@
+{
+  "stamp": "20261030181448",
+  "think": 1024,
+  "maxTokens": 3000,
+  "tasks": [
+    {
+      "id": "text_transform_reverse",
+      "category": "text"
+    },
+    {
+      "id": "coding_hard_calc",
+      "category": "coding"
+    }
+  ],
+  "presets": [
+    {
+      "preset": "8GB-VISION-HIGH",
+      "started": true,
+      "nCtx": 32768,
+      "kv": "q8_0",
+      "ctx": 32768,
+      "passed": 6,
+      "total": 10,
+      "score": 60,
+      "byCat": {
+        "text": 0.8,
+        "coding": 0.4
+      },
+      "avgTps": 42.16610919676569,
+      "seconds": 252
+    },
+    {
+      "preset": "8GB-VISION-MAX-F16",
+      "started": true,
+      "nCtx": 43008,
+      "kv": "f16",
+      "ctx": 43008,
+      "passed": 6,
+      "total": 10,
+      "score": 60,
+      "byCat": {
+        "text": 1,
+        "coding": 0.2
+      },
+      "avgTps": 42.45896598740893,
+      "seconds": 219
+    }
+  ],
+  "raw": [
+    {
+      "preset": "8GB-VISION-HIGH",
+      "started": true,
+      "nCtx": 32768,
+      "kv": "q8_0",
+      "ctx": 32768,
+      "tasks": [
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 15809,
+          "tps": 42.290911490889194,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 24600,
+          "tps": 42.25383504485812,
+          "empty": false,
+          "rep": 2,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 13288,
+          "tps": 41.20516254567158,
+          "empty": false,
+          "rep": 3,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 17352,
+          "tps": 42.32691889693968,
+          "empty": false,
+          "rep": 4,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": false,
+          "detail": "ladra perro el pero duerme, gato El.",
+          "ms": 24426,
+          "tps": 42.55068065086375,
+          "empty": false,
+          "rep": 5,
+          "finish": "stop",
+          "preview": "ladra perro el pero duerme, gato El."
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": true,
+          "detail": "5/5 tests",
+          "ms": 21348,
+          "tps": 42.548407412639364,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "```js\nfunction evaluate(expr) {\n  const s = expr.replace(/\\s+/g, '');\n  let i = 0;\n\n  function parseExpr() {\n    let value = parseTerm();\n    while (i < s.lengt"
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "Invalid number",
+          "ms": 0,
+          "tps": 0,
+          "rep": 2
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "fallo 2+3*4",
+          "ms": 36090,
+          "tps": 42.12563045182458,
+          "empty": false,
+          "rep": 3,
+          "finish": "stop",
+          "preview": "```js\nfunction evaluate(expr) {\n  const tokens = [];\n  for (let i = 0; i < expr.length; i++) {\n    const c = expr[i];\n    if (c === ' ') continue;\n    if (c ==="
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "Unexpected end",
+          "ms": 0,
+          "tps": 0,
+          "rep": 4
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": true,
+          "detail": "5/5 tests",
+          "ms": 30969,
+          "tps": 42.027327080439235,
+          "empty": false,
+          "rep": 5,
+          "finish": "stop",
+          "preview": "```js\nfunction evaluate(expr) {\n  const tokens = [];\n  let i = 0;\n  const n = expr.length;\n\n  function tokenize() {\n    while (i < n) {\n      const ch = expr[i]"
+        }
+      ],
+      "ms": 252384
+    },
+    {
+      "preset": "8GB-VISION-MAX-F16",
+      "started": true,
+      "nCtx": 43008,
+      "kv": "f16",
+      "ctx": 43008,
+      "tasks": [
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 18040,
+          "tps": 42.36382094016913,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 10717,
+          "tps": 42.264656772479206,
+          "empty": false,
+          "rep": 2,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 11819,
+          "tps": 42.34953877773437,
+          "empty": false,
+          "rep": 3,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 15771,
+          "tps": 42.72580444380204,
+          "empty": false,
+          "rep": 4,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "text_transform_reverse",
+          "category": "text",
+          "ok": true,
+          "detail": "ladra. perro el pero duerme, gato El",
+          "ms": 12373,
+          "tps": 42.84026920272389,
+          "empty": false,
+          "rep": 5,
+          "finish": "stop",
+          "preview": "ladra. perro el pero duerme, gato El"
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "Unexpected token",
+          "ms": 0,
+          "tps": 0,
+          "rep": 1
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "next is not defined",
+          "ms": 0,
+          "tps": 0,
+          "rep": 2
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": true,
+          "detail": "5/5 tests",
+          "ms": 29690,
+          "tps": 42.209705787544976,
+          "empty": false,
+          "rep": 3,
+          "finish": "stop",
+          "preview": "```js\nfunction evaluate(expr) {\n  const tokens = [];\n  let i = 0;\n  while (i < expr.length) {\n    const c = expr[i];\n    if (/\\s/.test(c)) { i++; continue; }\n  "
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "Assignment to constant variable.",
+          "ms": 0,
+          "tps": 0,
+          "rep": 4
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "next is not defined",
+          "ms": 0,
+          "tps": 0,
+          "rep": 5
+        }
+      ],
+      "ms": 218545
+    }
+  ]
+}
