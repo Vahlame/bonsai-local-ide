@@ -1,0 +1,210 @@
+The user wants me to create a Node.js (ESM) project called "taskforge" with multiple files. Let me write complete, correct, executable code following the exact format requested.
+
+Let me plan each file:
+
+1) package.json with {"type":"module"} and script test.
+2) src/priority-queue.mjs: PriorityQueue class with enqueue(item, priority), dequeue(), size. Min-heap.
+3) src/scheduler.mjs: Scheduler class.
+4) test/priority-queue.test.mjs and test/scheduler.test.mjs using node:test and node:assert/strict.
+
+Let me write each file carefully.
+
+### File 1: package.json
+
+```json
+{
+  "name": "taskforge",
+  "version": "1.0.0",
+  "description": "Priority-based async task scheduler",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
+```
+
+Wait, the `node --test` will run all test files matching the pattern. Let me use `node --test` which runs all test files in the project. Actually, by default `node --test` runs files matching test patterns. Let me be explicit. Actually `node --test` with no args runs test files. Let me use `"test": "node --test"`.
+
+Actually, in newer Node versions, `node --test` runs files in `test/` directories and files named `*.test.*`. Let me keep it simple: `"test": "node --test"`.
+
+### File 2: src/priority-queue.mjs
+
+A min-heap implementation. enqueue(item, priority), dequeue(), size. Min-heap: smallest priority comes out first; on tie, FIFO (the one that came first).
+
+I need to assign an insertion order counter so ties are broken by insertion order.
+
+```js
+export class PriorityQueue {
+  constructor() {
+    this.heap = [];
+    this._counter = 0;
+  }
+
+  get size() {
+    return this.heap.length;
+  }
+
+  enqueue(item, priority) {
+    const node = { priority, seq: this._counter++, item };
+    this.heap.push(node);
+    this._bubbleUp(this.heap.length - 1);
+  }
+
+  dequeue() {
+    if (this.heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const [root] = this.heap;
+    const last = this.heap.pop();
+    if (this.heap.length > 0) {
+      this.heap[0] = last;
+      this._bubbleDown(0);
+    }
+    return last.item;
+  }
+
+  _bubbleUp(idx) {
+    const node = this.heap[idx];
+    while (idx > 0) {
+      const parent = (idx - 1) >> 1;
+      if (node.priority < this.heap[parent].priority ||
+          (node.priority === this.heap[parent].priority && node.seq < this.heap[parent].seq)) {
+        [this.heap[idx], this.heap[parent]] = [this.heap[parent], this.heap[idx]];
+        idx = parent;
+      } else {
+        break;
+      }
+    }
+  }
+
+  _bubbleDown(idx) {
+    const length = this.heap.length;
+    const node = this.heap[idx];
+    while (true) {
+      const left = 2 * idx + 1;
+      const right = 2 * idx + 2;
+      let smallest = idx;
+      if (left < length && this._less(this.heap[left], node)) {
+        smallest = left;
+      }
+      if (right < length && this._less(this.heap[right], node)) {
+        smallest = right;
+      }
+      if (smallest === idx) {
+        break;
+      }
+      [this.heap[idx], this.heap[smallest]] = [this.heap[smallest], this.heap[idx]];
+      idx = smallest;
+    }
+  }
+
+  _less(a, b) {
+    if (a.priority !== b.priority) {
+      return a.priority < b.priority;
+    }
+    return a.seq < b.seq;
+  }
+}
+```
+
+Wait, in `_bubbleDown`, after swapping, I recompute `node` reference. Actually I stored `node` before, but after swapping, the node at `smallest` is the original node. Let me restructure to use the node reference properly. Actually the standard approach: after swap, idx = smallest, and we compare heap[idx] (which is now the node we moved down) with children. Since we keep `node` referencing the object, and we compare `this._less(this.heap[left], node)`, that's fine because node is still the same object reference. Let me double check: `node = this.heap[idx]` captures the reference. After `[this.heap[idx], this.heap[smallest]] = [this.heap[smallest], this.heap[idx]]`, the object that was at idx is now at smallest. But `node` still references that object. So comparing `this._less(this.heap[left], node)` compares a child with the node. That's correct.
+
+Actually wait, there's a subtle bug. When we do the swap, `this.heap[smallest]` becomes the node (the object we're sifting down), and `this.heap[idx]` becomes the child. Then we set `idx = smallest` and loop again. Now `this.heap[idx]` is the node. Comparing children at new idx with `node` (same object) is correct. Good.
+
+Let me verify the tie-break logic. The requirement: "menor priority sale antes; en empate, el que llego primero (FIFO)". So on equal priority, the one with smaller seq (earlier insertion) comes first. My `_less` returns true if a has smaller priority, or same priority and smaller seq. That's correct for a min-heap ordering.
+
+### File 3: src/scheduler.mjs
+
+```js
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency = 1 } = {}) {
+    this.concurrency = concurrency;
+    this._pq = new PriorityQueue();
+    this._running = 0;
+    this._active = 0;
+    this._maxActive = 0;
+    this._counter = 0;
+    this._finished = [];
+    this._started = false;
+    this._stopped = false;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    const id = ++this._counter;
+    this._pq.enqueue({ id, fn, priority }, priority);
+    return id;
+  }
+
+  async run() {
+    this._stopped = false;
+    this._active = 0;
+    this._maxActive = 0;
+    this._finished = [];
+    this._running = 0;
+
+    const worker = async () => {
+      while (true) {
+        if (this._stopped) {
+          return;
+        }
+        const entry = this._pq.dequeue();
+        if (!entry) {
+          return;
+        }
+        this._running++;
+        this._active++;
+        if (this._active > this._maxActive) {
+          this._maxActive = this._active;
+        }
+        try {
+          const value = await entry.fn();
+          this._finished.push({
+            id: entry.id,
+            ok: true,
+            value,
+            attempts: 1,
+          });
+        } catch (err) {
+          if (entry.attempts < entry.maxAttempts) {
+            entry.attempts++;
+            continue;
+          }
+          this._finished.push({
+            id: entry.id,
+            ok: false,
+            error: err,
+            attempts: entry.attempts,
+          });
+        } finally {
+          this._active--;
+          this._running--;
+        }
+      }
+    };
+
+    const workers = [];
+    for (let i = 0; i < this.concurrency; i++) {
+      workers.push(worker());
+    }
+    await Promise.all(workers);
+    return this._finished;
+  }
+}
+```
+
+Hmm, this is getting complex. Let me reconsider the design.
+
+The requirement: "run() que ejecuta respetando prioridad y que NUNCA haya mas de "concurrency" tareas a la vez, reintenta hasta "retries" veces si fn lanza (y si sigue fallando, el resultado de esa tarea es {ok:false, error}), y devuelve un array de resultados en orden de finalizacion con la forma {id, ok, value?, error?, attempts}."
+
+Key points:
+- Respects priority: higher priority tasks should run first.
+- Never more than `concurrency` tasks running at once.
+- Retry up to `retries` times if fn throws.
+- If still failing, result is {ok:false, error}.
+- Returns array of results in order of completion.
+- Result shape: {id, ok, value?, error?, attempts}.
+
+The tricky part is "en orden de finalizacion" (in order of completion). So the results array should be sorted

@@ -627,8 +627,11 @@
         <span>Terminal</span>
       </button>
       <select class="server-preset" id="server-preset" title="Preset de motor" aria-label="Preset de motor optimizado">
-        <option value="8GB-VISION-MAX-F16">🏆 MAX: 43k f16 + Vision + Thinking</option>
-        <option value="8GB-VISION-DEFAULT-F16">✅ Default: 16k f16 KV + Vision</option>
+        <option value="8GB-VISION-MAX-Q8-100K">🏆 Default: 110k q8_0 + Vision (CPU proyector) + Thinking</option>
+        <option value="8GB-VISION-MAX-Q8">⚡ 71k q8_0 + Vision en GPU (visión rápida)</option>
+        <option value="8GB-VISION-MAX-Q4">🗺️ Max ctx: 110k q4_0 + Vision + Thinking</option>
+        <option value="8GB-VISION-MAX-F16">🎯 Max precision: 43k f16 + Vision + Thinking</option>
+        <option value="8GB-VISION-DEFAULT-F16">✅ Safe: 16k f16 + Vision</option>
         <option value="8GB-VISION-ULTRA-F16">🔥 Ultra F16: 32k f16 KV + Vision</option>
         <option value="8GB-VISION-ULTRA">⚡ Ultra: 36k q4_0 + Vision</option>
         <option value="8GB-VISION-HIGH">🚀 High: 32k q8_0 + Vision</option>

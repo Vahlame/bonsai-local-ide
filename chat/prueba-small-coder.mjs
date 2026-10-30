@@ -634,8 +634,9 @@ try {
   assert.ok(bodies.every(b=>Array.isArray(b.messages[1].content)&&b.messages[1].content.some(p=>p.type==="image_url")),"the original image remains on the task goal throughout schema repair, edit and verification");
   assert.ok(!fs.readFileSync(path.join(state,"ui-session.json"),"utf8").includes("data:image/"));
   assert.equal((await post("/api/modelos",{clave:"ornith9b",enginePreset:"unknown"})).status,400);
-  assert.equal((await post("/api/settings",{coderContextTokens:4097})).status,400);
+  assert.equal((await post("/api/settings",{coderContextTokens:4095})).status,400);
   assert.equal((await post("/api/settings",{coderContextTokens:32768})).status,200);
+  assert.equal((await post("/api/settings",{coderContextTokens:71680})).status,200, "una ventana q8_0 de 71k debe aceptarse");
   const antesSaludo = bodies.length;
   const saludo = await post("/api/chat", {text:"hi"});
   const eventosSaludo = [];

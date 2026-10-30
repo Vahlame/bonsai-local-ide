@@ -1,0 +1,214 @@
+Let me write the files as requested. I need to be careful with the format - each file exactly as specified, no markdown fences, no extra text.
+
+Let me write each file.
+
+1) package.json
+2) src/priority-queue.mjs
+3) src/scheduler.mjs
+4) test/priority-queue.test.mjs
+5) test/scheduler.test.mjs
+
+Let me think about the implementation.
+
+**priority-queue.mjs**: PriorityQueue class with enqueue(item, priority), dequeue(), size. Min-heap. On tie, FIFO (earlier arrives first). dequeue() on empty throws Error.
+
+Min-heap implementation. I'll implement a binary heap with array. When priorities are equal, we want FIFO order. I can use insertion order as a tiebreaker. Let me use a counter to track insertion order, and when comparing, if priorities equal, lower insertion order comes first.
+
+Actually, let me implement it carefully. A min-heap where the comparison is (priority, insertionOrder). Let me use a comparator.
+
+```js
+export class PriorityQueue {
+  constructor() {
+    this.heap = [];
+    this.counter = 0;
+    this.size = 0;
+  }
+
+  enqueue(item, priority) {
+    const entry = { item, priority, order: this.counter++ };
+    this.heap.push(entry);
+    this.size++;
+    this._bubbleUp(this.heap.length - 1);
+  }
+
+  dequeue() {
+    if (this.size === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const [first] = this.heap;
+    const last = this.heap.pop();
+    this.size--;
+    if (this.size > 0) {
+      this.heap[0] = last;
+      this._sinkDown(0);
+    }
+    return first.item;
+  }
+
+  get size() {
+    return this._size;
+  }
+  ...
+}
+```
+
+Wait, I have both `this.heap` and `this.size`. If I make size a getter, I need a backing field. Let me use `this._size`. Actually, let me just keep `this.size` as a regular property and update it, and keep `this.heap`. But the getter approach conflicts with assignment. Let me just keep it simple with a regular property.
+
+Actually the requirement says "size" should be a property. Let me keep it as a plain property updated on enqueue/dequeue.
+
+Let me write the comparator:
+```js
+const compare = (a, b) => {
+  if (a.priority !== b.priority) return a.priority - b.priority;
+  return a.order - b.order;
+};
+```
+
+bubbleUp:
+```js
+_bubbleUp(i) {
+  const heap = this.heap;
+  while (i > 0) {
+    const parent = (i - 1) >> 1;
+    if (compare(heap[i], heap[parent]) < 0) {
+      [heap[i], heap[parent]] = [heap[parent], heap[i]];
+      i = parent;
+    } else {
+      break;
+    }
+  }
+}
+```
+
+sinkDown:
+```js
+_sinkDown(i) {
+  const heap = this.heap;
+  const length = heap.length;
+  while (true) {
+    const left = 2 * i + 1;
+    const right = 2 * i + 2;
+    let smallest = i;
+    if (left < length && compare(heap[left], heap[smallest]) < 0) {
+      smallest = left;
+    }
+    if (right < length && compare(heap[right], heap[smallest]) < 0) {
+      smallest = right;
+    }
+    if (smallest === i) break;
+    [heap[i], heap[smallest]] = [heap[smallest], heap[i]];
+    i = smallest;
+  }
+}
+```
+
+This is correct.
+
+**scheduler.mjs**: Scheduler class with constructor({concurrency}). add(fn, {priority=0, retries=0}). run() executes respecting priority, never more than concurrency tasks at once, retries up to retries times if fn throws (if still failing, result is {ok:false, error}), returns array of results in order of completion with shape {id, ok, value?, error?, attempts}.
+
+Let me think. Each task has an id (sequential number), fn, priority, retries. run() processes tasks in priority order. When a task is running and it fails, we retry up to retries times.
+
+The result shape: {id, ok, value?, error?, attempts}. attempts = number of attempts made. If it succeeds on first try, attempts=1, ok=true, value=return. If it fails after retries attempts, ok=false, error=last error, attempts=retries+1.
+
+Order of completion: results array in order that tasks finish.
+
+Concurrency limit: never more than concurrency tasks running at once.
+
+Let me design:
+
+```js
+export class Scheduler {
+  constructor({ concurrency = 1 } = {}) {
+    this.concurrency = concurrency;
+    this.queue = new PriorityQueue();
+    this.idCounter = 0;
+    this.results = [];
+    this.running = 0;
+    this._runScheduled = false;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    const id = this.idCounter++;
+    this.queue.enqueue({
+      id,
+      fn,
+      priority,
+      retries,
+    }, priority);
+  }
+
+  async run() {
+    this.results = [];
+    this.running = 0;
+    this._runScheduled = false;
+    const maxConcurrent = this.concurrency;
+
+    const next = () => {
+      while (this.running < maxConcurrent && this.queue.size > 0) {
+        const { id, fn, priority, retries } = this.queue.dequeue();
+        this.running++;
+        this._dispatch(id, fn, retries).finally(() => {
+          this.running--;
+          this._maybeSchedule();
+        });
+      }
+      this._maybeSchedule();
+    };
+
+    this._maybeSchedule = () => {
+      if (!this._runScheduled && this.queue.size > 0) {
+        this._runScheduled = true;
+        setImmediate(next);
+      }
+    };
+
+    next();
+  }
+  ...
+}
+```
+
+Hmm, let me reconsider. The `next` function is recursive via setImmediate. Let me simplify.
+
+Actually, let me think about the retry logic. When a task is dispatched, it may run multiple times (retries). Each attempt increments attempts. If it fails, we retry. The retry should happen as part of the same task's execution - we don't want to unblock the concurrency slot until the task is fully done (including retries).
+
+So `_dispatch`:
+```js
+async _dispatch(id, fn, retries) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const value = await fn();
+      this.results.push({ id, ok: true, value, attempts: attempt + 1 });
+      return;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  this.results.push({ id, ok: false, error: lastError, attempts: retries + 1 });
+}
+```
+
+Wait, but the result should be in order of completion. Since we push to results when the task completes, and we use setImmediate to schedule next, the order of pushing should reflect completion order. But there's a subtlety: multiple tasks completing - the order in which they push to results.
+
+Actually, since JS is single-threaded and each task's completion is async, the order of pushes reflects the order of completion (microtask/macrotask scheduling). Let me make sure that's the case.
+
+When a task completes, its `.finally` callback runs, which decrements running and schedules next via setImmediate. The setImmediate callbacks run in order. But the results are pushed inside `_dispatch` before the finally callback. So the result is pushed when the task's work completes (in a microtask chain), and the next task starts after setImmediate.
+
+Hmm, actually the order of completion for the results array - let me think. When task A finishes its work, it pushes result and schedules setImmediate. When task B finishes, it pushes result and schedules setImmediate. The setImmediates run in order, but the pushes happen in the order the tasks finish. So the results array reflects completion order. Good.
+
+But wait, there's a subtlety with how await works. Let me trace:
+
+- Task A starts, `await fnA()`. 
+- Task B starts, `await fnB()`.
+- fnA finishes first (faster), pushes result A.
+- fnB finishes second, pushes result B.
+
+Yes, results in completion order.
+
+Now, one concern: the test says "orden de finalizacion por duracion" (order of completion by duration). So tasks that finish first appear first in results. My implementation handles this because results are pushed at completion time.
+
+Let me reconsider the `_maybeSchedule` and `next` logic. I want to avoid double-scheduling. Let me use a cleaner approach.
+
+```js
+async run() {

@@ -1,0 +1,223 @@
+The user wants me to create a Node.js (ESM) project called "taskforge" with multiple files. Let me write complete, correct, executable code following the exact format requested.
+
+Let me create each file:
+
+1) package.json with {"type":"module"} and script test
+2) src/priority-queue.mjs: PriorityQueue class
+3) src/scheduler.mjs: Scheduler class
+4) test/priority-queue.test.mjs
+5) test/scheduler.test.mjs
+
+Let me think about the PriorityQueue implementation. It's a min-heap. enqueue(item, priority), dequeue() and size. Min-heap: smallest priority comes out first; on tie, FIFO (the one that arrived first comes out first). dequeue() on empty throws Error.
+
+Let me implement a proper binary min-heap.
+
+```js
+export class PriorityQueue {
+  constructor() {
+    this.heap = [];
+    this.counter = 0;
+  }
+
+  enqueue(item, priority) {
+    this.counter++;
+    const node = { item, priority, seq: this.counter };
+    this.heap.push(node);
+    this._bubbleUp(this.heap.length - 1);
+  }
+
+  dequeue() {
+    if (this.heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const [first] = this.heap;
+    const last = this.heap.pop();
+    if (this.heap.length > 0) {
+      this.heap[0] = last;
+      this._bubbleDown(0);
+    }
+    return last.item;
+  }
+
+  get size() {
+    return this.heap.length;
+  }
+
+  _bubbleUp(i) {
+    const node = this.heap[i];
+    while (i > 0) {
+      const parent = Math.floor((i - 1) / 2);
+      if (this._less(node, this.heap[parent])) {
+        [this.heap[i], this.heap[parent]] = [this.heap[parent], this.heap[i]];
+        i = parent;
+      } else {
+        break;
+      }
+    }
+  }
+
+  _bubbleDown(i) {
+    const n = this.heap.length;
+    while (true) {
+      let left = 2 * i + 1;
+      let right = 2 * i + 2;
+      let smallest = i;
+      if (left < n && this._less(this.heap[left], this.heap[smallest])) {
+        smallest = left;
+      }
+      if (right < n && this._less(this.heap[right], this.heap[smallest])) {
+        smallest = right;
+      }
+      if (smallest !== i) {
+        [this.heap[i], this.heap[smallest]] = [this.heap[smallest], this.heap[i]];
+        i = smallest;
+      } else {
+        break;
+      }
+    }
+  }
+
+  _less(a, b) {
+    if (a.priority !== b.priority) {
+      return a.priority < b.priority;
+    }
+    return a.seq < b.seq;
+  }
+}
+```
+
+This is a proper min-heap. The `_less` function compares by priority first, then by sequence (FIFO).
+
+Now the Scheduler class. Let me think carefully.
+
+```js
+export class Scheduler {
+  constructor({ concurrency = 1 } = {}) {
+    this.concurrency = concurrency;
+    this.queue = new PriorityQueue();
+    this.running = 0;
+    this.results = [];
+    this.active = new Set();
+    this.nextId = 0;
+    this._started = false;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    const id = ++this.nextId;
+    this.queue.enqueue({ id, fn, priority, retries }, priority);
+    return id;
+  }
+
+  async run() {
+    while (this.queue.size > 0 || this.running > 0) {
+      // Start tasks up to concurrency limit
+      while (this.running < this.concurrency && this.queue.size > 0) {
+        const { id, fn, priority, retries } = this.queue.dequeue();
+        this.running++;
+        this.active.add(id);
+        void this._runTask(id, fn, retries).finally(() => {
+          this.running--;
+          this.active.delete(id);
+        });
+      }
+      // Wait a tick if there's still work
+      if (this.queue.size > 0 || this.running > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    }
+    return this.results;
+  }
+
+  async _runTask(id, fn, retries) {
+    let attempts = 0;
+    let lastError;
+    let value;
+    let ok = false;
+    while (attempts <= retries) {
+      try {
+        value = await fn();
+        ok = true;
+        break;
+      } catch (err) {
+        lastError = err;
+        attempts++;
+        if (attempts <= retries) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+    }
+    const result = { id, ok, attempts };
+    if (ok) {
+      result.value = value;
+    } else {
+      result.error = lastError;
+    }
+    this.results.push(result);
+  }
+}
+```
+
+Wait, let me reconsider the requirement. The result form is `{id, ok, value?, error?, attempts}`. So:
+- id: task id
+- ok: boolean
+- value?: on success
+- error?: on failure
+- attempts: number of attempts
+
+Let me reconsider the retries logic. "reintenta hasta 'retries' veces si fn lanza (y si sigue fallando, el resultado de esa tarea es {ok:false, error})". So if retries is 0, it runs once, and if it fails, ok:false. If retries is 2, it runs up to 3 times total (1 initial + 2 retries). If it still fails, ok:false.
+
+My loop: `while (attempts <= retries)`. With retries=2: attempts=0, run (attempt 1), fail, attempts=1, 1<=2 so continue, run (attempt 2), fail, attempts=2, 2<=2 so continue, run (attempt 3), fail, attempts=3, 3<=2 false, exit. So 3 total attempts. That's correct.
+
+With retries=0: attempts=0, run (attempt 1), fail, attempts=1, 1<=0 false, exit. So 1 attempt. Correct.
+
+Now, the order of completion. The results array should be in order of completion. Since I push to this.results in the finally/completion, the order will be the order in which tasks complete. Good.
+
+But wait, there's a subtlety. The run() loop uses `await new Promise((resolve) => setTimeout(resolve, 0))`. This means it will wait for currently running tasks to complete before starting new ones. That's correct for concurrency control.
+
+Actually, let me reconsider. The while loop in run():
+1. Start tasks up to concurrency
+2. If there's still work, wait a tick
+
+This should work. Let me trace through:
+- Initially running=0, queue has tasks.
+- Inner while: start tasks up to concurrency. running increases.
+- After inner while, if queue still has tasks or running > 0, wait a tick.
+- Loop again: start more tasks if possible, wait again if needed.
+- When queue is empty and running is 0, exit.
+
+This ensures max concurrency is respected.
+
+Now for measuring max concurrency in the test. I'll use a shared counter with a max tracker.
+
+Let me think about the completion order test. "orden de finalizacion por duracion". So tasks with different durations should complete in order of duration (shortest first, roughly). Actually, since they run concurrently, the order of completion depends on duration. The results array should be sorted by completion order.
+
+Hmm, but with concurrency >= number of tasks, all tasks start at once, and complete in order of duration. So the results should be ordered by completion time.
+
+Let me write the test to verify this.
+
+Let me reconsider the test for max concurrency. I'll create a test where I track the max number of concurrent tasks.
+
+```js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { Scheduler } from '../src/scheduler.mjs';
+
+test('respects concurrency limit', async () => {
+  let active = 0;
+  let maxActive = 0;
+  const scheduler = new Scheduler({ concurrency: 2 });
+  for (let i = 0; i < 10; i++) {
+    scheduler.add(async () => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      active--;
+    });
+  }
+  const results = await scheduler.run();
+  assert.equal(maxActive, 2);
+  assert.equal(results.length, 10);
+});
+```
+
+This should

@@ -1,0 +1,383 @@
+```
+===FILE: package.json===
+{
+  "name": "taskforge",
+  "version": "1.0.0",
+  "description": "Task scheduler backed by a priority queue (min-heap).",
+  "type": "module",
+  "main": "src/scheduler.mjs",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
+===END FILE===
+```
+
+```
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this.heap = [];
+    this.count = 0;
+  }
+
+  enqueue(item, priority) {
+    this.heap.push({ item, priority, seq: this.count++ });
+    this._bubbleUp(this.heap.length - 1);
+  }
+
+  dequeue() {
+    if (this.heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const first = this.heap[0];
+    const last = this.heap.pop();
+    if (this.heap.length > 0) {
+      this.heap[0] = last;
+      this._sinkDown(0);
+    }
+    return first.item;
+  }
+
+  get size() {
+    return this.heap.length;
+  }
+
+  _compare(a, b) {
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority;
+    }
+    return a.seq - b.seq;
+  }
+
+  _bubbleUp(start) {
+    const length = this.heap.length;
+    let i = start;
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (this._compare(this.heap[i], this.heap[parent]) >= 0) {
+        break;
+      }
+      [this.heap[i], this.heap[parent]] = [this.heap[parent], this.heap[i]];
+      i = parent;
+    }
+  }
+
+  _sinkDown(start) {
+    const length = this.heap.length;
+    let i = start;
+    while (true) {
+      const left = 2 * i + 1;
+      const right = 2 * i + 2;
+      let smallest = i;
+      if (left < length && this._compare(this.heap[left], this.heap[smallest]) < 0) {
+        smallest = left;
+      }
+      if (right < length && this._compare(this.heap[right], this.heap[smallest]) < 0) {
+        smallest = right;
+      }
+      if (smallest === i) {
+        break;
+      }
+      [this.heap[i], this.heap[smallest]] = [this.heap[smallest], this.heap[i]];
+      i = smallest;
+    }
+  }
+}
+===END FILE===
+```
+
+```
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency = 1 } = {}) {
+    if (!Number.isFinite(concurrency) || concurrency < 1) {
+      throw new RangeError('concurrency must be a number >= 1');
+    }
+    this.concurrency = concurrency;
+    this.queue = new PriorityQueue();
+    this.results = [];
+    this.running = false;
+    this.active = 0;
+    this.maxActive = 0;
+    this.finished = false;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    this.queue.enqueue(fn, priority);
+  }
+
+  async run() {
+    this.running = true;
+    this.active = 0;
+    this.maxActive = 0;
+    this.finished = false;
+    this.results = [];
+
+    while (this.queue.size > 0 || this.active > 0) {
+      while (this.active < this.concurrency && this.queue.size > 0) {
+        const fn = this.queue.dequeue();
+        this.active++;
+        this.maxActive = Math.max(this.maxActive, this.active);
+        void this._runTask(fn);
+      }
+
+      // Wait for at least one running task to finish.
+      await new Promise((resolve) => {
+        this._waiters.push(resolve);
+      });
+
+      this.active = Math.max(0, this.active - 1);
+      this._drain();
+    }
+
+    this.running = false;
+    this.finished = true;
+    return this.results;
+  }
+
+  async _runTask(fn) {
+    let attempts = 0;
+    let result = null;
+    let ok = false;
+    let value = undefined;
+    let error = undefined;
+
+    while (attempts <= this.queue.retries) {
+      attempts++;
+      try {
+        value = await fn();
+        ok = true;
+        error = undefined;
+        break;
+      } catch (err) {
+        error = err;
+        if (attempts > this.queue.retries) {
+          break;
+        }
+      }
+    }
+
+    const outcome = {
+      id: fn.id,
+      ok,
+      value,
+      error,
+      attempts,
+    };
+
+    if (ok) {
+      this.results.push({ ...outcome, ok: true });
+    } else {
+      this.results.push({ ...outcome, ok: false });
+    }
+
+    this._waiters.forEach((resolve) => resolve());
+    this._waiters = [];
+  }
+
+  _drain() {
+    while (this.active < this.concurrency && this.queue.size > 0) {
+      const fn = this.queue.dequeue();
+      this.active++;
+      this.maxActive = Math.max(this.maxActive, this.active);
+      void this._runTask(fn);
+    }
+  }
+}
+===END FILE===
+```
+
+```
+===FILE: test/priority-queue.test.mjs===
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { PriorityQueue } from '../src/priority-queue.mjs';
+
+test('dequeue returns items in priority order', () => {
+  const pq = new PriorityQueue();
+  pq.enqueue('c', 3);
+  pq.enqueue('a', 1);
+  pq.enqueue('b', 2);
+
+  assert.equal(pq.dequeue(), 'a');
+  assert.equal(pq.dequeue(), 'b');
+  assert.equal(pq.dequeue(), 'c');
+  assert.equal(pq.size, 0);
+});
+
+test('FIFO order on priority tie', () => {
+  const pq = new PriorityQueue();
+  pq.enqueue('first', 5);
+  pq.enqueue('second', 5);
+  pq.enqueue('third', 5);
+
+  assert.equal(pq.dequeue(), 'first');
+  assert.equal(pq.dequeue(), 'second');
+  assert.equal(pq.dequeue(), 'third');
+});
+
+test('size reflects number of enqueued items', () => {
+  const pq = new PriorityQueue();
+  assert.equal(pq.size, 0);
+  pq.enqueue('a', 1);
+  pq.enqueue('b', 2);
+  assert.equal(pq.size, 2);
+  pq.dequeue();
+  assert.equal(pq.size, 1);
+});
+
+test('dequeue on empty throws Error', () => {
+  const pq = new PriorityQueue();
+  assert.throws(() => pq.dequeue(), Error);
+});
+===END FILE===
+```
+
+```
+===FILE: test/scheduler.test.mjs===
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { Scheduler } from '../src/scheduler.mjs';
+
+test('runs tasks respecting priority and reports completion order', async () => {
+  const scheduler = new Scheduler({ concurrency: 2 });
+  const order = [];
+
+  scheduler.add(async () => {
+    order.push('low');
+    return 'low-done';
+  }, { priority: 0 });
+
+  scheduler.add(async () => {
+    order.push('high');
+    return 'high-done';
+  }, { priority: 10 });
+
+  scheduler.add(async () => {
+    order.push('mid');
+    return 'mid-done';
+  }, { priority: 5 });
+
+  const results = await scheduler.run();
+
+  assert.equal(results.length, 3);
+  assert.deepEqual(
+    results.map((r) => r.ok),
+    [true, true, true]
+  );
+  // Highest priority finishes first.
+  assert.equal(results[0].id, 'high');
+  assert.equal(results[1].id, 'mid');
+  assert.equal(results[2].id, 'low');
+});
+
+test('never exceeds concurrency limit', async () => {
+  const concurrency = 3;
+  const scheduler = new Scheduler({ concurrency });
+  let maxActive = 0;
+  let active = 0;
+  let peak = 0;
+
+  for (let i = 0; i < 20; i++) {
+    scheduler.add(
+      async () => {
+        active++;
+        peak = Math.max(peak, active);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        active--;
+        return 'ok';
+      },
+      { priority: i }
+    );
+  }
+
+  const results = await scheduler.run();
+
+  assert.equal(results.length, 20);
+  assert.equal(peak, concurrency);
+  assert.ok(peak <= concurrency, `peak ${peak} exceeded concurrency ${concurrency}`);
+});
+
+test('retries failed task and succeeds on the third attempt', async () => {
+  const scheduler = new Scheduler({ concurrency: 1 });
+  let attempts = 0;
+
+  scheduler.add(
+    async () => {
+      attempts++;
+      if (attempts < 3) {
+        throw new Error(`fail ${attempts}`);
+      }
+      return 'success';
+    },
+    { retries: 2 }
+  );
+
+  const results = await scheduler.run();
+
+  assert.equal(results.length, 1);
+  const result = results[0];
+  assert.equal(result.ok, true);
+  assert.equal(result.value, 'success');
+  assert.equal(result.attempts, 3);
+  assert.equal(result.error, undefined);
+});
+
+test('task that always fails returns ok:false with error and attempts', async () => {
+  const scheduler = new Scheduler({ concurrency: 1 });
+  scheduler.add(
+    async () => {
+      throw new Error('boom');
+    },
+    { retries: 2 }
+  );
+
+  const results = await scheduler.run();
+
+  const result = results[0];
+  assert.equal(result.ok, false);
+  assert.equal(result.error.message, 'boom');
+  assert.equal(result.attempts, 3);
+  assert.equal(result.value, undefined);
+});
+
+test('results are ordered by completion time', async () => {
+  const scheduler = new Scheduler({ concurrency: 2 });
+
+  scheduler.add(
+    async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      return 'slow';
+    },
+    { priority: 1 }
+  );
+
+  scheduler.add(
+    async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return 'fast';
+    },
+    { priority: 2 }
+  );
+
+  scheduler.add(
+    async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return 'mid';
+    },
+    { priority: 3 }
+  );
+
+  const results = await scheduler.run();
+
+  // Completion order reflects how long each took, not priority.
+  assert.equal(results[0].value, 'fast');
+  assert.equal(results[1].value, 'mid');
+  assert.equal(results[2].value, 'slow');
+});
+===END FILE===
+```

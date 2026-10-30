@@ -5,16 +5,17 @@ Chat con agente, editor con pestañas, diffs, git, terminal integrado, navegador
 controlado y visión — todo en tu GPU, sin nube.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-1.5.1-cde86e">
+  <img alt="version" src="https://img.shields.io/badge/version-1.6.0-cde86e">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v1.5.1** — build optimizada de llama.cpp para sm89, plantilla oficial de
-> Ornith 1.5 9B (visión + herramientas + razonamiento) y **43.008 tokens por
-> defecto con KV f16, visión y pensamiento**. Notas: [RELEASE-1.5.1](docs/RELEASE-1.5.1.md).
+> **v1.6.0** — **110.592 tokens con visión y KV q8_0** en la RTX 4060 (el proyector
+> de visión pasa a RAM con `--no-mmproj-offload`), reparto de contexto automático
+> estilo frontera (historial = ventana − pensamiento − respuesta) y compactación
+> estructurada. Notas: [RELEASE-1.6.0](docs/RELEASE-1.6.0.md).
 
 ---
 
@@ -104,11 +105,14 @@ flowchart TD
 
 | Preset | Contexto | KV | Visión | Uso |
 |---|---:|:--:|:--:|---|
-| **`8GB-VISION-MAX-F16`** | **43.008** | **f16** | ✅ | **Por defecto** · máxima precisión y contexto |
+| **`8GB-VISION-MAX-Q8-100K`** | **110.592** | **q8_0** | ✅ CPU | **Por defecto** · contexto máximo con KV casi sin pérdida |
+| `8GB-VISION-MAX-Q8` | 71.680 | q8_0 | ✅ GPU | Visión rápida (~2 s/imagen) |
+| `8GB-VISION-MAX-Q4` | 110.592 | q4_0 | ✅ GPU | Contexto máximo con visión rápida |
+| `8GB-VISION-MAX-F16` | 43.008 | f16 | ✅ GPU | Precisión máxima de KV |
 | `8GB-VISION-DEFAULT-F16` | 16.384 | f16 | ✅ | Seguro, mucho margen |
 | `8GB-VISION-ULTRA-F16` | 32.768 | f16 | ✅ | Precisión alta, contexto medio |
 | `8GB-VISION-ULTRA` | 36.864 | q4_0 | ✅ | Contexto alto y barato |
-| `8GB-VISION-HIGH` | 32.768 | q8_0 | ✅ | Mejor equilibrio (calidad 8/8) |
+| `8GB-VISION-HIGH` | 32.768 | q8_0 | ✅ | Equilibrio (calidad 8/8) |
 | `8GB-VISION-BALANCED` | 28.672 | q4_0 | ✅ | Conservador |
 | `8GB-VISION-SAFE` | 24.576 | q4_0 | ✅ | Mucho margen |
 | `8GB-CODE-MAX` | 49.152 | q4_0 | — | Código largo |
@@ -199,6 +203,78 @@ de expresiones es intermitente (`2+3*4`). Son límites del modelo de 9B, no del 
 f16: FAIL,FAIL,OK,FAIL,FAIL). Es la prueba de que el 94,4 % de q8_0 fue **una
 muestra con suerte**, no precisión del KV.
 
+### Techo de contexto por tipo de KV (GPU dedicada)
+
+![Context ceiling by KV](docs/graficos/context-kv.svg)
+
+En una RTX 4060 dedicada al modelo (pantalla en la APU). **Visión siempre activada**;
+cada valor pasó una prueba de 3 agujas al 10/50/90 % con ese número real de tokens:
+
+| KV | Proyector de visión | Contexto máximo | Retrieval real | VRAM pico | Siguiente paso |
+|---|---|---:|---:|---:|---:|
+| f16 | GPU | 43.008 | PASS 33.373 tok | 7.481 MiB | 45.056 OOM |
+| q8_0 | GPU | 71.680 | PASS 56.306 tok | 7.543 MiB | 73.728 OOM |
+| q4_0 | GPU | 110.592 | PASS 87.433 tok | 7.497 MiB | 114.688 OOM |
+| **q8_0** | **CPU (`--no-mmproj-offload`)** | **110.592** | **PASS 87.433 tok** | **7.650 MiB** | 114.688 OOM |
+| q8_0 | sin visión | 110.592 | — | 7.481 MiB | 114.688 OOM |
+
+**La clave para los ~100k con q8_0 + visión**: el proyector de visión (879 MiB) se
+saca de la VRAM (`mmprojCPU`). La ventana sube de **71.680 → 110.592** sin tocar el
+KV (sigue q8_0, casi sin pérdida). Coste honesto: cada imagen se codifica en CPU y
+tarda **~15 s** (captura 1200×528 + respuesta de 120 tokens), frente a ~2 s con el
+proyector en GPU. Si usas capturas constantemente, el preset de 71k con visión en
+GPU es más cómodo; si quieres contexto máximo, el de 110k.
+
+Por eso el preset por defecto es **`8GB-VISION-MAX-Q8-100K`** (110.592 · q8_0 ·
+visión · 4096 de pensamiento). Alternativas: `8GB-VISION-MAX-Q8` (71k, visión
+rápida), `8GB-VISION-MAX-Q4` (110k, visión en GPU), `8GB-VISION-MAX-F16` (43k, f16).
+Reproducir: `scripts/probe-rtx4060-context.ps1` y `scripts/probe-longctx.ps1 -Image`.
+
+### Reparto del contexto (estilo modelos frontera)
+
+La ventana no se reparte a mano: **historial = ventana − reserva de salida − margen**.
+La reserva incluye el pensamiento, así que el razonamiento no se come la respuesta.
+Con el preset por defecto (110.592):
+
+| Parte | Tokens | Qué es |
+|---|---:|---|
+| Historial | ~98.176 | Conversación, archivos, resultados de herramientas y resumen compactado |
+| Pensamiento | 4.096 | Presupuesto de razonamiento (se gasta antes de responder) |
+| Respuesta / edición | ~7.936 | Texto final o escritura de archivo |
+| Margen | 128 | Red de seguridad del servidor |
+
+En `8GB-VISION-MAX-Q8` (71.680) queda en ~59.264 de historial + 12.288 de salida.
+`historial = 0` en Ajustes significa **automático** (lo anterior); un número fijo
+pone un techo manual. Los turnos viejos no se tiran: se **compactan** con el modelo
+en notas estructuradas (`OBJETIVO`, `DECISIONES`, `ARCHIVOS`, `COMANDOS Y PRUEBAS`,
+`ERRORES ABIERTOS`, `PENDIENTE`) de hasta ~6 % de la ventana (1k–8k tokens), y el
+historial original sigue guardado en la sesión.
+
+### Muestreo: la mejor configuración medida
+
+![Sampling benchmark](docs/graficos/bench-sampling.svg)
+
+Matriz de 10 configuraciones (temp / top_p / top_k / min_p / penalizaciones) sobre
+12 tareas difíciles, 2 repeticiones; los 3 primeros se revalidaron a 5 repeticiones:
+
+| Config | Puntuación |
+|---|---:|
+| **T0.6 · p0.90 · k20 · min_p0.05** | **73,3 %** (22/30) |
+| T0.6 · p0.95 · k20 (tarjeta code) | 70,0 % (21/30) |
+| T0.2 · p0.95 · k20 | 63,3 % (19/30) |
+| T0.6 · p0.90 · k20 · m0.05 (1.ª pasada, 24 muestras) | 87,5 % (21/24) |
+| T0.7 · p0.80 · k20 (tarjeta chat) | 83,3 % (20/24) |
+| T1.0 · p0.95 · k20 · m0.05 (tarjeta razón) | 83,3 % (20/24) |
+| T0.6 · p0.95 · k20 · presence1.5 | 83,3 % (20/24) |
+| T0.8 · p0.95 · k20 · m0.05 | 83,3 % (20/24) |
+| T0.6 · p0.95 · k20 · repeat1.1 | 79,2 % (19/24) |
+| greedy (T0) | 75,0 % (18/24) |
+
+Honesto: 22 vs 21 es **una** tarea; la ventaja no es enorme. Pero el ganador se
+mantuvo en las dos pasadas y **greedy fue el peor** (repite el mismo error siempre)
+mientras `repeat_penalty 1.1` **rompió la puntuación**. Es el default actual en
+`chat/modelo.json` y en el lanzador.
+
 ```powershell
 # media con repeticiones
 node scripts/bench-model-quality.mjs --presets 8GB-VISION-HIGH,8GB-VISION-MAX-F16 `
@@ -206,6 +282,29 @@ node scripts/bench-model-quality.mjs --presets 8GB-VISION-HIGH,8GB-VISION-MAX-F1
 # reconstruir solo la grafica desde un results.json
 node scripts/bench-model-quality.mjs --chart-from reports/bench-quality-<fecha>/results.json
 ```
+
+### Proyecto complejo real (honesto: el 9B sufre)
+
+![Complex project benchmark](docs/graficos/bench-project.svg)
+
+`scripts/bench-project.mjs` pide un proyecto Node ESM multi-archivo (`taskforge`:
+cola de prioridad con FIFO + scheduler con concurrencia y reintentos + tests
+`node:test`), escribe los archivos y **ejecuta `node --test`**. La nota es el
+porcentaje de tests que pasan de verdad, no "parece correcto". 2 repeticiones por
+preset, pensamiento 2048, visión activada:
+
+| Preset | Tests | Pasan | % | Todo OK | Visión |
+|---|---:|---:|---:|:--:|:--:|
+| `8GB-VISION-MAX-F16` | 14 | 8 | **57 %** | no | no |
+| `8GB-VISION-MAX-Q8` | 18 | 6 | **33 %** | no | no |
+| `8GB-VISION-MAX-Q4` | 9 | 2 | **22 %** | no | no |
+
+Lectura honesta: ninguna pasada deja la suite entera en verde; el modelo genera los
+5 archivos y una parte de los tests, pero falla en la cola de prioridad y en los
+reintentos del scheduler. La comprobación de visión sobre una captura del IDE
+**falló en los tres** (respuestas que no nombraban los paneles esperados). No es un
+problema de KV ni de contexto: es el límite del modelo de 9B en tareas multi-archivo.
+Sirve para comparar presets, no para prometer que el proyecto saldrá perfecto.
 
 ---
 
@@ -244,8 +343,9 @@ npm run test:gpu-exclusiva  # calidad KV; exige GPU libre
 node scripts/run-tests.mjs --listar   # ver suites por grupo
 ```
 
-Verificación de la **1.5.1**: `npm test` → **40/40**, arranque por la UI a 43k,
-prefill largo (1.982 t/s), 15 s en reposo vivo y parada sin procesos huérfanos.
+Verificación de la **1.6.0**: `npm test` → **40/40**, preset por defecto
+`8GB-VISION-MAX-Q8-100K` arrancando a 110.592 tokens (q8_0 + visión en CPU + 4.096 de
+pensamiento), retrieval real a 87.433 tokens y 15,4 s por imagen.
 
 Herramientas reproducibles añadidas:
 
@@ -286,6 +386,7 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 
 | Documento | Contenido |
 |---|---|
+| [RELEASE-1.6.0](docs/RELEASE-1.6.0.md) | 110k con visión, reparto de contexto automático y compactación |
 | [RELEASE-1.5.1](docs/RELEASE-1.5.1.md) | KV preset fix y benchmark de calidad |
 | [RTX4060_OPTIMIZATION_GUIDE](docs/RTX4060_OPTIMIZATION_GUIDE.md) | Ciclo de vida, presets, tuning, troubleshooting |
 | [CONTEXTO-Y-DIAGNOSTICO](docs/CONTEXTO-Y-DIAGNOSTICO.md) | Métricas, límites y diagnóstico |

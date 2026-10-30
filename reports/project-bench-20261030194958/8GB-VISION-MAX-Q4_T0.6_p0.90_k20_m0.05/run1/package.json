@@ -1,0 +1,11 @@
+{
+  "name": "taskforge",
+  "version": "1.0.0",
+  "description": "Priority-based async task scheduler",
+  "type": "module",
+  "main": "src/scheduler.mjs",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,11 @@
+{
+  "name": "taskforge",
+  "version": "1.0.0",
+  "description": "Task scheduler backed by a priority queue (min-heap).",
+  "type": "module",
+  "main": "src/scheduler.mjs",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}

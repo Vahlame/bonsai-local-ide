@@ -186,7 +186,10 @@ can paste it into any PowerShell window and run the server manually.
 
 | Preset | Context | KV | Vision | Notes |
 |--------|--------:|----|:------:|-------|
-| `8GB-VISION-MAX-F16` | **43,008** | f16 | ✅ | **Default** · highest precision + context |
+| `8GB-VISION-MAX-Q8-100K` | **110,592** | q8_0 | ✅ CPU | **Default** · max context, near-lossless KV |
+| `8GB-VISION-MAX-Q8` | 71,680 | q8_0 | ✅ GPU | Fast vision |
+| `8GB-VISION-MAX-Q4` | 110,592 | q4_0 | ✅ GPU | Max context, fast vision |
+| `8GB-VISION-MAX-F16` | 43,008 | f16 | ✅ GPU | Maximum KV precision |
 | `8GB-VISION-DEFAULT-F16` | 16,384 | f16 | ✅ | Safe fallback, lots of headroom |
 | `8GB-VISION-ULTRA-F16` | 32,768 | f16 | ✅ | Max precision, high context |
 | `8GB-VISION-ULTRA` | 36,864 | q4_0 | ✅ | High context, cheap KV |
@@ -210,30 +213,61 @@ with longer context.
 
 ---
 
-## Maximum context with f16 + vision + thinking (measured)
+## Maximum context with vision + thinking (measured, dedicated GPU)
 
-![Context ceiling](graficos/context-ceiling.svg)
+![Context ceiling by KV](graficos/context-kv.svg)
 
-Probed with a realistic ~1k-token prompt (long-prompt prefill is what actually
-blows the compute buffer) plus an 8 s idle window:
+With the RTX 4060 dedicated to the model (display on the Ryzen APU), the ceiling
+depends on KV type. Each value below passed a **3-needle retrieval test** at 10/50/90 %
+with that many real prompt tokens:
 
-| Context | Result | Peak VRAM | Free |
-|---:|:--:|---:|---:|
-| 32,768 | PASS | 7,157 MiB | 800 MiB |
-| 36,864 | PASS | 7,287 MiB | 670 MiB |
-| 39,936 | PASS | 7,383 MiB | 574 MiB |
-| **43,008** | **PASS** | **7,481 MiB** | **476 MiB** |
-| 45,056 | OOM | — | — |
+| KV | Vision projector | Max context | Real retrieval tokens | Peak VRAM | Next step |
+|---|---|---:|---:|---:|---:|
+| f16 | GPU | 43,008 | 33,373 | 7,481 MiB | 45,056 OOM |
+| q8_0 | GPU | 71,680 | 56,306 | 7,543 MiB | 73,728 OOM |
+| q4_0 | GPU | 110,592 | 87,433 | 7,497 MiB | 114,688 OOM |
+| **q8_0** | **CPU** (`--no-mmproj-offload`) | **110,592** | **87,433** | **7,650 MiB** | 114,688 OOM |
+| q8_0 | none | 110,592 | — | 7,481 MiB | 114,688 OOM |
 
-**43,008 tokens is the hard ceiling** for f16 KV + vision + 4096-token thinking on
-an 8 GB RTX 4060. 45k fails with `CUDA error: out of memory` during long prefill.
-The default preset is now `8GB-VISION-MAX-F16` (43,008 · f16 · vision · thinking).
+**Default is `8GB-VISION-MAX-Q8-100K`**: 110,592 · q8_0 · visión en CPU · 4096 de
+pensamiento. El proyector de visión (879 MiB) se saca de la VRAM y la ventana sube de
+71k a 110k sin tocar el KV. Coste honesto: cada imagen tarda ~15,4 s (captura
+1200×528 + 120 tokens), frente a ~2 s con el proyector en GPU; la imagen se entiende
+igual (describió el panel de ajustes). Alternativas: `8GB-VISION-MAX-Q8` (71k, visión
+rápida), `8GB-VISION-MAX-Q4` (110k, visión rápida con q4_0), `8GB-VISION-MAX-F16` (43k).
+
+### Context split (frontier-style)
+
+`historial = ventana − reserva de salida − margen`; la reserva incluye el pensamiento,
+así que razonar no se come la respuesta. Con el preset de 110.592:
+
+| Parte | Tokens |
+|---|---:|
+| Historial | ~98.176 |
+| Pensamiento | 4.096 |
+| Respuesta / edición | ~7.936 |
+| Margen | 128 |
+
+`historial = 0` en Ajustes = automático. Los turnos viejos se compactan con el modelo
+en notas estructuradas (objetivo, decisiones, archivos, comandos/pruebas, errores
+abiertos, pendiente), con tope ~6 % de la ventana (1k–8k); el historial original sigue
+guardado en la sesión.
+
+> The f16-only table below is the earlier probe and is kept for history:
+>
+> | Context | Result | Peak VRAM | Free |
+> |---:|:--:|---:|---:|
+> | 32,768 | PASS | 7,157 MiB | 800 MiB |
+> | 36,864 | PASS | 7,287 MiB | 670 MiB |
+> | 39,936 | PASS | 7,383 MiB | 574 MiB |
+> | 43,008 | PASS | 7,481 MiB | 476 MiB |
+> | 45,056 | OOM | — | — |
 
 ### Why the previous "idle crash" is gone
 
 The old crash at high f16 context came from **context checkpoints**, not the
-context size. The launcher now passes `--ctx-checkpoints 0` for f16, which removes
-the crash. (Do not remove that flag.)
+context size. The launcher now passes `--ctx-checkpoints 0` for every KV, which
+removes the crash. (Do not remove that flag.)
 
 ### Knob tuning (llama-bench, pp2048 / tg128, f16)
 
@@ -256,6 +290,28 @@ the crash. (Do not remove that flag.)
   43k f16 + vision**. It is only viable at ≤16k context.
 
 ---
+
+## Sampling parameters (measured)
+
+![Sampling benchmark](graficos/bench-sampling.svg)
+
+10 configurations over 12 hard tasks, 2 reps; top-3 revalidated at 5 reps:
+
+| Config | Score |
+|---|---:|
+| **T0.6 · p0.90 · k20 · min_p0.05** | **73.3 %** (22/30) |
+| T0.6 · p0.95 · k20 (model card) | 70.0 % (21/30) |
+| T0.2 · p0.95 · k20 | 63.3 % (19/30) |
+| T0.7 · p0.80 · k20 (chat card) | 83.3 % (20/24)¹ |
+| T1.0 · p0.95 · k20 · m0.05 (reason card) | 83.3 % (20/24)¹ |
+| presence 1.5 / T0.8 / T0.4 | 83.3 / 83.3 / 79.2 %¹ |
+| repeat_penalty 1.1 | 79.2 % (19/24)¹ |
+| greedy (T0) | 75.0 % (18/24)¹ |
+
+¹ first pass (24 samples). The winner held across both passes; greedy was worst
+(it repeats the model's mistakes deterministically) and `repeat_penalty 1.1` broke
+punctuation. Defaults are now `0.6 / 0.90 / 20 / 0.05` in `chat/modelo.json` and the
+launcher.
 
 ## Quality benchmark (complex tasks, deterministic)
 

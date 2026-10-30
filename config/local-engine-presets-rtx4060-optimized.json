@@ -1,6 +1,49 @@
 {
+  "8GB-VISION-MAX-Q8-100K": {
+    "label": "🏆 Default: 110k ctx + q8_0 KV + Vision (CPU proyector) + Thinking",
+    "context": 110592,
+    "kv": "q8_0",
+    "batch": 512,
+    "ubatch": 256,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 100,
+    "vision": true,
+    "mmprojCPU": true,
+    "coderOutputTokens": 8192,
+    "thinkingTokens": 4096,
+    "description": "DEFAULT: 110,592 tokens con KV q8_0 (casi sin perdida) + vision + 4096 de pensamiento. El proyector de vision vive en RAM (-mmprojCPU), lo que libera ~879 MiB y permite 110k en vez de 71k; cada imagen se codifica en CPU. Medido: 7,830 MiB, retrieval real PASS."
+  },
+  "8GB-VISION-MAX-Q8": {
+    "label": "⚡ 71k ctx + q8_0 KV + Vision en GPU + Thinking (vision rapida)",
+    "context": 71680,
+    "kv": "q8_0",
+    "batch": 512,
+    "ubatch": 256,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 100,
+    "vision": true,
+    "coderOutputTokens": 8192,
+    "thinkingTokens": 4096,
+    "description": "71,680 tokens, q8_0 KV (near-lossless) + vision en GPU + 4096-thinking. Measured 7,543 MiB; deep retrieval at 56,306 real tokens PASS. 73,728 OOMs."
+  },
+  "8GB-VISION-MAX-Q4": {
+    "label": "🗺️ Max context: 110k ctx + q4_0 KV + Vision + Thinking",
+    "context": 110592,
+    "kv": "q4_0",
+    "batch": 512,
+    "ubatch": 256,
+    "flash": "on",
+    "spec": "none",
+    "marginMiB": 100,
+    "vision": true,
+    "coderOutputTokens": 8192,
+    "thinkingTokens": 4096,
+    "description": "MAX CONTEXT: 110,592 tokens, q4_0 KV + vision + thinking. Measured 7,497 MiB; deep retrieval at 87,433 real tokens PASS. 114,688 OOMs. Use when you need the largest window."
+  },
   "8GB-VISION-MAX-F16": {
-    "label": "🏆 MAX: 43k ctx + f16 KV + Vision + Thinking (highest precision & context)",
+    "label": "🏆 MAX precision: 43k ctx + f16 KV + Vision + Thinking",
     "context": 43008,
     "kv": "f16",
     "batch": 512,
@@ -11,7 +54,7 @@
     "vision": true,
     "coderOutputTokens": 8192,
     "thinkingTokens": 4096,
-    "description": "MAX PRECISION & CONTEXT: 43,008 tokens with full f16 KV + vision + 4096-token thinking. Measured stable (long prompt + 30s idle, ~7.6GB VRAM). 45k OOMs. This is the highest f16 ceiling on an 8GB RTX 4060."
+    "description": "MAX PRECISION: 43,008 tokens with full f16 KV + vision + thinking. Measured 7,481 MiB; deep retrieval at 33,373 real tokens PASS. 45k OOMs."
   },
   "8GB-VISION-DEFAULT-F16": {
     "label": "✅ Default: 16k ctx + f16 KV + Vision (ROCK SOLID)",

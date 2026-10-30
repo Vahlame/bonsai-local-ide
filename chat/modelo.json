@@ -42,9 +42,9 @@
         "offload": true,
         "imageMaxTokens": 512,
         "reservaMiB": 900,
-        "contexto": 39936,
-        "contextoMaximoManual": 43008,
-        "contextoMaximoManualNota": "Uso elegido explícitamente: 43008/F16 y visión pasó tres pruebas de contexto largo, pero el mínimo muestreado fue 106 MiB; 44032 falló por memoria CUDA. El perfil automático conserva el techo anterior.",
+        "contexto": 71680,
+        "contextoMaximoManual": 110592,
+        "contextoMaximoManualNota": "Medido 2026-10-30 con prompt real (3 agujas a 10/50/90%): f16 43008 (45k OOM), q8_0+vision GPU 71680 (73728 OOM, 56306 tokens reales PASS), q4_0+vision 110592 (87433 PASS), q8_0+vision con proyector en CPU (--no-mmproj-offload) 110592 (87433 PASS, 7650 MiB, imagen real entendida en 15.4 s). El techo depende del KV y de dónde viva el proyector; 114688 OOM en todos. La GPU es exclusiva del modelo.",
         "vramLibreMinMiBMedida": 426,
         "validacionIDE": {
           "textoLargoPromptTokens": 28057,
@@ -62,29 +62,29 @@
         "pesosGpuEstandarMiB": 4864,
         "pesosGpuEstandarEvidencia": "CUDA0 4812.25 MiB medidos + 51.75 MiB de margen, adfffbe41, GGUF 70c112196e0b7023803c9762752e46d29e612a92c83f995bc3ba1ceb07e8fab6; solo colocacion estandar",
         "tipo": "gpu-completa",
-        "contexto": 53248,
+        "contexto": 114688,
         "capasAtencionCompleta": 8,
         "cabezasKV": 4,
         "dimCabeza": 256,
         "reservaMiB": 620,
         "ubatch": 128,
         "margenObjetivoMiB": 200,
-        "nota": "Perfil final elegido el 28-oct-2026: 39936 tokens, KV q8_0 y vision completa en CUDA0. Imagen 1200x528: leyo 4758, 539 tokens de entrada, minimo 426 MiB libres (logs/ornith-39936-final.err.log). 40960 fallo con imagen grande; no aumentar ni recalibrar. El techo historico de texto sin vision es 53248/q8_0; el presupuesto de VRAM es una estimacion, no una garantia de carga."
+        "nota": "Medido 2026-10-30 (GPU exclusiva para el modelo): q8_0+vision 71680 estable (7543 MiB, 56306 tok reales), q4_0+vision 110592 estable (7497 MiB, 87433 tok reales), f16 43008 (45k OOM). 73728/114688 fallan al arrancar. El techo depende del KV; el presupuesto de VRAM es una estimacion."
       },
       "muestreo": {
         "codigo": {
           "temperature": 0.6,
-          "top_p": 0.95,
+          "top_p": 0.9,
           "top_k": 20,
-          "min_p": 0,
+          "min_p": 0.05,
           "presence_penalty": 0,
           "repeat_penalty": 1
         },
         "razonar": {
           "temperature": 0.6,
-          "top_p": 0.95,
+          "top_p": 0.9,
           "top_k": 20,
-          "min_p": 0,
+          "min_p": 0.05,
           "presence_penalty": 0,
           "repeat_penalty": 1
         }
@@ -176,31 +176,31 @@
   },
   "muestreo": {
     "codigo": {
-      "temperature": 0.5,
-      "top_p": 0.85,
-      "top_k": 20,
-      "min_p": 0,
-      "presence_penalty": 0,
-      "repeat_penalty": 1,
-      "fuente": "docs.prismml.com/run/llamacpp: --temp 0.5 --top-p 0.85 --top-k 20 --min-p 0 (sin razonamiento)"
-    },
-    "chat": {
-      "temperature": 0.7,
-      "top_p": 0.8,
-      "top_k": 20,
-      "min_p": 0,
-      "presence_penalty": 1.5,
-      "repeat_penalty": 1,
-      "fuente": "ficha de Ternary-Bonsai-2-27B / Qwen3.8-27B, modo instruct (sin razonamiento)"
-    },
-    "razonar": {
-      "temperature": 1.0,
-      "top_p": 0.95,
+      "temperature": 0.6,
+      "top_p": 0.9,
       "top_k": 20,
       "min_p": 0.05,
       "presence_penalty": 0,
       "repeat_penalty": 1,
-      "fuente": "ficha de Ternary-Bonsai-2-27B, modo thinking; es también lo que lleva el GGUF en general.sampling.*"
+      "fuente": "Medido 2026-10-30 (18 tareas, 30 muestras): T0.6/p0.90/k20/min_p0.05 = 73.3% vs 70.0% tarjeta y 63.3% T0.2; greedy 75% y repeat 1.1 79% en la primera pasada. Mejor equilibrio codigo+razon."
+    },
+    "chat": {
+      "temperature": 0.6,
+      "top_p": 0.9,
+      "top_k": 20,
+      "min_p": 0.05,
+      "presence_penalty": 0,
+      "repeat_penalty": 1,
+      "fuente": "Mismo ganador medido; presence 1.5 no mejoro y repeat 1.1 rompio puntuacion."
+    },
+    "razonar": {
+      "temperature": 0.6,
+      "top_p": 0.9,
+      "top_k": 20,
+      "min_p": 0.05,
+      "presence_penalty": 0,
+      "repeat_penalty": 1,
+      "fuente": "Medido con pensamiento 1024: T0.6/p0.90/m0.05 gano a la tarjeta T1.0/p0.95/m0.05 (20/24)."
     }
   },
   "razonamiento": {

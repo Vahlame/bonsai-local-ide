@@ -1,0 +1,208 @@
+The user wants me to create a Node.js (ESM) project called "taskforge" with several files. Let me write complete, correct, executable code following the format requested.
+
+Let me carefully design each file:
+
+1) package.json with {"type":"module"} and script test.
+
+2) src/priority-queue.mjs: PriorityQueue class with enqueue(item, priority), dequeue(), size. Min-heap: smallest priority comes out first; on tie, FIFO. dequeue() on empty throws Error.
+
+3) src/scheduler.mjs: Scheduler class with constructor({concurrency}). Method add(fn, {priority=0, retries=0}). Method run() that executes respecting priority and NEVER more than "concurrency" tasks at once, retries up to "retries" times if fn throws (and if it still fails, result is {ok:false, error}), returns array of results in order of completion with shape {id, ok, value?, error?, attempts}.
+
+4) test/priority-queue.test.mjs and test/scheduler.test.mjs using ONLY node:test and node:assert/strict. Cover: priority ordering, FIFO on tie, empty dequeue, concurrency limit (measure max simultaneous), retries (2 failures then success), definitive failure, and completion order by duration.
+
+Let me write each file carefully.
+
+### package.json
+
+```json
+{
+  "name": "taskforge",
+  "version": "1.0.0",
+  "description": "Priority-based async task scheduler",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
+```
+
+Wait, `node --test` will find test files matching the pattern. By default node:test looks for files named `*.test.*` or in a `test` directory. Actually, the default test file patterns for `node --test` are:
+- `test.js`, `test.mjs`, `test.cjs`
+- files in directories named `test`
+- files matching `*.test.js`, `*.test.mjs`, etc.
+
+Since our test files are `test/priority-queue.test.mjs` and `test/scheduler.test.mjs`, they match both patterns (in a `test` directory AND `.test.mjs`). So `node --test` should pick them up.
+
+Let me use `"test": "node --test"`.
+
+### src/priority-queue.mjs
+
+I need a min-heap. Let me implement it properly with the array representation.
+
+```js
+export class PriorityQueue {
+  #heap = [];
+
+  enqueue(item, priority) {
+    this.#heap.push({ item, priority });
+    const start = this.#heap.length - 1;
+    this.#bubbleUp(start);
+  }
+
+  dequeue() {
+    if (this.#heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const [first] = this.#heap;
+    const last = this.#heap.pop();
+    if (this.#heap.length > 0) {
+      this.#heap[0] = last;
+      this.#bubbleDown(0);
+    }
+    return last.item;
+  }
+
+  get size() {
+    return this.#heap.length;
+  }
+
+  #bubbleUp(start) {
+    let i = start;
+    const value = this.#heap[i];
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (value.priority < this.#heap[parent].priority) {
+        this.#heap[i] = this.#heap[parent];
+        i = parent;
+      } else {
+        break;
+      }
+    }
+    this.#heap[i] = value;
+  }
+
+  #bubbleDown(start) {
+    const length = this.#heap.length;
+    const value = this.#heap[start];
+    while (true) {
+      const left = (start << 1) + 1;
+      const right = left + 1;
+      let swap = -1;
+      if (left < length && value.priority > this.#heap[left].priority) {
+        swap = left;
+      }
+      if (right < length && (swap === -1 || value.priority > this.#heap[right].priority)) {
+        swap = right;
+      }
+      if (swap === -1) break;
+      this.#heap[start] = this.#heap[swap];
+      start = swap;
+    }
+    this.#heap[start] = value;
+  }
+}
+```
+
+Wait, there's a subtlety with FIFO on tie. The standard heap with `<` and `>` comparisons doesn't guarantee FIFO on ties because bubbleUp/bubbleDown only swap when strictly greater/less. Let me think.
+
+Actually, with a min-heap where we compare `value.priority > this.#heap[left].priority`, we only swap when strictly greater. So equal priorities won't be swapped, which means... hmm, this doesn't necessarily preserve insertion order for equal priorities.
+
+Let me think about this more carefully. The requirement is: on tie (equal priority), the one that came first (FIFO) should come out first.
+
+A standard binary heap doesn't guarantee FIFO ordering for equal keys. To get strict FIFO among equal priorities, I need to incorporate the insertion order into the comparison. I can add a sequence number (insertion index) to each element and compare by (priority, sequence).
+
+Let me use a monotonic counter for insertion order.
+
+```js
+export class PriorityQueue {
+  #heap = [];
+  #counter = 0;
+
+  enqueue(item, priority) {
+    this.#heap.push({ item, priority, seq: this.#counter++ });
+    const start = this.#heap.length - 1;
+    this.#bubbleUp(start);
+  }
+
+  dequeue() {
+    if (this.#heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const [first] = this.#heap;
+    const last = this.#heap.pop();
+    if (this.#heap.length > 0) {
+      this.#heap[0] = last;
+      this.#bubbleDown(0);
+    }
+    return last.item;
+  }
+
+  get size() {
+    return this.#heap.length;
+  }
+
+  #bubbleUp(start) {
+    let i = start;
+    const value = this.#heap[i];
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (this.#compare(value, this.#heap[parent]) < 0) {
+        this.#heap[i] = this.#heap[parent];
+        i = parent;
+      } else {
+        break;
+      }
+    }
+    this.#heap[i] = value;
+  }
+
+  #bubbleDown(start) {
+    const length = this.#heap.length;
+    const value = this.#heap[start];
+    while (true) {
+      const left = (start << 1) + 1;
+      const right = left + 1;
+      let swap = -1;
+      if (left < length && this.#compare(value, this.#heap[left]) > 0) {
+        swap = left;
+      }
+      if (right < length && this.#compare(value, this.#heap[right]) > 0) {
+        swap = right;
+      }
+      if (swap === -1) break;
+      this.#heap[start] = this.#heap[swap];
+      start = swap;
+    }
+    this.#heap[start] = value;
+  }
+
+  #compare(a, b) {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return a.seq - b.seq;
+  }
+}
+```
+
+This uses a comparator that first compares priority, then sequence (insertion order). Since seq is unique and increasing, this guarantees FIFO on ties.
+
+Note: comparing priorities with `a.priority - b.priority` works for numbers. If priorities are non-numbers this could break, but the spec implies numeric priorities. I'll keep it simple but robust. Actually, to be safe with the "compare < 0 / > 0" logic, using subtraction is fine for numbers.
+
+Actually, let me reconsider. Using `a.priority - b.priority` returns 0 for equal, negative if a < b, positive if a > b. That's correct for number comparison. Good.
+
+### src/scheduler.mjs
+
+Now the Scheduler. Requirements:
+- constructor({concurrency})
+- add(fn, {priority=0, retries=0}) registers an async task
+- run() executes respecting priority and NEVER more than concurrency tasks at once
+- retries up to "retries" times if fn throws (and if it still fails, result is {ok:false, error})
+- returns array of results in order of completion with shape {id, ok, value?, error?, attempts}
+
+Let me think about the design.
+
+The scheduler needs to:
+1. Assign IDs to tasks.
+2. Order tasks by priority (min-heap), FIFO on tie.
+3. Run up to `concurrency` tasks at once.
+4. When a task fails, retry it (up to `retries` times).

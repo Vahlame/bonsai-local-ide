@@ -1,0 +1,78 @@
+TAP version 13
+# Subtest: orders by priority (min-heap)
+ok 1 - orders by priority (min-heap)
+  ---
+  duration_ms: 0.7036
+  type: 'test'
+  ...
+# Subtest: breaks ties FIFO by arrival order
+ok 2 - breaks ties FIFO by arrival order
+  ---
+  duration_ms: 0.1132
+  type: 'test'
+  ...
+# Subtest: mixes priority ordering with FIFO within same priority
+ok 3 - mixes priority ordering with FIFO within same priority
+  ---
+  duration_ms: 0.0956
+  type: 'test'
+  ...
+# Subtest: size reflects contents
+ok 4 - size reflects contents
+  ---
+  duration_ms: 0.0975
+  type: 'test'
+  ...
+# Subtest: dequeue on empty throws Error
+ok 5 - dequeue on empty throws Error
+  ---
+  duration_ms: 0.8415
+  type: 'test'
+  ...
+# Subtest: respects concurrency limit (measures max simultaneous)
+ok 6 - respects concurrency limit (measures max simultaneous)
+  ---
+  duration_ms: 153.3781
+  type: 'test'
+  ...
+# Subtest: runs at least one task at a time by default
+ok 7 - runs at least one task at a time by default
+  ---
+  duration_ms: 73.5313
+  type: 'test'
+  ...
+# Subtest: retries until success after 2 failures
+not ok 8 - retries until success after 2 failures
+  ---
+  duration_ms: 37.6937
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\project-bench-20261030194958\\8GB-VISION-MAX-Q4_T0.6_p0.90_k20_m0.05\\run2\\test\\scheduler.test.mjs:39:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    2 !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/project-bench-20261030194958/8GB-VISION-MAX-Q4_T0.6_p0.90_k20_m0.05/run2/test/scheduler.test.mjs:54:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: reports definitive failure when retries exhausted
+ok 9 - reports definitive failure when retries exhausted
+  ---
+  duration_ms: 14.3321
+  type: 'test'
+  ...
+# Subtest: retries=0 runs fn exactly once and surfaces the failure
+ok 10 - retries=0 runs fn exactly once and surfaces the failure
+  ---
+  duration_ms: 15.4979
+  type: 'test'
+  ...
+

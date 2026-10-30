@@ -50,6 +50,8 @@ function catalogoModelosValidacion() {
       clave,
       ctxNativo: Number(row.ctxNativo) || 262144,
       nombre: typeof row.nombre === "string" && row.nombre ? row.nombre : clave,
+      visionTecho: Number(row.vision?.contextoMaximoManual) || 43008,
+      servidorContexto: Number(row.servidor?.contexto) || 53248,
     });
   }
   return out;
@@ -69,8 +71,8 @@ export function validarTechoModelo(clave, contexto, vision) {
   if (!item) return { ok: true, techo: 65536 }; // desconocido: no bloquear
   const nativo = item.ctxNativo;
   const techo = vision
-    ? Math.min(43008, nativo) // visión: tope manual validado 43008
-    : Math.min(53248, nativo); // texto: tope histórico 53248
+    ? Math.min(item.visionTecho || 43008, nativo) // techo manual de visión medido
+    : Math.min(item.servidorContexto || 53248, nativo); // techo de texto medido
   if (contexto > techo) {
     return { ok: false, techo, motivo: `El contexto ${contexto} supera el techo ${techo} del modelo ${item.nombre} (${vision ? "con" : "sin"} visión)` };
   }
@@ -119,7 +121,7 @@ export function configMotor(raw = {}, ajustes = {}, anterior = null) {
   if (nombre && nombre !== CUSTOM_ENGINE && !isNamedEnginePreset(nombre)) throw new Error("Perfil de motor desconocido");
   const nombrado = isNamedEnginePreset(nombre) ? engineProfile(nombre) : null;
   const contexto = Number(nombrado ? (raw.contexto ?? nombrado.context) : (raw.contexto ?? ajustes.coderContextTokens ?? anterior?.contexto ?? 16384));
-  if (!Number.isInteger(contexto) || contexto < 4096 || contexto > 65536) throw new Error("Ventana de contexto inválida");
+  if (!Number.isInteger(contexto) || contexto < 4096 || contexto > 131072) throw new Error("Ventana de contexto inválida");
   const kv = String(nombrado ? nombrado.kv : (raw.kv || ajustes.engineKv || anterior?.kv || "f16"));
   if (!KV.has(kv)) throw new Error("Tipo de KV inválido");
   const vision = nombrado ? Boolean(nombrado.vision) : raw.vision !== undefined ? Boolean(raw.vision) : ajustes.engineVision !== undefined ? Boolean(ajustes.engineVision) : anterior?.vision !== undefined ? Boolean(anterior.vision) : true;

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="330" viewBox="0 0 860 330" font-family="Segoe UI, system-ui, sans-serif">
+  <rect width="860" height="330" fill="#0d100b"/>
+  <text x="24" y="34" fill="#e9eee0" font-size="18" font-weight="600">Context ceiling — vision always on, thinking on</text>
+  <text x="24" y="54" fill="#8d9680" font-size="12">RTX 4060 8 GB dedicated · 2026-10-30 · each value passed a 3-needle retrieval test @10/50/90%</text>
+
+  <!-- scale: 112k across 470px from x=310 -> 4.196 px per 1k -->
+  <line x1="310" y1="280" x2="790" y2="280" stroke="#2c3326"/>
+  <g fill="#6f7a64" font-size="10">
+    <text x="310" y="296" text-anchor="middle">0</text>
+    <text x="427" y="296" text-anchor="middle">28k</text>
+    <text x="545" y="296" text-anchor="middle">56k</text>
+    <text x="662" y="296" text-anchor="middle">84k</text>
+    <text x="780" y="296" text-anchor="middle">112k</text>
+  </g>
+
+  <!-- f16 GPU -->
+  <text x="24" y="100" fill="#e9eee0" font-size="12" font-weight="700">f16 · GPU proj · 43,008</text>
+  <rect x="310" y="84" width="180" height="20" rx="4" fill="#cde86e"/>
+  <text x="497" y="100" fill="#8d9680" font-size="10">PASS 33,373 tok · 7,481 MiB</text>
+
+  <!-- q8_0 GPU -->
+  <text x="24" y="140" fill="#e9eee0" font-size="12" font-weight="700">q8_0 · GPU proj · 71,680</text>
+  <rect x="310" y="124" width="301" height="20" rx="4" fill="#82b8d0"/>
+  <text x="618" y="140" fill="#8d9680" font-size="10">PASS 56,306 tok · 7,543 MiB</text>
+
+  <!-- q4_0 GPU -->
+  <text x="24" y="180" fill="#e9eee0" font-size="12" font-weight="700">q4_0 · GPU proj · 110,592</text>
+  <rect x="310" y="164" width="464" height="20" rx="4" fill="#e8c06a"/>
+  <text x="770" y="180" fill="#8d9680" font-size="10" text-anchor="end">PASS 87,433 tok · 7,497 MiB</text>
+
+  <!-- q8_0 CPU proj -->
+  <text x="24" y="220" fill="#e9eee0" font-size="12" font-weight="700">q8_0 · CPU proj · 110,592 ★</text>
+  <rect x="310" y="204" width="464" height="20" rx="4" fill="#cde86e"/>
+  <text x="770" y="220" fill="#0d100b" font-size="10" font-weight="700" text-anchor="end">PASS 87,433 tok · 7,650 MiB · 15.4 s/image</text>
+
+  <!-- q8_0 no vision -->
+  <text x="24" y="260" fill="#e9eee0" font-size="12" font-weight="700">q8_0 · no vision · 110,592</text>
+  <rect x="310" y="244" width="464" height="20" rx="4" fill="#6f7a64"/>
+  <text x="770" y="260" fill="#e9eee0" font-size="10" text-anchor="end">reference only (vision required)</text>
+
+  <text x="24" y="318" fill="#5c6554" font-size="10">★ default. 114,688 OOMs in every configuration. Moving the 879 MiB projector to RAM is what lifts q8_0 from 71k to 110k with vision on.</text>
+</svg>
