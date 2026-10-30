@@ -289,8 +289,8 @@
     }
     
     const binPath = ".local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89\\bin\\llama-server.exe";
-    const projectPath = "C:\\Users\\user\\Documents\\prject_local_AI";
-    return `cd ${projectPath} && "${binPath}" ${args.join(' ')}`;
+    // Use relative path from project root - works from any location
+    return `cd /d "%~dp0.." && "${binPath}" ${args.join(' ')}`;
   }
   
   function copyServerCommand() {
@@ -336,7 +336,9 @@
     try {
       const res = await fetch("http://127.0.0.1:8080/health", { timeout: 3000 });
       if (res.ok) {
-        updateStatus(true, "Conectado - RTX 4060");
+        const preset = presetSelect.value;
+        const presetLabel = presetSelect.options[presetSelect.selectedIndex]?.text || preset;
+        updateStatus(true, `Conectado - ${presetLabel}`);
         return true;
       }
     } catch (e) {
@@ -477,8 +479,11 @@
   statusPoll = setInterval(checkServerHealth, 10000);
   
   // Event listeners
-  startBtn.addEventListener("click", startServer);
-  stopBtn.addEventListener("click", stopServer);
+  // Hide start/stop buttons (don't work due to Windows process tree limitation)
+  startBtn.hidden = true;
+  stopBtn.hidden = true;
+  
+  // Terminal button is the only one that works - copies command to clipboard
   document.getElementById("server-terminal").addEventListener("click", copyServerCommand);
   
   // Cleanup on page unload
