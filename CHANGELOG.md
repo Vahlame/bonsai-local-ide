@@ -4,6 +4,41 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.2.0] - 2026-10-31
+
+### Añadido
+
+- **Laboratorio de rendimiento reproducible**: `bench/` con inventario de
+  hardware, baseline `llama-bench`, benchmark de servidor (TTFT/ITL), calidad
+  PPL, autotuner progresivo, merge de resultados y gráficos SVG.
+- **Perfiles medidos**: GPT-OSS-20B 64k (12 capas CPU, 8 hilos), Qwen3.6-35B-A3B
+  32k (19 capas), Qwen3-30B-A3B 32k (26 capas) y Qwen3-4B.
+- **Build de laboratorio**: `scripts/build-llama-lab.ps1` con CMake real,
+  `test-backend-ops` y hashes de binario.
+- **Especialización MMVQ sm_89**: parche opcional de 2 warps para Q4_K/Q5_K/Q6_K
+  en batch 1; +4,6% en Qwen3-4B, 2.490/2.490 tests MUL_MAT.
+- **Presupuesto de VRAM**: `runtime/rtxllm.py budget|plan|command`.
+- Documentos `HARDWARE.md`, `BENCHMARKS.md`, `OPTIMIZATIONS.md`,
+  `QUANTIZATION.md`, `TUNING.md`, `ARCHITECTURE.md`, `docs/SOURCE-AUDIT.md`.
+
+### Cambiado
+
+- Lanzador MoE: usa la tabla medida por contexto y 8 hilos; GPT-OSS-20B 64k
+  pasa de 30,0 a **36,8 tok/s** (+22,7%).
+- Launcher: prefiere el build de laboratorio `lab-server-mvq2`, luego el build
+  estable externo y por último `bin\`.
+- Qwen3.6-35B-A3B 32k: 42,5 -> **44,8 tok/s**; Qwen3-30B-A3B 32k: 44,3 ->
+  **46,6 tok/s**; Qwen3-4B servidor: 73,8 -> **77,0 tok/s**.
+- README y página principal con los números medidos, gráficos y límites.
+
+### Corregido
+
+- Auditoría del build anterior: `GGML_CUDA_FA_ALL_QUANTS`, `GRAPHS` y `MMQ` se
+  pasaban a `CMAKE_CUDA_FLAGS` y no activaban nada; `GGML_CUDA_MMQ` no existe en
+  esta revisión. El nuevo script usa opciones CMake reales.
+- Ornith 9B queda marcado como **no recomendado para coding**; los perfiles de
+  coding se centran en GPT-OSS-20B y Qwen3.6/30B-A3B.
+
 ## [2.1.0] - 2026-10-31
 
 ### Añadido

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1050" height="560" viewBox="0 0 1050 560" role="img" aria-label="Qwen3-4B: quantization speed vs quality">
+<rect width="1050" height="560" fill="#ffffff"/>
+<text x="24" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#17212b">Qwen3-4B: quantization speed vs quality</text>
+<text x="24.0" y="58.0" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#5b6773" text-anchor="start">Same model, same chat corpus. Decode = 128 tokens after a 512-token prompt. PPL = 12 chunks on bench/corpus/quality.txt.</text>
+<text x="80.0" y="100.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#17212b" text-anchor="start">Decode tok/s</text>
+<line x1="80.0" y1="470.0" x2="540.0" y2="470.0" stroke="#17212b" stroke-width="1.2"/>
+<line x1="80.0" y1="110.0" x2="80.0" y2="470.0" stroke="#17212b" stroke-width="1.2"/>
+<rect x="96.6" y="304.8" width="58.9" height="165.2" fill="#2f7d32" rx="4"/>
+<text x="126.0" y="296.8" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="middle">52.9</text>
+<text x="126.0" y="488.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">Q8_0</text>
+<text x="126.0" y="503.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">3.99 GiB</text>
+<rect x="188.6" y="265.6" width="58.9" height="204.4" fill="#2f7d32" rx="4"/>
+<text x="218.0" y="257.6" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="middle">65.5</text>
+<text x="218.0" y="488.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">Q6_K</text>
+<text x="218.0" y="503.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">3.08 GiB</text>
+<rect x="280.6" y="246.9" width="58.9" height="223.1" fill="#2f7d32" rx="4"/>
+<text x="310.0" y="238.9" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="middle">71.5</text>
+<text x="310.0" y="488.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">Q5_K_M</text>
+<text x="310.0" y="503.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">2.69 GiB</text>
+<rect x="372.6" y="214.5" width="58.9" height="255.5" fill="#2f7d32" rx="4"/>
+<text x="402.0" y="206.5" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="middle">81.9</text>
+<text x="402.0" y="488.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">Q4_K_M</text>
+<text x="402.0" y="503.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">2.33 GiB</text>
+<rect x="464.6" y="186.7" width="58.9" height="283.3" fill="#2f7d32" rx="4"/>
+<text x="494.0" y="178.7" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="middle">90.8</text>
+<text x="494.0" y="488.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">Q3_K_M</text>
+<text x="494.0" y="503.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">1.93 GiB</text>
+<text x="620.0" y="100.0" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#17212b" text-anchor="start">Perplexity delta vs Q8_0</text>
+<line x1="620.0" y1="470.0" x2="1000.0" y2="470.0" stroke="#17212b" stroke-width="1.2"/>
+<line x1="620.0" y1="110.0" x2="620.0" y2="470.0" stroke="#17212b" stroke-width="1.2"/>
+<rect x="650.0" y="470.0" width="40.0" height="0.0" fill="#2f7d32" rx="4"/>
+<text x="670.0" y="463.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#17212b" text-anchor="middle">+0.00%</text>
+<text x="670.0" y="490.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">Q8_0</text>
+<rect x="714.0" y="464.9" width="40.0" height="5.1" fill="#2f7d32" rx="4"/>
+<text x="734.0" y="457.9" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#17212b" text-anchor="middle">+0.32%</text>
+<text x="734.0" y="490.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">Q6_K</text>
+<rect x="778.0" y="442.2" width="40.0" height="27.8" fill="#d97706" rx="4"/>
+<text x="798.0" y="435.2" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#17212b" text-anchor="middle">+1.72%</text>
+<text x="798.0" y="490.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">Q5_K_M</text>
+<rect x="842.0" y="425.5" width="40.0" height="44.5" fill="#d97706" rx="4"/>
+<text x="862.0" y="418.5" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#17212b" text-anchor="middle">+2.75%</text>
+<text x="862.0" y="490.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">Q4_K_M</text>
+<rect x="906.0" y="220.0" width="40.0" height="250.0" fill="#c2410c" rx="4"/>
+<text x="926.0" y="213.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#17212b" text-anchor="middle">+15.44%</text>
+<text x="926.0" y="490.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">Q3_K_M</text>
+<text x="24.0" y="525.0" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#5b6773" text-anchor="start">Q6_K is the quality-first choice (+0.32% PPL, 65.5 tok/s). Q4_K_M is the balanced choice (+2.75%, 81.9 tok/s).</text>
+<text x="24.0" y="543.0" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#5b6773" text-anchor="start">Q3_K_M costs +15.4% PPL for 90.8 tok/s; this is a speed-only profile, not a quality recommendation.</text>
+</svg>

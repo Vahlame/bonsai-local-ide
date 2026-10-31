@@ -5,19 +5,44 @@ Chat con agente, editor con pestañas, diffs, git, terminal integrado, navegador
 controlado y visión — todo en tu GPU, sin nube.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.1.0-cde86e">
+  <img alt="version" src="https://img.shields.io/badge/version-2.2.0-cde86e">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.1.0 — segunda capa.** Editor **CodeMirror 6** opt-in, terminal **xterm +
-> ConPTY**, búsqueda **ripgrep + ast-grep**, contratos **Zod** y build opcional
-> con **llguidance**. Se mantiene el motor de 2.0: Qwen3.6-35B-A3B a **42,5
-> tok/s** en 8 GB y GPT-OSS-20B con **18/18 tests** de proyecto real.
-> **34 GGUF**, 7 modelos medidos y **0 nube**. Notas:
-> [RELEASE-2.1.0](docs/RELEASE-2.1.0.md).
+> **v2.2.0 — laboratorio de rendimiento.** Medición A/B y perfilado real en
+> la RTX 4060: GPT-OSS-20B a **36,8 tok/s** (+22,7 %), Qwen3.6-35B-A3B a
+> **44,8 tok/s**, Qwen3-30B-A3B a **46,6 tok/s** y Qwen3-4B a **77 tok/s**
+> con el build `lab-mvq2` (MMVQ de 2 warps). Incluye 2.490/2.490 tests
+> MUL_MAT, auditoría de fuente y perfiles medidos. **0 nube**. Notas:
+> [RELEASE-2.2.0](docs/RELEASE-2.2.0.md).
+
+---
+
+## Performance Lab 2.2 (RTX 4060 8 GB)
+
+![Rendimiento medido por modelo](docs/graficos/rtx4060-throughput.svg)
+
+| Cambio medido | Antes | Después | Ganancia |
+|---|---:|---:|---:|
+| GPT-OSS-20B 64k (MoE) | 30,0 tok/s | **36,8 tok/s** | **+22,7 %** |
+| GPT-OSS-20B prefill 2k | 762 tok/s | **908 tok/s** | **+19,2 %** |
+| GPT-OSS prompt cache | 3.814 ms | **72 ms** | **52,8×** |
+| Qwen3.6-35B-A3B 32k | 42,5 tok/s | **44,8 tok/s** | +5,3 % |
+| Qwen3-30B-A3B 32k | 44,3 tok/s | **46,6 tok/s** | +5,2 % |
+| Qwen3-4B servidor | 73,8 tok/s | **77,0 tok/s** | +4,3 % |
+
+El detalle está en [BENCHMARKS.md](BENCHMARKS.md) y el registro A/B en
+[OPTIMIZATIONS.md](OPTIMIZATIONS.md). La causa principal no fue un kernel:
+fue **usar la VRAM que el plan anterior dejaba libre** (GPT-OSS 64k pasó de
+16 a 12 capas de expertos en CPU) y **8 hilos físicos** en vez de 12.
+El único cambio de kernel que sobrevivió es MMVQ a 2 warps para K-quants
+en sm_89: +4,6 % en el 4B, neutro en 9B y −0,4 % en el 7B (declarado).
+
+> **Nota de coding:** Ornith 9B no se recomienda para coding; su calidad
+> medida está por debajo de GPT-OSS-20B, Qwen3.6-35B-A3B y Qwen3-30B-A3B.
 
 ---
 
@@ -104,6 +129,7 @@ controlado y visión — todo en tu GPU, sin nube.
 | **1.9** | MoE híbrido | 35B en 8 GB, `--load-mode none` y **42,5 tok/s** |
 | **2.0** | Precisión | Visión 1600 px, research limpio, logos y release reproducible |
 | **2.1** | Segunda capa | CodeMirror, xterm/PTY, ripgrep/ast-grep, Zod y llguidance opcional |
+| **2.2** | Performance Lab | MoE 16→12 capas CPU, 8 hilos, MMVQ 2 warps, 2.490 tests y perfiles medidos |
 
 ---
 
@@ -113,15 +139,17 @@ controlado y visión — todo en tu GPU, sin nube.
 
 | Modelo | Coding real | Web app | Generación | Contexto | Uso recomendado |
 |---|---:|---:|---:|---:|---|
-| **GPT-OSS-20B** | **100 %** | **100 %** | 31 tok/s | 64k / 128k | Proyecto complejo desde cero |
-| **Qwen3.6-35B-A3B** | **96 %** | 91 % | 39 tok/s | 32k | Código guiado, bugfix y visión |
-| **Qwen3-30B-A3B 2507** | 86 % | 55 % | **42 tok/s** | 32k | Velocidad con calidad |
-| Qwen3 4B Instruct 2507 | 64 % | — | **74 tok/s** | 32k | Ediciones rápidas |
-| Qwen3.5 9B | 57 % | — | 41 tok/s | 32k | Chat técnico general |
-| Qwen2.5 Coder 7B | 49 % | — | 67 tok/s | 32k | Cambios pequeños |
-| Ornith 1.5 9B | 35 % | — | 26 tok/s | 32k | Agente del IDE, no one-shot |
+| **GPT-OSS-20B** | **100 %** | **100 %** | **36,8 tok/s** | 64k / 128k | Proyecto complejo desde cero |
+| **Qwen3.6-35B-A3B** | **96 %** | 91 % | **44,8 tok/s** | 32k | Código guiado, bugfix y visión |
+| **Qwen3-30B-A3B 2507** | 86 % | 55 % | **46,6 tok/s** | 32k | Velocidad con calidad |
+| Qwen3 4B Instruct 2507 | 64 % | - | **77 tok/s** | 32k | Ediciones rápidas |
+| Qwen3.5 9B | 57 % | - | 50 tok/s | 32k | Chat técnico general |
+| Qwen2.5 Coder 7B | 49 % | - | 52 tok/s | 32k | Cambios pequeños |
+| Ornith 1.5 9B | 35 % | - | 43 tok/s | 32k | **No recomendado para coding** |
 
 **Cómo leerlo:** *Coding real* = 65 % proyecto multifichero con tests ocultos +
+
+> Generación = decode medido con 2k de prompt y 128–256 tokens, no el tok/s de una sesión de agente con razonamiento. La fila de GPT-OSS usa 12 capas CPU / 8 hilos; Qwen3.6 usa 19 capas CPU; Qwen3-30B usa 26.
 35 % bugfix; *Web app* = API + UI con Playwright. Los tres grandes se midieron
 con 2 repeticiones y los densos con 1; no es un ranking estadístico, es una
 guía de elección en **una RTX 4060 de 8 GB**. Detalle:
@@ -555,19 +583,26 @@ probar después están en [DEPENDENCIAS-2.0](docs/DEPENDENCIAS-2.0.md).
 
 ---
 
-## 🛠️ Build optimizada (opcional, ~20 min)
+## Build optimizada (opcional, ~20 min)
+
+El build estable se compila con opciones CMake reales (el script anterior
+pasaba algunos `-D` a `CMAKE_CUDA_FLAGS`, donde no hacían nada):
 
 ```powershell
 .\scripts\build-rtx4060-optimized.ps1
 ```
 
-Configura llama.cpp para **sm89** (Ada): FlashAttention v2, CUDA graphs,
-`FATTN_TILE_SIZE=128`, 4 warps, `GGML_CUDA_FA_ALL_QUANTS=ON`. La comparativa y
-flags están en [RTX4060_OPTIMIZATION_GUIDE](docs/RTX4060_OPTIMIZATION_GUIDE.md).
-Para structured outputs estrictos: `npm run build:llguidance` (requiere Rust;
-ver [LLGUIDANCE](docs/LLGUIDANCE.md)).
+Para el laboratorio y el parche MMVQ de 2 warps (solo Q4_K/Q5_K/Q6_K en
+sm_89) hay un build separado, con test de correctitud:
 
-Los bundles de la UI se regeneran con `npm run build:ui-vendor`; no hay CDN.
+```powershell
+powershell -ExecutionPolicy Bypass -File forks\apply-4060-patches.ps1 -Nwarps 2
+powershell -ExecutionPolicy Bypass -File scripts\build-llama-lab.ps1 -Variant lab-base -Server -Jobs 8
+```
+
+El launcher prefiere `bin\builds\lab-server-mvq2\bin\llama-server.exe` si
+existe; si no, usa el build estable externo y, por último, `bin\`.
+La auditoría de flags y kernels está en [SOURCE-AUDIT](docs/SOURCE-AUDIT.md).
 
 ---
 
@@ -625,8 +660,16 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 
 | Documento | Contenido |
 |---|---|
+| [BENCHMARKS](BENCHMARKS.md) | Metodología, matriz, TTFT, cache y resultados medidos |
+| [OPTIMIZATIONS](OPTIMIZATIONS.md) | Registro A/B: antes, después, VRAM y calidad |
+| [QUANTIZATION](QUANTIZATION.md) | Q8/Q6/Q5/Q4/Q3, KV y cuantización mixta |
+| [TUNING](TUNING.md) | Perfiles por modelo, contexto, hilos y reparto MoE |
+| [SOURCE-AUDIT](docs/SOURCE-AUDIT.md) | Código, kernels, hot paths y flags auditados |
+| [HARDWARE](HARDWARE.md) | Inventario y límites físicos de esta máquina |
+| [ARCHITECTURE](ARCHITECTURE.md) | Capas, request path y presupuesto de memoria |
 | [PRIMER-ARRANQUE](docs/PRIMER-ARRANQUE.md) | Clon limpio: dependencias, runtime, modelos y primer modelo |
 | [RELEASE-2.1.0](docs/RELEASE-2.1.0.md) | CodeMirror, xterm/PTY, ripgrep/ast-grep, Zod y llguidance |
+| [RELEASE-2.2.0](docs/RELEASE-2.2.0.md) | Performance Lab: MoE, MMVQ, 2.490 tests y perfiles medidos |
 | [RELEASE-2.0.0](docs/RELEASE-2.0.0.md) | Precisión local: visión, research, Hub y release |
 | [DEPENDENCIAS-2.0](docs/DEPENDENCIAS-2.0.md) | Auditoría de dependencias, licencias y siguiente capa |
 | [LLGUIDANCE](docs/LLGUIDANCE.md) | Build opcional para structured outputs y tool calls |

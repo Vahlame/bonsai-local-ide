@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="560" viewBox="0 0 980 560" role="img" aria-label="Decode roofline: model bytes vs tokens/s">
+<rect width="980" height="560" fill="#ffffff"/>
+<text x="24" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#17212b">Decode roofline: model bytes vs tokens/s</text>
+<text x="24.0" y="58.0" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#5b6773" text-anchor="start">Lower bound: one full read of the weights per token. Measured device read bandwidth = 244.2 GB/s.</text>
+<line x1="90.0" y1="480.0" x2="900.0" y2="480.0" stroke="#17212b" stroke-width="1.2"/>
+<line x1="90.0" y1="480.0" x2="90.0" y2="100.0" stroke="#17212b" stroke-width="1.2"/>
+<line x1="90.0" y1="480.0" x2="90.0" y2="100.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="90.0" y="498.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">0</text>
+<line x1="252.0" y1="480.0" x2="252.0" y2="100.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="252.0" y="498.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">3</text>
+<line x1="414.0" y1="480.0" x2="414.0" y2="100.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="414.0" y="498.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">5</text>
+<line x1="576.0" y1="480.0" x2="576.0" y2="100.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="576.0" y="498.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">8</text>
+<line x1="738.0" y1="480.0" x2="738.0" y2="100.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="738.0" y="498.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">10</text>
+<line x1="900.0" y1="480.0" x2="900.0" y2="100.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="900.0" y="498.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">13</text>
+<line x1="90.0" y1="480.0" x2="900.0" y2="480.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="78.0" y="484.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="end">0</text>
+<line x1="90.0" y1="404.0" x2="900.0" y2="404.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="78.0" y="408.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="end">18</text>
+<line x1="90.0" y1="328.0" x2="900.0" y2="328.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="78.0" y="332.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="end">36</text>
+<line x1="90.0" y1="252.0" x2="900.0" y2="252.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="78.0" y="256.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="end">54</text>
+<line x1="90.0" y1="176.0" x2="900.0" y2="176.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="78.0" y="180.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="end">72</text>
+<line x1="90.0" y1="100.0" x2="900.0" y2="100.0" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="78.0" y="104.0" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="end">90</text>
+<path d="M 90.0,100.0 L 252.0,110.7 L 258.8,125.4 L 265.5,139.1 L 272.2,151.7 L 279.0,163.4 L 285.8,174.3 L 292.5,184.5 L 299.2,194.1 L 306.0,203.0 L 312.8,211.4 L 319.5,219.3 L 326.2,226.7 L 333.0,233.8 L 339.8,240.4 L 346.5,246.7 L 353.2,252.7 L 360.0,258.4 L 366.8,263.8 L 373.5,268.9 L 380.2,273.9 L 387.0,278.5 L 393.8,283.0 L 400.5,287.3 L 407.2,291.4 L 414.0,295.3 L 420.8,299.1 L 427.5,302.7 L 434.3,306.2 L 441.0,309.5 L 447.8,312.8 L 454.5,315.8 L 461.2,318.8 L 468.0,321.7 L 474.8,324.5 L 481.5,327.2 L 488.2,329.8 L 495.0,332.3 L 501.8,334.7 L 508.5,337.0 L 515.2,339.3 L 522.0,341.5 L 528.8,343.6 L 535.5,345.7 L 542.2,347.7 L 549.0,349.6 L 555.8,351.5 L 562.5,353.4 L 569.2,355.2 L 576.0,356.9 L 582.8,358.6 L 589.5,360.2 L 596.2,361.8 L 603.0,363.4 L 609.8,364.9 L 616.5,366.4 L 623.2,367.8 L 630.0,369.2 L 636.8,370.6 L 643.5,371.9 L 650.2,373.2 L 657.0,374.5 L 663.8,375.7 L 670.5,376.9 L 677.3,378.1 L 684.0,379.3 L 690.8,380.4 L 697.5,381.5 L 704.2,382.6 L 711.0,383.7 L 717.7,384.7 L 724.5,385.7 L 731.2,386.7 L 738.0,387.7 L 744.8,388.6 L 751.5,389.5 L 758.2,390.5 L 765.0,391.4 L 771.8,392.2 L 778.5,393.1 L 785.2,393.9 L 792.0,394.8 L 798.8,395.6 L 805.5,396.4 L 812.2,397.2 L 819.0,397.9 L 825.8,398.7 L 832.5,399.4 L 839.2,400.1 L 846.0,400.9 L 852.8,401.6 L 859.5,402.2 L 866.2,402.9 L 873.0,403.6 L 879.8,404.2 L 886.5,404.9 L 893.2,405.5 L 900.0,406.1" fill="none" stroke="#d97706" stroke-width="2.2" stroke-dasharray="7 4"/>
+<circle cx="234.9" cy="134.3" r="7" fill="#2f7d32" stroke="#ffffff" stroke-width="2"/>
+<text x="244.9" y="124.3" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#17212b" text-anchor="start">qwen3-4b · 81.9 tok/s (84%)</text>
+<circle cx="361.7" cy="259.9" r="7" fill="#2563eb" stroke="#ffffff" stroke-width="2"/>
+<text x="371.7" y="249.9" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#17212b" text-anchor="start">qwen25-coder-7b · 52.1 tok/s (100%)</text>
+<circle cx="425.4" cy="296.9" r="7" fill="#7c3aed" stroke="#ffffff" stroke-width="2"/>
+<text x="435.4" y="286.9" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#17212b" text-anchor="start">ornith9b · 43.4 tok/s (103%)</text>
+<circle cx="792.7" cy="369.4" r="7" fill="#c2410c" stroke="#ffffff" stroke-width="2"/>
+<text x="802.7" y="359.4" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="600" fill="#17212b" text-anchor="start">gpt-oss-20b · 26.2 tok/s (130%)</text>
+<text x="24.0" y="525.0" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#5b6773" text-anchor="start">Orange dashed line = 244.2 / S_GB. The 7B and 9B Q4 models sit at 100–103% of the measured copy/read ceiling (within run-to-run error).</text>
+<text x="24.0" y="543.0" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#5b6773" text-anchor="start">GPT-OSS-20B is above the dense roofline because only 3.6B of its 20.9B parameters are active per token and its CPU-resident experts are not streamed from VRAM.</text>
+</svg>
