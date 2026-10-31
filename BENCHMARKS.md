@@ -57,6 +57,8 @@ del ancho de banda medido). No hay margen para un kernel GEMV milagroso: el
 decode está limitado por los bytes del modelo. El 4B está al 84% porque el
 overhead fijo (atención, sampler, lanzamientos) pesa más a 82 tok/s.
 
+![Roofline de decode](docs/graficos/rtx4060-roofline.svg)
+
 ### 2.1 Especialización MMVQ para sm_89 (build `lab-mvq2`)
 
 `mul_mat_vec_q` es el 88% del decode denso. En sm_89 usa la tabla genérica (4
@@ -106,6 +108,8 @@ Q3 otro 11% más que Q4, a costa de calidad.
 para `balanced` (+2.75%, 81.9 tok/s), Q3_K_M solo para `max_speed` y contextos
 donde el tamaño es el límite. Q8_0 no compensa para chat en 8 GB.
 
+![Velocidad y calidad por cuantización](docs/graficos/rtx4060-quant.svg)
+
 ---
 
 ## 4. MoE que sí programa: GPT-OSS-20B
@@ -131,6 +135,8 @@ Comparación directa a 64k, mismo binario y mismo prompt:
 El precio es +1.6 GiB de VRAM; quedan ~879 MiB libres, el mismo margen que el
 proyecto ya exigía. `n-cpu-moe 11` a 64k no arranca (OOM). La tabla completa
 está en `config/measured-moe-profiles.json`.
+
+![Reparto MoE seguro por contexto](docs/graficos/rtx4060-moe-context.svg)
 
 ### Hilos del servidor (64k, n-cpu-moe=12)
 
@@ -175,6 +181,8 @@ Prompt cache, mismo prefijo de 3,062 tokens:
 
 Este es el mayor ahorro de TTFT para agentes de coding, RAG y system prompts
 fijos. El proyecto ya lo soporta; el perfil `balanced` lo activa.
+
+![Prompt cache: TTFT cold vs warm](docs/graficos/rtx4060-cache.svg)
 
 ---
 
