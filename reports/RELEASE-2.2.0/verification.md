@@ -8,6 +8,7 @@ Machine: Acer Nitro AN16-41, RTX 4060 Laptop 8 GB, Ryzen 7 7840HS
 | Project suites | **45/45 OK, 0 fail** (129.5 s) | `npm test` |
 | Documentation links | **26 docs, 129 links, 0 broken** | `npm run docs:links` |
 | CUDA MUL_MAT correctness | **2,490/2,490 OK** | `reports/test-backend-ops-mvq2-scoped.log` |
+| CUDA Graphs A/B | 82.0 vs 73.2 tok/s (ON/OFF) | `reports/bench-ab-nographs-4b` |
 | GPT-OSS-20B 64k decode | 36.53 / 36.76 / 36.91 tok/s | `reports/bench-moe64k-n12-t8-r3` |
 | GPT-OSS-20B 64k prefill | 898–909 tok/s | same |
 | Qwen3.6-35B-A3B 32k | 44.79 tok/s, 7409 MiB | `reports/bench-qwen36-32k-n19-t8` |
