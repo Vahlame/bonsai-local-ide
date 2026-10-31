@@ -1,0 +1,59 @@
+{
+  "run_id": "ab-nographs-4b",
+  "suite": "core",
+  "suite_config": {
+    "models": [
+      "qwen3-4b"
+    ],
+    "prefill": [
+      512,
+      2048
+    ],
+    "decode": [
+      128,
+      256
+    ],
+    "contexts": [
+      0
+    ],
+    "reps": 4,
+    "runs": 1,
+    "description": "Phase 2 baseline: four representative models, 128–8K prefill, 32–256 decode."
+  },
+  "binary": "C:\\Users\\user\\Documents\\prject_local_AI\\bin\\builds\\lab-nographs\\bin\\llama-bench.exe",
+  "binary_sha256": "7d90f459d77d819c332d2dcbc7c1ff8b03f069db6418e10be2eafbc7852b31e4",
+  "build_name": "lab-nographs",
+  "arch": "89-real",
+  "compiler_flags": "{\"CMAKE_BUILD_TYPE\": \"Release\", \"CMAKE_CUDA_ARCHITECTURES\": \"89-real\", \"CMAKE_CUDA_FLAGS\": \"-lineinfo\", \"CMAKE_CXX_FLAGS_RELEASE\": \"/O2 /Ob2 /DNDEBUG\", \"GGML_CUDA_COMPRESSION_MODE\": \"size\", \"GGML_CUDA_FA_ALL_QUANTS\": \"OFF\", \"GGML_CUDA_FORCE_CUBLAS\": \"OFF\", \"GGML_CUDA_FORCE_MMQ\": \"OFF\", \"GGML_CUDA_GRAPHS\": \"OFF\", \"GGML_LTO\": \"OFF\", \"GGML_NATIVE\": \"ON\"}",
+  "commit": "8642541",
+  "started_at": "2026-10-31T21:59:17+00:00",
+  "finished_at": "2026-10-31T22:00:14+00:00",
+  "argv": [
+    "bench\\bench_suite.py",
+    "--suite",
+    "core",
+    "--model",
+    "qwen3-4b",
+    "--prefill",
+    "512,2048",
+    "--decode",
+    "128,256",
+    "--runs",
+    "2",
+    "--reps",
+    "4",
+    "--binary",
+    "bin\\builds\\lab-nographs\\bin\\llama-bench.exe",
+    "--label",
+    "ab-nographs-4b",
+    "--out",
+    "reports\\bench-ab-nographs-4b"
+  ],
+  "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "driver": 617.14,
+  "measured_read_gbs": 245.005,
+  "reps": 4,
+  "runs": 2,
+  "warmup_policy": "llama-bench warmup + drop first measured sample",
+  "row_count": 8
+}

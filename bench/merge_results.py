@@ -34,6 +34,7 @@ BENCH_SUITES = [
     "bench-ab-mvq2-7b",
     "bench-ab-control-qwen35-9b",
     "bench-ab-mvq2-qwen35-9b",
+    "bench-ab-nographs-4b",
 ]
 SERVER_SUITES = [
     "bench-server-qwen3-4b",

@@ -142,6 +142,11 @@ $MeasuredMoeEntry = if ($EsMoe) { Get-MeasuredMoeEntry ([string]$Item.clave) } e
 if ($Item.plan -and $Item.plan.kv -and -not $PSBoundParameters.ContainsKey('KVCacheType')) {
     $KVCacheType = [string]$Item.plan.kv
 }
+# For a dense model at a short explicit context, f16 KV is both faster and
+# higher quality than the q8_0 plan that exists to maximize the auto context.
+if (-not $EsMoe -and $ContextoExplicito -and $ContextSize -ne 'auto' -and [int]$ContextSize -le 16384 -and -not $PSBoundParameters.ContainsKey('KVCacheType')) {
+    $KVCacheType = 'f16'
+}
 # En MoE manda el plan del modelo, no el preset denso: un preset de 110k deja
 # casi toda la VRAM en KV y muy pocos expertos en la GPU. El plan ya calculó
 # contexto, KV y reparto para ESTE GGUF.

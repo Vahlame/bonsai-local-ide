@@ -191,6 +191,7 @@ upstream porque el óptimo depende del número de SMs y del tipo de quant; un
 - **KV q4_0**: +2.0% PPL a 1k contexto; solo se usa cuando el contexto es el
   límite y el usuario acepta la degradación.
 - **Q3_K_M**: +15.4% PPL; no se recomienda como perfil de calidad.
+- **CUDA Graphs OFF**: −10.7% decode (73.2 vs 82.0 tok/s); se quedan activas.
 - **Ornith 9B**: no se usa para coding en este laboratorio; el usuario indicó
   que su calidad de código no es aceptable. Los perfiles de coding se centran
   en GPT-OSS-20B y Qwen3.6/30B-A3B.

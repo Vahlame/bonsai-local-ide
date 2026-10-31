@@ -1,6 +1,6 @@
 # Resultados maestros — RTX 4060 8 GB
 
-Generado: `2026-10-31T21:31:24+00:00` · 187 filas de 41 suites.
+Generado: `2026-10-31T22:00:36+00:00` · 195 filas de 42 suites.
 
 Los datos crudos viven en `reports/bench-*`; este archivo solo los normaliza.
 Metodología y límites: [BENCHMARKS.md](BENCHMARKS.md).
@@ -136,6 +136,14 @@ Metodología y límites: [BENCHMARKS.md](BENCHMARKS.md).
 | `ab-mvq8-4b` | prefill | pp2048 | 3,977.93 | `bench-ab-mvq8-4b` |
 | `ab-mvq8-4b` | prefill | pp512 | 4,202.90 | `bench-ab-mvq8-4b` |
 | `ab-mvq8-4b` | prefill | pp512 | 4,207.97 | `bench-ab-mvq8-4b` |
+| `ab-nographs-4b` | decode | tg128 | 73.60 | `bench-ab-nographs-4b` |
+| `ab-nographs-4b` | decode | tg128 | 72.79 | `bench-ab-nographs-4b` |
+| `ab-nographs-4b` | decode | tg256 | 73.67 | `bench-ab-nographs-4b` |
+| `ab-nographs-4b` | decode | tg256 | 72.79 | `bench-ab-nographs-4b` |
+| `ab-nographs-4b` | prefill | pp2048 | 4,034.68 | `bench-ab-nographs-4b` |
+| `ab-nographs-4b` | prefill | pp2048 | 3,997.54 | `bench-ab-nographs-4b` |
+| `ab-nographs-4b` | prefill | pp512 | 4,182.49 | `bench-ab-nographs-4b` |
+| `ab-nographs-4b` | prefill | pp512 | 4,176.11 | `bench-ab-nographs-4b` |
 
 ## Cómo regenerar
 

@@ -73,7 +73,7 @@ otra aplicación usando la dGPU. Si necesitas margen, sube a 27 capas CPU
 | Perfil | Contexto | KV | Decode corto | Decode a 6k ctx | Prefill | VRAM |
 |---|---:|---|---:|---:|---:|---:|
 | `max_speed` | 8k | f16 | 78.2 | — | 3,892 | ~4.5 GiB |
-| **`balanced`** | **16k** | **q8_0** | **77.0** | 63.0 | **3,996** | ~4,500 MiB |
+| **`balanced`** | **16k** | **f16** | **77.0** | 63.0 | **3,996** | **4,885 MiB** |
 
 El 4B es el único denso con margen para “kernel hunting”: está al 84% del
 roofline, no al 100%. Aun así, el overhead es atención + sampler + launches; no

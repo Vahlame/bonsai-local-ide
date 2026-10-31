@@ -71,6 +71,14 @@ ab-mvq8-4b,qwen3-4b,Q4_K_M,2048,prefill,pp2048,3996.33,,3996.33,,,,3093,818,71.6
 ab-mvq8-4b,qwen3-4b,Q4_K_M,2048,prefill,pp2048,3977.93,,3977.93,,,,3093,817,71.07,72.0,0,8,f16-f16,bench-ab-mvq8-4b,first measured sample discarded; llama-bench warmup also active
 ab-mvq8-4b,qwen3-4b,Q4_K_M,512,prefill,pp512,4202.9,,4202.9,,,,3093,818,71.61,70.0,0,8,f16-f16,bench-ab-mvq8-4b,first measured sample discarded; llama-bench warmup also active
 ab-mvq8-4b,qwen3-4b,Q4_K_M,512,prefill,pp512,4207.97,,4207.97,,,,3093,817,71.07,72.0,0,8,f16-f16,bench-ab-mvq8-4b,first measured sample discarded; llama-bench warmup also active
+ab-nographs-4b,qwen3-4b,Q4_K_M,128,decode,tg128,73.6,,,73.6,,,3085,798,77.77,68.0,0,8,f16-f16,bench-ab-nographs-4b,first measured sample discarded; llama-bench warmup also active
+ab-nographs-4b,qwen3-4b,Q4_K_M,128,decode,tg128,72.791,,,72.791,,,3085,798,77.7,70.0,0,8,f16-f16,bench-ab-nographs-4b,first measured sample discarded; llama-bench warmup also active
+ab-nographs-4b,qwen3-4b,Q4_K_M,256,decode,tg256,73.669,,,73.669,,,3085,798,77.77,68.0,0,8,f16-f16,bench-ab-nographs-4b,first measured sample discarded; llama-bench warmup also active
+ab-nographs-4b,qwen3-4b,Q4_K_M,256,decode,tg256,72.794,,,72.794,,,3085,798,77.7,70.0,0,8,f16-f16,bench-ab-nographs-4b,first measured sample discarded; llama-bench warmup also active
+ab-nographs-4b,qwen3-4b,Q4_K_M,2048,prefill,pp2048,4034.68,,4034.68,,,,3085,798,77.77,68.0,0,8,f16-f16,bench-ab-nographs-4b,first measured sample discarded; llama-bench warmup also active
+ab-nographs-4b,qwen3-4b,Q4_K_M,2048,prefill,pp2048,3997.54,,3997.54,,,,3085,798,77.7,70.0,0,8,f16-f16,bench-ab-nographs-4b,first measured sample discarded; llama-bench warmup also active
+ab-nographs-4b,qwen3-4b,Q4_K_M,512,prefill,pp512,4182.49,,4182.49,,,,3085,798,77.77,68.0,0,8,f16-f16,bench-ab-nographs-4b,first measured sample discarded; llama-bench warmup also active
+ab-nographs-4b,qwen3-4b,Q4_K_M,512,prefill,pp512,4176.11,,4176.11,,,,3085,798,77.7,70.0,0,8,f16-f16,bench-ab-nographs-4b,first measured sample discarded; llama-bench warmup also active
 baseline-20261031,gpt-oss-20b,MXFP4,128,decode,tg128,26.197,,,26.197,,,5145,7781,48.57,71.0,16,12,q8_0-q8_0,bench-baseline-20261031,first measured sample discarded; llama-bench warmup also active
 baseline-20261031,gpt-oss-20b,MXFP4,256,decode,tg256,25.887,,,25.887,,,5145,7781,48.57,71.0,16,12,q8_0-q8_0,bench-baseline-20261031,first measured sample discarded; llama-bench warmup also active
 baseline-20261031,gpt-oss-20b,MXFP4,32,decode,tg32,30.925,,,30.925,,,5145,7781,48.57,71.0,16,12,q8_0-q8_0,bench-baseline-20261031,first measured sample discarded; llama-bench warmup also active

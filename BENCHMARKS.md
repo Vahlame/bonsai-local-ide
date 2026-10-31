@@ -79,6 +79,17 @@ Servidor real, 2,048-token prompt / 256 decode: 73.8 → **77.0 tok/s** (+4.3%).
 El prefill no cambia (3,979 → 3,996 tok/s). `test-backend-ops`:
 **2,490/2,490 MUL_MAT cases pass** con el build parcheado.
 
+### 2.2 CUDA Graphs: on vs off
+
+| Build | Decode 128 | Prefill 2048 |
+|---|---:|---:|
+| `lab-control` (graphs ON) | **82.0 tok/s** | 4,018 tok/s |
+| `lab-nographs` (graphs OFF) | 73.2 tok/s | 4,016 tok/s |
+
+Sin CUDA Graphs el decode cae **10.7%**; el prefill no cambia. Se quedan
+activas. El build `lab-nographs` está en `bin/builds/lab-nographs/` como
+evidencia, no como recomendación.
+
 El build `lab-mvq2` se instala en `bin/builds/lab-server-mvq2/bin/` y el
 launcher lo prefiere si existe. El binario estable externo sigue siendo el
 fallback. El parche está documentado en `forks/patches/` y no se aplica a

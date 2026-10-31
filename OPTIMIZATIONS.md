@@ -233,6 +233,26 @@ Q8; una prueba correcta necesita F16 + imatrix.
 
 ---
 
+## OPT-12 — CUDA Graphs (on por defecto, medido)
+
+**PROBLEM:** el decode batch 1 lanza ~90 kernels por token; sin graphs, el
+overhead de lanzamiento se nota.
+
+**BASELINE:** build `lab-control` con `GGML_CUDA_GRAPHS=ON`: 82.0 tok/s decode
+(4B Q4, 512+128), 4,018 tok/s prefill 2048.
+
+**CHANGE:** build `lab-nographs` con `GGML_CUDA_GRAPHS=OFF`, mismo compilador y
+misma máquina.
+
+**AFTER:** **73.2 tok/s** decode (−10.7%); prefill 4,016 tok/s (sin cambio).
+**DECISIÓN:** CUDA Graphs se queda activo. No hay coste de calidad; es una
+propiedad del runtime.
+
+**VRAM:** sin cambio medible. **CORRECTNESS:** el grafo produce los mismos
+kernels; `test-backend-ops` se ejecutó en el build con graphs.
+
+---
+
 ## Resumen de ganancias
 
 | Cambio | Decode | Prefill | TTFT | VRAM | Calidad |

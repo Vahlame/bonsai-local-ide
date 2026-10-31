@@ -39,9 +39,11 @@ que el proyecto ya exigía. `n-cpu-moe 11` a 64k hace OOM.
 4. **Auditoría del build anterior.** Los flags `FA_ALL_QUANTS`, `GRAPHS` y `MMQ`
    del script anterior no activaban nada; `GGML_CUDA_MMQ` no existe. El nuevo
    `scripts/build-llama-lab.ps1` usa variables CMake reales.
-5. **Perfiles y presupuesto.** `profiles/*.json`, `runtime/rtxllm.py`,
+5. **CUDA Graphs A/B.** Con graphs OFF el decode cae 10,7% (82,0 → 73,2 tok/s);
+   el prefill no cambia. Se quedan activas.
+6. **Perfiles y presupuesto.** `profiles/*.json`, `runtime/rtxllm.py`,
    `config/measured-moe-profiles.json`.
-6. **Documentación y gráficos.** `BENCHMARKS.md`, `OPTIMIZATIONS.md`,
+7. **Documentación y gráficos.** `BENCHMARKS.md`, `OPTIMIZATIONS.md`,
    `QUANTIZATION.md`, `TUNING.md`, `docs/SOURCE-AUDIT.md`, `HARDWARE.md`,
    `ARCHITECTURE.md`, SVG en `docs/graficos/rtx4060-*.svg`.
 
@@ -60,6 +62,7 @@ que el proyecto ya exigía. `n-cpu-moe 11` a 64k hace OOM.
 - `npm test`: **45/45 suites, 0 fallos** (129,5 s).
 - `npm run docs:links`: **26 documentos, 129 enlaces, 0 rotos**.
 - `test-backend-ops test -o MUL_MAT -b CUDA0 -j 4`: **2.490/2.490 OK**.
+- CUDA Graphs ON/OFF: 82,0 vs 73,2 tok/s decode; se quedan ON.
 - GPT-OSS 64k: 3 repeticiones independientes, 36,53/36,76/36,91 tok/s.
 - Qwen3.6 32k: 44,79 tok/s; n-cpu-moe 18 OOM.
 - Qwen3-30B 32k: 46,61 tok/s; n-cpu-moe 25 OOM.
