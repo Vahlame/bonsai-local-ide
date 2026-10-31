@@ -322,6 +322,25 @@ GPT-OSS es el que mejor sigue el contrato de archivos y API. Qwen3.6 funciona
 pero inlinó los estáticos; Qwen3-30B falla PATCH/DELETE por un `slice(13)`.
 Informe: [reports/WEBAPP-2026-10-31.md](../reports/WEBAPP-2026-10-31.md).
 
+### GPT-OSS: perfil recomendado
+
+GPT-OSS es el modelo principal para coding/web app de este equipo. El perfil
+automático usa **Harmony**, muestreo oficial (`temp 1.0`, `top_p 1.0`,
+`top_k 0`, `min_p 0.01`) y `--reasoning-effort high`. El contexto por defecto es
+**64k**; el Hub ofrece 32k/64k/96k/128k y recalcula las capas de expertos.
+
+| Contexto | KV | Capas CPU | Generación | RAM |
+|---:|---|---:|---:|---:|
+| 32k | q8_0 | 14 | 32,5 tok/s | 6,9 GiB |
+| **64k** | q8_0 | 16 | **29,2 tok/s** | 7,7 GiB |
+| 96k | q8_0 | 18 | 24,1 tok/s | 8,6 GiB |
+| 128k | q8_0 | 20 | 22,5 tok/s | 9,4 GiB |
+| 128k | q4_0 | 17 | 25,6 tok/s | 8,2 GiB |
+
+El máximo real probado es 128k; 128k+q4 es más rápido pero q4 puede degradar
+calidad. `-GpuExtra 3` da +4,7 % a 32k, con riesgo de OOM.
+Detalle: [reports/GPTOSS-2026-10-31.md](../reports/GPTOSS-2026-10-31.md).
+
 ### Tuning del motor
 
 `reports/ENGINE-2026-10-31.md`: `ngram-simple` acelera la generación cruda

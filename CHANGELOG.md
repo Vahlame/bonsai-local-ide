@@ -28,6 +28,11 @@ versionado semántico.
 - **Benchmark de web app real** (`bench-webapp.mjs`): Taskboard full-stack con
   API y UI Playwright. GPT-OSS-20B 100 % (8/8 + 3/3), Qwen3.6 91 %, Qwen3-30B
   55 %; capturas y SVG.
+- **GPT-OSS afinado**: Harmony, muestreo oficial, `--reasoning-effort high`,
+  64k por defecto y 128k máximo; aguja de 61k correcta. Selector de contexto
+  32/64/96/128k en el Hub y esfuerzo en Ajustes.
+- **Hub rediseñado**: resumen recomendado, KPIs de coding/web app, chips de
+  capacidades, tarjetas coherentes y orden por relevancia.
 - **Tuning del motor** (`ENGINE-2026-10-31.md`): ngram, draft, batch, KV,
   prioridad, afinidad y clocks medidos. Base: `none` + 12 hilos + 1024/512;
   3 capas extra de expertos = +4,7 %.

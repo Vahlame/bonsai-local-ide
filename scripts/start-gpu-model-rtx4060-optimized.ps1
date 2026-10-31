@@ -31,11 +31,13 @@ param (
     [string]$HostIP = "127.0.0.1",
     [ValidateSet("auto", "f16", "bf16", "q8_0", "q4_0")][string]$KVCacheType = "auto",
     [int]$Pensar = 0,
+    [ValidateSet("", "default", "minimal", "low", "medium", "high", "xhigh")][string]$PensarNivel = "",
     [int]$DormirSeg = 0,
     [switch]$Vision,
     [switch]$MmprojCPU,
     [switch]$Precargar,
     [int]$GpuExtra = 0,
+    [switch]$ContextoExplicito,
     [switch]$DryRun,
     [switch]$ManagedByIDE,
     [string]$EnginePreset = "",
@@ -123,8 +125,10 @@ if (-not $Item -or ($Item.servidor.tipo -ne "gpu-completa" -and $Item.servidor.t
 # contexto, KV y reparto para ESTE GGUF.
 $EsMoe = $Item.servidor.tipo -eq "moe-hibrido"
 if ($EsMoe -and $Item.plan) {
-    if ($Item.plan.contexto) { $ContextSize = [string]$Item.plan.contexto }
-    if ($Item.plan.kv) { $KVCacheType = [string]$Item.plan.kv }
+    if (-not $ContextoExplicito) {
+        if ($Item.plan.contexto) { $ContextSize = [string]$Item.plan.contexto }
+        if ($Item.plan.kv) { $KVCacheType = [string]$Item.plan.kv }
+    }
     if ($null -ne $Item.plan.mmprojCPU) { $ProjectorCPU = [bool]$Item.plan.mmprojCPU }
     if ($Item.servidor.batch) { $Batch = [int]$Item.servidor.batch }
     if ($Item.servidor.ubatch) { $UBatch = [int]$Item.servidor.ubatch }
@@ -354,6 +358,19 @@ if ($IsMoe) {
 # single-slot layout that the project has used since v0.7.
 $StableF16 = $true
 
+# Muestreo por modelo. GPT-OSS recomienda temp 1.0, top_p 1.0, top_k 0,
+# min_p ~0; Qwen/Ornith usan sus propios valores del catálogo.
+$Temp = 0.6; $TopP = 0.90; $TopK = 20; $MinP = 0.05; $Presence = 0; $Repeat = 1
+$Muestreo = $Item.muestreo.codigo
+if ($Muestreo) {
+    if ($null -ne $Muestreo.temperature) { $Temp = [double]$Muestreo.temperature }
+    if ($null -ne $Muestreo.top_p) { $TopP = [double]$Muestreo.top_p }
+    if ($null -ne $Muestreo.top_k) { $TopK = [int]$Muestreo.top_k }
+    if ($null -ne $Muestreo.min_p) { $MinP = [double]$Muestreo.min_p }
+    if ($null -ne $Muestreo.presence_penalty) { $Presence = [double]$Muestreo.presence_penalty }
+    if ($null -ne $Muestreo.repeat_penalty) { $Repeat = [double]$Muestreo.repeat_penalty }
+}
+
 $ServerArgs = @("-m", $ModelPath, "--gpu-layers", "99")
 if ($IsMoe) {
     # Reparto explícito: densos + KV en VRAM, expertos de las N primeras capas
@@ -386,12 +403,12 @@ $ServerArgs += "--metrics"
 if (-not $StableF16 -or $IsMoe) { $ServerArgs += "--cache-ram", "0" }
 $ServerArgs += "-lv", "4"
 $ServerArgs += "--cors-origins", "http://127.0.0.1:$Port,http://localhost:$Port,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788"
-$ServerArgs += "--temp", "0.6"
-$ServerArgs += "--top-p", "0.90"
-$ServerArgs += "--top-k", "20"
-$ServerArgs += "--min-p", "0.05"
-$ServerArgs += "--presence-penalty", "0"
-$ServerArgs += "--repeat-penalty", "1"
+$ServerArgs += "--temp", "$Temp"
+$ServerArgs += "--top-p", "$TopP"
+$ServerArgs += "--top-k", "$TopK"
+$ServerArgs += "--min-p", "$MinP"
+$ServerArgs += "--presence-penalty", "$Presence"
+$ServerArgs += "--repeat-penalty", "$Repeat"
 $ServerArgs += "--spec-type", "none"
 $ServerArgs += "--no-context-shift"
 if ($StableF16) { $ServerArgs += "--ctx-checkpoints", "0" }
@@ -415,6 +432,8 @@ if ($Vision) {
 if ($Pensar -gt 0) {
     $ServerArgs += "--reasoning-budget", "$Pensar"
     $ServerArgs += "--reasoning-format", "deepseek"
+    $Nivel = if ($PensarNivel) { $PensarNivel } elseif ($Item.pensar.nivel) { [string]$Item.pensar.nivel } else { "" }
+    if ($Nivel -and $Nivel -ne "default") { $ServerArgs += "--reasoning-effort", $Nivel }
 }
 
 if ($SpeculativeDecoding -and (Test-Path -LiteralPath $DraftModelPath)) {

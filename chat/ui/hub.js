@@ -54,7 +54,7 @@
   let estado = {
     catalogo: null,
     trabajos: [],
-    pestana: "recomendados",
+    pestana: "instalados",
     busqueda: "",
     resultados: [],
     descubiertos: [],
@@ -93,9 +93,9 @@
   function barraPestanas() {
     const barra = el("div", "hub-tabs");
     const tabs = [
+      ["instalados", "Instalados"],
       ["recomendados", "Recomendados"],
       ["descubrir", "Descubrir"],
-      ["instalados", "Instalados"],
       ["buscar", "Buscar en Hugging Face"],
       ["url", "Desde URL"],
       ["importar", "Importar / escanear"],
@@ -193,6 +193,7 @@
 
   function tarjetaInstalada(m) {
     const card = el("article", "hub-card");
+    card.dataset.busqueda = [m.nombre, m.clave, m.rol, ...(m.capacidades || []), ...(m.etiquetas || [])].filter(Boolean).join(" ").toLowerCase();
     const top = el("div", "hub-card-top");
     const nombre = el("div");
     nombre.append(el("h3", "", m.nombre || m.clave), el("p", "hub-repo", m.archivo || ""));
@@ -207,15 +208,45 @@
       m.rol ? el("span", "", m.rol) : null,
     ].filter(Boolean));
     card.append(meta);
+    const etiquetas = el("div", "hub-tags");
+    if (m.pruebas?.coding?.rank === 1) etiquetas.append(el("span", "hub-tag best", "★ #1 coding"));
+    if (m.pruebas?.webapp?.global >= 100) etiquetas.append(el("span", "hub-tag best", "★ web app 100%"));
+    for (const c of (m.capacidades || [])) etiquetas.append(el("span", "hub-tag", c));
+    if (etiquetas.children.length) card.append(etiquetas);
     if (m.pruebas?.resumen) card.append(el("p", "hub-uso", `Pruebas: ${m.pruebas.resumen}`));
-    if (m.pruebas?.coding) {
+    if (m.pruebas?.coding || m.pruebas?.webapp) {
+      const kpis = el("div", "hub-kpis");
       const c = m.pruebas.coding;
-      const rank = c.rank ? `#${c.rank} · ` : "";
-      card.append(el("p", "hub-uso", `Coding real: ${rank}${c.global}% · proyecto ${c.project?.pass ?? 0}/${c.project?.total ?? 0} · bugfix ${c.bugfix?.pass ?? 0}/${c.bugfix?.total ?? 0}`));
-    }
-    if (m.pruebas?.webapp) {
+      if (c) {
+        kpis.append(
+          el("span", "hub-kpi strong", `Coding${c.rank ? ` #${c.rank}` : ""} · ${c.global}%`),
+          el("span", "hub-kpi", `Proyecto ${c.project?.pass ?? 0}/${c.project?.total ?? 0}`),
+          el("span", "hub-kpi", `Bugfix ${c.bugfix?.pass ?? 0}/${c.bugfix?.total ?? 0}`),
+        );
+      }
       const w = m.pruebas.webapp;
-      card.append(el("p", "hub-uso", `Web app: ${w.global}% · API ${w.api}/${w.apiTotal} · UI ${w.ui}/${w.uiTotal}`));
+      if (w) {
+        kpis.append(
+          el("span", "hub-kpi strong", `Web app · ${w.global}%`),
+          el("span", "hub-kpi", `API ${w.api}/${w.apiTotal}`),
+          el("span", "hub-kpi", `UI ${w.ui}/${w.uiTotal}`),
+        );
+      }
+      card.append(kpis);
+    }
+    if (Array.isArray(m.contextos) && m.contextos.length) {
+      const fila = el("div", "hub-contextos");
+      fila.append(el("span", "hub-contextos-label", "Contexto"));
+      for (const c of m.contextos) {
+        const b = el("button", "ghost hub-mini", `${Math.round(c / 1024)}k`);
+        b.type = "button";
+        b.disabled = !m.existe;
+        b.title = `Arrancar con ${c.toLocaleString("es-ES")} tokens`;
+        if (Number(m.plan?.contexto) === Number(c)) b.classList.add("on");
+        b.addEventListener("click", () => void usarModelo(m.clave, m.nombre, { contexto: c, kv: "q8_0", vision: Boolean(m.vision) }));
+        fila.append(b);
+      }
+      card.append(fila);
     }
     const acciones = el("div", "hub-actions");
     const usar = el("button", "primary hub-mini", m.oculto ? "Auxiliar" : "Usar ahora");
@@ -265,14 +296,53 @@
   }
 
   function vistaInstalados() {
-    const caja = el("div", "hub-grid");
     const modelos = estado.catalogo?.instalados || [];
     if (!modelos.length) {
+      const caja = el("div", "hub-grid");
       caja.append(el("p", "hub-vacio", "Todavía no hay modelos del Hub. Descarga uno en «Recomendados» o importa un .gguf."));
       return caja;
     }
+    const visible = modelos.filter((m) => !m.oculto);
+    const mejor = [...visible].sort((a, b) =>
+      (Number(b.pruebas?.coding?.global) || 0) - (Number(a.pruebas?.coding?.global) || 0) ||
+      (Number(b.pruebas?.webapp?.global) || 0) - (Number(a.pruebas?.webapp?.global) || 0))[0];
+    const vista = el("div", "hub-vista");
+    const barra = el("div", "hub-barra");
+    const filtro = el("input", "hub-filtro");
+    filtro.type = "search";
+    filtro.placeholder = "Filtrar por nombre, capacidad o rol…";
+    filtro.setAttribute("aria-label", "Filtrar modelos instalados");
+    barra.append(filtro);
+    vista.append(barra);
+    if (mejor) {
+      const resumen = el("div", "hub-resumen");
+      const info = el("div", "hub-resumen-info");
+      info.append(
+        el("span", "hub-resumen-kicker", "Recomendado para coding"),
+        el("strong", "", mejor.nombre),
+        el("span", "hub-resumen-meta", `${mejor.pruebas?.coding?.global ?? "—"}% coding · ${mejor.pruebas?.webapp?.global ?? "—"}% web app · ${Math.round(Number(mejor.plan?.contexto || 0) / 1024)}k por defecto`),
+      );
+      resumen.append(info);
+      const acciones = el("div", "hub-resumen-acciones");
+      for (const c of (mejor.contextos || []).slice(0, 4)) {
+        const b = el("button", c === Number(mejor.plan?.contexto) ? "primary hub-mini" : "ghost hub-mini", `${Math.round(c / 1024)}k`);
+        b.type = "button";
+        b.addEventListener("click", () => void usarModelo(mejor.clave, mejor.nombre, { contexto: c, kv: "q8_0", vision: Boolean(mejor.vision) }));
+        acciones.append(b);
+      }
+      resumen.append(acciones);
+      vista.append(resumen);
+    }
+    const caja = el("div", "hub-grid");
     for (const m of modelos) caja.append(tarjetaInstalada(m));
-    return caja;
+    vista.append(caja);
+    filtro.addEventListener("input", () => {
+      const q = filtro.value.trim().toLowerCase();
+      for (const card of caja.querySelectorAll(".hub-card")) {
+        card.hidden = Boolean(q) && !String(card.dataset.busqueda || "").includes(q);
+      }
+    });
+    return vista;
   }
 
   function filaResultado(m) {
@@ -606,11 +676,17 @@
     }
   }
 
-  async function usarModelo(clave, nombre) {
+  async function usarModelo(clave, nombre, opciones = {}) {
     if (!clave) return;
-    const cerrar = avisar(`Cargando ${nombre || clave} con el plan automático…`, "warn", 0);
+    const ctx = Number(opciones.contexto) || 0;
+    const cuerpo = ctx
+      ? { clave, enginePreset: "CUSTOM", contexto: ctx, kv: opciones.kv || "q8_0", vision: Boolean(opciones.vision), auto: false }
+      : { clave, auto: true };
+    const cerrar = avisar(ctx
+      ? `Cargando ${nombre || clave} con ${Math.round(ctx / 1024)}k de contexto…`
+      : `Cargando ${nombre || clave} con el plan automático…`, "warn", 0);
     try {
-      const r = await api("/api/modelos", { cuerpo: { clave, auto: true }, timeout: 600000 });
+      const r = await api("/api/modelos", { cuerpo, timeout: 600000 });
       cerrar();
       avisar(`${r.nombre || nombre || clave} listo · ventana ${r.nCtx} tok${r.pensar ? ` · razona ${r.pensar}` : ""}`, "ok", 7000);
       window.dispatchEvent(new CustomEvent("bonsai:modelos-cambiados"));
@@ -661,7 +737,7 @@
     document.body.append(capa);
     capa.addEventListener("click", (e) => { if (e.target === capa) cerrarHub(); });
     document.addEventListener("keydown", tecla, true);
-    estado = { catalogo: null, trabajos: [], pestana: "recomendados", busqueda: "", resultados: [], descubiertos: [], descubriendo: false, descubrirError: "", repo: null, cargando: false, error: "", ultimoListo: "" };
+    estado = { catalogo: null, trabajos: [], pestana: "instalados", busqueda: "", resultados: [], descubiertos: [], descubriendo: false, descubrirError: "", repo: null, cargando: false, error: "", ultimoListo: "" };
     pintar();
     void refrescar();
     arrancarPoll();

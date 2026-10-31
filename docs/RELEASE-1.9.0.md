@@ -136,6 +136,25 @@ benchmark de calidad usan `/v1/chat/completions` con system+user. La auditoría
 - `bench-model-quality` pasaba `--chat-template-file` aunque el modelo no
   tuviera plantilla; ahora solo si existe.
 
+### GPT-OSS: perfil afinado
+
+GPT-OSS-20B queda como modelo principal para coding/web app:
+
+- **Harmony** con `--jinja` y plantilla del GGUF; tool-calling y razonamiento
+  verificados.
+- **Muestreo oficial** (`temp 1.0`, `top_p 1.0`, `top_k 0`, `min_p 0.01`) por
+  modelo, no el 0.6/0.9 genérico.
+- **64k por defecto** y **128k máximo**, con selector en el Hub que recalcula
+  `--n-cpu-moe`; 128k+q4 opcional.
+- **61.070 tokens** de contexto con aguja correcta (`QX-7419`) y 777 tok/s de
+  prefill.
+- **Esfuerzo de razonamiento** configurable (automático/high por defecto).
+- **18/18 + 10/10** en coding, **8/8 + 3/3** en web app, **3/3** en el agente.
+- Hub rediseñado: resumen “Recomendado para coding”, KPIs, chips de capacidades y
+  botones 32k/64k/96k/128k.
+
+Detalle: [reports/GPTOSS-2026-10-31.md](../reports/GPTOSS-2026-10-31.md).
+
 ## Verificación
 
 - `npm test`: **42/42** (una pasada; `prueba-code-intelligence` puede fallar por

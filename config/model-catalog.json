@@ -1169,22 +1169,23 @@
       "toolcalls": "nativo",
       "pensar": {
         "compatible": true,
-        "presupuesto": 3072
+        "presupuesto": 2048,
+        "nivel": "high"
       },
       "muestreo": {
         "codigo": {
-          "temperature": 0.6,
-          "top_p": 0.9,
-          "top_k": 20,
-          "min_p": 0.05,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "min_p": 0.01,
           "presence_penalty": 0,
           "repeat_penalty": 1
         },
         "razonar": {
-          "temperature": 0.6,
-          "top_p": 0.9,
-          "top_k": 20,
-          "min_p": 0.05,
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "min_p": 0.01,
           "presence_penalty": 0,
           "repeat_penalty": 1
         }
@@ -1196,7 +1197,22 @@
       ],
       "vision": null,
       "capas": 24,
-      "moe": true
+      "moe": true,
+      "capacidades": [
+        "Harmony",
+        "razonamiento",
+        "herramientas",
+        "json",
+        "código"
+      ],
+      "contextos": [
+        32768,
+        65536,
+        98304,
+        131072
+      ],
+      "contextoMaximo": 131072,
+      "contextoPorDefecto": 65536
     },
     {
       "clave": "nemotron3-nano-30b",

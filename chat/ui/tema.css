@@ -1049,3 +1049,43 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .hub-url > .hub-mini { align-self: flex-start; }
 .hub-descubrir-head h3 { margin: 0 0 4px; font-size: 15px; }
 .hub-descubrir-head .hub-uso { margin: 0 0 6px; }
+
+/* Model Hub: tarjetas coherentes y selector de contexto */
+.hub-card { display: flex; flex-direction: column; gap: 7px; padding: 14px; min-height: 330px; }
+.hub-card .hub-uso { margin: 0; }
+.hub-tag.best { background: #cde86e; color: #18200f; font-weight: 700; }
+.hub-contextos { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 2px; }
+.hub-contextos-label { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; margin-right: 2px; }
+.hub-contextos .hub-mini.on { border-color: var(--accent-line); color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+
+/* Model Hub: cabecera de recomendación */
+.hub-vista { display: flex; flex-direction: column; gap: 12px; }
+.hub-resumen { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  border: 1px solid var(--accent-line); border-radius: 12px; padding: 12px 14px;
+  background: linear-gradient(120deg, var(--accent-soft), transparent 70%); }
+.hub-resumen-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hub-resumen-kicker { color: var(--accent); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; }
+.hub-resumen-info strong { font-size: 16px; }
+.hub-resumen-meta { color: var(--muted); font-size: 11.5px; }
+.hub-resumen-acciones { display: flex; gap: 4px; flex-wrap: wrap; }
+
+/* Cromo superior: solo microajustes; la distribución responsive ya existe */
+.top { gap: 8px; }
+.top .brand strong { font-size: 14px; letter-spacing: .06em; }
+.top #meta { display: none; }
+.top .server-preset { height: 30px; }
+.statusbar { font-size: 11.5px; }
+
+/* Acciones del cromo agrupadas a la derecha; si no caben, bajan como bloque. */
+.top-acciones { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+.top-acciones .panes { margin-left: 2px; }
+
+/* KPIs de modelo: lectura rápida de coding/web app */
+.hub-kpis { display: flex; flex-wrap: wrap; gap: 4px; }
+.hub-kpi { border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; color: var(--muted); font-size: 10.5px; background: color-mix(in srgb, var(--bg) 55%, transparent); }
+.hub-kpi.strong { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); font-weight: 650; }
+
+.hub-barra { display: flex; gap: 8px; align-items: center; }
+.hub-filtro { width: min(420px, 100%); height: 34px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel); color: var(--text); padding: 0 11px; font-size: 12px; }
+.hub-filtro:focus { outline: none; border-color: var(--accent-line); }

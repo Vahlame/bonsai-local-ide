@@ -1842,6 +1842,18 @@
     const pensarCaja = el("div");
     pensarCaja.style.cssText = "display:flex;flex-direction:column;align-items:flex-end;gap:3px";
     pensarCaja.append(pensar);
+
+    // GPT-OSS/Harmony: el esfuerzo se fija al arrancar; el presupuesto de arriba
+    // es el tope de tokens. Automático usa el nivel del modelo (high en GPT-OSS).
+    const esfuerzo = el("select");
+    esfuerzo.setAttribute("aria-label", "Esfuerzo de razonamiento");
+    for (const [v, t] of [["default", "Automático (modelo)"], ["minimal", "Mínimo"], ["low", "Bajo"], ["medium", "Medio"], ["high", "Alto"], ["xhigh", "Muy alto"]]) {
+      const o = el("option", "", t);
+      o.value = v;
+      if ((ajustes.engineEffort || "default") === v) o.selected = true;
+      esfuerzo.append(o);
+    }
+    esfuerzo.addEventListener("change", () => guardarAjustes({ engineEffort: esfuerzo.value }));
     if ((ajustes.agentePerfil || "legacy") === "small-local-coder") {
       const limite=el("small","",`Coding permite hasta ${infoPensar.limiteCoding ?? 512} tokens de pensamiento; el resto de la salida queda para la respuesta y las ediciones.`);
       limite.style.cssText="max-width:280px;color:var(--muted)"; pensarCaja.append(limite);
@@ -1948,6 +1960,7 @@
       fila("Modo de respuesta", modo),
       fila("Motor · reinicia el modelo", motorCaja),
       fila("Modo razonamiento", pensarCaja),
+      fila("Esfuerzo de razonamiento", esfuerzo),
       fila("Tope de historial (pedido)", historial),
       el("h4","settings-section","Trabajo del agente"),
       fila("Aplicar reglas del proyecto", reglas),
@@ -2534,7 +2547,8 @@
     contexto.hidden = true;
     contexto.title = "Presupuesto real de contexto";
     contexto.addEventListener("click", () => abrirAjustes());
-    barra.prepend(modelo, contexto, vision, reglas, git);
+    const destino = document.querySelector(".top-acciones") || barra;
+    destino.prepend(modelo, contexto, vision, reglas, git);
   }
 
   /** Enciende el chip de visión si el servidor la tiene. */
@@ -2587,6 +2601,15 @@
     grupo.style.marginLeft = "4px";
     grupo.append(paleta, comandos, distribuir, tema, ajustesBoton);
 
+    // Agrupa las acciones de la derecha para que la barra no se rompa en trozos
+    // sueltos: herramientas a la izquierda, acciones/modelo a la derecha.
+    const acciones = el("div", "top-acciones");
+    for (const id of ["hub-abrir", "cerrar-bonsai", "carpeta", "ayuda"]) {
+      const nodo = document.getElementById(id);
+      if (nodo) acciones.append(nodo);
+    }
+    acciones.append(grupo);
+
     // Cambiar de modelo a la vista, sin terminal: el chip de la barra de estado es pequeño
     // y se confundía con las etiquetas fijas de al lado ("Modelo en RTX 4060").
     const modelo = el("button", "ghost modelo-boton");
@@ -2601,7 +2624,8 @@
     modelo.append(icono, el("span", "modelo-nombre", "Modelo"), flecha);
     modelo.addEventListener("click", () => menuModelos(modelo));
 
-    barra.append(modelo, grupo);
+    acciones.prepend(modelo);
+    barra.append(acciones);
   }
 
   async function arrancar() {

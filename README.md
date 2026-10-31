@@ -15,8 +15,9 @@ controlado y visión — todo en tu GPU, sin nube.
 > **v1.9.0** — **MoE híbrido**: Qwen3.6-35B-A3B, Qwen3-30B-A3B, GPT-OSS-20B y
 > Nemotron 3 Nano reparten expertos entre 8 GB de VRAM y 16 GB de RAM.
 > Qwen3.6-35B-A3B corre a **42,5 tok/s** con `--load-mode none`; **GPT-OSS-20B
-> gana el benchmark de proyecto real (18/18 tests)**. Catálogo de 34 GGUF con
-> plantilla auditada. Notas: [RELEASE-1.9.0](docs/RELEASE-1.9.0.md).
+> gana el benchmark de proyecto real (18/18 tests)** y trabaja a **64k por
+> defecto / 128k máximo** con Harmony y muestreo oficial. Catálogo de 34 GGUF
+> con plantilla auditada. Notas: [RELEASE-1.9.0](docs/RELEASE-1.9.0.md).
 
 ---
 
@@ -462,6 +463,7 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 | [MODEL-CATALOG-2026-10-31](reports/MODEL-CATALOG-2026-10-31.md) | Catálogo completo: 30 modelos usables, visión y planes |
 | [MOE-2026-10-31](reports/MOE-2026-10-31.md) | MoE de 30-35B en 8 GB VRAM: reparto VRAM/RAM/SSD y tok/s |
 | [CODING-2026-10-31](reports/CODING-2026-10-31.md) | Proyecto real con tests ocultos: ranking de coding y pipeline |
+| [GPTOSS-2026-10-31](reports/GPTOSS-2026-10-31.md) | Perfil GPT-OSS: Harmony, 64k/128k, muestreo y Hub |
 | [CODER-PIPELINE-2026-10-31](reports/CODER-PIPELINE-2026-10-31.md) | Agente con herramientas: ablaciones y perfil `moe-fast` |
 | [WEBAPP-2026-10-31](reports/WEBAPP-2026-10-31.md) | Taskboard full-stack: API + UI real en navegador |
 | [ENGINE-2026-10-31](reports/ENGINE-2026-10-31.md) | Tuning de tok/s, ngram, draft, batch, VRAM y clocks |

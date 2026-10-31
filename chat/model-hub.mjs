@@ -217,6 +217,7 @@ export async function planParaModelo(clave, opciones = {}) {
     reservaMiB: Number(opciones.reservaMiB) || Number(entrada.servidor?.reservaMiB) || 850,
     pesosMiB: Number(entrada.servidor?.pesosGpuEstandarMiB) || undefined,
     ramTotalMiB: Math.round(os.totalmem() / MIB),
+    ctxTopeMoe: Number(entrada.servidor?.moe?.ctxTope) || undefined,
     // Un modelo ya medido no debe superar su techo real aunque las cuentas den
     // más: Ornith, por ejemplo, arranca a 110.592 y falla a 114.688.
     ctxMaximo: Math.min(
@@ -420,10 +421,19 @@ export function listarInstalados() {
     plan: m.plan || null,
     servidor: m.servidor || null,
     pruebas: m.pruebas || null,
+    contextos: Array.isArray(m.contextos) ? m.contextos : [],
+    contextoMaximo: Number(m.contextoMaximo) || 0,
+    contextoPorDefecto: Number(m.contextoPorDefecto) || 0,
+    capacidades: Array.isArray(m.capacidades) ? m.capacidades : [],
+    pensar: m.pensar || null,
+    muestreo: m.muestreo || null,
     instalado: m.instalado || "",
     fuente: m.fuente || "hub",
     oculto: m.oculto === true,
-  })).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  })).sort((a, b) =>
+    (Number(b.pruebas?.coding?.global) || 0) - (Number(a.pruebas?.coding?.global) || 0) ||
+    (Number(b.pruebas?.webapp?.global) || 0) - (Number(a.pruebas?.webapp?.global) || 0) ||
+    a.nombre.localeCompare(b.nombre, "es"));
 }
 
 /** @returns {any} */

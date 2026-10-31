@@ -616,8 +616,21 @@ function catalogoModelos() {
       visionArchivo: typeof row.vision?.archivo === "string" ? row.vision.archivo : "",
       plan: row.plan || null,
       pruebas: row.pruebas || null,
+      contextos: Array.isArray(row.contextos) ? row.contextos : [],
+      contextoMaximo: Number(row.contextoMaximo) || 0,
+      contextoPorDefecto: Number(row.contextoPorDefecto) || 0,
+      capacidades: Array.isArray(row.capacidades) ? row.capacidades : [],
+      etiquetas: Array.isArray(row.etiquetas) ? row.etiquetas : [],
+      pensar: row.pensar || null,
+      muestreo: row.muestreo || null,
     });
   }
+  // Relevancia para coding/web app primero; auxiliares (borradores) al final.
+  out.sort((a, b) =>
+    (a.oculto ? 1 : 0) - (b.oculto ? 1 : 0) ||
+    (Number(b.pruebas?.coding?.global) || 0) - (Number(a.pruebas?.coding?.global) || 0) ||
+    (Number(b.pruebas?.webapp?.global) || 0) - (Number(a.pruebas?.webapp?.global) || 0) ||
+    String(a.nombre).localeCompare(String(b.nombre), "es"));
   return out;
 }
 
@@ -1426,6 +1439,7 @@ async function main(args) {
     if (configuracion) {
       // Solo se pasan contexto/KV si vienen definidos; si no, manda el preset.
       if (configuracion.contexto !== undefined && configuracion.contexto !== null) args.push("-ContextSize", String(configuracion.contexto));
+      if (configuracion.contextoExplicito === true) args.push("-ContextoExplicito");
       if (configuracion.kv) args.push("-KVCacheType", configuracion.kv);
       if (configuracion.mmprojCPU === true) args.push("-MmprojCPU");
       if (configuracion.draftModel) args.push("-DraftModel", String(configuracion.draftModel));
@@ -1443,6 +1457,8 @@ async function main(args) {
     const pensar = configuracion ? configuracion.pensar : presupuestoPensar(clave, Number(leerAjustes().pensar));
     args.push("-Pensar", String(pensar));
     pensarServidor = pensar;
+    const effort = String(configuracion?.pensarNivel || leerAjustes().engineEffort || "default");
+    if (effort && effort !== "default") args.push("-PensarNivel", effort);
     // OJO: nada de `detached: true`. En Windows deja al hijo SIN consola y PowerShell
     // 5.1 sale con código 0 sin ejecutar ni una línea (costó media tarde averiguarlo:
     // el servidor nunca arrancaba y no había ni un mensaje de error). Con `windowsHide`
@@ -1492,7 +1508,7 @@ async function main(args) {
           !Number.isInteger(datos.dormir) || datos.dormir < 0 || datos.dormir > 86400 ||
           !["127.0.0.1", "localhost", "::1"].includes(datos.hostIP)) throw new Error("datos incompletos");
       if (datos.enginePreset && isNamedEnginePreset(datos.enginePreset)) engineProfile(datos.enginePreset);
-      return { clave: datos.modelo, contexto: datos.contexto, kv: datos.kv, vision: datos.vision, mmprojCPU: datos.mmprojCPU === true, pensar: datos.pensar, dormir: datos.dormir, hostIP: datos.hostIP, enginePreset: datos.enginePreset || "" };
+      return { clave: datos.modelo, contexto: datos.contexto, contextoExplicito: true, kv: datos.kv, vision: datos.vision, mmprojCPU: datos.mmprojCPU === true, pensar: datos.pensar, dormir: datos.dormir, hostIP: datos.hostIP, enginePreset: datos.enginePreset || "" };
     } catch {
       // Un arranque de una versión anterior no guardaba estos parámetros.
       return { error: "no se guardó la configuración anterior; reinicia el IDE manualmente" };
@@ -1798,7 +1814,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy", memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480 };
+  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy", memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480, engineEffort: "default" };
   // Los ajustes guardados en la interfaz (perfil de muestreo, tope de historial, pensar)
   // mandan sobre los valores por defecto de la línea de comandos. Va AQUÍ y no al principio
   // de main(): `AJUSTES_DEFECTO` es un `const` y llamarlo antes revienta el arranque con
@@ -2860,6 +2876,7 @@ async function main(args) {
               const solicitado = restaurar || {
                 enginePreset: cfg.enginePreset,
                 contexto: cfg.contexto,
+                contextoExplicito: raw.contexto !== undefined || raw.context !== undefined,
                 kv: cfg.kv,
                 vision: cfg.vision,
                 mmprojCPU: cfg.mmprojCPU === true,

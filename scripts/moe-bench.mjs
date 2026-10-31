@@ -307,6 +307,10 @@ function variantes(plan) {
     { id: "batch2048", nombre: "batch 2048/1024", o: { nCpuMoe: n, threads: 12, batch: 2048, ubatch: 1024 } },
     { id: "ub256", nombre: "batch 1024 / ubatch 256", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 256 } },
     { id: "mask12", nombre: "afinidad a 12 CPU lógicas", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, cpuMask: "0xFFF" } },
+    { id: "ctx64", nombre: "contexto 64k", o: { nCpuMoe: Math.min(capas, n + 2), threads: 12, batch: 1024, ubatch: 512, ctx: 65536 } },
+    { id: "ctx96", nombre: "contexto 96k", o: { nCpuMoe: Math.min(capas, n + 4), threads: 12, batch: 1024, ubatch: 512, ctx: 98304 } },
+    { id: "ctx128", nombre: "contexto 128k", o: { nCpuMoe: Math.min(capas, n + 6), threads: 12, batch: 1024, ubatch: 512, ctx: 131072 } },
+    { id: "ctx128q4", nombre: "contexto 128k + KV q4", o: { nCpuMoe: Math.min(capas, n + 3), threads: 12, batch: 1024, ubatch: 512, ctx: 131072, kv: "q4_0" } },
   ];
   const lista = [
     { id: "baseline", nombre: "plan automático", o: { nCpuMoe: n, threads: hilosPlan, batch: batchPlan, ubatch: ubatchPlan } },

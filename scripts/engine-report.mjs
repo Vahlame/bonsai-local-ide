@@ -25,6 +25,46 @@ for (const rel of FUENTES) {
 }
 const filas = [...vistos.values()].sort((a, b) => (b.generacion?.tokPorSegundo || 0) - (a.generacion?.tokPorSegundo || 0));
 
+// Curva de contexto de GPT-OSS (misma tanda de moe-bench).
+const ctxPath = path.join(PROJECT, "reports/moe-bench-2026-10-31T15-00-51/results.json");
+let ctxGpt = [];
+if (fs.existsSync(ctxPath)) {
+  const raw = JSON.parse(fs.readFileSync(ctxPath, "utf8"));
+  const lista = Array.isArray(raw) ? raw : (raw.filas || []);
+  ctxGpt = lista.filter((r) => r.modelo === "gpt-oss-20b").map((r) => ({
+    variante: r.variante,
+    ctx: r.ctx,
+    kv: r.variante.includes("q4") ? "q4_0" : "q8_0",
+    nCpuMoe: r.nCpuMoe,
+    gen: r.generacion?.tokPorSegundo || 0,
+    prompt: r.promptLargo?.tokPorSegundo || 0,
+    vram: r.vramPicoMiB || 0,
+    ram: r.ramPicoMiB || 0,
+  }));
+}
+
+function svgCtx(rows) {
+  const W = 980, rowH = 42, top = 96, left = 280, chartW = 560;
+  const H = top + rows.length * rowH + 60;
+  const max = Math.max(1, ...rows.map((r) => r.gen));
+  const out = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Segoe UI, system-ui, sans-serif">`,
+    `<rect width="${W}" height="${H}" fill="#0d100b"/>`,
+    `<text x="24" y="34" fill="#e9eee0" font-size="18" font-weight="600">GPT-OSS-20B: contexto frente a velocidad</text>`,
+    `<text x="24" y="54" fill="#8d9680" font-size="12">Más contexto = menos capas de expertos en GPU · q8_0 salvo indicación</text>`,
+  ];
+  rows.forEach((r, i) => {
+    const y = top + i * rowH;
+    const w = Math.round(chartW * r.gen / max);
+    out.push(`<text x="24" y="${y + 20}" fill="#e9eee0" font-size="11">${(r.ctx / 1024).toFixed(0)}k · ${r.kv} · ${r.nCpuMoe} CPU</text>`);
+    out.push(`<rect x="${left}" y="${y + 6}" width="${chartW}" height="18" rx="4" fill="#1a2014"/>`);
+    out.push(`<rect x="${left}" y="${y + 6}" width="${w}" height="18" rx="4" fill="#cde86e"/>`);
+    out.push(`<text x="${left + chartW + 10}" y="${y + 20}" fill="#e9eee0" font-size="11" font-weight="700">${r.gen.toFixed(1)} tok/s</text>`);
+  });
+  out.push("</svg>");
+  return out.join("\n");
+}
+
 function svg(rows) {
   const W = 1040, rowH = 38, top = 100, left = 300, chartW = 580;
   const H = top + rows.length * rowH + 60;
@@ -66,6 +106,18 @@ const md = [
   "- **`ngram-simple`**: 71,6 tok/s en generación cruda (+62 %), pero **44,5 tok/s en chat real**, igual que la base. La ganancia viene de texto repetido del prompt, no del uso conversacional. No se integra por defecto.",
   "- **`batch 2048/1024`**: 1.343 tok/s de prompt (+33 %), pero generación baja a 36,2 tok/s (-18 %). Útil para prefill/RAG, no para chat.",
   "",
+  "## GPT-OSS: contexto y muestreo oficial",
+  "",
+  "GPT-OSS usa Harmony y recomienda `temp 1.0`, `top_p 1.0`, `top_k 0`, `min_p ~0.01`. Con 8 GB, el contexto máximo se paga en capas de expertos que pasan a CPU:",
+  "",
+  "| Contexto | KV | Capas CPU | Generación | Prompt | VRAM | RAM |",
+  "|---:|---|---:|---:|---:|---:|---:|",
+  ...ctxGpt.map((r) => `| ${(r.ctx / 1024).toFixed(0)}k | ${r.kv} | ${r.nCpuMoe} | ${r.gen.toFixed(1)} tok/s | ${r.prompt.toFixed(0)} tok/s | ${r.vram} MiB | ${r.ram} MiB |`),
+  "",
+  "![GPT-OSS: contexto y velocidad](../docs/graficos/gptoss-context.svg)",
+  "",
+  "64k es el equilibrio (29,2 tok/s, 7,7 GiB RAM); 128k funciona a 22,5 tok/s y deja 9,4 GiB de RAM. El modo 128k + KV q4 sube a 25,6 tok/s, pero q4 puede degradar calidad. Aguja a 61.070 tokens: respuesta correcta QX-7419, prefill 777 tok/s.",
+  "",
   "## Qué no funciona",
   "",
   "- **Draft Qwen3 0.6B**: 37,9 tok/s con 16k y KV q4; 19,7 tok/s en CPU. No compensa el coste de VRAM/RAM.",
@@ -82,5 +134,6 @@ const md = [
 ].join("\n");
 fs.mkdirSync(path.join(PROJECT, "docs", "graficos"), { recursive: true });
 fs.writeFileSync(path.join(PROJECT, "docs", "graficos", "engine-tuning.svg"), svg(filas), "utf8");
+if (ctxGpt.length) fs.writeFileSync(path.join(PROJECT, "docs", "graficos", "gptoss-context.svg"), svgCtx(ctxGpt), "utf8");
 fs.writeFileSync(path.join(PROJECT, "reports", "ENGINE-2026-10-31.md"), md, "utf8");
 process.stdout.write(`${path.join(PROJECT, "reports", "ENGINE-2026-10-31.md")}\n`);
