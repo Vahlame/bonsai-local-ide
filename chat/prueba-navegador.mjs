@@ -159,18 +159,17 @@ async function run() {
     // 3. Ctrl+K: selección, diálogo, diff y aceptar.
     fila("x.txt").querySelector(".name").click();
     const area = await hasta(() => {
-      const a = D().querySelector(".editor-wrap textarea");
-      return a && !a.closest("[hidden]") && a.value.includes("hola mundo") ? a : null;
+      const a = D().querySelector(".editor-cm .cm-content");
+      return a && W().bonsaiEditor()?.texto.includes("hola mundo") ? a : null;
     });
     check("el editor abre x.txt", Boolean(area));
-    area.focus();
-    area.setSelectionRange(0, 10);
+    W().bonsaiEditorCommand.select(0, 10);
     tecla(D(), "k", { ctrlKey: true });
     check("Ctrl+K pide la instrucción", Boolean(await hasta(() => D().querySelector(".dialogo input"))));
     dialogoAceptar("cambia la primera línea");
-    const diff = await hasta(() => D().querySelector("pre.diff-preview"));
+    const diff = await hasta(() => D().querySelector(".diff-cm"));
     check("Ctrl+K enseña el diff propuesto", Boolean(diff), diff ? diff.textContent.slice(0, 80) : "sin diff");
-    check("el diff marca lo que se va", Boolean(diff && diff.querySelector(".del")));
+    check("el diff marca lo que se va", Boolean(diff && /linea editada|hola mundo/.test(diff.textContent)));
     clickBoton("Aceptar y guardar");
     const guardado = await hasta(async () => {
       const r = await fetch("/api/file?path=x.txt");
@@ -236,20 +235,17 @@ async function run() {
     await W().openFile("y.txt");
     check("abrir un archivo CRLF no lo marca como modificado", !D().querySelector(".tab-item.on .dirty"));
     await W().openFile("x.txt");
-    const edit = D().querySelector(".editor-wrap textarea");
-    const escribir = (valor) => {
-      edit.value = valor;
-      edit.dispatchEvent(new (W().Event)("input", { bubbles: true }));
-    };
+    const textoEdit = () => W().bonsaiEditorCommand.getText();
+    const escribir = (valor) => W().bonsaiEditorCommand.replaceAll(valor);
     escribir("guardado inmediato");
     tecla(D(), "s", { ctrlKey: true });
     check("Ctrl+S inmediato guarda la ultima escritura", Boolean(await hasta(async () => (await (await fetch("/api/file?path=x.txt")).text()) === "guardado inmediato")));
     escribir("cambio rapido de pestana");
     await W().openFile("y.txt");
     await W().openFile("x.txt");
-    check("cambiar de pestana conserva lo recien escrito", edit.value === "cambio rapido de pestana", edit.value);
+    check("cambiar de pestana conserva lo recien escrito", textoEdit() === "cambio rapido de pestana", textoEdit());
     await esperar(120);
-    check("el resaltado diferido no contamina otra pestana", edit.value === "cambio rapido de pestana");
+    check("el resaltado diferido no contamina otra pestana", textoEdit() === "cambio rapido de pestana");
 
     const fetchOriginal = W().fetch.bind(W());
     let guardarLento = true;
@@ -280,13 +276,13 @@ async function run() {
     const avisoCerrar = await hasta(() => D().querySelector(".dialogo"));
     check("cerrar todas avisa de los cambios sin guardar", Boolean(avisoCerrar));
     if (avisoCerrar) avisoCerrar.querySelector(".d-botones button").click();
-    check("cancelar conserva el documento y las pestanas", edit.value === "no descartar" && D().querySelectorAll(".tab-item").length >= 2);
+    check("cancelar conserva el documento y las pestanas", textoEdit() === "no descartar" && D().querySelectorAll(".tab-item").length >= 2);
     await W().openFile("y.txt");
     contexto("Cerrar las demás");
     const avisoOtras = await hasta(() => D().querySelector(".dialogo"));
     check("cerrar las demas tambien protege los cambios", Boolean(avisoOtras));
     if (avisoOtras) avisoOtras.querySelector(".d-botones button").click();
-    check("cerrar las demas cancelado mantiene el editor correcto", edit.value === "otra pestana\\n");
+    check("cerrar las demas cancelado mantiene el editor correcto", textoEdit() === "otra pestana\\n");
 
     W().bonsaiResetLayout();
     const anchoEditor = D().querySelector("#editor").getBoundingClientRect().width;

@@ -1124,3 +1124,273 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .inicio-modelo-vacio { border: 1px dashed var(--line-strong); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 4px; background: color-mix(in srgb, var(--bg) 45%, transparent); }
 .inicio-modelo-vacio strong { font-size: 14px; }
 .inicio-modelo-vacio span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+/* ============================================================================
+   2.3 - Nueva capa visual: shell de dos filas, foco en el editor y contraste
+   ========================================================================== */
+:root, :root[data-theme="slate"] {
+  --ink:#0b0d12;
+  --bg:#0f1117;
+  --panel:#151821;
+  --raised:#1d2230;
+  --hover:#252b3a;
+  --text:#e8ecf5;
+  --muted:#a2adbf;
+  --dim:#7d879a;
+  --line: rgba(184, 201, 255, 0.10);
+  --line-strong: rgba(184, 201, 255, 0.24);
+  --accent:#8fb8ff;
+  --accent-hi:#b5d0ff;
+  --accent-ink:#0c1830;
+  --accent-soft: rgba(143, 184, 255, 0.10);
+  --accent-line: rgba(143, 184, 255, 0.34);
+  --gen:#7dd3fc;
+  --ok:#7ee0b0;
+  --warn:#f0c674;
+  --danger:#ff9a9a;
+  --code-bg:#0d1017;
+}
+
+/* Cabecera: dos filas reales, sin botones huérfanos. */
+.top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 5px 12px;
+  height: auto;
+  min-height: 72px;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, var(--ink), color-mix(in srgb, var(--ink) 82%, var(--bg)));
+  box-shadow: 0 1px 0 rgba(255,255,255,.04), 0 10px 30px rgba(0,0,0,.18);
+}
+.top .brand { grid-column: 1; grid-row: 1; }
+.top > .panes[aria-label="Paneles"] { grid-column: 2; grid-row: 1; justify-self: start; margin-left: 0; }
+.top-tools { grid-column: 3; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 4px; }
+.top-tools .panes { margin-left: 0; }
+.server-panel { grid-column: 1; grid-row: 2; justify-self: start; flex-wrap: wrap; }
+.top > .panes[aria-label="Permiso de comandos"] { grid-column: 2; grid-row: 2; justify-self: start; margin-left: 0; }
+.top-acciones { grid-column: 3; grid-row: 2; justify-self: end; display: flex; align-items: center; gap: 6px; margin-left: 0; flex-wrap: nowrap; }
+.top .brand .mark { width: 22px; height: 22px; border-radius: 7px; }
+.top .brand strong { font-size: 15px; letter-spacing: .02em; }
+.top .server-preset { height: 30px; max-width: 230px; }
+.top #cerrar-bonsai, .top #ayuda, .top #carpeta, .top #hub-abrir { font-size: 12px; }
+.top .modelo-boton { max-width: 200px; }
+
+@media (max-width: 1400px) {
+  .top > .panes[aria-label="Permiso de comandos"] { display: none; }
+}
+@media (max-width: 1180px) {
+  .top { grid-template-columns: auto minmax(0, 1fr) auto; padding: 7px 9px; gap: 4px 8px; }
+  .top .panes .ghost { padding-inline: 7px; }
+  .top .server-preset { max-width: 190px; }
+  .top-acciones { gap: 4px; }
+  .top #cerrar-bonsai { display: none; }
+  .top #carpeta { max-width: 13ch; }
+  .work {
+    grid-template-rows: minmax(340px, 1fr) minmax(230px, .62fr);
+    gap: 8px;
+    padding: 8px;
+  }
+}
+@media (max-width: 980px) {
+  .top { grid-template-columns: auto 1fr auto; }
+  .top #cerrar-bonsai, .top #ayuda { display: none; }
+  .top .server-preset { max-width: 150px; }
+  .top .server-panel { gap: 4px; }
+  .top .brand strong { font-size: 14px; }
+  .top .modelo-boton { max-width: 150px; }
+  .top .top-acciones #carpeta { display: none; }
+}
+
+/* El hint largo del explorador ya no compite con el árbol. */
+#files .hint { display: none; }
+#tree { padding: 4px 6px 10px; }
+.row { min-height: 28px; }
+.row button.name { font-size: 12.5px; }
+
+/* Editor vacío: una bienvenida útil, no un párrafo centrado en un desierto. */
+#code.empty-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 42px 32px;
+  color: var(--muted);
+  font: 13px/1.8 var(--sans);
+  background:
+    radial-gradient(900px 320px at 50% -10%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 70%),
+    var(--code-bg);
+  max-width: none;
+}
+#code.empty-code::before {
+  content: "Bonsai";
+  position: absolute;
+  margin-top: -54px;
+  font: 700 12px/1 var(--mono);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: .8;
+}
+#editor { position: relative; }
+#code.empty-code { text-align: center; }
+
+/* Editor CodeMirror: ocupa el panel y respira. */
+.editor-cm { border: 0; background: var(--code-bg); }
+.editor-cm .cm-editor { font-size: 13px; }
+.editor-cm .cm-scroller { padding: 4px 0 20px; }
+.editor-cm .cm-gutters { padding-left: 6px; }
+.editor-cm .cm-activeLine { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.editor-cm .cm-activeLineGutter { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+/* Diff/merge moderno dentro del diálogo de Ctrl+K. */
+.diff-cm {
+  height: min(46vh, 420px);
+  min-height: 220px;
+  margin: 4px 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--code-bg);
+}
+.diff-cm .cm-editor { height: 100%; font-size: 12.5px; }
+.diff-cm .cm-scroller { overflow: auto; }
+.diff-cm .cm-changedLine { background: color-mix(in srgb, var(--ok) 9%, transparent); }
+.diff-cm .cm-deletedChunk { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.diff-cm .cm-mergeView { height: 100%; }
+.diff-cm .cm-mergeViewEditors { height: 100%; }
+
+/* Diálogos más limpios y legibles. */
+.dialogo { padding: 22px 24px; }
+.dialogo h3 { font-size: 17px; letter-spacing: -.01em; }
+.dialogo p { color: var(--muted); }
+.dialogo-fondo { background: rgba(4, 6, 10, .64); }
+
+/* El atributo hidden debe ganar a cualquier display de componente. */
+[hidden] { display: none !important; }
+
+
+/* El chip de estado del modelo duplica el selector visible; se conserva solo el botón. */
+#modelo-chip { display: none !important; }
+
+/* La columna del brand no debe crecer por el panel del servidor. */
+.top { grid-template-columns: max-content max-content minmax(0, 1fr) max-content; }
+.top .brand { grid-column: 1; grid-row: 1; }
+.top > .panes[aria-label="Paneles"] { grid-column: 2; grid-row: 1; }
+.top-tools { grid-column: 4; grid-row: 1; }
+.server-panel { grid-column: 1 / span 3; grid-row: 2; }
+.top > .panes[aria-label="Permiso de comandos"] { grid-column: 3; grid-row: 2; }
+.top-acciones { grid-column: 4; grid-row: 2; }
+/* Ajustes 2.3: cabecera fija, cuerpo desplazable y jerarquía clara. */
+.dialogo.ajustes { padding: 0; }
+.ajustes-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 16px 22px 12px; flex: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--raised);
+}
+.ajustes-head h3 { margin: 0; font-size: 18px; letter-spacing: -.01em; }
+.ajustes-x { width: 30px; height: 30px; font-size: 20px; line-height: 1; color: var(--muted); }
+.ajustes-body { overflow: auto; padding: 4px 22px 20px; min-height: 0; }
+.ajustes-body > p:first-child { margin: 14px 0 16px; }
+.ajustes-body .setting-row { padding: 9px 0; gap: 14px; }
+.ajustes-body .setting-row > span { font-size: 13px; }
+.ajustes-body .setting-row > :last-child { max-width: 250px; }
+.ajustes-body .settings-section {
+  margin: 20px 0 4px;
+  font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent); opacity: .9;
+}
+.ajustes-body h4:first-of-type { margin-top: 8px; }
+.ajustes-body .d-botones { position: sticky; bottom: -20px; padding: 12px 0 2px; background: linear-gradient(transparent, var(--raised) 35%); }
+/* Footer de ajustes: barra fija, no un botón flotando sobre el contenido. */
+.ajustes-body { padding-bottom: 0; }
+.ajustes-body .d-botones {
+  position: sticky; bottom: 0; z-index: 3;
+  margin: 10px -22px 0; padding: 12px 22px;
+  background: var(--raised); border-top: 1px solid var(--line);
+  box-shadow: 0 -12px 24px rgba(0,0,0,.18);
+}
+.tabs:empty::before { content: "Sin archivo"; padding: 0 12px; color: var(--muted); font: 12px/32px var(--sans); }
+/* Permisos: fila superior, entre paneles y herramientas; se ocultan solo en ventanas muy estrechas. */
+.top > .panes[aria-label="Permiso de comandos"] { grid-column: 3; grid-row: 1; justify-self: end; margin-left: 0; }
+@media (max-width: 1180px) {
+  .top > .panes[aria-label="Permiso de comandos"] { display: none; }
+}
+@media (min-width: 1181px) {
+  .top > .panes[aria-label="Permiso de comandos"] { display: flex; }
+}
+
+/* 2.3 - cabecera compacta: en 1280-1360 se retiran los chips secundarios y el
+   permiso de comandos para que la fila del servidor no se parta en dos. */
+@media (max-width: 1360px) {
+  .top > .panes[aria-label="Permiso de comandos"] { display: none; }
+  .top #contexto-chip,
+  .top #reglas-chip,
+  .top #cerrar-bonsai,
+  .top #ayuda { display: none; }
+  .top #carpeta { max-width: 12ch; }
+  .top .modelo-boton { max-width: 160px; }
+  .top .server-panel { flex-wrap: nowrap; }
+}
+
+/* Permiso de comandos: control segmentado, no dos botones sueltos en el aire. */
+.top > .panes[aria-label="Permiso de comandos"] {
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--panel);
+}
+.top > .panes[aria-label="Permiso de comandos"] .ghost {
+  border: 0;
+  border-radius: calc(var(--r-md) - 2px);
+  padding: 5px 11px;
+}
+.top > .panes[aria-label="Permiso de comandos"] .ghost.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Ajustes: todos los desplegables comparten ancho y borde derecho. */
+.ajustes-body .setting-row > select,
+.ajustes-body .setting-row > input[type="text"],
+.ajustes-body .setting-row > input[type="number"] {
+  width: 250px;
+}
+
+/* Estado vacío: bienvenida tipográfica + atajos alineados en monoespaciada. */
+#code.empty-code {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  white-space: pre;
+  text-align: left;
+  font: 12.5px/1.95 var(--mono);
+  color: var(--muted);
+  padding: 40px;
+  background:
+    radial-gradient(900px 340px at 50% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%),
+    var(--code-bg);
+}
+#code.empty-code::before {
+  content: "Bonsai IDE";
+  position: static;
+  margin: 0 0 16px;
+  font: 650 19px/1.2 var(--sans);
+  letter-spacing: -.01em;
+  text-transform: none;
+  color: var(--text);
+  opacity: 1;
+}
+
+/* Los desplegables necesitan 280px para no cortar "Automático (ventana - salida)". */
+.ajustes-body .setting-row > :last-child { max-width: 280px; }
+.ajustes-body .setting-row > select,
+.ajustes-body .setting-row > input[type="text"],
+.ajustes-body .setting-row > input[type="number"] { width: 280px; }
+@media (max-width: 560px) {
+  .ajustes-body .setting-row > select,
+  .ajustes-body .setting-row > input[type="text"],
+  .ajustes-body .setting-row > input[type="number"] { width: 100%; }
+}

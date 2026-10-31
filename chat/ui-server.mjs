@@ -10,7 +10,8 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { aplicarReemplazo, commandAllowed, commandKey, esCharla, extractCommands, trozoParecido, extractReads, extractSearches, extractWrites, impliedAction, indexScope, inventedToolResult, nativeToolEffects, resolveInside, stripCommands, stripFakeToolText, stripFileBlocks, stripIndex, stripReads, stripSearches, unifiedDiff, writeNewOutput, writeOutputs } from "./actions.mjs";
+import { aplicarReemplazo, commandAllowed, commandKey, esCharla, inventedToolResult, nativeToolEffects, resolveInside, stripCommands, stripFakeToolText, stripFileBlocks, stripIndex, stripReads, stripSearches, trozoParecido, unifiedDiff, writeNewOutput, writeOutputs } from "./actions.mjs";
+import { legacyCommands, legacyImpliedAction, legacyIndexScope, legacyReads, legacySearches, legacyWrites } from "./legacy-tool-parser.mjs";
 import { dialectoDe, llamadasCrudas } from "./adaptadores.mjs";
 import { BonsaiChat, metadatosSesion } from "./bonsai-chat.mjs";
 import { MODELO, muestreo, pensarDe, perfilAgente, presupuestoPensar } from "./modelo.mjs";
@@ -54,6 +55,15 @@ import {
   resumen as resumenHub,
   vramInfo,
 } from "./model-hub.mjs";
+
+// El parser legacy de tools escritas como texto queda detrás de estas fachadas.
+// Las tools nativas + Zod/JSON Schema son el camino canónico; ver chat/legacy-tool-parser.mjs.
+const extractCommands = legacyCommands;
+const extractWrites = legacyWrites;
+const extractReads = legacyReads;
+const extractSearches = legacySearches;
+const indexScope = legacyIndexScope;
+const impliedAction = legacyImpliedAction;
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT = path.dirname(HERE);
@@ -1780,7 +1790,8 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy", memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480, engineEffort: "default", preguntarModelo: true, editorModerno: false };
+  const UI_VERSION = "2.3.0";
+  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy", memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480, engineEffort: "default", preguntarModelo: true, editorModerno: true, uiVersion: UI_VERSION };
   // Los ajustes guardados en la interfaz (perfil de muestreo, tope de historial, pensar)
   // mandan sobre los valores por defecto de la línea de comandos. Va AQUÍ y no al principio
   // de main(): `AJUSTES_DEFECTO` es un `const` y llamarlo antes revienta el arranque con
@@ -1805,7 +1816,17 @@ async function main(args) {
   function leerAjustes() {
     try {
       if (fs.existsSync(SETTINGS_FILE)) {
-        return { ...AJUSTES_DEFECTO, ...JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf8")) };
+        const datos = { ...AJUSTES_DEFECTO, ...JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf8")) };
+        // Migración de la capa visual 2.3: CodeMirror pasa a ser el único
+        // editor y el tema por defecto es slate. Solo se ejecuta una vez por
+        // instalación; después el usuario puede cambiar de tema.
+        if (datos.uiVersion !== UI_VERSION) {
+          datos.uiVersion = UI_VERSION;
+          datos.tema = "slate";
+          datos.editorModerno = true;
+          try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(datos, null, 2), "utf8"); } catch { /* solo lectura */ }
+        }
+        return datos;
       }
     } catch {
       /* json roto: se usan los de defecto */

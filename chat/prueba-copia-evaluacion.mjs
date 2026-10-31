@@ -20,6 +20,7 @@ try {
   }
   copiarApp(origen, copia);
   assert.equal(fs.readFileSync(path.join(copia, "ui/index.html"), "utf8"), fs.readFileSync(path.join(origen, "ui/index.html"), "utf8"));
+  assert.equal(fs.existsSync(path.join(copia, "legacy-tool-parser.mjs")), true, "la copia debe incluir la capa legacy de tools");
   for (const rel of ["undo", "ui-chats", "ui-settings.json", "ui-workspace.json", "modelo-activo.json", "timings.jsonl", "memoria-global.json", "secreto-inesperado.mjs", "ui/privado.txt", "node_modules"]) assert.equal(fs.existsSync(path.join(copia, rel)), false, `${rel} no debe copiarse`);
   assert.throws(() => copiarApp(origen, copia), /ya existe/, "no mezclar resultados de evaluaciones anteriores");
 

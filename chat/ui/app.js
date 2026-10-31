@@ -348,7 +348,7 @@
 
   // ================================================================== ajustes
   /** @type {{tema: string, perfil: string, pensar: number, reglas: boolean, historial: number}} */
-  let ajustes = { tema: "slate", perfil: "codigo", pensar: 0, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, preguntarModelo: true, editorModerno: false };
+  let ajustes = { tema: "slate", perfil: "codigo", pensar: 0, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, preguntarModelo: true, editorModerno: true };
 
   const TEMAS = [["slate","Grafito"],["ocean","Niebla azul"],["forest","Bosque"],["sand","Arena"],["light","Marfil"],["dark","Medianoche"]];
   function siguienteTema() { const i=TEMAS.findIndex(([v])=>v===ajustes.tema); return TEMAS[(i+1)%TEMAS.length][0]; }
@@ -412,13 +412,12 @@
   const editor = $("#editor");
   const code = $("#code");
 
-  // CodeMirror es opt-in: si el bundle no está o el ajuste está apagado, el
-  // editor textarea/pre de siempre sigue siendo el camino principal.
+  // CodeMirror es el editor principal. El bundle viaja en el repo; si faltara,
+  // mostramos un aviso en vez de mantener un segundo editor con bugs distintos.
   const cmWrap = el("div", "editor-cm");
-  cmWrap.hidden = true;
-  editor?.append(cmWrap);
-  // CodeMirror captura sus propios atajos: Ctrl+K/Ctrl+S se enrutan aquí para
-  // que el comportamiento sea idéntico al editor clásico.
+  cmWrap.hidden = false;
+  const editorModerno = () => typeof window.BonsaiCodeEditor === "function";
+  // CodeMirror captura sus propios atajos: Ctrl+K/Ctrl+S se enrutan aqui.
   cmWrap.addEventListener("keydown", (e) => {
     if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
     const k = String(e.key || "").toLowerCase();
@@ -434,8 +433,6 @@
   }, true);
   /** @type {any | null} */
   let cm = null;
-  let cmListo = false;
-  const editorModerno = () => ajustes.editorModerno === true && typeof window.BonsaiCodeEditor === "function";
 
   function asegurarCM() {
     if (cm || !editorModerno()) return cm;
@@ -461,18 +458,7 @@
         if (p && cm) p.cursor = cm.getCursor().offset;
       },
     });
-    cmListo = true;
     return cm;
-  }
-
-  function apagarCM() {
-    if (cm) {
-      try { cm.destroy(); } catch { /* ya estaba cerrado */ }
-      cm = null;
-    }
-    cmListo = false;
-    cmWrap.hidden = true;
-    cmWrap.replaceChildren();
   }
 
   // Barra de pestañas (se inserta antes del título antiguo, que queda oculto).
@@ -486,30 +472,7 @@
   const nota = el("div", "editor-note");
   nota.hidden = true;
 
-  // Capas del editor: números + resaltado + textarea transparente encima.
-  const wrap = el("div", "editor-wrap");
-  wrap.hidden = true;
-  const scroll = el("div", "editor-scroll");
-  const capas = el("div", "editor-layers");
-  const numsLive = el("div", "nums-live");
-  const stack = el("div", "stack");
-  const hlPre = el("pre", "hl");
-  const hl = el("code");
-  hlPre.append(hl);
-  const area = el("textarea");
-  area.spellcheck = false;
-  area.setAttribute("autocomplete", "off");
-  area.setAttribute("autocapitalize", "off");
-  area.setAttribute("wrap", "off");
-  area.setAttribute("aria-label", "Editor de código");
-  stack.append(hlPre, area);
-  capas.append(numsLive, stack);
-  scroll.append(capas);
-  wrap.append(scroll);
-  editor?.append(nota, wrap);
-
-  const extension = (rel) => (rel.includes(".") ? rel.slice(rel.lastIndexOf(".") + 1) : "");
-  const esEditable = (rel) => !/\.(png|jpe?g|gif|webp|ico|pdf|gguf|zip|exe|dll|woff2?|mp[34])$/i.test(rel);
+  editor?.append(nota, cmWrap);
 
   function pintarPestanas() {
     tabs.replaceChildren();
@@ -563,13 +526,19 @@
 
   /** Estado "sin archivo abierto". */
   function pintarVacio() {
-    wrap.hidden = true;
     if (cmWrap) cmWrap.hidden = true;
     nota.hidden = true;
     if (code) {
       code.hidden = false;
       code.className = "empty-code";
-      code.textContent = "Abre un archivo del explorador (o pulsa Ctrl+P). Puedes editarlo y guardar con Ctrl+S; el agente verá los cambios.";
+      code.textContent = [
+        "Sin archivo abierto",
+        "",
+        "Ctrl+P          Buscar archivo",
+        "Ctrl+Shift+P    Comandos",
+        "Ctrl+K          Editar la selección con IA",
+        "Ctrl+`          Terminal",
+      ].join("\n");
     }
     opened = "";
     openedText = "";
@@ -582,35 +551,28 @@
     if (i < 0 || i >= pestanas.length) return;
     clearTimeout(temporizadorResaltado);
     // Guarda dónde estaba el cursor en la pestaña que se deja.
-    if (activa >= 0 && pestanas[activa]) {
-      pestanas[activa].cursor = cm && !cmWrap.hidden ? cm.getCursor().offset : area.selectionStart;
-    }
+    if (activa >= 0 && pestanas[activa] && cm) pestanas[activa].cursor = cm.getCursor().offset;
     activa = i;
     const p = pestanas[i];
     opened = p.rel;
     openedText = p.texto;
     if (tituloViejo) tituloViejo.textContent = p.rel;
     if (code) code.hidden = true;
-    if (editorModerno()) {
-      const c = asegurarCM();
-      wrap.hidden = true;
-      cmWrap.hidden = false;
-      if (c) {
-        c.setDoc(p.texto, p.rel, p.cursor);
-        c.setReadOnly(p.truncado);
-        c.requestMeasure();
-        if (enfocar) c.focus();
+    cmWrap.hidden = false;
+    const c = asegurarCM();
+    if (!c) {
+      cmWrap.hidden = true;
+      if (code) {
+        code.hidden = false;
+        code.className = "empty-code";
+        code.textContent = "CodeMirror no está disponible. Reinstala el bundle de la UI (npm run build:ui-vendor).";
       }
-    } else {
-      if (cmWrap) cmWrap.hidden = true;
-      wrap.hidden = false;
-      area.value = p.texto;
-      area.readOnly = p.truncado;
-      area.classList.toggle("plain", !esEditable(p.rel));
-      pintarResaltado(p);
-      if (enfocar) area.focus({ preventScroll: true });
-      area.setSelectionRange(Math.min(p.cursor, p.texto.length), Math.min(p.cursor, p.texto.length));
+      return;
     }
+    c.setDoc(p.texto, p.rel, p.cursor);
+    c.setReadOnly(p.truncado);
+    c.requestMeasure();
+    if (enfocar) c.focus();
     pintarNota(p);
     pintarPestanas();
     if (typeof paintAttached === "function") paintAttached();
@@ -642,82 +604,7 @@
     nota.hidden = true;
   }
 
-  /** @param {typeof pestanas[number]} p */
-  function pintarResaltado(p) {
-    if (editorModerno()) return;
-    const texto = area.value;
-    hl.innerHTML = esEditable(p.rel) && texto.length <= 120_000 ? BonsaiMd.highlight(texto, extension(p.rel)) : BonsaiMd.esc(texto);
-    const lineas = texto.split("\n").length;
-    numsLive.textContent = Array.from({ length: lineas }, (_, i) => String(i + 1)).join("\n");
-  }
-
   let temporizadorResaltado = 0;
-  area.addEventListener("input", () => {
-    const p = pestanas[activa];
-    if (!p) return;
-    // El documento se actualiza sin espera. Solo el resaltado es diferido: de otro
-    // modo Ctrl+S o cambiar de pestaña antes de 70 ms perdía la última escritura.
-    p.texto = area.value;
-    openedText = p.texto;
-    p.cursor = area.selectionStart;
-    clearTimeout(temporizadorResaltado);
-    temporizadorResaltado = window.setTimeout(() => {
-      if (pestanas[activa] !== p) return;
-      pintarResaltado(p);
-      pintarNota(p);
-      pintarPestanas();
-    }, 70);
-  });
-
-  // Tabula en vez de saltar de campo; Enter copia la sangría de la línea anterior.
-  area.addEventListener("keydown", (e) => {
-    const p = pestanas[activa];
-    if (!p || p.truncado) return;
-    const inicio = area.selectionStart;
-    const fin = area.selectionEnd;
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const valor = area.value;
-      if (inicio === fin) {
-        if (e.shiftKey) {
-          const iniLinea = valor.lastIndexOf("\n", inicio - 1) + 1;
-          const sangria = valor.slice(iniLinea, iniLinea + 2);
-          const quitar = sangria.startsWith("  ") ? 2 : sangria.startsWith(" ") || sangria.startsWith("\t") ? 1 : 0;
-          if (quitar) {
-            area.value = valor.slice(0, iniLinea) + valor.slice(iniLinea + quitar);
-            area.setSelectionRange(inicio - quitar, inicio - quitar);
-          }
-        } else {
-          area.value = `${valor.slice(0, inicio)}  ${valor.slice(fin)}`;
-          area.setSelectionRange(inicio + 2, inicio + 2);
-        }
-      } else {
-        // Con selección: desplaza el bloque entero.
-        const desde = valor.lastIndexOf("\n", inicio - 1) + 1;
-        const hasta = valor.indexOf("\n", fin) < 0 ? valor.length : valor.indexOf("\n", fin);
-        const bloque = valor.slice(desde, hasta);
-        const nuevo = e.shiftKey
-          ? bloque.split("\n").map((l) => l.replace(/^( {1,2}|\t)/, "")).join("\n")
-          : bloque.split("\n").map((l) => `  ${l}`).join("\n");
-        area.value = valor.slice(0, desde) + nuevo + valor.slice(hasta);
-        area.setSelectionRange(desde, desde + nuevo.length);
-      }
-      area.dispatchEvent(new Event("input"));
-      return;
-    }
-    if (e.key === "Enter" && !e.shiftKey) {
-      const iniLinea = area.value.lastIndexOf("\n", inicio - 1) + 1;
-      const sangria = (area.value.slice(iniLinea, inicio).match(/^[ \t]*/) || [""])[0];
-      const extra = /[{([]\s*$/.test(area.value.slice(iniLinea, inicio)) ? "  " : "";
-      if (sangria || extra) {
-        e.preventDefault();
-        const insercion = `\n${sangria}${extra}`;
-        area.value = area.value.slice(0, inicio) + insercion + area.value.slice(fin);
-        area.setSelectionRange(inicio + insercion.length, inicio + insercion.length);
-        area.dispatchEvent(new Event("input"));
-      }
-    }
-  });
 
   /** @param {string} rel @param {number} [cursor] */
   async function abrirArchivo(rel, cursor = 0) {
@@ -813,12 +700,19 @@
   window.bonsaiEditor = () => {
     const p = pestanas[activa];
     if (!p) return null;
-    if (cm && !cmWrap.hidden) {
+    if (cm) {
       const cursor = cm.getCursor();
       return { rel: p.rel, texto: p.texto, linea: cursor.line, columna: cursor.col, cursor: cursor.offset };
     }
-    const antes = area.value.slice(0, area.selectionStart);
-    return { rel: p.rel, texto: area.value, linea: antes.split(/\r?\n/).length, columna: antes.length - antes.lastIndexOf("\n"), cursor: area.selectionStart };
+    return { rel: p.rel, texto: p.texto, linea: 1, columna: 1, cursor: p.cursor || 0 };
+  };
+  // API mínima para automatización/pruebas y para integraciones externas:
+  // sustituye el textarea clásico sin depender de su DOM.
+  window.bonsaiEditorCommand = {
+    getText: () => cm?.getValue() ?? "",
+    replaceAll: (texto) => { if (cm) { cm.setDocLive(String(texto ?? "")); cm.focus(); } },
+    select: (desde, hasta = desde) => { if (cm) { cm.setSelection(Number(desde) || 0, Number(hasta) || Number(desde) || 0); cm.focus(); } },
+    focus: () => cm?.focus(),
   };
   /** Abre el archivo y deja el cursor en la línea indicada (1-based). */
   window.bonsaiAbrirLinea = async (rel, linea = 1) => {
@@ -831,33 +725,21 @@
     let off = 0;
     for (let i = 0; i < l - 1; i += 1) off += (lineas[i] || "").length + 1;
     mostrarPestana(pestanas.indexOf(p));
-    if (cm && !cmWrap.hidden) {
+    if (cm) {
       cm.setSelection(off, Math.min(p.texto.length, off + 1));
       cm.scrollToLine(l);
       cm.focus();
-      return;
     }
-    area.value = p.texto;
-    area.focus();
-    area.setSelectionRange(off, Math.min(area.value.length, off + 1));
-    const alto = Number.parseInt(getComputedStyle(area).lineHeight, 10) || 18;
-    area.scrollTop = Math.max(0, (l - 2) * alto - 40);
   };
   window.bonsaiAvisar = avisar;
   window.selectionInsideEditor = function selectionInsideEditor() {
     const p = pestanas[activa];
     if (!p) return null;
-    if (cm && !cmWrap.hidden) {
-      const seleccion = cm.getSelection();
-      if (!seleccion.text.trim()) return null;
-      const inicio = p.texto.slice(0, seleccion.from).split("\n").length;
-      return { start: inicio, end: inicio + seleccion.text.split("\n").length - 1, text: seleccion.text };
-    }
-    if (area.selectionStart === area.selectionEnd) return null;
-    const texto = area.value.slice(area.selectionStart, area.selectionEnd);
-    if (!texto.trim()) return null;
-    const inicio = area.value.slice(0, area.selectionStart).split("\n").length;
-    return { start: inicio, end: inicio + texto.split("\n").length - 1, text: texto };
+    if (!cm) return null;
+    const seleccion = cm.getSelection();
+    if (!seleccion.text.trim()) return null;
+    const inicio = p.texto.slice(0, seleccion.from).split("\n").length;
+    return { start: inicio, end: inicio + seleccion.text.split("\n").length - 1, text: seleccion.text };
   };
 
   // Si el agente reescribe el archivo abierto, se recarga solo (salvo si hay
@@ -1283,13 +1165,13 @@
     const botones = el("div", "d-botones");
     const cerrar = el("button", "primary", "Cerrar");
     cerrar.type = "button";
-    cerrar.addEventListener("click", () => fondo.remove());
+    cerrar.addEventListener("click", cerrarAjustes);
     botones.append(cerrar);
     caja.append(botones);
     fondo.append(caja);
     document.body.append(fondo);
-    accesibilizarDialogo(fondo, caja, h, { onEscape: () => fondo.remove() });
-    cerrar.focus();
+    accesibilizarDialogo(fondo, caja, h, { onEscape: cerrarAjustes });
+    h.focus();
   }
 
   // ============================== archivos: crear, renombrar y borrar
@@ -1826,11 +1708,21 @@
   // ================================================================== ajustes
   function abrirAjustes() {
     const fondo = el("div", "dialogo-fondo");
-    const caja = el("div", "dialogo");
-    caja.style.cssText="width:min(640px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow-y:auto;box-sizing:border-box";
+    const caja = el("div", "dialogo ajustes");
+    caja.style.cssText="width:min(640px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overflow:hidden;box-sizing:border-box;display:flex;flex-direction:column";
+    const cerrarAjustes = () => fondo.remove();
     const h = el("h3", "", "Ajustes");
-    caja.append(h);
-    caja.append(el("p", "", "Tu espacio y tu modelo. Los cambios se guardan automáticamente."));
+    h.tabIndex = -1;
+    const cabecera = el("div", "ajustes-head");
+    const cerrarX = el("button", "icon-btn ajustes-x", String.fromCharCode(215));
+    cerrarX.type = "button";
+    cerrarX.title = "Cerrar ajustes";
+    cerrarX.setAttribute("aria-label", "Cerrar ajustes");
+    cerrarX.addEventListener("click", cerrarAjustes);
+    cabecera.append(h, cerrarX);
+    const cuerpo = el("div", "ajustes-body");
+    caja.append(cabecera, cuerpo);
+    cuerpo.append(el("p", "", "Tu espacio y tu modelo. Los cambios se guardan automaticamente."));
 
     /** @param {string} etiqueta @param {HTMLElement} control */
     const fila = (etiqueta, control) => {
@@ -1884,23 +1776,6 @@
         }
       }
       try { localStorage.setItem("bonsai-notificar", notificar.checked ? "1" : "0"); } catch { /* modo privado */ }
-    });
-
-    // Editor CodeMirror 6: opt-in. Si el bundle no está, el checkbox queda
-    // deshabilitado y la UI sigue usando el editor clásico.
-    const editorCm = el("input");
-    editorCm.type = "checkbox";
-    editorCm.checked = ajustes.editorModerno === true;
-    editorCm.disabled = typeof window.BonsaiCodeEditor !== "function";
-    editorCm.title = editorCm.disabled
-      ? "El bundle de CodeMirror no está disponible en esta instalación"
-      : "Editor con resaltado, autocompletado, búsqueda y plegado";
-    editorCm.setAttribute("aria-label", "Editor moderno CodeMirror");
-    editorCm.addEventListener("change", async () => {
-      await guardarAjustes({ editorModerno: editorCm.checked });
-      if (!editorCm.checked) apagarCM();
-      if (activa >= 0) mostrarPestana(activa, false);
-      if (editorCm.checked) avisar("Editor moderno activado. Se aplica al abrir la próxima pestaña.", "ok", 4000);
     });
 
     const perfil = el("select");
@@ -2095,10 +1970,9 @@
     revisarMemoria.type = "button";
     revisarMemoria.addEventListener("click", () => void abrirMemoriaGlobal());
 
-    caja.append(
+    cuerpo.append(
       el("h4","settings-section","Apariencia"),
       fila("Tema", tema),
-      fila("Editor moderno (CodeMirror)", editorCm),
       fila("Mostrar pensamiento expandido", verPensamiento),
       fila("Avisar al terminar (ventana oculta)", notificar),
       el("h4","settings-section","Modelo y respuesta"),
@@ -2123,32 +1997,32 @@
     );
     const aviso = el("p", "", "El perfil se aplica en cada petición. El razonamiento solo lo usan los modelos que lo admiten. «Continuar solo» encadena hasta 3 turnos internos si el agente se queda sin pasos o se atasca; los procesos lanzados en segundo plano ya no se cierran al acabar el turno. La memoria global solo inyecta las notas relevantes al pedido (más las fijadas), dentro del presupuesto elegido; se guarda fuera del proyecto y de Git.");
     aviso.style.marginTop = "12px";
-    caja.append(aviso);
+    cuerpo.append(aviso);
 
     // Finding 16: aquí se enseñan los valores REALES de contexto, no el tope pedido.
     const separador = el("h4", "", "Contexto real");
     separador.style.cssText = "margin:18px 0 2px;font-size:13px";
     const explicacion = el("p", "", "Lo que el servidor entrega, no lo que se pide: cambiar el tope no agranda la ventana del modelo.");
     explicacion.style.cssText = "color:var(--muted);font-size:12px;margin:0 0 2px";
-    caja.append(separador, explicacion, presupuestoCaja);
+    cuerpo.append(separador, explicacion, presupuestoCaja);
     void pintarPresupuestoEn(presupuestoCaja);
 
     const botones = el("div", "d-botones");
     const cerrar = el("button", "primary", "Cerrar");
     cerrar.type = "button";
-    cerrar.addEventListener("click", () => fondo.remove());
+    cerrar.addEventListener("click", cerrarAjustes);
     botones.append(cerrar);
-    caja.append(botones);
+    cuerpo.append(botones);
     fondo.append(caja);
     document.body.append(fondo);
-    accesibilizarDialogo(fondo, caja, h, { onEscape: () => fondo.remove() });
+    accesibilizarDialogo(fondo, caja, h, { onEscape: cerrarAjustes });
     cerrar.focus();
   }
 
   // ==================================================== edición en línea (Ctrl+K)
   /**
    * Diff propuesto por el modelo, con Aceptar / Rechazar.
-   * @param {{rel: string, start: number, end: number, diff: string, borra?: boolean, recortada?: boolean}} r
+   * @param {{rel: string, start: number, end: number, diff: string, base?: string, texto?: string, borra?: boolean, recortada?: boolean}} r
    * @returns {Promise<boolean>}
    */
   function previsualizarDiff(r) {
@@ -2173,33 +2047,40 @@
         aviso.style.color = "var(--warn, #d9a441)";
         caja.append(aviso);
       }
-      const pre = el("pre", "diff-preview");
-      for (const linea of String(r.diff || "(sin cambios)").split("\n")) {
-        const fila = el("div");
-        const marca = el("span", "mark");
-        const cuerpo = el("span", "code");
-        if (linea.startsWith("+") && !linea.startsWith("+++")) {
-          fila.className = "add";
-          marca.textContent = "+";
-          cuerpo.textContent = linea.slice(1);
-        } else if (linea.startsWith("-") && !linea.startsWith("---")) {
-          fila.className = "del";
-          marca.textContent = "−";
-          cuerpo.textContent = linea.slice(1);
-        } else if (linea.startsWith("@@") || linea.startsWith("---") || linea.startsWith("+++")) {
-          fila.className = "meta";
-          fila.textContent = linea;
+      let diffView = null;
+      const diffHost = el("div", "diff-cm");
+      if (window.BonsaiDiff && typeof r.base === "string" && typeof r.texto === "string") {
+        diffView = new window.BonsaiDiff({ parent: diffHost, original: r.base, modified: r.texto, rel: r.rel });
+        caja.append(diffHost);
+      } else {
+        const pre = el("pre", "diff-preview");
+        for (const linea of String(r.diff || "(sin cambios)").split("\n")) {
+          const fila = el("div");
+          const marca = el("span", "mark");
+          const cuerpo = el("span", "code");
+          if (linea.startsWith("+") && !linea.startsWith("+++")) {
+            fila.className = "add";
+            marca.textContent = "+";
+            cuerpo.textContent = linea.slice(1);
+          } else if (linea.startsWith("-") && !linea.startsWith("---")) {
+            fila.className = "del";
+            marca.textContent = "-";
+            cuerpo.textContent = linea.slice(1);
+          } else if (linea.startsWith("@@") || linea.startsWith("---") || linea.startsWith("+++")) {
+            fila.className = "meta";
+            fila.textContent = linea;
+            pre.append(fila);
+            continue;
+          } else {
+            fila.className = "ctx";
+            marca.textContent = " ";
+            cuerpo.textContent = linea.startsWith(" ") ? linea.slice(1) : linea;
+          }
+          fila.append(marca, cuerpo);
           pre.append(fila);
-          continue;
-        } else {
-          fila.className = "ctx";
-          marca.textContent = " ";
-          cuerpo.textContent = linea.startsWith(" ") ? linea.slice(1) : linea;
         }
-        fila.append(marca, cuerpo);
-        pre.append(fila);
+        caja.append(pre);
       }
-      caja.append(pre);
       const botones = el("div", "d-botones");
       const no = el("button", "ghost", "Rechazar");
       no.type = "button";
@@ -2211,6 +2092,7 @@
       document.body.append(fondo);
       accesibilizarDialogo(fondo, caja, h);
       const cerrar = (valor) => {
+        try { diffView?.destroy(); } catch { /* ya estaba cerrado */ }
         fondo.remove();
         document.removeEventListener("keydown", tecla, true);
         resolve(valor);
@@ -2357,6 +2239,8 @@
       start: r.start,
       end: r.end,
       diff: r.diff,
+      base: r.base,
+      texto: r.texto,
       borra: Boolean(r.borra),
       recortada,
     });
@@ -2885,17 +2769,7 @@
     grupo.style.marginLeft = "4px";
     grupo.append(paleta, comandos, distribuir, tema, ajustesBoton);
 
-    // Agrupa las acciones de la derecha para que la barra no se rompa en trozos
-    // sueltos: herramientas a la izquierda, acciones/modelo a la derecha.
-    const acciones = el("div", "top-acciones");
-    for (const id of ["hub-abrir", "cerrar-bonsai", "carpeta", "ayuda"]) {
-      const nodo = document.getElementById(id);
-      if (nodo) acciones.append(nodo);
-    }
-    acciones.append(grupo);
-
-    // Cambiar de modelo a la vista, sin terminal: el chip de la barra de estado es pequeño
-    // y se confundía con las etiquetas fijas de al lado ("Modelo en RTX 4060").
+    // Chip de modelo: visible, con icono y flecha. Vive en la fila de acciones.
     const modelo = el("button", "ghost modelo-boton");
     modelo.id = "modelo-boton";
     modelo.type = "button";
@@ -2908,8 +2782,19 @@
     modelo.append(icono, el("span", "modelo-nombre", "Modelo"), flecha);
     modelo.addEventListener("click", () => menuModelos(modelo));
 
-    acciones.prepend(modelo);
-    barra.append(acciones);
+    // Agrupa las acciones de la derecha para que la barra no se rompa en trozos
+    // sueltos: herramientas a la izquierda, acciones/modelo a la derecha.
+    const acciones = el("div", "top-acciones");
+    for (const id of ["hub-abrir", "cerrar-bonsai", "carpeta", "ayuda"]) {
+      const nodo = document.getElementById(id);
+      if (nodo) acciones.append(nodo);
+    }
+    // El grupo de iconos vive en la primera fila; las acciones de modelo y
+    // workspace, en la segunda. Así la cabecera no crece a tres filas.
+    const herramientas = el("div", "top-tools");
+    herramientas.append(grupo);
+    acciones.append(modelo);
+    barra.append(acciones, herramientas);
   }
 
   async function arrancar() {

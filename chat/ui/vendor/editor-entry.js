@@ -2,15 +2,16 @@
  * Bundle local del editor CodeMirror 6.
  *
  * Se compila con esbuild a `editor.js` (IIFE) y se carga como script clásico.
- * La UI lo usa solo si el ajuste `editorModerno` está activo y el bundle existe;
- * si no, conserva el editor textarea/pre de siempre.
- *
- * No hay CDN: todo el editor y sus lenguajes viajan en el repositorio.
+ * Es el único editor de la UI desde 2.3. No hay CDN: el editor, los lenguajes y
+ * la vista de diff/merge viajan en el repositorio.
  */
 import { basicSetup } from "codemirror";
 import { EditorState, Compartment } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { indentWithTab } from "@codemirror/commands";
+import { unifiedMergeView } from "@codemirror/merge";
+import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { json } from "@codemirror/lang-json";
@@ -59,6 +60,25 @@ function lenguajePara(rel) {
   const ext = nombre.includes(".") ? nombre.slice(nombre.lastIndexOf(".") + 1) : "";
   return LENGUAJES[ext] ? LENGUAJES[ext]() : [];
 }
+
+// Paleta de sintaxis propia: la de CodeMirror por defecto está pensada para
+// fondos claros y deja los tags de Markdown/HTML casi ilegibles en tema oscuro.
+const resaltado = HighlightStyle.define([
+  { tag: [tags.keyword, tags.operatorKeyword, tags.modifier], color: "#c4a7f7" },
+  { tag: [tags.string, tags.special(tags.string), tags.regexp], color: "#a8d49a" },
+  { tag: [tags.comment, tags.lineComment, tags.blockComment], color: "#6f7a8c", fontStyle: "italic" },
+  { tag: [tags.number, tags.integer, tags.float, tags.bool, tags.atom], color: "#f0c674" },
+  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: "#8fc7ff" },
+  { tag: [tags.typeName, tags.className, tags.namespace], color: "#7dd3fc" },
+  { tag: [tags.tagName], color: "#f0a6a6" },
+  { tag: [tags.attributeName, tags.propertyName], color: "#f0c674" },
+  { tag: [tags.heading], color: "#dbe6ff", fontWeight: "700" },
+  { tag: [tags.link, tags.url], color: "#8fb8ff", textDecoration: "underline" },
+  { tag: [tags.emphasis], fontStyle: "italic" },
+  { tag: [tags.strong], fontWeight: "700", color: "#eef3ff" },
+  { tag: [tags.meta, tags.processingInstruction], color: "#a2adbf" },
+  { tag: [tags.invalid], color: "#ff9a9a", textDecoration: "underline wavy" },
+]);
 
 const tema = EditorView.theme(
   {
@@ -140,6 +160,8 @@ export class BonsaiCodeEditor {
           basicSetup,
           keymap.of([indentWithTab]),
           tema,
+          syntaxHighlighting(resaltado),
+          EditorView.lineWrapping,
           EditorState.tabSize.of(2),
           this.lang.of(lenguajePara(rel)),
           this.readOnly.of(EditorState.readOnly.of(false)),
@@ -176,6 +198,12 @@ export class BonsaiCodeEditor {
       this.silencioso = false;
     }
     this.view.requestMeasure();
+  }
+
+  /** Reemplaza el documento como una edición real (dispara onChange). */
+  setDocLive(doc) {
+    const actual = this.getValue();
+    this.view.dispatch({ changes: { from: 0, to: actual.length, insert: String(doc ?? "") } });
   }
 
   /** @param {boolean} valor */
@@ -238,4 +266,43 @@ export class BonsaiCodeEditor {
   }
 }
 
+/**
+ * Vista de diff/merge unificada sobre CodeMirror. Se usa en Ctrl+K y en la
+ * previsualización de cambios: el original queda como texto de referencia y el
+ * documento editable (solo lectura aquí) muestra las inserciones y borrados.
+ */
+export class BonsaiDiff {
+  /**
+   * @param {{parent: HTMLElement, original?: string, modified?: string, rel?: string}} opciones
+   */
+  constructor({ parent, original = "", modified = "", rel = "" }) {
+    this.view = new EditorView({
+      parent,
+      state: EditorState.create({
+        doc: String(modified ?? ""),
+        extensions: [
+          basicSetup,
+          tema,
+          syntaxHighlighting(resaltado),
+          EditorState.tabSize.of(2),
+          EditorState.readOnly.of(true),
+          EditorView.editable.of(false),
+          lenguajePara(rel),
+          unifiedMergeView({
+            original: String(original ?? ""),
+            highlightChanges: true,
+            gutter: true,
+            mergeControls: false,
+          }),
+        ],
+      }),
+    });
+  }
+
+  destroy() {
+    this.view.destroy();
+  }
+}
+
 window.BonsaiCodeEditor = BonsaiCodeEditor;
+window.BonsaiDiff = BonsaiDiff;

@@ -124,8 +124,8 @@ try {
   await dialogo.locator("input").waitFor({ timeout: 10000 });
   await dialogo.locator("input").fill("ponlo en mayúsculas");
   await dialogo.getByRole("button", { name: "Editar" }).click();
-  await pagina.waitForSelector("pre.diff-preview", { timeout: 20000 });
-  assert.match(await pagina.locator("pre.diff-preview").textContent(), /UNO/);
+  await pagina.waitForSelector(".diff-cm .cm-editor", { timeout: 20000 });
+  assert.match(await pagina.locator(".diff-cm .cm-content").textContent(), /UNO/);
   await pagina.getByRole("button", { name: "Aceptar y guardar" }).click();
   await pagina.waitForFunction(() => (document.querySelector(".avisos")?.textContent || "").includes("Editado x.txt"), null, { timeout: 20000 });
   const guardado = fs.readFileSync(path.join(proyecto, "x.txt"), "utf8");

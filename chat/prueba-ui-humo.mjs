@@ -190,24 +190,21 @@ try {
   );
   check("el explorador pinta los archivos", (await pagina.locator("#tree .row").count()) === 3);
   check("la barra de estado existe", await pagina.locator(".statusbar").isVisible());
-  check("las pestañas y el editor están montados", (await pagina.locator(".tabs").count()) === 1 && (await pagina.locator(".editor-wrap").count()) === 1);
+  check("las pestañas y el editor están montados", (await pagina.locator(".tabs").count()) === 1 && (await pagina.locator(".editor-cm").count()) === 1);
 
   // ---- 2. Ctrl+K de punta a punta: propuesta, diff, Aceptar y guardar ----
   await pagina.locator("#tree .row .name", { hasText: "x.txt" }).click();
-  const area = pagina.locator(".editor-wrap textarea");
-  await pagina.waitForSelector(".editor-wrap:not([hidden]) textarea", { timeout: 10000 });
-  check("abrir x.txt muestra su contenido", (await area.inputValue()).startsWith("uno\ndos"));
-  await area.evaluate((nodo) => {
-    nodo.focus();
-    nodo.setSelectionRange(0, 3); // "uno"
-  });
+  await pagina.waitForSelector(".editor-cm:not([hidden]) .cm-content", { timeout: 10000 });
+  const textoX = await pagina.evaluate(() => window.bonsaiEditor()?.texto || "");
+  check("abrir x.txt muestra su contenido", textoX.startsWith("uno\ndos"));
+  await pagina.evaluate(() => window.bonsaiEditorCommand.select(0, 3)); // "uno"
   await pagina.keyboard.press("Control+k");
   const dialogo = pagina.locator(".dialogo").last();
   await dialogo.locator("input").waitFor({ timeout: 10000 });
   await dialogo.locator("input").fill("ponlo en mayúsculas");
   await dialogo.getByRole("button", { name: "Editar" }).click();
-  await pagina.waitForSelector("pre.diff-preview", { timeout: 20000 });
-  const preview = pagina.locator("pre.diff-preview");
+  await pagina.waitForSelector(".diff-cm .cm-editor", { timeout: 20000 });
+  const preview = pagina.locator(".diff-cm .cm-content");
   check("Ctrl+K enseña el diff propuesto", (await preview.textContent()).includes("UNO"));
   check("Ctrl+K avisa del rango real", (await pagina.locator(".dialogo").last().textContent()).includes("rango real de líneas 1-1"));
   await pagina.getByRole("button", { name: "Aceptar y guardar" }).click();
@@ -221,8 +218,8 @@ try {
 
   // ---- 2b. Guardar un archivo CRLF conserva los saltos de línea ----
   await pagina.locator("#tree .row .name", { hasText: "nota.md" }).click();
-  await pagina.waitForFunction(() => (document.querySelector(".editor-wrap textarea")?.value || "").startsWith("# nota"), null, { timeout: 10000 });
-  await pagina.locator(".editor-wrap textarea").fill("# nota\nnueva\n");
+  await pagina.waitForFunction(() => (window.bonsaiEditor()?.texto || "").startsWith("# nota"), null, { timeout: 10000 });
+  await pagina.evaluate(() => window.bonsaiEditorCommand.replaceAll("# nota\nnueva\n"));
   await pagina.keyboard.press("Control+s");
   await pagina.waitForFunction(() => (document.querySelector(".avisos")?.textContent || "").includes("Guardado nota.md"), null, { timeout: 20000 });
   const notaGuardada = fs.readFileSync(path.join(proyecto, "nota.md"), "utf8");
@@ -254,17 +251,14 @@ try {
 
   // ---- 3. Hallazgo 8: el archivo cambia en disco antes de aceptar -> 409 sin pisar ----
   await pagina.locator("#tree .row .name", { hasText: "y.txt" }).click();
-  await pagina.waitForFunction(() => (document.querySelector(".editor-wrap textarea")?.value || "").startsWith("alfa"), null, { timeout: 10000 });
-  await pagina.locator(".editor-wrap textarea").evaluate((nodo) => {
-    nodo.focus();
-    nodo.setSelectionRange(0, 4); // "alfa"
-  });
+  await pagina.waitForFunction(() => (window.bonsaiEditor()?.texto || "").startsWith("alfa"), null, { timeout: 10000 });
+  await pagina.evaluate(() => window.bonsaiEditorCommand.select(0, 4)); // "alfa"
   await pagina.keyboard.press("Control+k");
   const dialogo2 = pagina.locator(".dialogo").last();
   await dialogo2.locator("input").waitFor({ timeout: 10000 });
   await dialogo2.locator("input").fill("ponlo en mayúsculas");
   await dialogo2.getByRole("button", { name: "Editar" }).click();
-  await pagina.waitForSelector("pre.diff-preview", { timeout: 20000 });
+  await pagina.waitForSelector(".diff-cm .cm-editor", { timeout: 20000 });
   // El disco cambia DESPUÉS de que el servidor leyera la base y ANTES de aceptar.
   const externo = "CAMBIADO EXTERNO\r\nbeta\r\n";
   fs.writeFileSync(path.join(proyecto, "y.txt"), externo, "utf8");
@@ -277,7 +271,7 @@ try {
   check("409: el disco conserva el contenido externo", fs.readFileSync(path.join(proyecto, "y.txt"), "utf8") === externo);
   check(
     "409: el editor conserva lo del usuario y no lo pisa",
-    (await pagina.locator(".editor-wrap textarea").inputValue()).startsWith("alfa\n"),
+    (await pagina.evaluate(() => window.bonsaiEditor()?.texto || "")).startsWith("alfa\n"),
   );
 
   // ---- 3b. El compositor espera al estado inicial antes de aceptar envíos ----
