@@ -66,6 +66,35 @@
     const oldText = new Map();
 
     /**
+     * Aviso nativo al terminar un turno largo, solo si el usuario lo activó y
+     * la ventana está oculta. No pide permiso por su cuenta: eso lo hace Ajustes.
+     * @param {{motivo?: string, incompleto?: boolean} | null} evento
+     */
+    function notificarTurno(evento) {
+      if (!evento || evento.incompleto || evento.motivo === "cancelled") return;
+      if (!document.hidden || !("Notification" in window) || Notification.permission !== "granted") return;
+      try {
+        if (localStorage.getItem("bonsai-notificar") !== "1") return;
+      } catch {
+        return;
+      }
+      const cuerpo = evento.motivo === "error" ? "El turno terminó con error." : "Turno terminado.";
+      try {
+        const aviso = new Notification("Bonsai", {
+          body: `${cuerpo} Vuelve a la ventana para revisar el resultado.`,
+          tag: "bonsai-turno",
+          silent: true,
+        });
+        aviso.onclick = () => {
+          window.focus();
+          aviso.close();
+        };
+      } catch {
+        /* algunos navegadores bloquean Notification en app mode */
+      }
+    }
+
+    /**
      * @param {string} rel
      * @returns {boolean}
      */
@@ -1459,6 +1488,7 @@
         clearInterval(activityTimer);
         activity.remove();
         if (progreso) progreso.remove();
+        notificarTurno(lastDone);
         current?.abort();
         current = null;
         bubble = null;

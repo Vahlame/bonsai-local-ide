@@ -40,6 +40,7 @@ const AISLADAS = [
   { archivo: "chat/actions.mjs" },
   { archivo: "chat/prueba-entorno-local.mjs" },
   { archivo: "chat/prueba-investigacion.mjs" },
+  { archivo: "chat/prueba-imagenes.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-terminal.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-diagnosticos.mjs", timeout: 180_000 },
   { archivo: "chat/editar.mjs" },

@@ -1,6 +1,6 @@
 {
   "name": "bonsai-local-ide",
-  "version": "1.9.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Bonsai Local IDE: agente de desarrollo local con llama-server para Windows 10 y 11",
   "license": "MIT",

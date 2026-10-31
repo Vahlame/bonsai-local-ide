@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="480" viewBox="0 0 1100 480" role="img" aria-labelledby="titulo-modelos">
+  <title id="titulo-modelos">Modelos 2.0: coding real y velocidad</title>
+  <rect width="1100" height="480" fill="#0d100b"/>
+
+  <text x="28" y="38" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="22" font-weight="700">Modelos 2.0 · calidad real, no marketing</text>
+  <text x="28" y="62" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="12.5">Coding con tests ocultos y generación medida en la misma RTX 4060 de 8 GB.</text>
+
+  <!-- Panel izquierdo: ranking -->
+  <rect x="24" y="86" width="520" height="356" rx="14" fill="#12160f" stroke="#26301f"/>
+  <text x="44" y="114" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="13" font-weight="600">Coding real · proyecto + bugfix</text>
+  <text x="44" y="134" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">65 % proyecto multifichero + 35 % bugfix · tests ocultos</text>
+
+  <!-- filas -->
+  <text x="44" y="166" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="11" font-weight="600">GPT-OSS 20B</text>
+  <rect x="220" y="154" width="250" height="16" rx="4" fill="#1a2014"/>
+  <rect x="220" y="154" width="250" height="16" rx="4" fill="#cde86e"/>
+  <text x="480" y="166" fill="#cde86e" font-family="JetBrains Mono, Consolas, monospace" font-size="11" font-weight="700">100 %</text>
+
+  <text x="44" y="204" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="11">Qwen3.6 35B-A3B</text>
+  <rect x="220" y="192" width="250" height="16" rx="4" fill="#1a2014"/>
+  <rect x="220" y="192" width="240" height="16" rx="4" fill="#82b8d0"/>
+  <text x="480" y="204" fill="#82b8d0" font-family="JetBrains Mono, Consolas, monospace" font-size="11" font-weight="700">96 %</text>
+
+  <text x="44" y="242" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="11">Qwen3 30B-A3B 2507</text>
+  <rect x="220" y="230" width="250" height="16" rx="4" fill="#1a2014"/>
+  <rect x="220" y="230" width="215" height="16" rx="4" fill="#e8c06a"/>
+  <text x="480" y="242" fill="#e8c06a" font-family="JetBrains Mono, Consolas, monospace" font-size="11" font-weight="700">86 %</text>
+
+  <text x="44" y="280" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Qwen3 4B Instruct</text>
+  <rect x="220" y="268" width="250" height="16" rx="4" fill="#1a2014"/>
+  <rect x="220" y="268" width="160" height="16" rx="4" fill="#6f7a64"/>
+  <text x="480" y="280" fill="#8d9680" font-family="JetBrains Mono, Consolas, monospace" font-size="11">64 %</text>
+
+  <text x="44" y="318" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Qwen3.5 9B</text>
+  <rect x="220" y="306" width="250" height="16" rx="4" fill="#1a2014"/>
+  <rect x="220" y="306" width="142" height="16" rx="4" fill="#6f7a64"/>
+  <text x="480" y="318" fill="#8d9680" font-family="JetBrains Mono, Consolas, monospace" font-size="11">57 %</text>
+
+  <text x="44" y="356" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Qwen2.5 Coder 7B</text>
+  <rect x="220" y="344" width="250" height="16" rx="4" fill="#1a2014"/>
+  <rect x="220" y="344" width="122" height="16" rx="4" fill="#6f7a64"/>
+  <text x="480" y="356" fill="#8d9680" font-family="JetBrains Mono, Consolas, monospace" font-size="11">49 %</text>
+
+  <text x="44" y="394" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Ornith 1.5 9B</text>
+  <rect x="220" y="382" width="250" height="16" rx="4" fill="#1a2014"/>
+  <rect x="220" y="382" width="87" height="16" rx="4" fill="#6f7a64"/>
+  <text x="480" y="394" fill="#8d9680" font-family="JetBrains Mono, Consolas, monospace" font-size="11">35 %</text>
+
+  <text x="44" y="424" fill="#6f7a64" font-family="Inter, Segoe UI, sans-serif" font-size="10">2 repeticiones en los grandes, 1 en los densos.</text>
+
+  <!-- Panel derecho: scatter -->
+  <rect x="564" y="86" width="512" height="356" rx="14" fill="#12160f" stroke="#26301f"/>
+  <text x="584" y="114" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="13" font-weight="600">Calidad frente a velocidad</text>
+  <text x="584" y="134" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">Coding global (%) · generación (tok/s)</text>
+
+  <!-- grid -->
+  <line x1="604" y1="150" x2="1048" y2="150" stroke="#26301f"/>
+  <line x1="604" y1="220" x2="1048" y2="220" stroke="#26301f"/>
+  <line x1="604" y1="290" x2="1048" y2="290" stroke="#26301f"/>
+  <line x1="604" y1="360" x2="1048" y2="360" stroke="#26301f"/>
+  <line x1="604" y1="410" x2="1048" y2="410" stroke="#3a4332"/>
+  <line x1="604" y1="410" x2="604" y2="150" stroke="#3a4332"/>
+
+  <text x="596" y="154" text-anchor="end" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">100</text>
+  <text x="596" y="224" text-anchor="end" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">75</text>
+  <text x="596" y="294" text-anchor="end" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">50</text>
+  <text x="596" y="364" text-anchor="end" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">25</text>
+  <text x="596" y="414" text-anchor="end" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">0</text>
+
+  <text x="604" y="432" text-anchor="middle" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">20</text>
+  <text x="678" y="432" text-anchor="middle" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">30</text>
+  <text x="752" y="432" text-anchor="middle" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">40</text>
+  <text x="826" y="432" text-anchor="middle" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">50</text>
+  <text x="900" y="432" text-anchor="middle" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">60</text>
+  <text x="974" y="432" text-anchor="middle" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">70</text>
+  <text x="1048" y="432" text-anchor="middle" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="9">80</text>
+
+  <!-- puntos -->
+  <circle cx="682" cy="150" r="8" fill="#cde86e" opacity="0.22"/>
+  <circle cx="682" cy="150" r="4.5" fill="#cde86e"/>
+  <text x="694" y="143" fill="#cde86e" font-family="Inter, Segoe UI, sans-serif" font-size="10" font-weight="700">GPT-OSS 20B</text>
+
+  <circle cx="742" cy="160" r="7" fill="#82b8d0" opacity="0.22"/>
+  <circle cx="742" cy="160" r="4" fill="#82b8d0"/>
+  <text x="754" y="155" fill="#82b8d0" font-family="Inter, Segoe UI, sans-serif" font-size="10" font-weight="600">Qwen3.6 35B</text>
+
+  <circle cx="765" cy="186" r="6" fill="#e8c06a" opacity="0.22"/>
+  <circle cx="765" cy="186" r="3.6" fill="#e8c06a"/>
+  <text x="777" y="183" fill="#e8c06a" font-family="Inter, Segoe UI, sans-serif" font-size="10" font-weight="600">Qwen3 30B</text>
+
+  <circle cx="1005" cy="244" r="6" fill="#8d9680" opacity="0.22"/>
+  <circle cx="1005" cy="244" r="3.6" fill="#8d9680"/>
+  <text x="997" y="238" text-anchor="end" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10">Qwen3 4B</text>
+
+  <circle cx="757" cy="262" r="6" fill="#8d9680" opacity="0.22"/>
+  <circle cx="757" cy="262" r="3.6" fill="#8d9680"/>
+  <text x="749" y="267" text-anchor="end" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10">Qwen3.5 9B</text>
+
+  <circle cx="953" cy="283" r="6" fill="#8d9680" opacity="0.22"/>
+  <circle cx="953" cy="283" r="3.6" fill="#8d9680"/>
+  <text x="945" y="288" text-anchor="end" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10">Qwen2.5 Coder</text>
+
+  <circle cx="645" cy="319" r="6" fill="#8d9680" opacity="0.22"/>
+  <circle cx="645" cy="319" r="3.6" fill="#8d9680"/>
+  <text x="657" y="324" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10">Ornith 9B</text>
+
+  <text x="604" y="452" fill="#6f7a64" font-family="Inter, Segoe UI, sans-serif" font-size="9.5">El punto ideal está arriba a la derecha: máxima calidad sin perder velocidad.</text>
+</svg>

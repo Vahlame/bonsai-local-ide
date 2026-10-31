@@ -138,6 +138,7 @@ kbd {
   line-height: 1.5;
 }
 .muted { color: var(--muted); }
+#help p + p { margin-top: 6px; }
 
 /* ------------------------------------------------- 3. Foco, selección, scroll */
 :where(button, a, input, textarea, select, [tabindex]):focus-visible {
@@ -974,6 +975,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 }
 .hub-card:hover { border-color: var(--line-strong); }
 .hub-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.hub-name { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.hub-name-text { min-width: 0; }
+.hub-logo {
+  width: 20px; height: 20px; flex: none; margin-top: 1px;
+  border-radius: 5px; object-fit: contain;
+}
+.hub-logo-mono { filter: brightness(0) invert(1); }
+:root[data-theme="light"] .hub-logo-mono { filter: none; }
 .hub-card h3 { margin: 0; font-size: 14px; line-height: 1.25; }
 .hub-repo { margin: 2px 0 0; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
 .hub-badge {

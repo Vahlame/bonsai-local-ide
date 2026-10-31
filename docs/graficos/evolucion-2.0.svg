@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="440" viewBox="0 0 1100 440" role="img" aria-labelledby="titulo-evolucion">
+  <title id="titulo-evolucion">Evolución de Bonsai Local IDE hasta 2.0</title>
+  <rect width="1100" height="440" fill="#0d100b"/>
+  <defs>
+    <linearGradient id="linea" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#82b8d0"/>
+      <stop offset="0.55" stop-color="#cde86e"/>
+      <stop offset="1" stop-color="#dcf58a"/>
+    </linearGradient>
+    <linearGradient id="brillo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cde86e" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#cde86e" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <text x="28" y="38" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="22" font-weight="700">Bonsai Local IDE · evolución 2026</text>
+  <text x="28" y="62" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="12.5">De un chat local a un IDE de agentes con modelos de 35B en 8 GB de VRAM.</text>
+
+  <rect x="28" y="88" width="1044" height="1" fill="#26301f"/>
+  <text x="28" y="112" fill="#6f7a64" font-family="JetBrains Mono, Consolas, monospace" font-size="10.5" letter-spacing="0.1em">OCTUBRE 2026</text>
+
+  <line x1="70" y1="220" x2="1030" y2="220" stroke="#26301f" stroke-width="6" stroke-linecap="round"/>
+  <line x1="70" y1="220" x2="1030" y2="220" stroke="url(#linea)" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- 1.2 -->
+  <circle cx="86" cy="220" r="10" fill="#0d100b" stroke="#82b8d0" stroke-width="3"/>
+  <circle cx="86" cy="220" r="4" fill="#82b8d0"/>
+  <text x="86" y="254" text-anchor="middle" fill="#82b8d0" font-family="JetBrains Mono, Consolas, monospace" font-size="11" font-weight="700">1.2</text>
+  <text x="86" y="278" text-anchor="middle" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600">Base local</text>
+  <text x="86" y="296" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">chat + editor</text>
+  <text x="86" y="312" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">diffs y guardado</text>
+
+  <!-- 1.5 -->
+  <circle cx="228" cy="220" r="10" fill="#0d100b" stroke="#82b8d0" stroke-width="3"/>
+  <circle cx="228" cy="220" r="4" fill="#82b8d0"/>
+  <text x="228" y="254" text-anchor="middle" fill="#82b8d0" font-family="JetBrains Mono, Consolas, monospace" font-size="11" font-weight="700">1.5</text>
+  <text x="228" y="278" text-anchor="middle" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600">IDE completo</text>
+  <text x="228" y="296" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">git · terminal</text>
+  <text x="228" y="312" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">navegador</text>
+
+  <!-- 1.6 -->
+  <circle cx="370" cy="220" r="10" fill="#0d100b" stroke="#82b8d0" stroke-width="3"/>
+  <circle cx="370" cy="220" r="4" fill="#82b8d0"/>
+  <text x="370" y="254" text-anchor="middle" fill="#82b8d0" font-family="JetBrains Mono, Consolas, monospace" font-size="11" font-weight="700">1.6</text>
+  <text x="370" y="278" text-anchor="middle" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600">Contexto real</text>
+  <text x="370" y="296" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">tokenizer · KV</text>
+  <text x="370" y="312" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">visión</text>
+
+  <!-- 1.7 -->
+  <circle cx="512" cy="220" r="10" fill="#0d100b" stroke="#cde86e" stroke-width="3"/>
+  <circle cx="512" cy="220" r="4" fill="#cde86e"/>
+  <text x="512" y="254" text-anchor="middle" fill="#cde86e" font-family="JetBrains Mono, Consolas, monospace" font-size="11" font-weight="700">1.7</text>
+  <text x="512" y="278" text-anchor="middle" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600">Model Hub</text>
+  <text x="512" y="296" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">plan por modelo</text>
+  <text x="512" y="312" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">SHA-256</text>
+
+  <!-- 1.8 -->
+  <circle cx="654" cy="220" r="10" fill="#0d100b" stroke="#cde86e" stroke-width="3"/>
+  <circle cx="654" cy="220" r="4" fill="#cde86e"/>
+  <text x="654" y="254" text-anchor="middle" fill="#cde86e" font-family="JetBrains Mono, Consolas, monospace" font-size="11" font-weight="700">1.8</text>
+  <text x="654" y="278" text-anchor="middle" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600">Catálogo</text>
+  <text x="654" y="296" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">25 modelos</text>
+  <text x="654" y="312" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">descubrimiento HF</text>
+
+  <!-- 1.9 -->
+  <circle cx="796" cy="220" r="13" fill="#0d100b" stroke="#cde86e" stroke-width="4"/>
+  <circle cx="796" cy="220" r="5" fill="#cde86e"/>
+  <text x="796" y="254" text-anchor="middle" fill="#cde86e" font-family="JetBrains Mono, Consolas, monospace" font-size="11" font-weight="700">1.9</text>
+  <text x="796" y="278" text-anchor="middle" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600">MoE híbrido</text>
+  <text x="796" y="296" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">35B en 8 GB</text>
+  <text x="796" y="312" text-anchor="middle" fill="#cde86e" font-family="JetBrains Mono, Consolas, monospace" font-size="10.5">42,5 tok/s</text>
+
+  <!-- 2.0 -->
+  <circle cx="985" cy="220" r="16" fill="#cde86e" opacity="0.16"/>
+  <circle cx="985" cy="220" r="11" fill="#0d100b" stroke="#dcf58a" stroke-width="4"/>
+  <circle cx="985" cy="220" r="5" fill="#dcf58a"/>
+  <text x="985" y="254" text-anchor="middle" fill="#dcf58a" font-family="JetBrains Mono, Consolas, monospace" font-size="12" font-weight="700">2.0</text>
+  <text x="985" y="278" text-anchor="middle" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600">Precisión local</text>
+  <text x="985" y="296" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">visión 1600 px</text>
+  <text x="985" y="312" text-anchor="middle" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">research limpio</text>
+
+  <rect x="28" y="344" width="1044" height="64" rx="12" fill="#12160f" stroke="#26301f"/>
+  <text x="52" y="368" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="10.5" letter-spacing="0.08em">EN NÚMEROS</text>
+  <text x="52" y="392" fill="#e9eee0" font-family="JetBrains Mono, Consolas, monospace" font-size="15" font-weight="700">34 GGUF</text>
+  <text x="222" y="392" fill="#e9eee0" font-family="JetBrains Mono, Consolas, monospace" font-size="15" font-weight="700">7 modelos medidos</text>
+  <text x="462" y="392" fill="#e9eee0" font-family="JetBrains Mono, Consolas, monospace" font-size="15" font-weight="700">18/18 tests</text>
+  <text x="682" y="392" fill="#e9eee0" font-family="JetBrains Mono, Consolas, monospace" font-size="15" font-weight="700">0 nube</text>
+  <text x="842" y="392" fill="#cde86e" font-family="JetBrains Mono, Consolas, monospace" font-size="15" font-weight="700">100 % local</text>
+</svg>

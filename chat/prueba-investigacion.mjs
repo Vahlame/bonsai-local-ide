@@ -11,7 +11,7 @@ let intentos = 0;
 const fallback = JSON.parse(await buscarWeb("API oficial", { fetcher: async () => ++intentos === 1 ? new Response("captcha", { status: 403 }) : new Response(rss, { headers: { "content-type": "application/xml" } }) }));
 assert.equal(fallback.proveedor, "bing-rss"); assert.equal(fallback.resultados[0].titulo, "Documentación");
 await assert.rejects(buscarWeb("consulta", { fetcher: async () => new Response("verificación", { status: 200 }) }), /No se obtuvieron fuentes/);
-const parsed = extraerPagina('<title>Fuente</title><nav>MENU</nav><main><h1>Guía</h1><script>INSTRUCCION_OCULTA</script><p>A &lt; B &#x1F680;</p><a href="/api">API</a></main>', "https://example.org/docs");
+const parsed = await extraerPagina('<title>Fuente</title><nav>MENU</nav><main><h1>Guía</h1><script>INSTRUCCION_OCULTA</script><p>A &lt; B &#x1F680;</p><a href="/api">API</a></main>', "https://example.org/docs");
 assert.match(parsed.texto, /A < B 🚀/); assert.doesNotMatch(parsed.texto, /MENU|INSTRUCCION/);
 assert.equal(parsed.enlaces[0].url, "https://example.org/api");
 const effects = nativeToolEffects([{ id: "fuente", name: "leer_web", arguments: { url: "https://example.org/docs" } }]);

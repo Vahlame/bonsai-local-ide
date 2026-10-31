@@ -23,6 +23,7 @@ import { McpPlaywright } from "./mcp-playwright.mjs";
 import { buscarWeb, leerWeb } from "./investigacion.mjs";
 import { cambiarConRecuperacion } from "./cambio-modelo.mjs";
 import { ocrLocal } from "./ocr.mjs";
+import { imagenesParaModelo } from "./imagenes.mjs";
 import { analizarEstadoGit, elegirRutasGit } from "./git-seguro.mjs";
 import { rutaSegura, rutaProyecto, escribirAtomico, escribirAtomicoCondicional, escribirAtomicoNuevo } from "./archivos-seguros.mjs";
 import { LIMITE_TEXTO, decodificarRecorteUtf8, describirLectura, leerPrimerosBytes, leerTextoAcotado, parseLectura } from "./lecturas.mjs";
@@ -647,42 +648,6 @@ function mmprojDisponible(clave) {
   } catch {
     return false;
   }
-}
-
-/** Tipos MIME de las imágenes que se pueden adjuntar. */
-const TIPO_IMAGEN = {  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".gif": "image/gif",
-  ".bmp": "image/bmp",
-};
-
-/**
- * Convierte los adjuntos guardados en data URLs para el servidor de visión.
- * @param {unknown} imagenes
- * @returns {string[]}
- */
-function imagenesParaModelo(imagenes) {
-  /** @type {string[]} */
-  const out = [];
-  if (!Array.isArray(imagenes)) return out;
-  // Tope de peso total del cuerpo que se manda a llama.cpp (base64 infla ~33 %).
-  const MAX_TOTAL = 12_000_000;
-  let total = 0;
-  for (const rel of imagenes.slice(0, 6)) {
-    if (typeof rel !== "string") continue;
-    const abs = fileInside(ADJUNTOS_DIR, rel.replace(/\\/g, "/"));
-    if (!abs || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) continue;
-    const datos = fs.readFileSync(abs);
-    if (!datos.length || datos.length > 8_000_000) continue;
-    const b64 = datos.toString("base64");
-    if (total + b64.length > MAX_TOTAL) break;
-    total += b64.length;
-    const tipo = TIPO_IMAGEN[path.extname(abs).toLowerCase()] || "image/png";
-    out.push(`data:${tipo};base64,${b64}`);
-  }
-  return out;
 }
 
 /**
@@ -3379,7 +3344,11 @@ async function main(args) {
           let prompt = chat.agentProfile === "small-local-coder" ? (attached.length ? attachFiles(text, attached) : text) : (named.length ? attachFiles(text, named) : (snippets.length ? text : withCurrentFile(text)));
           if (snippets.length) prompt = attachSnippets(prompt, snippets);
           // Imágenes: con visión viajan como partes `image_url`; sin ella solo se avisa.
-          const imagenesData = chat.vision ? imagenesParaModelo(imagenes) : [];
+          // `sharp` normaliza tamaño/orientación y evita mandar capturas 4K en base64.
+          const rutasImagenes = imagenes
+            .map((rel) => typeof rel === "string" ? fileInside(ADJUNTOS_DIR, rel.replace(/\\/g, "/")) : null)
+            .filter((abs) => Boolean(abs) && fs.existsSync(abs) && fs.statSync(abs).isFile());
+          const imagenesData = chat.vision ? await imagenesParaModelo(rutasImagenes) : [];
           chat.turnImages = imagenesData;
           if (imagenes.length && chat.vision && imagenesData.length !== imagenes.length) {
             const aviso = `Solo se pudieron adjuntar ${imagenesData.length} de ${imagenes.length} imágenes; revisa los archivos y los límites de tamaño.`;

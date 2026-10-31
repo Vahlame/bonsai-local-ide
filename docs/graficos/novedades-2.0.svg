@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="360" viewBox="0 0 1100 360" role="img" aria-labelledby="titulo-novedades">
+  <title id="titulo-novedades">Novedades de Bonsai Local IDE 2.0</title>
+  <rect width="1100" height="360" fill="#0d100b"/>
+
+  <text x="28" y="40" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="22" font-weight="700">Bonsai 2.0 · precisión local</text>
+  <text x="28" y="64" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="12.5">Cuatro mejoras que se notan en cada turno, sin enviar nada a la nube.</text>
+  <rect x="966" y="22" width="106" height="30" rx="15" fill="#cde86e"/>
+  <text x="1019" y="42" text-anchor="middle" fill="#18200f" font-family="JetBrains Mono, Consolas, monospace" font-size="12" font-weight="700">v2.0.0</text>
+
+  <!-- tarjeta 1 -->
+  <rect x="28" y="92" width="248" height="188" rx="14" fill="#12160f" stroke="#26301f"/>
+  <text x="48" y="120" fill="#cde86e" font-family="JetBrains Mono, Consolas, monospace" font-size="10" letter-spacing="0.08em">01 · VISIÓN</text>
+  <g transform="translate(48 136)" fill="none" stroke="#cde86e" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 10c3.5-5 7.5-7.5 12-7.5S21.5 5 25 10c-3.5 5-7.5 7.5-12 7.5S4.5 15 1 10Z"/>
+    <circle cx="13" cy="10" r="3.2"/>
+  </g>
+  <text x="48" y="178" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="600">Visión nítida</text>
+  <text x="48" y="200" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">sharp · 1600 px · JPEG 4:4:4</text>
+  <text x="48" y="218" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Corrige EXIF, aplana alfa y</text>
+  <text x="48" y="234" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">conserva el original si falla.</text>
+  <text x="48" y="262" fill="#cde86e" font-family="JetBrains Mono, Consolas, monospace" font-size="10">menos latencia, mismo detalle</text>
+
+  <!-- tarjeta 2 -->
+  <rect x="300" y="92" width="248" height="188" rx="14" fill="#12160f" stroke="#26301f"/>
+  <text x="320" y="120" fill="#82b8d0" font-family="JetBrains Mono, Consolas, monospace" font-size="10" letter-spacing="0.08em">02 · RESEARCH</text>
+  <g transform="translate(320 136)" fill="none" stroke="#82b8d0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 2h12l5 5v16H4z"/>
+    <path d="M16 2v5h5M8 12h9M8 16h9M8 20h6"/>
+  </g>
+  <text x="320" y="178" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="600">Research limpio</text>
+  <text x="320" y="200" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Readability + Turndown</text>
+  <text x="320" y="218" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Quita menús, scripts y ruido;</text>
+  <text x="320" y="234" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">entrega Markdown GFM.</text>
+  <text x="320" y="262" fill="#82b8d0" font-family="JetBrains Mono, Consolas, monospace" font-size="10">menos tokens, mejor contexto</text>
+
+  <!-- tarjeta 3 -->
+  <rect x="572" y="92" width="248" height="188" rx="14" fill="#12160f" stroke="#26301f"/>
+  <text x="592" y="120" fill="#e8c06a" font-family="JetBrains Mono, Consolas, monospace" font-size="10" letter-spacing="0.08em">03 · MODEL HUB</text>
+  <g transform="translate(592 136)" fill="none" stroke="#e8c06a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 7 13 2l11 5-11 5L2 7Z"/>
+    <path d="M2 13l11 5 11-5M2 19l11 5 11-5"/>
+  </g>
+  <text x="592" y="178" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="600">Hub con identidad</text>
+  <text x="592" y="200" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Logos de proveedor locales</text>
+  <text x="592" y="218" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Qwen, Llama, Mistral, GPT,</text>
+  <text x="592" y="234" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Nemotron, Granite y más.</text>
+  <text x="592" y="262" fill="#e8c06a" font-family="JetBrains Mono, Consolas, monospace" font-size="10">34 GGUF · plan por modelo</text>
+
+  <!-- tarjeta 4 -->
+  <rect x="844" y="92" width="228" height="188" rx="14" fill="#12160f" stroke="#26301f"/>
+  <text x="864" y="120" fill="#ea9a89" font-family="JetBrains Mono, Consolas, monospace" font-size="10" letter-spacing="0.08em">04 · AGENTE</text>
+  <g transform="translate(864 136)" fill="none" stroke="#ea9a89" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5 10a8 8 0 0 1 16 0c0 7 3 8 3 8H2s3-1 3-8Z"/>
+    <path d="M9 21h8"/>
+  </g>
+  <text x="864" y="178" fill="#e9eee0" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="600">Agente que avisa</text>
+  <text x="864" y="200" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Notificación nativa opt-in</text>
+  <text x="864" y="218" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">Solo si la ventana está</text>
+  <text x="864" y="234" fill="#8d9680" font-family="Inter, Segoe UI, sans-serif" font-size="11">oculta y tú lo activaste.</text>
+  <text x="864" y="262" fill="#ea9a89" font-family="JetBrains Mono, Consolas, monospace" font-size="10">turnos largos sin vigilar</text>
+
+  <line x1="28" y1="310" x2="1072" y2="310" stroke="#26301f"/>
+  <text x="28" y="334" fill="#6f7a64" font-family="Inter, Segoe UI, sans-serif" font-size="10.5">Dependencias nuevas: sharp · @mozilla/readability · turndown · linkedom · @lobehub/icons-static-svg</text>
+  <text x="1072" y="334" text-anchor="end" fill="#cde86e" font-family="JetBrains Mono, Consolas, monospace" font-size="10.5" font-weight="700">0 nube · 0 vulnerabilidades npm</text>
+</svg>

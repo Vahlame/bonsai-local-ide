@@ -4,6 +4,51 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.0.0] - 2026-10-31
+
+### Añadido
+
+- **Visión optimizada con `sharp`**: `chat/imagenes.mjs` corrige EXIF, limita el
+  lado mayor a 1600 px, aplana transparencia, convierte a JPEG 4:4:4 y conserva
+  el original si el procesado falla. Tope de 8 MB por imagen y 12 MB de body
+  base64.
+- **Investigación limpia**: `@mozilla/readability` + `turndown` + `linkedom`
+  extraen el artículo y lo pasan a Markdown GFM. El extractor regex histórico
+  queda como *fallback*; la guardia SSRF no cambia.
+- **Model Hub con identidad**: logos SVG locales de Qwen, Meta/Llama, Mistral,
+  DeepSeek, OpenAI, Gemma, NVIDIA, IBM, Hugging Face, Liquid, Zhipu, Kimi y
+  otros, servidos desde `chat/ui/iconos/modelos/`.
+- **Notificación nativa opt-in** al terminar un turno largo con la ventana
+  oculta; el permiso solo se pide al activar el ajuste.
+- **Portada 2.0**: evolución, modelos y novedades en tres SVG nuevos
+  (`evolucion-2.0.svg`, `modelos-2.0.svg`, `novedades-2.0.svg`).
+- **Auditoría de dependencias** en `docs/DEPENDENCIAS-2.0.md`, con alternativas
+  evaluadas, licencias y cadena de suministro.
+- Suite `chat/prueba-imagenes.mjs` para resize, JPEG, fallback y tope total.
+
+### Cambiado
+
+- Versión **2.0.0**; README, badges, tabla de releases y documentación
+  actualizados.
+- Dependencias nuevas fijadas con versión exacta:
+  `sharp`, `@mozilla/readability`, `turndown`, `turndown-plugin-gfm`,
+  `linkedom` y `@lobehub/icons-static-svg`.
+- `npm test` incorpora la suite de imágenes (43 suites aisladas).
+
+### Corregido
+
+- `extraerPagina` ya no depende solo de regex: si Readability no encuentra un
+  artículo claro, vuelve al extractor anterior en vez de devolver texto vacío.
+- Las imágenes que `sharp` no puede abrir se envían tal cual, en lugar de
+  perderse silenciosamente.
+
+### Seguridad
+
+- `npm audit`: **0 vulnerabilidades**.
+- Readability/Turndown no habilitan HTML crudo ni scripts; el contenido web
+  sigue siendo dato no confiable.
+- Los logos son SVG estáticos y locales; no hay CDN ni telemetría.
+
 ## [1.9.0] - 2026-10-31
 
 ### Añadido

@@ -1763,6 +1763,32 @@
     verPensamiento.setAttribute("aria-label","Pensamiento expandido");
     verPensamiento.addEventListener("change",()=>guardarAjustes({verPensamiento:verPensamiento.checked}));
 
+    // Notificación nativa al terminar un turno largo. Es opt-in y solo se pide
+    // permiso cuando el usuario la activa; nunca al cargar la interfaz.
+    const notificar = el("input");
+    notificar.type = "checkbox";
+    notificar.setAttribute("aria-label", "Avisar al terminar un turno");
+    try { notificar.checked = localStorage.getItem("bonsai-notificar") === "1"; } catch { notificar.checked = false; }
+    notificar.addEventListener("change", async () => {
+      if (notificar.checked) {
+        if (!("Notification" in window)) {
+          notificar.checked = false;
+          avisar("Este navegador no admite notificaciones nativas.", "warn", 5000);
+          return;
+        }
+        let permiso = Notification.permission;
+        if (permiso !== "granted") {
+          try { permiso = await Notification.requestPermission(); } catch { permiso = "denied"; }
+        }
+        if (permiso !== "granted") {
+          notificar.checked = false;
+          avisar("El navegador no dio permiso para mostrar notificaciones.", "warn", 5000);
+          return;
+        }
+      }
+      try { localStorage.setItem("bonsai-notificar", notificar.checked ? "1" : "0"); } catch { /* modo privado */ }
+    });
+
     const perfil = el("select");
     for (const [v, t] of [["codigo", "Código (ajustes del modelo)"], ["chat", "Chat (temp 0.7)"]]) {
       const o = el("option", "", t);
@@ -1959,6 +1985,7 @@
       el("h4","settings-section","Apariencia"),
       fila("Tema", tema),
       fila("Mostrar pensamiento expandido", verPensamiento),
+      fila("Avisar al terminar (ventana oculta)", notificar),
       el("h4","settings-section","Modelo y respuesta"),
       fila("Preguntar modelo al iniciar", preguntarInicio),
       fila("Perfil de muestreo", perfil),

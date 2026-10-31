@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="Bonsai">
+  <rect width="24" height="24" rx="6" fill="#cde86e"/>
+  <path d="M12 18.4v-5.1" stroke="#18200f" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M11.2 13.6c-2.7 0-4.2-1.7-4.2-4.2 2.7 0 4.2 1.5 4.2 4.2Z" fill="#18200f"/>
+  <path d="M12.4 11.6c2.4 0 3.8-1.6 3.8-3.9-2.5 0-3.8 1.5-3.8 3.9Z" fill="#18200f"/>
+  <path d="M9.2 18.4h5.6" stroke="#18200f" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

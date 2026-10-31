@@ -5,20 +5,19 @@ Chat con agente, editor con pestañas, diffs, git, terminal integrado, navegador
 controlado y visión — todo en tu GPU, sin nube.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-1.9.0-cde86e">
+  <img alt="version" src="https://img.shields.io/badge/version-2.0.0-cde86e">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v1.9.0** — **MoE híbrido**: Qwen3.6-35B-A3B, Qwen3-30B-A3B, GPT-OSS-20B y
-> Nemotron 3 Nano reparten expertos entre 8 GB de VRAM y 16 GB de RAM.
-> Qwen3.6-35B-A3B corre a **42,5 tok/s** con `--load-mode none`; **GPT-OSS-20B
-> gana el benchmark de proyecto real (18/18 tests)** y trabaja a **64k por
-> defecto / 128k máximo** con Harmony y muestreo oficial. Catálogo de 34 GGUF
-> con plantilla auditada. Al abrir, la UI pregunta qué modelo cargar; si no hay
-> ninguno, te lleva al Model Hub. Notas: [RELEASE-1.9.0](docs/RELEASE-1.9.0.md).
+> **v2.0.0 — precisión local.** La misma filosofía, ahora con visión optimizada
+> (`sharp`, ≤1600 px), investigación web limpia (Readability + Turndown),
+> Model Hub con identidad de proveedor y avisos nativos opt-in. Se mantiene el
+> motor de 1.9: Qwen3.6-35B-A3B a **42,5 tok/s** en 8 GB y GPT-OSS-20B con
+> **18/18 tests** de proyecto real. **34 GGUF**, 7 modelos medidos y **0 nube**.
+> Notas: [RELEASE-2.0.0](docs/RELEASE-2.0.0.md).
 
 ---
 
@@ -29,12 +28,77 @@ controlado y visión — todo en tu GPU, sin nube.
 | **Agente** | Edita archivos, ejecuta comandos, corre tests, lee/crea archivos, plan persistente, hasta 192 pasos por turno |
 | **Editor** | Pestañas, Ctrl+S, Ctrl+K (edición con diff y guardado atómico), paleta (Ctrl+P), búsqueda (Ctrl+Shift+F) |
 | **Contexto** | Tokenizer real del servidor, historial adaptativo y presupuesto honesto (ventana / solicitado / efectivo / reserva de salida) |
-| **Visión** | Imágenes pegadas o arrastradas, OCR local opcional, proyector en GPU |
+| **Visión** | Imágenes pegadas o arrastradas, OCR local opcional, proyector en GPU y normalización `sharp` a ≤1600 px |
+| **Investigación** | Búsqueda web y lectura con Readability + Turndown; el texto llega como Markdown limpio, no como HTML con menús |
 | **Razonamiento** | Panel desplegable del *thinking*; presupuesto configurable (por defecto 4096 tokens) |
 | **Herramientas** | Terminal persistente, problemas/diagnósticos, esquema, ir a definición (F12), procesos en segundo plano |
 | **Navegador** | Playwright MCP aislado, `evaluar` para diagnósticos JS, WebGL/workers/HMR |
+| **Model Hub** | 34 GGUF, logos de proveedor, plan por modelo, descarga reanudable y SHA-256 |
+| **Avisos** | Notificación nativa opt-in al terminar un turno largo con la ventana oculta |
 | **Git** | Estado por archivo, selección explícita, sin `add -A` |
 | **Seguridad** | Guardados atómicos, punto de deshacer por escritura, rutas confinadas, git seguro |
+
+---
+
+## ✨ Novedades 2.0
+
+![Novedades 2.0: visión, research, Hub y avisos](docs/graficos/novedades-2.0.svg)
+
+- **Visión que no desperdicia píxeles.** `sharp` corrige la orientación EXIF,
+  limita el lado mayor a **1600 px**, aplana la transparencia y convierte a
+  **JPEG 4:4:4** antes de base64. Si la imagen no se puede procesar, se conserva
+  el original: la visión nunca tumba el turno.
+- **Investigación con menos ruido.** `@mozilla/readability` aísla el artículo,
+  `turndown` lo pasa a **Markdown GFM** y `linkedom` evita un navegador. El
+  extractor regex histórico queda como *fallback* y la guardia SSRF no cambia.
+- **Hub con identidad.** Logos locales de Qwen, Llama, Mistral, GPT-OSS,
+  Nemotron, Granite, Gemma, DeepSeek, Kimi y más. Sin CDN, sin telemetría y sin
+  depender de una web externa para pintar una tarjeta.
+- **Avisos de verdad.** Notificación nativa **opt-in** al terminar un turno
+  largo, solo si la ventana está oculta. El permiso se pide únicamente cuando
+  activas la opción en Ajustes.
+- **Release reproducible.** Versiones exactas en `chat/package.json`,
+  `npm audit` limpio y notas completas en
+  [RELEASE-2.0.0](docs/RELEASE-2.0.0.md).
+
+---
+
+## 🧬 Evolución
+
+![Evolución de Bonsai hasta 2.0](docs/graficos/evolucion-2.0.svg)
+
+| Versión | Hito | Qué aportó |
+|---|---|---|
+| **1.2** | Base local | Chat, editor, diffs y guardado atómico |
+| **1.5** | IDE completo | Git, terminal, navegador y pestañas |
+| **1.6** | Contexto real | Tokenizer del servidor, KV, visión y *thinking* |
+| **1.7** | Model Hub | Catálogo, plan por modelo y Model Lab |
+| **1.8** | Catálogo | 25 modelos, descubrimiento en Hugging Face y visión |
+| **1.9** | MoE híbrido | 35B en 8 GB, `--load-mode none` y **42,5 tok/s** |
+| **2.0** | Precisión | Visión 1600 px, research limpio, logos y release reproducible |
+
+---
+
+## 🏁 Modelos 2.0
+
+![Modelos 2.0: coding, web app y velocidad](docs/graficos/modelos-2.0.svg)
+
+| Modelo | Coding real | Web app | Generación | Contexto | Uso recomendado |
+|---|---:|---:|---:|---:|---|
+| **GPT-OSS-20B** | **100 %** | **100 %** | 31 tok/s | 64k / 128k | Proyecto complejo desde cero |
+| **Qwen3.6-35B-A3B** | **96 %** | 91 % | 39 tok/s | 32k | Código guiado, bugfix y visión |
+| **Qwen3-30B-A3B 2507** | 86 % | 55 % | **42 tok/s** | 32k | Velocidad con calidad |
+| Qwen3 4B Instruct 2507 | 64 % | — | **74 tok/s** | 32k | Ediciones rápidas |
+| Qwen3.5 9B | 57 % | — | 41 tok/s | 32k | Chat técnico general |
+| Qwen2.5 Coder 7B | 49 % | — | 67 tok/s | 32k | Cambios pequeños |
+| Ornith 1.5 9B | 35 % | — | 26 tok/s | 32k | Agente del IDE, no one-shot |
+
+**Cómo leerlo:** *Coding real* = 65 % proyecto multifichero con tests ocultos +
+35 % bugfix; *Web app* = API + UI con Playwright. Los tres grandes se midieron
+con 2 repeticiones y los densos con 1; no es un ranking estadístico, es una
+guía de elección en **una RTX 4060 de 8 GB**. Detalle:
+[CODING-2026-10-31](reports/CODING-2026-10-31.md) y
+[MOE-2026-10-31](reports/MOE-2026-10-31.md).
 
 ---
 
@@ -208,8 +272,8 @@ resultados quedan en `reports/model-lab-<fecha>/` y en el registro local.
 👉 [Guía del Model Hub](docs/MODEL-HUB.md) ·
 [Strata y la memoria: cómo meter más en menos RAM](docs/STRATA-Y-MEMORIA.md)
 
-**Estado de este equipo:** 29 modelos curados instalados (15 con visión) + Ornith;
-**30 modelos utilizables** en total, incluidos 4 MoE de 20–35B. El catálogo, los
+**Estado de este equipo:** **34 GGUF en catálogo** (15 con visión) y **30 modelos
+utilizables** en total, incluidos 4 MoE de 20–35B. El catálogo, los
 planes medidos y el ranking de coding están en
 [MODEL-CATALOG-2026-10-31](reports/MODEL-CATALOG-2026-10-31.md),
 [MOE-2026-10-31](reports/MOE-2026-10-31.md) y
@@ -220,6 +284,10 @@ Qwen3.6-35B-A3B o Qwen3-30B-A3B.**
 ---
 
 ## 📊 Rendimiento medido (RTX 4060 Laptop 8 GB)
+
+> Los rankings de coding, web app y velocidad de los modelos actuales están en
+> la sección **Modelos 2.0** de arriba. Esta sección conserva las mediciones
+> profundas de motor, KV y contexto que siguen vigentes.
 
 ### Techo de contexto con f16 (histórico, 28-oct-2026)
 
@@ -410,6 +478,28 @@ Sirve para comparar presets, no para prometer que el proyecto saldrá perfecto.
 
 ---
 
+## 🧩 Dependencias con criterio
+
+La regla es simple: **nada que exija nube, telemetría o un framework que reescriba
+la UI**. Estas son las que entraron en 2.0 y por qué:
+
+| Dependencia | Origen / licencia | Para qué |
+|---|---|---|
+| `sharp` 0.35.5 | Apache-2.0 (libvips LGPL-3.0) | Redimensionar, orientar y comprimir imágenes antes de visión |
+| `@mozilla/readability` 0.6.0 | Mozilla / Apache-2.0 | Aislar el artículo real de una página web |
+| `turndown` 7.2.4 + GFM | Comunidad / MIT | Convertir el artículo a Markdown limpio y tablas |
+| `linkedom` 0.18.14 | Comunidad / ISC | DOM en Node sin lanzar un navegador |
+| `@lobehub/icons-static-svg` 1.101.0 | LobeHub / MIT | Logos de proveedores de modelos, servidos en local |
+
+Las dependencias históricas siguen siendo deliberadamente pocas: Playwright,
+MCP, TypeScript, tree-sitter y el language server de TypeScript. El resto del
+IDE —agente, contexto, diffs, terminal, Markdown, seguridad— es propio.
+
+La auditoría completa, la lista de *no adoptadas* y las que sí valdría la pena
+probar después están en [DEPENDENCIAS-2.0](docs/DEPENDENCIAS-2.0.md).
+
+---
+
 ## 🧱 Requisitos
 
 - **Windows 10/11** con Windows PowerShell 5.1.
@@ -440,17 +530,17 @@ flags están en [RTX4060_OPTIMIZATION_GUIDE](docs/RTX4060_OPTIMIZATION_GUIDE.md)
 ## 🧪 Pruebas
 
 ```powershell
-npm test                    # 42 suites aisladas (sin GPU) ~2 min
+npm test                    # 43 suites aisladas (sin GPU) ~2 min
 npm run test:navegador      # Edge/Chrome headless (UI, Ctrl+K, primer arranque)
 npm run test:gpu            # requiere el modelo real cargado
 npm run test:gpu-exclusiva  # calidad KV; exige GPU libre
 node scripts/run-tests.mjs --listar   # ver suites por grupo
 ```
 
-Verificación de la **1.9.0**: `npm test` → **42/42**, `npm run test:navegador` →
-**6/6**, primer arranque sin modelos verificado, IDE en ventana propia con
-**0 MiB de VRAM** y capturas revisadas a 1920×1080, 1600×900, 1366×768 y
-1024×768.
+Verificación de la **2.0.0**: `npm test` → **43/43**, `npm run test:navegador` →
+**6/6**, `npm audit` → **0 vulnerabilidades**, primer arranque sin modelos
+verificado, IDE en ventana propia con **0 MiB de VRAM** y capturas revisadas a
+1920×1080, 1600×900, 1366×768 y 1024×768.
 
 Herramientas reproducibles añadidas:
 
@@ -492,6 +582,8 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 | Documento | Contenido |
 |---|---|
 | [PRIMER-ARRANQUE](docs/PRIMER-ARRANQUE.md) | Clon limpio: dependencias, runtime, modelos y primer modelo |
+| [RELEASE-2.0.0](docs/RELEASE-2.0.0.md) | Precisión local: visión, research, Hub y release |
+| [DEPENDENCIAS-2.0](docs/DEPENDENCIAS-2.0.md) | Auditoría de dependencias, licencias y siguiente capa |
 | [RELEASE-1.9.0](docs/RELEASE-1.9.0.md) | MoE híbrido: 30–35B en 8 GB VRAM |
 | [RELEASE-1.8.0](docs/RELEASE-1.8.0.md) | Catálogo de 25 modelos y descubrimiento online |
 | [RELEASE-1.7.0](docs/RELEASE-1.7.0.md) | Model Hub, plan por modelo y Model Lab |

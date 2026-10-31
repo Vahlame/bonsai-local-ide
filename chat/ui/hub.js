@@ -49,6 +49,43 @@
     return `${Number(plan.contexto || 0).toLocaleString("es-ES")} tok · ${kvTexto(plan.kv)}${plan.vision ? (plan.mmprojCPU ? " · visión CPU" : " · visión GPU") : " · sin visión"}${moe}`;
   };
 
+  /**
+   * Logo del proveedor del modelo. Los SVG viven en /ui/iconos/modelos/ y se
+   * sirven localmente; si no reconocemos la familia, usamos la marca Bonsai.
+   * @param {Record<string, any>} m
+   * @returns {HTMLImageElement}
+   */
+  function logoModelo(m) {
+    const texto = [m?.clave, m?.nombre, m?.repo, m?.archivo].filter(Boolean).join(" ").toLowerCase();
+    const reglas = [
+      [/qwen|alibaba/, "qwen-color.svg", false],
+      [/gpt-oss|openai/, "openai.svg", true],
+      [/nemotron|nvidia/, "nvidia-color.svg", false],
+      [/granite|\bibm\b/, "ibm.svg", true],
+      [/gemma|google/, "gemma-color.svg", false],
+      [/llama|\bmeta\b/, "meta-color.svg", false],
+      [/mistral|devstral|magistral/, "mistral-color.svg", false],
+      [/deepseek/, "deepseek-color.svg", false],
+      [/glm|zhipu/, "zhipu.svg", false],
+      [/kimi|moonshot/, "kimi-color.svg", false],
+      [/lfm|liquid/, "liquid.svg", true],
+      [/smol|huggingface|unsloth/, "huggingface-color.svg", false],
+      [/phi|microsoft/, "microsoft-color.svg", false],
+      [/spark/, "spark-color.svg", false],
+    ];
+    const encontrada = reglas.find(([re]) => re.test(texto));
+    const archivo = encontrada?.[1] || "bonsai.svg";
+    const mono = Boolean(encontrada?.[2]);
+    const img = document.createElement("img");
+    img.className = `hub-logo${mono ? " hub-logo-mono" : ""}`;
+    img.src = `/ui/iconos/modelos/${archivo}`;
+    img.alt = "";
+    img.setAttribute("aria-hidden", "true");
+    img.loading = "lazy";
+    img.decoding = "async";
+    return img;
+  }
+
   let capa = null;
   let temporizador = null;
   let estado = {
@@ -158,8 +195,10 @@
   function tarjetaCurada(m) {
     const card = el("article", "hub-card");
     const top = el("div", "hub-card-top");
-    const nombre = el("div");
-    nombre.append(el("h3", "", m.nombre || m.clave), el("p", "hub-repo", m.repo || "origen directo"));
+    const nombre = el("div", "hub-name");
+    const textoNombre = el("div", "hub-name-text");
+    textoNombre.append(el("h3", "", m.nombre || m.clave), el("p", "hub-repo", m.repo || "origen directo"));
+    nombre.append(logoModelo(m), textoNombre);
     const estadoModelo = el("span", `hub-badge${m.instalado ? " ok" : ""}`, m.instalado ? "instalado" : "disponible");
     top.append(nombre, estadoModelo);
     card.append(top);
@@ -195,8 +234,10 @@
     const card = el("article", "hub-card");
     card.dataset.busqueda = [m.nombre, m.clave, m.rol, ...(m.capacidades || []), ...(m.etiquetas || [])].filter(Boolean).join(" ").toLowerCase();
     const top = el("div", "hub-card-top");
-    const nombre = el("div");
-    nombre.append(el("h3", "", m.nombre || m.clave), el("p", "hub-repo", m.archivo || ""));
+    const nombre = el("div", "hub-name");
+    const textoNombre = el("div", "hub-name-text");
+    textoNombre.append(el("h3", "", m.nombre || m.clave), el("p", "hub-repo", m.archivo || ""));
+    nombre.append(logoModelo(m), textoNombre);
     top.append(nombre, el("span", `hub-badge${m.existe ? " ok" : " bad"}`, m.existe ? "ok" : "falta el GGUF"));
     card.append(top);
     const meta = el("div", "hub-meta");

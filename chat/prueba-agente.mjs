@@ -718,7 +718,7 @@ try {
       const cuerpo = visto2[visto2.length - 1];
       const mensaje = cuerpo?.messages?.[cuerpo.messages.length - 1] || {};
       const partes = Array.isArray(mensaje.content) ? mensaje.content : [];
-      check("la imagen viaja como image_url", partes.some((p) => p.type === "image_url" && String(p.image_url?.url || "").startsWith("data:image/png;base64,")), JSON.stringify(partes).slice(0, 120));
+      check("la imagen viaja como image_url", partes.some((p) => p.type === "image_url" && /^data:image\/(?:png|jpeg);base64,/.test(String(p.image_url?.url || ""))), JSON.stringify(partes).slice(0, 120));
       check("el texto del usuario sigue ahí", String(partes[0]?.text || "").includes("qué hay en la imagen"));
       check("ya no se le dice que no ve", !JSON.stringify(partes).includes("No tienes visión"));
 

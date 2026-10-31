@@ -178,6 +178,8 @@ try {
 
   await pagina.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
   await pagina.waitForSelector("#tree .row", { timeout: 15000 });
+  const logo = await fetch(`http://127.0.0.1:${puertoUi}/ui/iconos/modelos/qwen-color.svg`);
+  check("los logos del Hub se sirven en local", logo.status === 200 && String(logo.headers.get("content-type") || "").includes("image/svg+xml"), `HTTP ${logo.status}`);
 
   // ---- 1. La UI pinta y chat-core.js se cargó como script clásico ----
   check("la página carga sin errores de consola", erroresConsola.length === 0, erroresConsola.slice(0, 3).join(" | "));
