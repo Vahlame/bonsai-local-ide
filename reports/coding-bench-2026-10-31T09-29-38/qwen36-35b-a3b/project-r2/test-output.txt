@@ -1,0 +1,65 @@
+TAP version 13
+# Subtest: sale primero la prioridad menor
+ok 1 - sale primero la prioridad menor
+  ---
+  duration_ms: 0.7606
+  type: 'test'
+  ...
+# Subtest: en empate de prioridad sale primero el que llego antes
+ok 2 - en empate de prioridad sale primero el que llego antes
+  ---
+  duration_ms: 0.1287
+  type: 'test'
+  ...
+# Subtest: size refleja los elementos y dequeue en vacio lanza Error
+ok 3 - size refleja los elementos y dequeue en vacio lanza Error
+  ---
+  duration_ms: 0.3263
+  type: 'test'
+  ...
+# Subtest: mezcla de prioridades y FIFO estable
+ok 4 - mezcla de prioridades y FIFO estable
+  ---
+  duration_ms: 0.6167
+  type: 'test'
+  ...
+# Subtest: respeta el limite de concurrencia
+ok 5 - respeta el limite de concurrencia
+  ---
+  duration_ms: 133.6033
+  type: 'test'
+  ...
+# Subtest: empieza por la prioridad menor
+ok 6 - empieza por la prioridad menor
+  ---
+  duration_ms: 0.7725
+  type: 'test'
+  ...
+# Subtest: reintenta hasta tener exito
+ok 7 - reintenta hasta tener exito
+  ---
+  duration_ms: 0.2334
+  type: 'test'
+  ...
+# Subtest: fallo definitivo devuelve ok:false con error
+ok 8 - fallo definitivo devuelve ok:false con error
+  ---
+  duration_ms: 0.2375
+  type: 'test'
+  ...
+# Subtest: devuelve resultados en orden de finalizacion
+ok 9 - devuelve resultados en orden de finalizacion
+  ---
+  duration_ms: 61.2989
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 262.7769
+

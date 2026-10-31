@@ -1,0 +1,90 @@
+</think>
+
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this._items = [];
+    this._order = 0;
+  }
+
+  enqueue(item, priority) {
+    this._items.push({ item, priority, order: this._order++ });
+  }
+
+  dequeue() {
+    if (this._items.length === 0) {
+      throw new Error('Queue is empty');
+    }
+    let minIdx = 0;
+    for (let i = 1; i < this._items.length; i++) {
+      const curr = this._items[i];
+      const min = this._items[minIdx];
+      if (curr.priority < min.priority || (curr.priority === min.priority && curr.order < min.order)) {
+        minIdx = i;
+      }
+    }
+    return this._items.splice(minIdx, 1)[0].item;
+  }
+
+  get size() {
+    return this._items.length;
+  }
+}
+===END FILE===
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency }) {
+    this.concurrency = concurrency;
+    this._tasks = [];
+    this._idCounter = 0;
+  }
+
+  add(fn, { priority = 0, retries = 0 }) {
+    this._tasks.push({ fn, priority, retries, id: ++this._idCounter });
+  }
+
+  async run() {
+    const pq = new PriorityQueue();
+    for (const t of this._tasks) {
+      pq.enqueue(t, t.priority);
+    }
+
+    const results = [];
+    const active = [];
+
+    const runTask = async (task) => {
+      let attempts = 0;
+      const maxAttempts = task.retries + 1;
+      while (attempts < maxAttempts) {
+        attempts++;
+        try {
+          const value = await task.fn();
+          return { id: task.id, ok: true, value, attempts };
+        } catch (error) {
+          if (attempts === maxAttempts) {
+            return { id: task.id, ok: false, error, attempts };
+          }
+        }
+      }
+    };
+
+    const spawn = () => {
+      while (active.length < this.concurrency && pq.size > 0) {
+        const task = pq.dequeue();
+        const promise = runTask(task).then((res) => {
+          results.push(res);
+          active.splice(active.indexOf(promise), 1);
+          spawn();
+        });
+        active.push(promise);
+      }
+    };
+
+    spawn();
+    await Promise.all(active);
+    return results;
+  }
+}
+===END FILE===

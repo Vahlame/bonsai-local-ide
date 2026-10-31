@@ -1,0 +1,155 @@
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this.heap = [];
+    this.counter = 0; // to preserve FIFO on equal priority
+  }
+
+  enqueue(item, priority) {
+    const node = { item, priority, index: this.counter++ };
+    this.heap.push(node);
+    this._bubbleUp(this.heap.length - 1);
+  }
+
+  dequeue() {
+    if (this.heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const root = this.heap[0];
+    const last = this.heap.pop();
+    if (this.heap.length > 0) {
+      this.heap[0] = last;
+      this._bubbleDown(0);
+    }
+    return root.item;
+  }
+
+  get size() {
+    return this.heap.length;
+  }
+
+  _bubbleUp(idx) {
+    const node = this.heap[idx];
+    while (idx > 0) {
+      const parentIdx = (idx - 1) >> 1;
+      const parent = this.heap[parentIdx];
+      if (
+        node.priority < parent.priority ||
+        (node.priority === parent.priority && node.index < parent.index)
+      ) {
+        this.heap[idx] = parent;
+        idx = parentIdx;
+      } else {
+        break;
+      }
+    }
+    this.heap[idx] = node;
+  }
+
+  _bubbleDown(idx) {
+    const length = this.heap.length;
+    const node = this.heap[idx];
+    while (true) {
+      let leftIdx = (idx << 1) + 1;
+      let rightIdx = leftIdx + 1;
+      let smallestIdx = idx;
+
+      if (
+        leftIdx < length &&
+        (this.heap[leftIdx].priority < this.heap[smallestIdx].priority ||
+          (this.heap[leftIdx].priority === this.heap[smallestIdx].priority &&
+            this.heap[leftIdx].index < this.heap[smallestIdx].index))
+      ) {
+        smallestIdx = leftIdx;
+      }
+
+      if (
+        rightIdx < length &&
+        (this.heap[rightIdx].priority < this.heap[smallestIdx].priority ||
+          (this.heap[rightIdx].priority === this.heap[smallestIdx].priority &&
+            this.heap[rightIdx].index < this.heap[smallestIdx].index))
+      ) {
+        smallestIdx = rightIdx;
+      }
+
+      if (smallestIdx === idx) break;
+
+      this.heap[idx] = this.heap[smallestIdx];
+      idx = smallestIdx;
+    }
+    this.heap[idx] = node;
+  }
+}
+===END FILE===
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency }) {
+    if (typeof concurrency !== 'number' || concurrency <= 0) {
+      throw new Error('concurrency must be a positive number');
+    }
+    this.concurrency = concurrency;
+    this.tasks = [];
+    this.idCounter = 0;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    if (typeof fn !== 'function') {
+      throw new Error('fn must be a function');
+    }
+    const id = this.idCounter++;
+    this.tasks.push({ id, fn, priority, retries });
+  }
+
+  async run() {
+    const pq = new PriorityQueue();
+    for (const t of this.tasks) {
+      pq.enqueue(t, t.priority);
+    }
+
+    const results = [];
+    const total = this.tasks.length;
+    let running = 0;
+
+    const allDone = new Promise((resolve) => {
+      const checkDone = () => {
+        if (results.length === total) resolve();
+      };
+
+      const startNext = () => {
+        while (running < this.concurrency && pq.size > 0) {
+          const task = pq.dequeue();
+          running++;
+          this._runTask(task).then((res) => {
+            results.push(res);
+            running--;
+            checkDone();
+            startNext();
+          });
+        }
+      };
+
+      startNext();
+    });
+
+    await allDone;
+    return results;
+  }
+
+  async _runTask(task) {
+    let attempts = 0;
+    while (true) {
+      attempts++;
+      try {
+        const value = await task.fn();
+        return { id: task.id, ok: true, value, attempts };
+      } catch (err) {
+        if (attempts > task.retries) {
+          return { id: task.id, ok: false, error: err, attempts };
+        }
+      }
+    }
+  }
+}
+===END FILE===

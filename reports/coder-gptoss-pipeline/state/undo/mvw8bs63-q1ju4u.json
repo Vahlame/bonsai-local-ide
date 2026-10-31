@@ -1,0 +1,1 @@
+{"tipo":"texto","rel":"src/range.mjs","antes":"export const range = n => Array.from({length:n+1},(_,i)=>i);\n","despues":"export const range = n => Array.from({length:n},(_,i)=>i);\n","workspace":"C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-gptoss-pipeline\\ws\\failing-test","ts":1793440766811}

@@ -1,0 +1,109 @@
+TAP version 13
+# Subtest: sale primero la prioridad menor
+ok 1 - sale primero la prioridad menor
+  ---
+  duration_ms: 0.8418
+  type: 'test'
+  ...
+# Subtest: en empate de prioridad sale primero el que llego antes
+ok 2 - en empate de prioridad sale primero el que llego antes
+  ---
+  duration_ms: 0.1264
+  type: 'test'
+  ...
+# Subtest: size refleja los elementos y dequeue en vacio lanza Error
+ok 3 - size refleja los elementos y dequeue en vacio lanza Error
+  ---
+  duration_ms: 0.3309
+  type: 'test'
+  ...
+# Subtest: mezcla de prioridades y FIFO estable
+ok 4 - mezcla de prioridades y FIFO estable
+  ---
+  duration_ms: 1.0748
+  type: 'test'
+  ...
+# Subtest: respeta el limite de concurrencia
+ok 5 - respeta el limite de concurrencia
+  ---
+  duration_ms: 257.9792
+  type: 'test'
+  ...
+# Subtest: empieza por la prioridad menor
+ok 6 - empieza por la prioridad menor
+  ---
+  duration_ms: 0.825
+  type: 'test'
+  ...
+# Subtest: reintenta hasta tener exito
+not ok 7 - reintenta hasta tener exito
+  ---
+  duration_ms: 0.8174
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-46-07\\qwen3-30b-a3b-2507\\project-r1\\test\\scheduler.test.mjs:36:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    2 !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen3-30b-a3b-2507/project-r1/test/scheduler.test.mjs:47:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: fallo definitivo devuelve ok:false con error
+ok 8 - fallo definitivo devuelve ok:false con error
+  ---
+  duration_ms: 0.2518
+  type: 'test'
+  ...
+# Subtest: devuelve resultados en orden de finalizacion
+not ok 9 - devuelve resultados en orden de finalizacion
+  ---
+  duration_ms: 107.3871
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-46-07\\qwen3-30b-a3b-2507\\project-r1\\test\\scheduler.test.mjs:59:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   'lenta',
+        'rapida',
+        'media',
+    -   'lenta'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'rapida'
+    1: 'media'
+    2: 'lenta'
+  actual:
+    0: 'lenta'
+    1: 'rapida'
+    2: 'media'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen3-30b-a3b-2507/project-r1/test/scheduler.test.mjs:65:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 7
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 438.9028
+

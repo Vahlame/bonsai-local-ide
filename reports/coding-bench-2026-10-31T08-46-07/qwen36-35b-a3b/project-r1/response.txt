@@ -1,0 +1,459 @@
+```
+     - Let's think carefully. A robust way:
+       ```javascript
+       async run() {
+         const pq = new PriorityQueue();
+         for (const task of this._tasks) {
+           pq.enqueue(task, task.priority);
+         }
+
+         const results = [];
+         let active = 0;
+         const concurrency = this.concurrency;
+
+         // We need to wait for a task to finish if pq is empty but active > 0
+         // We can use a simple approach: maintain a list of promises, and when one settles, try to dequeue.
+         // But we must ensure we don't exceed concurrency.
+         
+         const running = [];
+         
+         const process = async () => {
+           while (pq.size > 0 || running.length > 0) {
+             // Try to start new tasks
+             while (pq.size > 0 && running.length < concurrency) {
+               const task = pq.dequeue();
+               const p = this._runTask(task);
+               running.push(p);
+               p.then(() => {
+                 const idx = running.indexOf(p);
+                 if (idx !== -1) running.splice(idx, 1);
+               });
+             }
+             
+             // If we can't start new tasks, wait for any running task to finish
+             if (running.length > 0 && pq.size === 0) {
+               await Promise.race(running);
+             } else if (running.length === 0 && pq.size === 0) {
+               break;
+             }
+           }
+           return results;
+         };
+         
+         return process();
+       }
+       ```
+     - Wait, `Promise.race` resolves as soon as *one* task finishes. That's good. But after it resolves, we loop back, check `running.length < concurrency`, and if true, dequeue again. This works correctly.
+     - Let's trace: 
+       - Initially `running = []`, `pq` has tasks.
+       - Inner while: starts up to `concurrency` tasks. Each pushes to `running` and attaches `.then` to remove itself.
+       - After inner while, if `running.length > 0 && pq.size === 0`, we `await Promise.race(running)`. This waits for one to finish.
+       - Loop continues. `running` shrinks. Inner while tries to start more.
+       - Eventually `pq.size === 0` and `running.length === 0`, breaks.
+       - Returns `results`.
+     - This is clean and correct.
+     - Now, `_runTask(task)` needs to handle retries and record results.
+       ```javascript
+       async _runTask(task) {
+         let attempts = 0;
+         let lastError;
+         const maxRetries = task.retries;
+         
+         while (attempts <= maxRetries) {
+           attempts++;
+           try {
+             const value = await task.fn();
+             return { id: task.id, ok: true, value, attempts };
+           } catch (err) {
+             lastError = err;
+           }
+         }
+         
+         return { id: task.id, ok: false, error: lastError, attempts };
+       }
+       ```
+     - Wait, the requirement says: "Si fn lanza, reintenta hasta "retries" veces; si sigue fallando, el resultado es { ok:false, error }."
+     - If `retries = 0`, it should try once. If it fails, return `{ ok: false, error, attempts: 1 }`.
+     - My loop `while (attempts <= maxRetries)` with `attempts++` at start:
+       - `retries = 0`: `attempts` starts 0. `0 <= 0` true. `attempts` becomes 1. Tries fn. If fails, `lastError` set. Loop checks `1 <= 0` false. Returns `{ ok: false, error: lastError, attempts: 1 }`. Correct.
+       - `retries = 2`: tries up to 3 times total (1 initial + 2 retries). Correct.
+     - One detail: `task` structure in `add`: I'll store `{ id, fn, priority, retries }`.
+     - `add` method:
+       ```javascript
+       add(fn, { priority = 0, retries = 0 } = {}) {
+         this._tasks.push({ id: this._nextId++, fn, priority, retries });
+       }
+       constructor({ concurrency }) {
+         this.concurrency = concurrency;
+         this._tasks = [];
+         this._nextId = 0;
+       }
+       ```
+     - Wait, `add` signature in prompt: `add(fn, { priority = 0, retries = 0 })`. I'll match that.
+     - Let's assemble `scheduler.mjs`:
+       ```javascript
+       import { PriorityQueue } from './priority-queue.mjs';
+
+       export class Scheduler {
+         constructor({ concurrency }) {
+           this.concurrency = concurrency;
+           this._tasks = [];
+           this._nextId = 0;
+         }
+
+         add(fn, { priority = 0, retries = 0 }) {
+           this._tasks.push({ id: this._nextId++, fn, priority, retries });
+         }
+
+         async _runTask(task) {
+           let attempts = 0;
+           let lastError;
+           const maxRetries = task.retries;
+
+           while (attempts <= maxRetries) {
+             attempts++;
+             try {
+               const value = await task.fn();
+               return { id: task.id, ok: true, value, attempts };
+             } catch (err) {
+               lastError = err;
+             }
+           }
+
+           return { id: task.id, ok: false, error: lastError, attempts };
+         }
+
+         async run() {
+           const pq = new PriorityQueue();
+           for (const task of this._tasks) {
+             pq.enqueue(task, task.priority);
+           }
+
+           const results = [];
+           const running = [];
+           const concurrency = this.concurrency;
+
+           const process = async () => {
+             while (pq.size > 0 || running.length > 0) {
+               while (pq.size > 0 && running.length < concurrency) {
+                 const task = pq.dequeue();
+                 const p = this._runTask(task);
+                 running.push(p);
+                 p.then(() => {
+                   const idx = running.indexOf(p);
+                   if (idx !== -1) running.splice(idx, 1);
+                 });
+               }
+
+               if (running.length > 0 && pq.size === 0) {
+                 await Promise.race(running);
+               } else if (running.length === 0 && pq.size === 0) {
+                 break;
+               }
+             }
+             return results;
+           };
+
+           return process();
+         }
+       }
+       ```
+     - Wait, there's a subtle bug in the concurrency control: `Promise.race` resolves when *one* task finishes, but we might have multiple tasks finish around the same time. The loop will catch up correctly because after `await Promise.race(running)`, we go back to the outer `while`, then inner `while` will check `running.length < concurrency` and start more tasks. This is correct.
+     - However, `running.indexOf(p)` inside `.then` might be slow or problematic if `p` is already removed? No, it's fine. But `running` is an array of promises. When a promise settles, we remove it. `Promise.race` returns the settled promise. We don't need to track it specially.
+     - One issue: `running` array might contain promises that have already settled but haven't been removed yet (because `.then` hasn't run or is pending). That's fine.
+     - Actually, a cleaner way to handle concurrency without `Promise.race` quirks is to use a simple semaphore or just `Promise.all` with a concurrency limiter, but the current approach is standard and works.
+     - Let's double check the `Promise.race` behavior: It returns the first settled promise. The `.then` on each promise will run asynchronously. The `await` will pause until one settles. Then the loop continues. This works.
+     - Wait, what if `concurrency` is 0? The prompt says "límite de tareas simultáneas", usually >= 1. I'll assume >= 1. If 0, it would hang or break immediately. I'll add a guard or just assume valid input. I'll keep it simple.
+     - Let's refine the scheduler to be more robust and avoid potential race conditions with `running.indexOf`. Actually, we can just use a counter for active tasks and a promise that resolves when active drops. But the array approach is fine.
+     - Alternative concurrency control:
+       ```javascript
+       async run() {
+         const pq = new PriorityQueue();
+         for (const task of this._tasks) {
+           pq.enqueue(task, task.priority);
+         }
+
+         const results = [];
+         let active = 0;
+         const concurrency = this.concurrency;
+
+         const waitForSlot = () => new Promise(resolve => {
+           const check = () => {
+             if (active < concurrency) resolve();
+             else setTimeout(check, 0); // yield to event loop
+           };
+           check();
+         });
+       ```
+       This is messy. The `Promise.race` approach is actually cleaner. I'll stick with it but fix the removal logic to be safer:
+       ```javascript
+       const p = this._runTask(task);
+       running.push(p);
+       p.finally(() => {
+         const idx = running.indexOf(p);
+         if (idx !== -1) running.splice(idx, 1);
+       });
+       ```
+       Using `.finally` is better than `.then` because it runs regardless of settle state.
+     - Let's test the logic mentally:
+       - `pq` has tasks. `running` empty.
+       - Inner while: starts `concurrency` tasks. `running` has `concurrency` promises.
+       - Outer while condition: `pq.size > 0 || running.length > 0` -> true.
+       - Inner while condition: `pq.size > 0 && running.length < concurrency` -> false (running is full).
+       - Next: `if (running.length > 0 && pq.size === 0)` -> true. `await Promise.race(running)`.
+       - One task finishes. `.finally` runs, removes it from `running`.
+       - Loop continues. Outer while checks. Inner while checks `running.length < concurrency` -> true (if pq still has tasks). Starts new task.
+       - This works correctly.
+     - One edge case: `Promise.race` might resolve with a promise that was already removed? No, `running` contains the promises. When one settles, it's removed. `Promise.race` returns the promise object. It's fine.
+     - Actually, `Promise.race` on an array that changes while waiting might cause issues? No, `Promise.race` takes the array at call time. It's safe.
+     - Let's consider if `concurrency` is large. It works.
+     - What about `run()` returning results in completion order? `results.push(res)` happens inside `_runTask`? Wait, `_runTask` returns the result object. But in my code, `_runTask` returns the result, but I don't push it to `results` inside `_runTask`. I need to push it when the promise resolves.
+     - Ah! I missed pushing to `results`. `_runTask` returns the result object, but I need to capture it when the promise settles.
+     - Let's fix:
+       ```javascript
+       const p = this._runTask(task);
+       running.push(p);
+       p.then(res => {
+         results.push(res);
+       }).finally(() => {
+         const idx = running.indexOf(p);
+         if (idx !== -1) running.splice(idx, 1);
+       });
+       ```
+     - This ensures `results` is populated in completion order.
+     - Let's verify `_runTask` return value: It returns `{ id, ok, value, attempts }` or `{ id, ok, error, attempts }`. Correct.
+     - One detail: `task.id` is assigned in `add`. Correct.
+     - Let's put it all together.
+
+     Structure:
+     `src/priority-queue.mjs`
+     `src/scheduler.mjs`
+
+     Check requirements:
+     - `PriorityQueue`: `enqueue(item, priority)`, `dequeue()`, `size`. Correct.
+     - `Scheduler`: `constructor({ concurrency })`, `add(fn, { priority = 0, retries = 0 })`, `async run()`. Correct.
+     - Concurrency limit respected. Correct.
+     - Retry logic correct. Correct.
+     - Completion order results. Correct.
+     - No external deps. Correct.
+     - ESM. Correct.
+
+     One minor thing: `PriorityQueue` `size` should be a property. I used `get size()`. That's fine.
+     `dequeue` throws `Error` if empty. I used `throw new Error('Queue is empty')`. Correct.
+     `add` signature: `add(fn, { priority = 0, retries = 0 })`. I'll keep it exactly.
+     `run` returns array in completion order. Correct.
+
+     Let's write out the files carefully.
+
+     `src/priority-queue.mjs`:
+     ```javascript
+     export class PriorityQueue {
+       constructor() {
+         this._queue = [];
+         this._seq = 0;
+       }
+
+       enqueue(item, priority) {
+         this._queue.push({ item, priority, seq: this._seq++ });
+       }
+
+       dequeue() {
+         if (this._queue.length === 0) throw new Error('Queue is empty');
+         let minIdx = 0;
+         for (let i = 1; i < this._queue.length; i++) {
+           const curr = this._queue[i];
+           const min = this._queue[minIdx];
+           if (curr.priority < min.priority || (curr.priority === min.priority && curr.seq < min.seq)) {
+             minIdx = i;
+           }
+         }
+         return this._queue.splice(minIdx, 1)[0].item;
+       }
+
+       get size() {
+         return this._queue.length;
+       }
+     }
+     ```
+
+     `src/scheduler.mjs`:
+     ```javascript
+     import { PriorityQueue } from './priority-queue.mjs';
+
+     export class Scheduler {
+       constructor({ concurrency }) {
+         this.concurrency = concurrency;
+         this._tasks = [];
+         this._nextId = 0;
+       }
+
+       add(fn, { priority = 0, retries = 0 }) {
+         this._tasks.push({ id: this._nextId++, fn, priority, retries });
+       }
+
+       async _runTask(task) {
+         let attempts = 0;
+         let lastError;
+         const maxRetries = task.retries;
+
+         while (attempts <= maxRetries) {
+           attempts++;
+           try {
+             const value = await task.fn();
+             return { id: task.id, ok: true, value, attempts };
+           } catch (err) {
+             lastError = err;
+           }
+         }
+
+         return { id: task.id, ok: false, error: lastError, attempts };
+       }
+
+       async run() {
+         const pq = new PriorityQueue();
+         for (const task of this._tasks) {
+           pq.enqueue(task, task.priority);
+         }
+
+         const results = [];
+         const running = [];
+         const concurrency = this.concurrency;
+
+         const process = async () => {
+           while (pq.size > 0 || running.length > 0) {
+             while (pq.size > 0 && running.length < concurrency) {
+               const task = pq.dequeue();
+               const p = this._runTask(task);
+               running.push(p);
+               p.then(res => {
+                 results.push(res);
+               }).finally(() => {
+                 const idx = running.indexOf(p);
+                 if (idx !== -1) running.splice(idx, 1);
+               });
+             }
+
+             if (running.length > 0 && pq.size === 0) {
+               await Promise.race(running);
+             } else if (running.length === 0 && pq.size === 0) {
+               break;
+             }
+           }
+           return results;
+         };
+
+         return process();
+       }
+     }
+     ```
+
+     Wait, there's a potential issue with `Promise.race` and the `running` array being mutated. `Promise.race` takes the array at the moment of call. If we mutate `running` inside `.finally`, it's fine because `.finally` runs asynchronously after the promise settles. But `Promise.race` might resolve, then `.finally` runs, then loop continues. This is safe.
+     However, a more robust way to handle concurrency without `Promise.race` array mutation issues is to use a simple counter and a promise that resolves when a slot frees up. But given the constraints and typical Node.js event loop behavior, the current approach is standard.
+     Actually, `Promise.race` on an array that changes might cause it to wait for a promise that was already removed? No, `Promise.race` clones the array internally or iterates over it. It's safe.
+     Let's consider an alternative that's foolproof: use a semaphore-like pattern with `async` and `await` on a single "free slot" promise, or just use `Promise.all` with a concurrency limiter. But the current one is fine.
+     I'll stick with it. It's clean and correct.
+
+     One minor adjustment: `running.indexOf(p)` might be O(n), but concurrency is usually small. It's fine.
+     Also, `pq.size` is a getter, so `pq.size > 0` works.
+     The prompt says: `export class PriorityQueue` and `export class Scheduler`.
+     I'll ensure exact exports.
+     Check `add` signature: `add(fn, { priority = 0, retries = 0 })`. I'll keep it.
+     Check `run` return: array in completion order. `results.push(res)` happens in `.then`, so order is preserved.
+     Check retry logic: `retries = 0` means 1 attempt. `retries = 2` means 3 attempts. My loop `while (attempts <= maxRetries)` with `attempts++` at start does exactly that.
+     Check error handling: if `fn` throws, `catch` sets `lastError`, loop continues. If `attempts > maxRetries`, returns `{ ok: false, error: lastError, attempts }`. Correct.
+     Check concurrency: `running.length < concurrency` prevents exceeding limit. Correct.
+     Check FIFO tie-breaking: `seq` counter ensures FIFO. Correct.
+     Check empty dequeue: throws `Error`. Correct.
+
+     One thing: `PriorityQueue` `size` property. The prompt says "size: propiedad o método que devuelve cuántos elementos hay." I used `get size()`. That's fine.
+     I'll output exactly as requested.
+
+     Final check of the code structure:
+     ```javascript
+     // src/priority-queue.mjs
+     export class PriorityQueue {
+       constructor() {
+         this._queue = [];
+         this._seq = 0;
+       }
+       enqueue(item, priority) {
+         this._queue.push({ item, priority, seq: this._seq++ });
+       }
+       dequeue() {
+         if (this._queue.length === 0) throw new Error('Queue is empty');
+         let minIdx = 0;
+         for (let i = 1; i < this._queue.length; i++) {
+           const curr = this._queue[i];
+           const min = this._queue[minIdx];
+           if (curr.priority < min.priority || (curr.priority === min.priority && curr.seq < min.seq)) {
+             minIdx = i;
+           }
+         }
+         return this._queue.splice(minIdx, 1)[0].item;
+       }
+       get size() {
+         return this._queue.length;
+       }
+     }
+     ```
+
+     ```javascript
+     // src/scheduler.mjs
+     import { PriorityQueue } from './priority-queue.mjs';
+
+     export class Scheduler {
+       constructor({ concurrency }) {
+         this.concurrency = concurrency;
+         this._tasks = [];
+         this._nextId = 0;
+       }
+
+       add(fn, { priority = 0, retries = 0 }) {
+         this._tasks.push({ id: this._nextId++, fn, priority, retries });
+       }
+
+       async _runTask(task) {
+         let attempts = 0;
+         let lastError;
+         const maxRetries = task.retries;
+
+         while (attempts <= maxRetries) {
+           attempts++;
+           try {
+             const value = await task.fn();
+             return { id: task.id, ok: true, value, attempts };
+           } catch (err) {
+             lastError = err;
+           }
+         }
+
+         return { id: task.id, ok: false, error: lastError, attempts };
+       }
+
+       async run() {
+         const pq = new PriorityQueue();
+         for (const task of this._tasks) {
+           pq.enqueue(task, task.priority);
+         }
+
+         const results = [];
+         const running = [];
+         const concurrency = this.concurrency;
+
+         const process = async () => {
+           while (pq.size > 0 || running.length > 0) {
+             while (pq.size > 0 && running.length < concurrency) {
+               const task = pq.dequeue();
+               const p = this._runTask(task);
+               running.push(p);
+               p.then(res => {
+                 results.push(res);
+               }).finally(() => {
+                 const idx = running.indexOf(p);
+                 if (idx !== -1) running.splice(idx, 1);
+               });
+             }
+
+             if (running.length > 0 && pq.size === 0) {
+               await Promise.race(running);
+             } else

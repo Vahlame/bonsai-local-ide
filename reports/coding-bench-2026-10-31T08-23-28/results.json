@@ -1,0 +1,67 @@
+{
+  "stamp": "2026-10-31T08-23-28",
+  "pipeline": "single",
+  "repair": 1,
+  "think": "auto",
+  "agregados": [
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "project": {
+        "pass": 0,
+        "total": 0,
+        "fail": 0,
+        "score": 0,
+        "ms": 17671,
+        "tps": 41.03474001089323,
+        "allPass": false,
+        "runs": 1
+      },
+      "bugfix": null,
+      "global": 0
+    }
+  ],
+  "resultados": [
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 1,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [
+        {
+          "ms": 17671,
+          "tps": 41.03474001089323,
+          "files": [
+            "src/priority-queue.mjs",
+            "src/scheduler.mjs"
+          ],
+          "pass": 0,
+          "fail": 0
+        }
+      ],
+      "ms": 17671,
+      "tps": 41.03474001089323,
+      "genTokens": 616,
+      "promptTokens": 2723,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 0,
+        "fail": 0,
+        "tests": 0,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 1.1893\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.3107\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.4712\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 1.3567\n  type: 'test'\n  ...\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\n```mjs\nexport class PriorityQueue {\n  constructor() {\n    this._queue = [];\n  }\n\n  enqueue(item, priority) {\n    this._queue.push({ item, priority, timestamp: Date.now() });\n  }\n\n  dequeue() {\n    if (this._queue.length === 0) {\n      throw new Error('Queue is empty');\n    }\n\n    let minIndex = 0;\n    for (let i = 1; i < this._queue.length; i++) {\n      const current = this._queue[i];\n      const previous = this._queue[minIndex];\n\n      if (current.priority < previous.priority || \n          (current.priority === previous.priority && current.timestamp < previous.timestamp)) {\n        minIndex = i;\n      }\n    }\n\n    return this._queue.splice(minIndex, 1)[0].item;\n  }\n\n  get size() {\n    return this._queue.length;\n  }\n}\n```\n===END FILE===\n===FILE: src/scheduler.mjs===\n```mjs\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency }) {\n    this.concurrency = concurrency;\n    this.tasks = [];\n    this.running = 0;\n    this.idCounter = 0;\n    this.results = [];\n  }\n\n  add(fn, { priority = 0, retries = 0 }) {\n    const taskId = this.idCounter++;\n    this.tasks.push({ fn, priority, retries, taskId });\n  }\n\n  async run() {\n    const queue = new PriorityQueue();\n    this.tasks.forEach(task => queue.enqueue(task, task.priority));\n\n    const executeTask = async (task) => {\n      let attempts = 0;\n      let result;\n\n      while (attempts <= task.retries) {\n        try {\n          const value = await task.fn();\n          result = { ok: true, value };\n          break;\n        } catch (error) {\n          attempts++;\n          if (attempts > task.retries) {\n            result = { ok: false, error };\n          }\n        }\n      }\n\n      this.results.push({\n        id: task.taskId,\n        ok: result.ok,\n        value: result.value,\n        error: result.error,\n        attempts: attempts\n      });\n    };\n\n    const runTasks = async () => {\n      while (queue.size > 0) {\n        const task = queue.dequeue();\n\n        if (this.running >= this.concurrency) {\n          await new Promise(resolve => {\n            const interval = setInterval(() => {\n              if (this.running < this.concurrency) {\n                clearInterval(interval);\n                resolve();\n              }\n            }, 10);\n          });\n        }\n\n        this.running++;\n        await executeTask(task);\n        this.running--;\n      }\n    };\n\n    await runTasks();\n    return this.results;\n  }\n}\n```\n===END FILE===\n\n--- REPARACION ---\n===FILE: src/priority-queue.mjs===\n```mjs\nexport class PriorityQueue {\n  constructor() {\n    this._queue = [];\n  }\n\n  enqueue(item, priority) {\n    this._queue.push({ item, priority, timestamp: Date.now() });\n  }\n\n  dequeue() {\n    if (this._queue.length === 0) {\n      throw new Error('Queue is empty');\n    }\n\n    let minIndex = 0;\n    for (let i = 1; i < this._queue.length; i++) {\n      const current = this._queue[i];\n      const previous = this._queue[minIndex];\n\n      if (current.priority < previous.priority || \n          (current.priority === previous.priority && current.timestamp < previous.timestamp)) {\n        minIndex = i;\n      }\n    }\n\n    return this._queue.splice(minIndex, 1)[0].item;\n  }\n\n  get size() {\n    return this._queue.length;\n  }\n}\n```\n===END FILE===\n===FILE: src/scheduler.mjs===\n```mjs\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency }) {\n    this.concurrency = concurrency;\n    this.tasks = [];\n    this.running = 0;\n    this.idCounter = 0;\n    this.results = [];\n  }\n\n  add(fn, { priority = 0, retries = 0 }) {\n    const taskId = this.idCounter++;\n    this.tasks.push({ fn, priority, retries, taskId });\n  }\n\n  async run() {\n    const queue = new PriorityQueue();\n    this.tasks.forEach(task => queue.enqueue(task, task.priority));\n\n    const executeTask = async (task) => {\n      let attempts = 0;\n      let result;\n\n      while (attempts <= task.retries) {\n        try {\n          const value = await task.fn();\n          result = { ok: true, value };\n          break;\n        } catch (error) {\n          attempts++;\n          if (attempts > task.retries) {\n            result = { ok: false, error };\n          }\n        }\n      }\n\n      this.results.push({\n        id: task.taskId,\n        ok: result.ok,\n        value: result.value,\n        error: result.error,\n        attempts: attempts\n      });\n    };\n\n    const runTasks = async () => {\n      const taskPromises = [];\n      while (queue.size > 0) {\n        const task = queue.dequeue();\n\n        if (this.running >= this.concurrency) {\n          await new Promise(resolve => {\n            const interval = setInterval(() => {\n              if (this.running < this.concurrency) {\n                clearInterval(interval);\n                resolve();\n              }\n            }, 10);\n          });\n        }\n\n        this.running++;\n        const promise = executeTask(task);\n        taskPromises.push(promise);\n        promise.catch(() => {});\n      }\n\n      await Promise.all(taskPromises);\n    };\n\n    await runTasks();\n    return this.results;\n  }\n}\n```\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 7021
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+TAP version 13
+# Subtest: descuento del 10% sobre 100
+ok 1 - descuento del 10% sobre 100
+  ---
+  duration_ms: 0.594
+  type: 'test'
+  ...
+# Subtest: descuento del 0% no cambia el precio
+ok 2 - descuento del 0% no cambia el precio
+  ---
+  duration_ms: 0.0852
+  type: 'test'
+  ...
+# Subtest: descuento del 25% sobre 80
+ok 3 - descuento del 25% sobre 80
+  ---
+  duration_ms: 0.0688
+  type: 'test'
+  ...
+# Subtest: el total multiplica por cantidad
+ok 4 - el total multiplica por cantidad
+  ---
+  duration_ms: 0.6113
+  type: 'test'
+  ...
+# Subtest: el total suma varios items con y sin descuento
+ok 5 - el total suma varios items con y sin descuento
+  ---
+  duration_ms: 0.1149
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 71.3388
+

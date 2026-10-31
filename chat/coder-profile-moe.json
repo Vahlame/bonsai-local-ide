@@ -1,0 +1,16 @@
+{
+  "name": "moe-fast",
+  "contextTokens": 32768,
+  "outputTokens": 4096,
+  "repoMapTokens": 600,
+  "snippetTokens": 0,
+  "toolResultTokens": 1000,
+  "maxSteps": 200,
+  "maxRepairs": 4,
+  "timeoutMs": 1800000,
+  "maxFileBytes": 131072,
+  "maxIndexBytes": 8388608,
+  "maxFiles": 1500,
+  "strategy": "auto",
+  "promptCache": true
+}

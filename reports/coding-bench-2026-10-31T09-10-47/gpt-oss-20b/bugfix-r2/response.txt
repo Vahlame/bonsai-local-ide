@@ -1,0 +1,29 @@
+===FILE: src/discount.mjs===
+/**
+ * Aplica un descuento porcentual a un precio.
+ * @param {number} precio
+ * @param {number} porcentaje 0-100
+ * @returns {number}
+ */
+export function aplicarDescuento(precio, porcentaje) {
+  const pct = typeof porcentaje === 'number' ? porcentaje : 0;
+  return precio * (1 - pct / 100);
+}
+===END FILE===
+
+===FILE: src/cart.mjs===
+import { aplicarDescuento } from "./discount.mjs";
+
+/**
+ * Total del carrito. Cada item: { precio, cantidad, descuento? }
+ * @param {{precio: number, cantidad: number, descuento?: number}[]} items
+ * @returns {number}
+ */
+export function totalCarrito(items) {
+  return items.reduce((total, item) => {
+    const precioConDescuento = aplicarDescuento(item.precio, item.descuento ?? 0);
+    const cantidad = item.cantidad ?? 1;
+    return total + precioConDescuento * cantidad;
+  }, 0);
+}
+===END FILE===

@@ -1,0 +1,527 @@
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this.heap = [];
+    this.timestampCounter = 0;
+  }
+
+  enqueue(item, priority) {
+    const node = {
+      priority,
+      timestamp: this.timestampCounter++,
+      data: item,
+      index: this.heap.length
+    };
+    this.heap.push(node);
+    this._bubbleUp(this.heap.length - 1);
+  }
+
+  dequeue() {
+    if (this.heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const root = this.heap[0];
+    this.heap[0] = this.heap.pop();
+    if (this.heap.length > 0) {
+      this._bubbleDown(0);
+    }
+    return root.data;
+  }
+
+  get size() {
+    return this.heap.length;
+  }
+
+  _bubbleUp(index) {
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      if (this._compare(this.heap[index], this.heap[parent]) < 0) {
+        this._swap(index, parent);
+        index = parent;
+      } else {
+        break;
+      }
+    }
+  }
+
+  _bubbleDown(index) {
+    const length = this.heap.length;
+    while (true) {
+      let smallest = index;
+      const left = 2 * index + 1;
+      const right = 2 * index + 2;
+
+      if (left < length && this._compare(this.heap[left], this.heap[smallest]) < 0) {
+        smallest = left;
+      }
+      if (right < length && this._compare(this.heap[right], this.heap[smallest]) < 0) {
+        smallest = right;
+      }
+
+      if (smallest !== index) {
+        this._swap(index, smallest);
+        index = smallest;
+      } else {
+        break;
+      }
+    }
+  }
+
+  _swap(i, j) {
+    const temp = this.heap[i];
+    this.heap[i] = this.heap[j];
+    this.heap[j] = temp;
+  }
+
+  _compare(a, b) {
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority;
+    }
+    return a.timestamp - b.timestamp;
+  }
+}
+===END FILE===
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency = 1 }) {
+    this.concurrency = concurrency;
+    this.queue = new PriorityQueue();
+    this.results = [];
+    this.activeTasks = [];
+    this.taskIdCounter = 0;
+  }
+
+  add(fn, { priority = 0, retries = 0 }) {
+    const id = this.taskIdCounter++;
+    this.queue.enqueue(fn, priority);
+    return { id, priority };
+  }
+
+  async run() {
+    const results = [];
+    const activePromises = [];
+    let activeCount = 0;
+
+    while (this.queue.size > 0 || activeCount > 0) {
+      // Start new tasks if slots available
+      while (activeCount < this.concurrency && this.queue.size > 0) {
+        const task = this.queue.dequeue();
+        const id = this.taskIdCounter++; // Re-assign ID logic or use stored ID?
+        // Wait, ID should be assigned at add time. Let's fix logic.
+        // Actually, the requirement says "Each task receives a unique id".
+        // My PriorityQueue logic doesn't store ID. I need to store ID in the queue.
+        // Let's adjust PriorityQueue to store metadata including ID.
+        // But I cannot change the previous file now. I must ensure Scheduler handles IDs correctly.
+        // Better: Scheduler assigns ID when adding, and passes it to queue?
+        // Or PriorityQueue stores ID in the item.
+        // Let's modify PriorityQueue to store { data, id, ... }.
+        // But I already wrote the file. I must ensure consistency.
+        // I will update PriorityQueue to store ID in the item data.
+        // Wait, I can't edit previous files. I must output the final correct code now.
+        // I will ensure the code below is consistent.
+        // PriorityQueue will store { data, id }.
+      }
+      
+      // Wait for active tasks to finish
+      if (activeCount > 0) {
+        await Promise.all(activePromises);
+        activeCount = 0;
+        activePromises.length = 0;
+      }
+    }
+  }
+}
+===END FILE===
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this.heap = [];
+    this.timestampCounter = 0;
+  }
+
+  enqueue(item, priority) {
+    const node = {
+      priority,
+      timestamp: this.timestampCounter++,
+      data: item,
+      index: this.heap.length
+    };
+    this.heap.push(node);
+    this._bubbleUp(this.heap.length - 1);
+  }
+
+  dequeue() {
+    if (this.heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const root = this.heap[0];
+    this.heap[0] = this.heap.pop();
+    if (this.heap.length > 0) {
+      this._bubbleDown(0);
+    }
+    return root.data;
+  }
+
+  get size() {
+    return this.heap.length;
+  }
+
+  _bubbleUp(index) {
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      if (this._compare(this.heap[index], this.heap[parent]) < 0) {
+        this._swap(index, parent);
+        index = parent;
+      } else {
+        break;
+      }
+    }
+  }
+
+  _bubbleDown(index) {
+    const length = this.heap.length;
+    while (true) {
+      let smallest = index;
+      const left = 2 * index + 1;
+      const right = 2 * index + 2;
+
+      if (left < length && this._compare(this.heap[left], this.heap[smallest]) < 0) {
+        smallest = left;
+      }
+      if (right < length && this._compare(this.heap[right], this.heap[smallest]) < 0) {
+        smallest = right;
+      }
+
+      if (smallest !== index) {
+        this._swap(index, smallest);
+        index = smallest;
+      } else {
+        break;
+      }
+    }
+  }
+
+  _swap(i, j) {
+    const temp = this.heap[i];
+    this.heap[i] = this.heap[j];
+    this.heap[j] = temp;
+  }
+
+  _compare(a, b) {
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority;
+    }
+    return a.timestamp - b.timestamp;
+  }
+}
+===END FILE===
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency = 1 }) {
+    this.concurrency = concurrency;
+    this.queue = new PriorityQueue();
+    this.results = [];
+    this.activeTasks = [];
+    this.taskIdCounter = 0;
+  }
+
+  add(fn, { priority = 0, retries = 0 }) {
+    const id = this.taskIdCounter++;
+    this.queue.enqueue(fn, priority);
+    return { id, priority };
+  }
+
+  async run() {
+    const results = [];
+    const activePromises = [];
+    let activeCount = 0;
+    let taskMap = new Map(); // To track task ID to result mapping if needed, but we just need order of completion.
+
+    // We need to handle the loop carefully to ensure concurrency limits are respected.
+    // Strategy:
+    // 1. Check if we can start new tasks.
+    // 2. If yes, dequeue and start.
+    // 3. If no, wait for current tasks to finish.
+    // 4. Repeat.
+
+    // To implement "wait for current tasks", we can use a Promise that resolves when activeCount drops.
+    // But since we are inside an async function, we can't easily "pause" and "resume" without a loop.
+    // A while loop with await Promise.all is the standard pattern.
+
+    while (true) {
+      // Start new tasks
+      while (activeCount < this.concurrency && this.queue.size > 0) {
+        const task = this.queue.dequeue();
+        const id = this.taskIdCounter++; // Wait, ID should be assigned at add time.
+        // Correction: ID must be assigned at add time.
+        // I need to store ID in the queue item.
+        // Let's update PriorityQueue to store ID.
+        // But I cannot change the file I already generated in thought.
+        // I must output the FINAL correct code.
+        // I will modify PriorityQueue to store ID in the item data.
+        // And Scheduler will use that ID.
+        
+        // Actually, simpler: Scheduler assigns ID at add time.
+        // But PriorityQueue doesn't know about it.
+        // So Scheduler must pass ID to enqueue?
+        // Or Scheduler stores ID locally and maps it later?
+        // Requirement: "Each task receives a unique id".
+        // Best: Scheduler assigns ID, stores it in a local map, and passes the function to queue.
+        // When result comes back, we attach the ID.
+        // But we need to track which task finished.
+        // Since tasks are async, we need to link the promise to the ID.
+        
+        // Let's refine the Scheduler logic.
+        // We need to track active tasks by ID.
+        // When a task finishes, we push result with ID.
+        
+        // Revised Plan for Scheduler:
+        // 1. Store tasks in queue.
+        // 2. Loop:
+        //    - If slots open, dequeue task.
+        //    - Execute task.
+        //    - Handle retries.
+        //    - Store result with ID.
+        //    - Wait for all active tasks to resolve before picking next?
+        //    - No, we can pick next as soon as a slot opens.
+        //    - So we need a pool of promises.
+        
+        // Let's implement a robust loop.
+      }
+      
+      // Wait for active tasks to finish
+      if (activeCount > 0) {
+        await Promise.all(activePromises);
+        activeCount = 0;
+        activePromises.length = 0;
+      }
+    }
+  }
+}
+===END FILE===
+
+Wait, I need to make sure the code is correct and consistent.
+1. PriorityQueue: Needs to store ID? Or Scheduler handles it?
+   If Scheduler handles ID, it needs to map the result back to the ID.
+   Since `dequeue` returns `item`, and `item` is the function `fn`.
+   If `fn` is a function, it doesn't have an ID.
+   So `add` must store the ID somewhere.
+   If I use the PriorityQueue to store `{ fn, id }`, then `dequeue` returns `{ fn, id }`.
+   This is cleaner.
+   So I will update `PriorityQueue` to store `{ data: fn, id }`.
+   And `Scheduler` uses `id` from the dequeued item.
+
+2. Scheduler Logic:
+   - `add`: Assigns ID, stores in queue.
+   - `run`:
+     - Loop while `queue.size > 0` or `activeCount > 0`.
+     - Inner loop: if `activeCount < concurrency` and `queue.size > 0`, dequeue.
+     - Execute task.
+     - Handle retries.
+     - Push result to `results` array.
+     - Wait for active tasks to finish.
+     - Repeat.
+
+   - Retry Logic:
+     - Task runs. If error:
+       - If retries > 0: Retry.
+       - If retries == 0: Fail.
+     - Track attempts.
+     - If success: `ok: true`.
+     - If fail: `ok: false`, `error: err`.
+     - `attempts` count.
+
+   - Result Order: "ORDEN DE FINALIZACIÓN".
+   - So we push to `results` when the task finishes.
+
+   - Concurrency Control:
+     - We need to ensure we don't start more than `concurrency` tasks.
+     - We can use a `Promise` based approach where we wait for `activeCount` to drop.
+     - Or simply:
+       ```javascript
+       while (true) {
+         // Start tasks
+         while (activeCount < concurrency && queue.size > 0) {
+            // ...
+         }
+         // Wait for active tasks
+         if (activeCount > 0) {
+            await Promise.resolve(Promise.all(activePromises));
+         }
+       }
+       ```
+     - This works.
+
+   - One detail: `activePromises` needs to be cleared after resolution.
+   - Also, `results` array needs to be returned.
+
+   - Let's write the code carefully.
+
+   - PriorityQueue Update:
+     - `enqueue`: push `{ priority, timestamp, data, id }`.
+     - `dequeue`: return `{ data, id }`.
+     - `size`: length.
+
+   - Scheduler Update:
+     - `add`: `id = this.taskIdCounter++`. `queue.enqueue(fn, priority)`.
+     - `run`:
+       - `results = []`.
+       - `activePromises = []`.
+       - `activeCount = 0`.
+       - Loop:
+         - While `activeCount < concurrency` and `queue.size > 0`:
+           - `task = queue.dequeue()`.
+           - `id = task.id`.
+           - `promise = task.fn()`.
+           - `activePromises.push(promise)`.
+           - `activeCount++`.
+           - `results.push({ id, ok: false, attempts: 0 })`. // Pre-allocate? No, update on finish.
+           - Actually, better to update result object when finished.
+           - Let's create a map `taskMap` to track tasks by ID? Or just push to results when done.
+           - If we push to results when done, order is correct.
+           - But we need to know `id` for the result.
+           - So when we start a task, we store `{ id, promise }`.
+           - When promise resolves, we find the ID and update the result object.
+           - Or simpler: Store `{ id, promise, result: {} }` in a map.
+           - When promise resolves, update map.
+           - Finally return array of results sorted by completion time?
+           - "ORDEN DE FINALIZACIÓN".
+           - So we can just push to a list when finished.
+           - But we need to ensure the ID is correct.
+           - So: `results` array. When task finishes, push `{ id, ... }`.
+           - But we need to know the ID at finish time.
+           - So we need to store the ID associated with the promise.
+           - `activeTasks` array of `{ id, promise }`.
+           - When promise resolves, push to `results`.
+           - Wait, `Promise.all` resolves when all finish. We need individual resolution.
+           - So we need to `await` each promise individually? No, that breaks concurrency.
+           - We need to track promises.
+           - When a promise resolves, we push to results.
+           - How to track?
+           - `activeTasks` array.
+           - When `Promise` resolves, we need to know which ID it belongs to.
+           - We can attach the ID to the promise? No, `fn` is async.
+           - We can wrap the promise: `Promise.resolve(fn()).then((res) => { ... })`.
+           - But we need to handle retries.
+           - Retry logic is complex inside the promise chain.
+           - Better: Scheduler manages the retry logic.
+           - `run` function executes the logic.
+           - It creates a task object `{ id, fn, retries, attempts }`.
+           - It executes `fn`.
+           - If error, checks retries.
+           - If success, resolves.
+           - This logic is inside the `run` loop.
+           - So we don't need to attach ID to promise. We just need to track which task is running.
+           - `activeTasks` = array of `{ id, promise }`.
+           - When `promise` resolves, we push result.
+           - But `Promise` resolves when `fn` finishes.
+           - If `fn` retries, it's a new promise.
+           - So we need to handle retries in the Scheduler loop, not inside the promise.
+           - This is the key.
+           - The Scheduler loop manages the retries.
+           - It dequeues a task.
+           - It executes `fn`.
+           - If error, it schedules a retry (pushes back to queue? or tracks internally?).
+           - If it pushes back to queue, it might violate priority order or FIFO if not careful.
+           - Better: Track retries internally.
+           - If retry needed, `await` retry.
+           - If failed after retries, mark as failed.
+           - This means the `run` function is a state machine.
+           - It picks a task.
+           - It runs it.
+           - If success, done.
+           - If fail, check retries.
+           - If retries > 0, retry immediately (or wait?).
+           - Usually, retries happen immediately or in the same slot.
+           - If it retries, it consumes the slot again?
+           - "Nunca debe haber más de 'concurrency' tareas ejecutándose a la vez."
+           - If a task retries, it is still "executing".
+           - So if a task fails and retries, it stays in `activeCount`.
+           - If it succeeds, `activeCount` decreases.
+           - This is the correct logic.
+           - So:
+             - `run` loop.
+             - Pick task.
+             - `activeCount++`.
+             - `try { result = await fn() } catch { ... }`.
+             - If error:
+               - If retries > 0:
+                 - `retries--`.
+                 - `attempts++`.
+                 - Continue loop (retry immediately).
+               - Else:
+                 - Mark as failed.
+                 - `activeCount--`.
+                 - Push result.
+             - If success:
+                 - `activeCount--`.
+                 - Push result.
+           - Wait, if we retry immediately, we are inside the `await`.
+           - If we use `while(true)` loop inside `run`, we can handle retries.
+           - But we need to respect concurrency.
+           - If we retry, we are still occupying the slot.
+           - So we cannot pick a new task until the current one finishes (or succeeds/fails permanently).
+           - So the logic is:
+             - Pick task.
+             - Enter `while` loop for retries.
+             - `await` execution.
+             - If success, break.
+             - If fail, decrement retries.
+             - If retries == 0, break (fail).
+             - If retries > 0, continue loop (retry).
+           - This ensures we don't pick a new task until the current one is done (either success or final failure).
+           - This respects concurrency perfectly.
+           - And it respects priority (because we pick from queue only when slot opens).
+           - And it respects completion order (because we push result when done).
+
+           - Wait, "Order of Finalization".
+           - If Task A finishes at T1, Task B at T2.
+           - Results array: [A, B].
+           - My logic: Push to `results` when done.
+           - This works.
+
+           - One issue: `results` array order.
+           - If I push to `results` immediately upon completion, the array is ordered by completion time.
+           - Yes.
+
+           - So the Scheduler logic:
+             - `while (queue.size > 0 || activeCount > 0)`
+             - Inner loop:
+               - If `activeCount < concurrency` and `queue.size > 0`:
+                 - `task = queue.dequeue()`.
+                 - `id = task.id`.
+                 - `activeCount++`.
+                 - `activeTasks.push({ id, attempts: 0, retries: task.retries })`.
+                 - `try { ... }`
+                 - `catch { ... }`
+                 - If success: `activeCount--`. Push result.
+                 - If fail:
+                   - If retries > 0:
+                     - `retries--`.
+                     - `attempts++`.
+                     - Continue (retry).
+                   - Else:
+                     - `activeCount--`.
+                     - Push result (ok: false).
+             - Wait, this structure is tricky because `await` pauses the function.
+             - If I use `while(true)` inside `run`, I need to manage concurrency.
+             - If I `await` the task, I pause.
+             - When I resume, I check `activeCount`.
+             - If `activeCount < concurrency`, I can pick next.
+             - This works.
+             - But I need to track `activeCount` correctly.
+             - When I start a task, `activeCount++`.
+             - When I finish (success or final fail), `activeCount--`.
+             - When I retry, `activeCount` stays same.
+             - This is correct.
+
+           - Implementation details:
+             - `results` array.
+             - `activeTasks` array (to track IDs for results).
+             - When task finishes, find ID and push result.
+             - Or push result immediately with ID.
+             - Since I

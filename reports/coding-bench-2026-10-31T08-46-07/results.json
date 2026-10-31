@@ -1,0 +1,648 @@
+{
+  "stamp": "2026-10-31T08-46-07",
+  "pipeline": "single",
+  "repair": 0,
+  "think": "auto",
+  "agregados": [
+    {
+      "clave": "gpt-oss-20b",
+      "nombre": "GPT-OSS 20B",
+      "project": {
+        "pass": 9,
+        "total": 9,
+        "fail": 0,
+        "score": 100,
+        "ms": 64268,
+        "tps": 30.29110698937129,
+        "allPass": true,
+        "timeout": false,
+        "runs": 1
+      },
+      "bugfix": {
+        "pass": 5,
+        "total": 5,
+        "fail": 0,
+        "score": 100,
+        "ms": 23787,
+        "tps": 29.67708059957959,
+        "allPass": true,
+        "timeout": false,
+        "runs": 1
+      },
+      "global": 100
+    },
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "project": {
+        "pass": 7,
+        "total": 9,
+        "fail": 2,
+        "score": 77.77777777777779,
+        "ms": 14328,
+        "tps": 43.401376223570715,
+        "allPass": false,
+        "timeout": false,
+        "runs": 1
+      },
+      "bugfix": {
+        "pass": 5,
+        "total": 5,
+        "fail": 0,
+        "score": 100,
+        "ms": 7925,
+        "tps": 41.60063546932973,
+        "allPass": true,
+        "timeout": false,
+        "runs": 1
+      },
+      "global": 85.55555555555557
+    },
+    {
+      "clave": "qwen25-coder-7b",
+      "nombre": "Qwen2.5 Coder 7B Instruct",
+      "project": {
+        "pass": 5,
+        "total": 9,
+        "fail": 4,
+        "score": 55.55555555555556,
+        "ms": 6132,
+        "tps": 73.23568575233023,
+        "allPass": false,
+        "timeout": false,
+        "runs": 1
+      },
+      "bugfix": {
+        "pass": 5,
+        "total": 5,
+        "fail": 0,
+        "score": 100,
+        "ms": 3335,
+        "tps": 86.72142428697725,
+        "allPass": true,
+        "timeout": false,
+        "runs": 1
+      },
+      "global": 71.11111111111111
+    },
+    {
+      "clave": "qwen3-4b-2507",
+      "nombre": "Qwen3 4B Instruct 2507",
+      "project": {
+        "pass": 4,
+        "total": 9,
+        "fail": 5,
+        "score": 44.44444444444444,
+        "ms": 10217,
+        "tps": 74.18058752614195,
+        "allPass": false,
+        "timeout": false,
+        "runs": 1
+      },
+      "bugfix": {
+        "pass": 5,
+        "total": 5,
+        "fail": 0,
+        "score": 100,
+        "ms": 3907,
+        "tps": 66.77716340791115,
+        "allPass": true,
+        "timeout": false,
+        "runs": 1
+      },
+      "global": 63.888888888888886
+    },
+    {
+      "clave": "qwen35-9b",
+      "nombre": "Qwen3.5 9B",
+      "project": {
+        "pass": 4,
+        "total": 9,
+        "fail": 5,
+        "score": 44.44444444444444,
+        "ms": 35450,
+        "tps": 40.85946577386647,
+        "allPass": false,
+        "timeout": false,
+        "runs": 1
+      },
+      "bugfix": {
+        "pass": 3,
+        "total": 5,
+        "fail": 2,
+        "score": 60,
+        "ms": 25536,
+        "tps": 39.06325893449589,
+        "allPass": false,
+        "timeout": false,
+        "runs": 1
+      },
+      "global": 49.888888888888886
+    },
+    {
+      "clave": "qwen36-35b-a3b",
+      "nombre": "Qwen3.6 35B-A3B",
+      "project": {
+        "pass": 0,
+        "total": 9,
+        "fail": 9,
+        "score": 0,
+        "ms": 150433,
+        "tps": 46.761559248325334,
+        "allPass": false,
+        "timeout": false,
+        "runs": 1
+      },
+      "bugfix": {
+        "pass": 5,
+        "total": 5,
+        "fail": 0,
+        "score": 100,
+        "ms": 48929,
+        "tps": 46.099158507872346,
+        "allPass": true,
+        "timeout": false,
+        "runs": 1
+      },
+      "global": 35
+    },
+    {
+      "clave": "ornith9b",
+      "nombre": "Ornith 1.5 9B",
+      "project": {
+        "pass": 3,
+        "total": 9,
+        "fail": 6,
+        "score": 33.33333333333333,
+        "ms": 75379,
+        "tps": 41.781185460850466,
+        "allPass": false,
+        "timeout": false,
+        "runs": 1
+      },
+      "bugfix": {
+        "pass": 1,
+        "total": 5,
+        "fail": 4,
+        "score": 20,
+        "ms": 56252,
+        "tps": 41.04250347544771,
+        "allPass": false,
+        "timeout": false,
+        "runs": 1
+      },
+      "global": 28.666666666666664
+    }
+  ],
+  "resultados": [
+    {
+      "clave": "ornith9b",
+      "nombre": "Ornith 1.5 9B",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 75379,
+      "tps": 41.781185460850466,
+      "genTokens": 3139,
+      "promptTokens": 416,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 3,
+        "fail": 2,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 0.7013\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.147\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.3586\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nnot ok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 2.3842\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\ornith9b\\\\project-r1\\\\test\\\\priority-queue.test.mjs:39:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n      [\n        'b',\n    +   'f',\n    +   'c',\n        'd',\n    -   'f',\n        'a',\n    -   'c',\n        'e'\n      ]\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    0: 'b'\n    1: 'd'\n    2: 'f'\n    3: 'a'\n    4: 'c'\n    5: 'e'\n  actual:\n    0: 'b'\n    1: 'f'\n    2: 'c'\n    3: 'd'\n    4: 'a'\n    5: 'e'\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/ornith9b/project-r1/test/priority-queue.test.mjs:45:10)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1201:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:831:18)\n    Test.postRun (node:internal/test_runner/test:1330:19)\n    Test.run (node:internal/test_runner/test:1258:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/ornith9b/project-r1/src/scheduler.mjs:46\n#         const value = await fn();\n#                       ^^^^^\n# SyntaxError: Unexpected reserved word\n#     at compileSourceTextModule (node:internal/modules/esm/utils:354:16)\n#     at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:91:18)\n#     at \\#translate (node:internal/modules/esm/loader:454:20)\n#     at afterLoad (node:internal/modules/esm/loader:510:29)\n#     at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:515:12)\n#     at \\#getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:558:36)\n#     at afterResolve (node:internal/modules/esm/loader:606:52)\n#     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:612:12)\n#     at ModuleJob.syncLink (node:internal/modules/esm/module_job:162:33)\n#     at ModuleJob.link (node:internal/modules/esm/module_job:252:17)\n# Node.js v26.0.0\n# Subtest: test\\\\scheduler.test.mjs\nnot ok 2 - test\\\\scheduler.test.mjs\n  ---\n  duration_ms: 40.8273\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\ornith9b\\\\project-r1\\\\test\\\\scheduler.test.mjs:1:1'\n  failureType: 'testCodeFailure'\n  exitCode: 1\n  signal: ~\n  error: 'test failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 3\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 71.0697\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\nexport class PriorityQueue {\n  constructor() {\n    this._heap = [];\n    this._seq = 0;\n  }\n\n  enqueue(item, priority) {\n    const node = { item, priority, seq: this._seq++ };\n    this._heap.push(node);\n    this._bubbleUp(this._heap.length - 1);\n  }\n\n  dequeue() {\n    if (this._heap.length === 0) {\n      throw new Error('PriorityQueue is empty');\n    }\n    const root = this._heap[0];\n    const last = this._heap.pop();\n    if (this._heap.length > 0) {\n      this._heap[0] = last;\n      this._bubbleDown(0);\n    }\n    return root.item;\n  }\n\n  get size() {\n    return this._heap.length;\n  }\n\n  _compare(a, b) {\n    if (a.priority !== b.priority) return a.priority - b.priority;\n    return a.seq - b.seq;\n  }\n\n  _bubbleUp(i) {\n    const node = this._heap[i];\n    while (i > 0) {\n      const parent = (i - 1) >> 1;\n      if (this._compare(this._heap[parent], node) <= 0) break;\n      [this._heap[parent], this._heap[i]] = [this._heap[i], this._heap[parent]];\n      i = parent;\n    }\n  }\n\n  _bubbleDown(i) {\n    const n = this._heap.length;\n    const node = this._heap[i];\n    while (true) {\n      let smallest = i;\n      const left = 2 * i + 1;\n      const right = 2 * i + 2;\n      if (left < n && this._compare(this._heap[left], node) < 0) smallest = left;\n      if (right < n && this._compare(this._heap[right], node) < 0) smallest = right;\n      if (smallest === i) break;\n      [this._heap[smallest], this._heap[i]] = [this._heap[i], this._heap[smallest]];\n      i = smallest;\n    }\n  }\n}\n===END FILE===\n===FILE: src/scheduler.mjs===\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency = 1 } = {}) {\n    if (!Number.isFinite(concurrency) || concurrency < 1) {\n      throw new Error('concurrency must be a positive number');\n    }\n    this.concurrency = concurrency;\n    this._queue = new PriorityQueue();\n    this._nextId = 0;\n    this._running = 0;\n    this._finished = [];\n    this._done = false;\n  }\n\n  add(fn, { priority = 0, retries = 0 } = {}) {\n    if (typeof fn !== 'function') {\n      throw new TypeError('fn must be a function');\n    }\n    const id = this._nextId++;\n    const task = { id, fn, priority, retries };\n    this._queue.enqueue(task, priority);\n    return id;\n  }\n\n  async run() {\n    this._done = true;\n    while (this._running > 0 || this._queue.size > 0) {\n      while (this._running < this.concurrency && this._queue.size > 0) {\n        const task = this._queue.dequeue();\n        this._running++;\n        this._runTask(task)\n          .then((result) => this._record(result))\n          .catch((err) => this._record({ id: task.id, ok: false, error: err }));\n      }\n      await this._wait();\n    }\n  }\n\n  _runTask(task) {\n    const { id, fn, retries } = task;\n    const attempts = retries + 1;\n    let lastError;\n    for (let attempt = 0; attempt < attempts; attempt++) {\n      try {\n        const value = await fn();\n        return { id, ok: true, value };\n      } catch (err) {\n        lastError = err;\n      }\n    }\n    return { id, ok: false, error: lastError };\n  }\n\n  _record(result) {\n    this._finished.push(result);\n    this._running--;\n  }\n\n  _wait() {\n    return new Promise((resolve) => {\n      if (this._running === 0) {\n        resolve();\n        return;\n      }\n      this._onFinish = resolve;\n    });\n  }\n\n  get finished() {\n    return this._finished;\n  }\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 7471
+    },
+    {
+      "clave": "ornith9b",
+      "nombre": "Ornith 1.5 9B",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [],
+      "rondas": [],
+      "ms": 56252,
+      "tps": 41.04250347544771,
+      "genTokens": 2269,
+      "promptTokens": 1846,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 1,
+        "fail": 4,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nnot ok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 1.096\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\ornith9b\\\\bugfix-r1\\\\test\\\\cart.test.mjs:6:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    -900 !== 90\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 90\n  actual: -900\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/ornith9b/bugfix-r1/test/cart.test.mjs:7:10)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1201:25)\n    Test.start (node:internal/test_runner/test:1096:17)\n    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.1266\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nnot ok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.5831\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\ornith9b\\\\bugfix-r1\\\\test\\\\cart.test.mjs:14:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    -1920 !== 60\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 60\n  actual: -1920\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/ornith9b/bugfix-r1/test/cart.test.mjs:15:10)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1201:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:831:18)\n    Test.postRun (node:internal/test_runner/test:1330:19)\n    Test.run (node:internal/test_runner/test:1258:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: el total multiplica por cantidad\nnot ok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 0.1918\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\ornith9b\\\\bugfix-r1\\\\test\\\\cart.test.mjs:18:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    -900 !== 180\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 180\n  actual: -900\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/ornith9b/bugfix-r1/test/cart.test.mjs:19:10)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1201:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:831:18)\n    Test.postRun (node:internal/test_runner/test:1330:19)\n    Test.run (node:internal/test_runner/test:1258:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: el total suma varios items con y sin descuento\nnot ok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.1343\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\ornith9b\\\\bugfix-r1\\\\test\\\\cart.test.mjs:22:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    -1830 !== 260\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 260\n  actual: -1830\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/ornith9b/bugfix-r1/test/cart.test.mjs:23:10)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1201:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:831:18)\n    Test.postRun (node:internal/test_runner/test:1330:19)\n    Test.run (node:internal/test_runner/test:1258:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 1\n# fail 4\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 72.358\n\n"
+      },
+      "content": "===FILE: discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  return precio * (1 - porcentaje / 100);\n}\n===END FILE===\n===FILE: cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    total += aplicarDescuento(item.precio, item.descuento || 0) * item.cantidad;\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 7471
+    },
+    {
+      "clave": "qwen25-coder-7b",
+      "nombre": "Qwen2.5 Coder 7B Instruct",
+      "task": "project",
+      "think": 0,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 6132,
+      "tps": 73.23568575233023,
+      "genTokens": 430,
+      "promptTokens": 423,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 5,
+        "fail": 4,
+        "tests": 9,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 0.63\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.1241\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.3236\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 0.6313\n  type: 'test'\n  ...\n# Subtest: respeta el limite de concurrencia\nok 5 - respeta el limite de concurrencia\n  ---\n  duration_ms: 144.9856\n  type: 'test'\n  ...\n# Subtest: empieza por la prioridad menor\nnot ok 6 - empieza por la prioridad menor\n  ---\n  duration_ms: 12.7882\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen25-coder-7b\\\\project-r1\\\\test\\\\scheduler.test.mjs:26:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n      [\n    +   'baja',\n        'alta',\n        'media',\n    -   'baja'\n      ]\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    0: 'alta'\n    1: 'media'\n    2: 'baja'\n  actual:\n    0: 'baja'\n    1: 'alta'\n    2: 'media'\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen25-coder-7b/project-r1/test/scheduler.test.mjs:33:10)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: reintenta hasta tener exito\nnot ok 7 - reintenta hasta tener exito\n  ---\n  duration_ms: 10.7743\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen25-coder-7b\\\\project-r1\\\\test\\\\scheduler.test.mjs:36:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    undefined !== 3\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 3\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen25-coder-7b/project-r1/test/scheduler.test.mjs:47:10)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: fallo definitivo devuelve ok:false con error\nnot ok 8 - fallo definitivo devuelve ok:false con error\n  ---\n  duration_ms: 6.3005\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen25-coder-7b\\\\project-r1\\\\test\\\\scheduler.test.mjs:50:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    undefined !== 2\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 2\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen25-coder-7b/project-r1/test/scheduler.test.mjs:56:10)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: devuelve resultados en orden de finalizacion\nnot ok 9 - devuelve resultados en orden de finalizacion\n  ---\n  duration_ms: 71.6971\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen25-coder-7b\\\\project-r1\\\\test\\\\scheduler.test.mjs:59:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    The expression evaluated to a falsy value:\n    \n      assert.ok(r.every((x) => x.ok && x.attempts === 1))\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: true\n  actual: false\n  operator: '=='\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen25-coder-7b/project-r1/test/scheduler.test.mjs:66:10)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 5\n# fail 4\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 317.1149\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\n```javascript\nclass PriorityQueue {\n  constructor() {\n    this.queue = [];\n  }\n\n  enqueue(item, priority) {\n    this.queue.push({ item, priority });\n    this.queue.sort((a, b) => a.priority - b.priority || a.timestamp - b.timestamp);\n  }\n\n  dequeue() {\n    if (this.queue.length === 0) {\n      throw new Error('Queue is empty');\n    }\n    return this.queue.shift().item;\n  }\n\n  get size() {\n    return this.queue.length;\n  }\n}\n\nexport { PriorityQueue };\n```\n===END FILE===\n\n===FILE: src/scheduler.mjs===\n```javascript\nimport { PriorityQueue } from './priority-queue.mjs';\n\nclass Scheduler {\n  constructor({ concurrency }) {\n    this.concurrency = concurrency;\n    this.queue = new PriorityQueue();\n    this.running = 0;\n    this.results = [];\n    this.idCounter = 0;\n  }\n\n  add(fn, { priority = 0, retries = 0 }) {\n    this.queue.enqueue({ fn, priority, retries, attempts: 0, id: this.idCounter++ });\n  }\n\n  async run() {\n    while (this.queue.size > 0 || this.running > 0) {\n      while (this.running < this.concurrency && this.queue.size > 0) {\n        const { fn, retries, attempts, id } = this.queue.dequeue();\n        this.running++;\n        (async () => {\n          try {\n            const result = await fn();\n            this.results.push({ id, ok: true, value: result });\n          } catch (error) {\n            if (attempts < retries) {\n              this.queue.enqueue({ fn, retries, attempts: attempts + 1, id });\n            } else {\n              this.results.push({ id, ok: false, error });\n            }\n          } finally {\n            this.running--;\n          }\n        })();\n      }\n      await new Promise(resolve => setTimeout(resolve, 0));\n    }\n    return this.results;\n  }\n}\n\nexport { Scheduler };\n```\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 7055
+    },
+    {
+      "clave": "qwen25-coder-7b",
+      "nombre": "Qwen2.5 Coder 7B Instruct",
+      "task": "bugfix",
+      "think": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 3335,
+      "tps": 86.72142428697725,
+      "genTokens": 217,
+      "promptTokens": 1799,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.6162\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.0882\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.0699\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 0.5818\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.1068\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 69.3322\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n```javascript\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  return precio - precio * (porcentaje / 100);\n}\n===END FILE===\n\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    total += aplicarDescuento(item.precio, item.descuento || 0) * item.cantidad;\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 7055
+    },
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 14328,
+      "tps": 43.401376223570715,
+      "genTokens": 587,
+      "promptTokens": 423,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 7,
+        "fail": 2,
+        "tests": 9,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 0.8418\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.1264\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.3309\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 1.0748\n  type: 'test'\n  ...\n# Subtest: respeta el limite de concurrencia\nok 5 - respeta el limite de concurrencia\n  ---\n  duration_ms: 257.9792\n  type: 'test'\n  ...\n# Subtest: empieza por la prioridad menor\nok 6 - empieza por la prioridad menor\n  ---\n  duration_ms: 0.825\n  type: 'test'\n  ...\n# Subtest: reintenta hasta tener exito\nnot ok 7 - reintenta hasta tener exito\n  ---\n  duration_ms: 0.8174\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen3-30b-a3b-2507\\\\project-r1\\\\test\\\\scheduler.test.mjs:36:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    2 !== 3\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 3\n  actual: 2\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen3-30b-a3b-2507/project-r1/test/scheduler.test.mjs:47:10)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: fallo definitivo devuelve ok:false con error\nok 8 - fallo definitivo devuelve ok:false con error\n  ---\n  duration_ms: 0.2518\n  type: 'test'\n  ...\n# Subtest: devuelve resultados en orden de finalizacion\nnot ok 9 - devuelve resultados en orden de finalizacion\n  ---\n  duration_ms: 107.3871\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen3-30b-a3b-2507\\\\project-r1\\\\test\\\\scheduler.test.mjs:59:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n      [\n    +   'lenta',\n        'rapida',\n        'media',\n    -   'lenta'\n      ]\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    0: 'rapida'\n    1: 'media'\n    2: 'lenta'\n  actual:\n    0: 'lenta'\n    1: 'rapida'\n    2: 'media'\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen3-30b-a3b-2507/project-r1/test/scheduler.test.mjs:65:10)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 7\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 438.9028\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\n```mjs\nexport class PriorityQueue {\n  constructor() {\n    this._queue = [];\n  }\n\n  enqueue(item, priority) {\n    this._queue.push({ item, priority, timestamp: Date.now() });\n  }\n\n  dequeue() {\n    if (this._queue.length === 0) {\n      throw new Error('Queue is empty');\n    }\n\n    let minIndex = 0;\n    for (let i = 1; i < this._queue.length; i++) {\n      const a = this._queue[i];\n      const b = this._queue[minIndex];\n      if (a.priority < b.priority || (a.priority === b.priority && a.timestamp < b.timestamp)) {\n        minIndex = i;\n      }\n    }\n\n    return this._queue.splice(minIndex, 1)[0].item;\n  }\n\n  get size() {\n    return this._queue.length;\n  }\n}\n```\n===END FILE===\n===FILE: src/scheduler.mjs===\n```mjs\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency }) {\n    this.concurrency = concurrency;\n    this.tasks = [];\n    this.running = 0;\n    this.idCounter = 0;\n    this.results = [];\n  }\n\n  add(fn, { priority = 0, retries = 0 }) {\n    const taskId = this.idCounter++;\n    this.tasks.push({ fn, priority, retries, taskId });\n  }\n\n  async run() {\n    const queue = new PriorityQueue();\n    this.tasks.forEach(task => queue.enqueue(task, task.priority));\n\n    const executeTask = async (task) => {\n      let attempts = 0;\n      let result;\n\n      while (attempts <= task.retries) {\n        try {\n          const value = await task.fn();\n          result = { ok: true, value };\n          break;\n        } catch (error) {\n          attempts++;\n          if (attempts > task.retries) {\n            result = { ok: false, error };\n          }\n        }\n      }\n\n      this.results.push({\n        id: task.taskId,\n        ok: result.ok,\n        value: result.value,\n        error: result.error,\n        attempts: attempts\n      });\n    };\n\n    const runTasks = async () => {\n      while (queue.size > 0) {\n        const task = queue.dequeue();\n\n        if (this.running >= this.concurrency) {\n          await new Promise(resolve => {\n            const interval = setInterval(() => {\n              if (this.running < this.concurrency) {\n                clearInterval(interval);\n                resolve();\n              }\n            }, 10);\n          });\n        }\n\n        this.running++;\n        await executeTask(task);\n        this.running--;\n      }\n    };\n\n    await runTasks();\n    return this.results;\n  }\n}\n```\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6865
+    },
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 7925,
+      "tps": 41.60063546932973,
+      "genTokens": 213,
+      "promptTokens": 1833,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.6359\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.1029\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.0747\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 0.6719\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.1156\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 73.0378\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  return precio - (precio * porcentaje / 100);\n}\n===END FILE===\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    total += aplicarDescuento(item.precio, item.descuento || 0) * item.cantidad;\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6865
+    },
+    {
+      "clave": "qwen36-35b-a3b",
+      "nombre": "Qwen3.6 35B-A3B",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [],
+      "rondas": [],
+      "ms": 150433,
+      "tps": 46.761559248325334,
+      "genTokens": 7000,
+      "promptTokens": 416,
+      "finish": "length",
+      "test": {
+        "code": 1,
+        "pass": 0,
+        "fail": 2,
+        "tests": 2,
+        "text": "TAP version 13\n# node:internal/modules/esm/resolve:271\n#     throw new ERR_MODULE_NOT_FOUND(\n#           ^\n# Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen36-35b-a3b\\\\project-r1\\\\src\\\\priority-queue.mjs' imported from C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen36-35b-a3b\\\\project-r1\\\\test\\\\priority-queue.test.mjs\n#     at finalizeResolution (node:internal/modules/esm/resolve:271:11)\n#     at moduleResolve (node:internal/modules/esm/resolve:861:10)\n#     at defaultResolve (node:internal/modules/esm/resolve:988:11)\n#     at \\#cachedDefaultResolve (node:internal/modules/esm/loader:700:20)\n#     at \\#resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:717:38)\n#     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:749:52)\n#     at \\#resolve (node:internal/modules/esm/loader:682:17)\n#     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:602:35)\n#     at ModuleJob.syncLink (node:internal/modules/esm/module_job:162:33)\n#     at ModuleJob.link (node:internal/modules/esm/module_job:252:17) {\n#   code: 'ERR_MODULE_NOT_FOUND',\n#   url: 'file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen36-35b-a3b/project-r1/src/priority-queue.mjs'\n# }\n# Node.js v26.0.0\n# Subtest: test\\\\priority-queue.test.mjs\nnot ok 1 - test\\\\priority-queue.test.mjs\n  ---\n  duration_ms: 56.2452\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen36-35b-a3b\\\\project-r1\\\\test\\\\priority-queue.test.mjs:1:1'\n  failureType: 'testCodeFailure'\n  exitCode: 1\n  signal: ~\n  error: 'test failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n# node:internal/modules/esm/resolve:271\n#     throw new ERR_MODULE_NOT_FOUND(\n#           ^\n# Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen36-35b-a3b\\\\project-r1\\\\src\\\\scheduler.mjs' imported from C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen36-35b-a3b\\\\project-r1\\\\test\\\\scheduler.test.mjs\n#     at finalizeResolution (node:internal/modules/esm/resolve:271:11)\n#     at moduleResolve (node:internal/modules/esm/resolve:861:10)\n#     at defaultResolve (node:internal/modules/esm/resolve:988:11)\n#     at \\#cachedDefaultResolve (node:internal/modules/esm/loader:700:20)\n#     at \\#resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:717:38)\n#     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:749:52)\n#     at \\#resolve (node:internal/modules/esm/loader:682:17)\n#     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:602:35)\n#     at ModuleJob.syncLink (node:internal/modules/esm/module_job:162:33)\n#     at ModuleJob.link (node:internal/modules/esm/module_job:252:17) {\n#   code: 'ERR_MODULE_NOT_FOUND',\n#   url: 'file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen36-35b-a3b/project-r1/src/scheduler.mjs'\n# }\n# Node.js v26.0.0\n# Subtest: test\\\\scheduler.test.mjs\nnot ok 2 - test\\\\scheduler.test.mjs\n  ---\n  duration_ms: 43.5133\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen36-35b-a3b\\\\project-r1\\\\test\\\\scheduler.test.mjs:1:1'\n  failureType: 'testCodeFailure'\n  exitCode: 1\n  signal: ~\n  error: 'test failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 0\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 70.8485\n\n"
+      },
+      "content": "```\n     - Let's think carefully. A robust way:\n       ```javascript\n       async run() {\n         const pq = new PriorityQueue();\n         for (const task of this._tasks) {\n           pq.enqueue(task, task.priority);\n         }\n\n         const results = [];\n         let active = 0;\n         const concurrency = this.concurrency;\n\n         // We need to wait for a task to finish if pq is empty but active > 0\n         // We can use a simple approach: maintain a list of promises, and when one settles, try to dequeue.\n         // But we must ensure we don't exceed concurrency.\n         \n         const running = [];\n         \n         const process = async () => {\n           while (pq.size > 0 || running.length > 0) {\n             // Try to start new tasks\n             while (pq.size > 0 && running.length < concurrency) {\n               const task = pq.dequeue();\n               const p = this._runTask(task);\n               running.push(p);\n               p.then(() => {\n                 const idx = running.indexOf(p);\n                 if (idx !== -1) running.splice(idx, 1);\n               });\n             }\n             \n             // If we can't start new tasks, wait for any running task to finish\n             if (running.length > 0 && pq.size === 0) {\n               await Promise.race(running);\n             } else if (running.length === 0 && pq.size === 0) {\n               break;\n             }\n           }\n           return results;\n         };\n         \n         return process();\n       }\n       ```\n     - Wait, `Promise.race` resolves as soon as *one* task finishes. That's good. But after it resolves, we loop back, check `running.length < concurrency`, and if true, dequeue again. This works correctly.\n     - Let's trace: \n       - Initially `running = []`, `pq` has tasks.\n       - Inner while: starts up to `concurrency` tasks. Each pushes to `running` and attaches `.then` to remove itself.\n       - After inner while, if `running.length > 0 && pq.size === 0`, we `await Promise.race(running)`. This waits for one to finish.\n       - Loop continues. `running` shrinks. Inner while tries to start more.\n       - Eventually `pq.size === 0` and `running.length === 0`, breaks.\n       - Returns `results`.\n     - This is clean and correct.\n     - Now, `_runTask(task)` needs to handle retries and record results.\n       ```javascript\n       async _runTask(task) {\n         let attempts = 0;\n         let lastError;\n         const maxRetries = task.retries;\n         \n         while (attempts <= maxRetries) {\n           attempts++;\n           try {\n             const value = await task.fn();\n             return { id: task.id, ok: true, value, attempts };\n           } catch (err) {\n             lastError = err;\n           }\n         }\n         \n         return { id: task.id, ok: false, error: lastError, attempts };\n       }\n       ```\n     - Wait, the requirement says: \"Si fn lanza, reintenta hasta \"retries\" veces; si sigue fallando, el resultado es { ok:false, error }.\"\n     - If `retries = 0`, it should try once. If it fails, return `{ ok: false, error, attempts: 1 }`.\n     - My loop `while (attempts <= maxRetries)` with `attempts++` at start:\n       - `retries = 0`: `attempts` starts 0. `0 <= 0` true. `attempts` becomes 1. Tries fn. If fails, `lastError` set. Loop checks `1 <= 0` false. Returns `{ ok: false, error: lastError, attempts: 1 }`. Correct.\n       - `retries = 2`: tries up to 3 times total (1 initial + 2 retries). Correct.\n     - One detail: `task` structure in `add`: I'll store `{ id, fn, priority, retries }`.\n     - `add` method:\n       ```javascript\n       add(fn, { priority = 0, retries = 0 } = {}) {\n         this._tasks.push({ id: this._nextId++, fn, priority, retries });\n       }\n       constructor({ concurrency }) {\n         this.concurrency = concurrency;\n         this._tasks = [];\n         this._nextId = 0;\n       }\n       ```\n     - Wait, `add` signature in prompt: `add(fn, { priority = 0, retries = 0 })`. I'll match that.\n     - Let's assemble `scheduler.mjs`:\n       ```javascript\n       import { PriorityQueue } from './priority-queue.mjs';\n\n       export class Scheduler {\n         constructor({ concurrency }) {\n           this.concurrency = concurrency;\n           this._tasks = [];\n           this._nextId = 0;\n         }\n\n         add(fn, { priority = 0, retries = 0 }) {\n           this._tasks.push({ id: this._nextId++, fn, priority, retries });\n         }\n\n         async _runTask(task) {\n           let attempts = 0;\n           let lastError;\n           const maxRetries = task.retries;\n\n           while (attempts <= maxRetries) {\n             attempts++;\n             try {\n               const value = await task.fn();\n               return { id: task.id, ok: true, value, attempts };\n             } catch (err) {\n               lastError = err;\n             }\n           }\n\n           return { id: task.id, ok: false, error: lastError, attempts };\n         }\n\n         async run() {\n           const pq = new PriorityQueue();\n           for (const task of this._tasks) {\n             pq.enqueue(task, task.priority);\n           }\n\n           const results = [];\n           const running = [];\n           const concurrency = this.concurrency;\n\n           const process = async () => {\n             while (pq.size > 0 || running.length > 0) {\n               while (pq.size > 0 && running.length < concurrency) {\n                 const task = pq.dequeue();\n                 const p = this._runTask(task);\n                 running.push(p);\n                 p.then(() => {\n                   const idx = running.indexOf(p);\n                   if (idx !== -1) running.splice(idx, 1);\n                 });\n               }\n\n               if (running.length > 0 && pq.size === 0) {\n                 await Promise.race(running);\n               } else if (running.length === 0 && pq.size === 0) {\n                 break;\n               }\n             }\n             return results;\n           };\n\n           return process();\n         }\n       }\n       ```\n     - Wait, there's a subtle bug in the concurrency control: `Promise.race` resolves when *one* task finishes, but we might have multiple tasks finish around the same time. The loop will catch up correctly because after `await Promise.race(running)`, we go back to the outer `while`, then inner `while` will check `running.length < concurrency` and start more tasks. This is correct.\n     - However, `running.indexOf(p)` inside `.then` might be slow or problematic if `p` is already removed? No, it's fine. But `running` is an array of promises. When a promise settles, we remove it. `Promise.race` returns the settled promise. We don't need to track it specially.\n     - One issue: `running` array might contain promises that have already settled but haven't been removed yet (because `.then` hasn't run or is pending). That's fine.\n     - Actually, a cleaner way to handle concurrency without `Promise.race` quirks is to use a simple semaphore or just `Promise.all` with a concurrency limiter, but the current approach is standard and works.\n     - Let's double check the `Promise.race` behavior: It returns the first settled promise. The `.then` on each promise will run asynchronously. The `await` will pause until one settles. Then the loop continues. This works.\n     - Wait, what if `concurrency` is 0? The prompt says \"límite de tareas simultáneas\", usually >= 1. I'll assume >= 1. If 0, it would hang or break immediately. I'll add a guard or just assume valid input. I'll keep it simple.\n     - Let's refine the scheduler to be more robust and avoid potential race conditions with `running.indexOf`. Actually, we can just use a counter for active tasks and a promise that resolves when active drops. But the array approach is fine.\n     - Alternative concurrency control:\n       ```javascript\n       async run() {\n         const pq = new PriorityQueue();\n         for (const task of this._tasks) {\n           pq.enqueue(task, task.priority);\n         }\n\n         const results = [];\n         let active = 0;\n         const concurrency = this.concurrency;\n\n         const waitForSlot = () => new Promise(resolve => {\n           const check = () => {\n             if (active < concurrency) resolve();\n             else setTimeout(check, 0); // yield to event loop\n           };\n           check();\n         });\n       ```\n       This is messy. The `Promise.race` approach is actually cleaner. I'll stick with it but fix the removal logic to be safer:\n       ```javascript\n       const p = this._runTask(task);\n       running.push(p);\n       p.finally(() => {\n         const idx = running.indexOf(p);\n         if (idx !== -1) running.splice(idx, 1);\n       });\n       ```\n       Using `.finally` is better than `.then` because it runs regardless of settle state.\n     - Let's test the logic mentally:\n       - `pq` has tasks. `running` empty.\n       - Inner while: starts `concurrency` tasks. `running` has `concurrency` promises.\n       - Outer while condition: `pq.size > 0 || running.length > 0` -> true.\n       - Inner while condition: `pq.size > 0 && running.length < concurrency` -> false (running is full).\n       - Next: `if (running.length > 0 && pq.size === 0)` -> true. `await Promise.race(running)`.\n       - One task finishes. `.finally` runs, removes it from `running`.\n       - Loop continues. Outer while checks. Inner while checks `running.length < concurrency` -> true (if pq still has tasks). Starts new task.\n       - This works correctly.\n     - One edge case: `Promise.race` might resolve with a promise that was already removed? No, `running` contains the promises. When one settles, it's removed. `Promise.race` returns the promise object. It's fine.\n     - Actually, `Promise.race` on an array that changes while waiting might cause issues? No, `Promise.race` takes the array at call time. It's safe.\n     - Let's consider if `concurrency` is large. It works.\n     - What about `run()` returning results in completion order? `results.push(res)` happens inside `_runTask`? Wait, `_runTask` returns the result object. But in my code, `_runTask` returns the result, but I don't push it to `results` inside `_runTask`. I need to push it when the promise resolves.\n     - Ah! I missed pushing to `results`. `_runTask` returns the result object, but I need to capture it when the promise settles.\n     - Let's fix:\n       ```javascript\n       const p = this._runTask(task);\n       running.push(p);\n       p.then(res => {\n         results.push(res);\n       }).finally(() => {\n         const idx = running.indexOf(p);\n         if (idx !== -1) running.splice(idx, 1);\n       });\n       ```\n     - This ensures `results` is populated in completion order.\n     - Let's verify `_runTask` return value: It returns `{ id, ok, value, attempts }` or `{ id, ok, error, attempts }`. Correct.\n     - One detail: `task.id` is assigned in `add`. Correct.\n     - Let's put it all together.\n\n     Structure:\n     `src/priority-queue.mjs`\n     `src/scheduler.mjs`\n\n     Check requirements:\n     - `PriorityQueue`: `enqueue(item, priority)`, `dequeue()`, `size`. Correct.\n     - `Scheduler`: `constructor({ concurrency })`, `add(fn, { priority = 0, retries = 0 })`, `async run()`. Correct.\n     - Concurrency limit respected. Correct.\n     - Retry logic correct. Correct.\n     - Completion order results. Correct.\n     - No external deps. Correct.\n     - ESM. Correct.\n\n     One minor thing: `PriorityQueue` `size` should be a property. I used `get size()`. That's fine.\n     `dequeue` throws `Error` if empty. I used `throw new Error('Queue is empty')`. Correct.\n     `add` signature: `add(fn, { priority = 0, retries = 0 })`. I'll keep it exactly.\n     `run` returns array in completion order. Correct.\n\n     Let's write out the files carefully.\n\n     `src/priority-queue.mjs`:\n     ```javascript\n     export class PriorityQueue {\n       constructor() {\n         this._queue = [];\n         this._seq = 0;\n       }\n\n       enqueue(item, priority) {\n         this._queue.push({ item, priority, seq: this._seq++ });\n       }\n\n       dequeue() {\n         if (this._queue.length === 0) throw new Error('Queue is empty');\n         let minIdx = 0;\n         for (let i = 1; i < this._queue.length; i++) {\n           const curr = this._queue[i];\n           const min = this._queue[minIdx];\n           if (curr.priority < min.priority || (curr.priority === min.priority && curr.seq < min.seq)) {\n             minIdx = i;\n           }\n         }\n         return this._queue.splice(minIdx, 1)[0].item;\n       }\n\n       get size() {\n         return this._queue.length;\n       }\n     }\n     ```\n\n     `src/scheduler.mjs`:\n     ```javascript\n     import { PriorityQueue } from './priority-queue.mjs';\n\n     export class Scheduler {\n       constructor({ concurrency }) {\n         this.concurrency = concurrency;\n         this._tasks = [];\n         this._nextId = 0;\n       }\n\n       add(fn, { priority = 0, retries = 0 }) {\n         this._tasks.push({ id: this._nextId++, fn, priority, retries });\n       }\n\n       async _runTask(task) {\n         let attempts = 0;\n         let lastError;\n         const maxRetries = task.retries;\n\n         while (attempts <= maxRetries) {\n           attempts++;\n           try {\n             const value = await task.fn();\n             return { id: task.id, ok: true, value, attempts };\n           } catch (err) {\n             lastError = err;\n           }\n         }\n\n         return { id: task.id, ok: false, error: lastError, attempts };\n       }\n\n       async run() {\n         const pq = new PriorityQueue();\n         for (const task of this._tasks) {\n           pq.enqueue(task, task.priority);\n         }\n\n         const results = [];\n         const running = [];\n         const concurrency = this.concurrency;\n\n         const process = async () => {\n           while (pq.size > 0 || running.length > 0) {\n             while (pq.size > 0 && running.length < concurrency) {\n               const task = pq.dequeue();\n               const p = this._runTask(task);\n               running.push(p);\n               p.then(res => {\n                 results.push(res);\n               }).finally(() => {\n                 const idx = running.indexOf(p);\n                 if (idx !== -1) running.splice(idx, 1);\n               });\n             }\n\n             if (running.length > 0 && pq.size === 0) {\n               await Promise.race(running);\n             } else if (running.length === 0 && pq.size === 0) {\n               break;\n             }\n           }\n           return results;\n         };\n\n         return process();\n       }\n     }\n     ```\n\n     Wait, there's a potential issue with `Promise.race` and the `running` array being mutated. `Promise.race` takes the array at the moment of call. If we mutate `running` inside `.finally`, it's fine because `.finally` runs asynchronously after the promise settles. But `Promise.race` might resolve, then `.finally` runs, then loop continues. This is safe.\n     However, a more robust way to handle concurrency without `Promise.race` array mutation issues is to use a simple counter and a promise that resolves when a slot frees up. But given the constraints and typical Node.js event loop behavior, the current approach is standard.\n     Actually, `Promise.race` on an array that changes might cause it to wait for a promise that was already removed? No, `Promise.race` clones the array internally or iterates over it. It's safe.\n     Let's consider an alternative that's foolproof: use a semaphore-like pattern with `async` and `await` on a single \"free slot\" promise, or just use `Promise.all` with a concurrency limiter. But the current one is fine.\n     I'll stick with it. It's clean and correct.\n\n     One minor adjustment: `running.indexOf(p)` might be O(n), but concurrency is usually small. It's fine.\n     Also, `pq.size` is a getter, so `pq.size > 0` works.\n     The prompt says: `export class PriorityQueue` and `export class Scheduler`.\n     I'll ensure exact exports.\n     Check `add` signature: `add(fn, { priority = 0, retries = 0 })`. I'll keep it.\n     Check `run` return: array in completion order. `results.push(res)` happens in `.then`, so order is preserved.\n     Check retry logic: `retries = 0` means 1 attempt. `retries = 2` means 3 attempts. My loop `while (attempts <= maxRetries)` with `attempts++` at start does exactly that.\n     Check error handling: if `fn` throws, `catch` sets `lastError`, loop continues. If `attempts > maxRetries`, returns `{ ok: false, error: lastError, attempts }`. Correct.\n     Check concurrency: `running.length < concurrency` prevents exceeding limit. Correct.\n     Check FIFO tie-breaking: `seq` counter ensures FIFO. Correct.\n     Check empty dequeue: throws `Error`. Correct.\n\n     One thing: `PriorityQueue` `size` property. The prompt says \"size: propiedad o método que devuelve cuántos elementos hay.\" I used `get size()`. That's fine.\n     I'll output exactly as requested.\n\n     Final check of the code structure:\n     ```javascript\n     // src/priority-queue.mjs\n     export class PriorityQueue {\n       constructor() {\n         this._queue = [];\n         this._seq = 0;\n       }\n       enqueue(item, priority) {\n         this._queue.push({ item, priority, seq: this._seq++ });\n       }\n       dequeue() {\n         if (this._queue.length === 0) throw new Error('Queue is empty');\n         let minIdx = 0;\n         for (let i = 1; i < this._queue.length; i++) {\n           const curr = this._queue[i];\n           const min = this._queue[minIdx];\n           if (curr.priority < min.priority || (curr.priority === min.priority && curr.seq < min.seq)) {\n             minIdx = i;\n           }\n         }\n         return this._queue.splice(minIdx, 1)[0].item;\n       }\n       get size() {\n         return this._queue.length;\n       }\n     }\n     ```\n\n     ```javascript\n     // src/scheduler.mjs\n     import { PriorityQueue } from './priority-queue.mjs';\n\n     export class Scheduler {\n       constructor({ concurrency }) {\n         this.concurrency = concurrency;\n         this._tasks = [];\n         this._nextId = 0;\n       }\n\n       add(fn, { priority = 0, retries = 0 }) {\n         this._tasks.push({ id: this._nextId++, fn, priority, retries });\n       }\n\n       async _runTask(task) {\n         let attempts = 0;\n         let lastError;\n         const maxRetries = task.retries;\n\n         while (attempts <= maxRetries) {\n           attempts++;\n           try {\n             const value = await task.fn();\n             return { id: task.id, ok: true, value, attempts };\n           } catch (err) {\n             lastError = err;\n           }\n         }\n\n         return { id: task.id, ok: false, error: lastError, attempts };\n       }\n\n       async run() {\n         const pq = new PriorityQueue();\n         for (const task of this._tasks) {\n           pq.enqueue(task, task.priority);\n         }\n\n         const results = [];\n         const running = [];\n         const concurrency = this.concurrency;\n\n         const process = async () => {\n           while (pq.size > 0 || running.length > 0) {\n             while (pq.size > 0 && running.length < concurrency) {\n               const task = pq.dequeue();\n               const p = this._runTask(task);\n               running.push(p);\n               p.then(res => {\n                 results.push(res);\n               }).finally(() => {\n                 const idx = running.indexOf(p);\n                 if (idx !== -1) running.splice(idx, 1);\n               });\n             }\n\n             if (running.length > 0 && pq.size === 0) {\n               await Promise.race(running);\n             } else",
+      "rep": 1,
+      "vramPicoMiB": 6827
+    },
+    {
+      "clave": "qwen36-35b-a3b",
+      "nombre": "Qwen3.6 35B-A3B",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 48929,
+      "tps": 46.099158507872346,
+      "genTokens": 2123,
+      "promptTokens": 1879,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.5605\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.0823\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.0673\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 0.5229\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.1032\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 76.9844\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  return precio * (1 - porcentaje / 100);\n}\n===END FILE===\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    total += item.cantidad * aplicarDescuento(item.precio, item.descuento || 0);\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6827
+    },
+    {
+      "clave": "gpt-oss-20b",
+      "nombre": "GPT-OSS 20B",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 64268,
+      "tps": 30.29110698937129,
+      "genTokens": 1924,
+      "promptTokens": 462,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 9,
+        "fail": 0,
+        "tests": 9,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 0.7473\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 4.2829\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.4234\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 0.673\n  type: 'test'\n  ...\n# Subtest: respeta el limite de concurrencia\nok 5 - respeta el limite de concurrencia\n  ---\n  duration_ms: 128.8786\n  type: 'test'\n  ...\n# Subtest: empieza por la prioridad menor\nok 6 - empieza por la prioridad menor\n  ---\n  duration_ms: 1.0345\n  type: 'test'\n  ...\n# Subtest: reintenta hasta tener exito\nok 7 - reintenta hasta tener exito\n  ---\n  duration_ms: 0.2931\n  type: 'test'\n  ...\n# Subtest: fallo definitivo devuelve ok:false con error\nok 8 - fallo definitivo devuelve ok:false con error\n  ---\n  duration_ms: 0.3124\n  type: 'test'\n  ...\n# Subtest: devuelve resultados en orden de finalizacion\nok 9 - devuelve resultados en orden de finalizacion\n  ---\n  duration_ms: 63.8269\n  type: 'test'\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 9\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 282.2525\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\nexport class PriorityQueue {\n  constructor() {\n    this.heap = [];\n    this.counter = 0; // to preserve FIFO on equal priority\n  }\n\n  enqueue(item, priority) {\n    const node = { item, priority, index: this.counter++ };\n    this.heap.push(node);\n    this._bubbleUp(this.heap.length - 1);\n  }\n\n  dequeue() {\n    if (this.heap.length === 0) {\n      throw new Error('PriorityQueue is empty');\n    }\n    const root = this.heap[0];\n    const last = this.heap.pop();\n    if (this.heap.length > 0) {\n      this.heap[0] = last;\n      this._bubbleDown(0);\n    }\n    return root.item;\n  }\n\n  get size() {\n    return this.heap.length;\n  }\n\n  _bubbleUp(idx) {\n    const node = this.heap[idx];\n    while (idx > 0) {\n      const parentIdx = (idx - 1) >> 1;\n      const parent = this.heap[parentIdx];\n      if (\n        node.priority < parent.priority ||\n        (node.priority === parent.priority && node.index < parent.index)\n      ) {\n        this.heap[idx] = parent;\n        idx = parentIdx;\n      } else {\n        break;\n      }\n    }\n    this.heap[idx] = node;\n  }\n\n  _bubbleDown(idx) {\n    const length = this.heap.length;\n    const node = this.heap[idx];\n    while (true) {\n      let leftIdx = (idx << 1) + 1;\n      let rightIdx = leftIdx + 1;\n      let smallestIdx = idx;\n\n      if (\n        leftIdx < length &&\n        (this.heap[leftIdx].priority < this.heap[smallestIdx].priority ||\n          (this.heap[leftIdx].priority === this.heap[smallestIdx].priority &&\n            this.heap[leftIdx].index < this.heap[smallestIdx].index))\n      ) {\n        smallestIdx = leftIdx;\n      }\n\n      if (\n        rightIdx < length &&\n        (this.heap[rightIdx].priority < this.heap[smallestIdx].priority ||\n          (this.heap[rightIdx].priority === this.heap[smallestIdx].priority &&\n            this.heap[rightIdx].index < this.heap[smallestIdx].index))\n      ) {\n        smallestIdx = rightIdx;\n      }\n\n      if (smallestIdx === idx) break;\n\n      this.heap[idx] = this.heap[smallestIdx];\n      idx = smallestIdx;\n    }\n    this.heap[idx] = node;\n  }\n}\n===END FILE===\n===FILE: src/scheduler.mjs===\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency }) {\n    if (typeof concurrency !== 'number' || concurrency <= 0) {\n      throw new Error('concurrency must be a positive number');\n    }\n    this.concurrency = concurrency;\n    this.tasks = [];\n    this.idCounter = 0;\n  }\n\n  add(fn, { priority = 0, retries = 0 } = {}) {\n    if (typeof fn !== 'function') {\n      throw new Error('fn must be a function');\n    }\n    const id = this.idCounter++;\n    this.tasks.push({ id, fn, priority, retries });\n  }\n\n  async run() {\n    const pq = new PriorityQueue();\n    for (const t of this.tasks) {\n      pq.enqueue(t, t.priority);\n    }\n\n    const results = [];\n    const total = this.tasks.length;\n    let running = 0;\n\n    const allDone = new Promise((resolve) => {\n      const checkDone = () => {\n        if (results.length === total) resolve();\n      };\n\n      const startNext = () => {\n        while (running < this.concurrency && pq.size > 0) {\n          const task = pq.dequeue();\n          running++;\n          this._runTask(task).then((res) => {\n            results.push(res);\n            running--;\n            checkDone();\n            startNext();\n          });\n        }\n      };\n\n      startNext();\n    });\n\n    await allDone;\n    return results;\n  }\n\n  async _runTask(task) {\n    let attempts = 0;\n    while (true) {\n      attempts++;\n      try {\n        const value = await task.fn();\n        return { id: task.id, ok: true, value, attempts };\n      } catch (err) {\n        if (attempts > task.retries) {\n          return { id: task.id, ok: false, error: err, attempts };\n        }\n      }\n    }\n  }\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6186
+    },
+    {
+      "clave": "gpt-oss-20b",
+      "nombre": "GPT-OSS 20B",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 23787,
+      "tps": 29.67708059957959,
+      "genTokens": 626,
+      "promptTokens": 1663,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.5943\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.0995\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.071\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 0.6315\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.113\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 64.8646\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  const pct = porcentaje / 100;\n  return precio - precio * pct;\n}\n===END FILE===\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    const precioConDescuento = aplicarDescuento(item.precio, item.descuento || 0);\n    total += precioConDescuento * item.cantidad;\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6186
+    },
+    {
+      "clave": "qwen35-9b",
+      "nombre": "Qwen3.5 9B",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 35450,
+      "tps": 40.85946577386647,
+      "genTokens": 1437,
+      "promptTokens": 416,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 4,
+        "fail": 1,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 1.5101\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.1945\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.4477\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 0.7933\n  type: 'test'\n  ...\n# RangeError: Map maximum size exceeded\n#     at Map.set (<anonymous>)\n#     at AsyncHook.init (node:internal/test_runner/harness:242:23)\n#     at emitInitNative (node:internal/async_hooks:207:43)\n#     at emitInitScript (node:internal/async_hooks:514:3)\n#     at promiseInitHook (node:internal/async_hooks:333:3)\n#     at promiseInitHookWithDestroyTracking (node:internal/async_hooks:337:3)\n#     at Promise.then (<anonymous>)\n#     at Promise.race (<anonymous>)\n#     at Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen35-9b/project-r1/src/scheduler.mjs:33:21)\n#     at runNextTicks (node:internal/process/task_queues:65:5)\n# Subtest: test\\\\scheduler.test.mjs\nnot ok 2 - test\\\\scheduler.test.mjs\n  ---\n  duration_ms: 44160.9427\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen35-9b\\\\project-r1\\\\test\\\\scheduler.test.mjs:1:1'\n  failureType: 'testCodeFailure'\n  exitCode: 1\n  signal: ~\n  error: 'test failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 4\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 44180.3197\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\nexport class PriorityQueue {\n  #items = [];\n\n  constructor() {\n    this.#items = [];\n  }\n\n  enqueue(item, priority) {\n    const entry = { item, priority, timestamp: Date.now() };\n    this.#items.push(entry);\n    this.#heapifyUp(this.#items.length - 1);\n  }\n\n  dequeue() {\n    if (this.#items.length === 0) {\n      throw new Error('PriorityQueue is empty');\n    }\n\n    const minIndex = this.#findMinIndex();\n    const minEntry = this.#items[minIndex];\n    this.#items.splice(minIndex, 1);\n    this.#heapifyDown(0);\n\n    return minEntry.item;\n  }\n\n  get size() {\n    return this.#items.length;\n  }\n\n  #findMinIndex() {\n    let minIndex = 0;\n    for (let i = 1; i < this.#items.length; i++) {\n      const current = this.#items[i];\n      const min = this.#items[minIndex];\n      if (current.priority < min.priority ||\n          (current.priority === min.priority && current.timestamp < min.timestamp)) {\n        minIndex = i;\n      }\n    }\n    return minIndex;\n  }\n\n  #heapifyUp(index) {\n    while (index > 0) {\n      const parentIndex = Math.floor((index - 1) / 2);\n      const parent = this.#items[parentIndex];\n      const child = this.#items[index];\n\n      if (child.priority < parent.priority ||\n          (child.priority === parent.priority && child.timestamp < parent.timestamp)) {\n        this.#swap(index, parentIndex);\n        index = parentIndex;\n      } else {\n        break;\n      }\n    }\n  }\n\n  #heapifyDown(index) {\n    while (true) {\n      let smallest = index;\n      const left = 2 * index + 1;\n      const right = 2 * index + 2;\n\n      if (left < this.#items.length) {\n        const leftEntry = this.#items[left];\n        const smallestEntry = this.#items[smallest];\n        if (leftEntry.priority < smallestEntry.priority ||\n            (leftEntry.priority === smallestEntry.priority && leftEntry.timestamp < smallestEntry.timestamp)) {\n          smallest = left;\n        }\n      }\n\n      if (right < this.#items.length) {\n        const rightEntry = this.#items[right];\n        const smallestEntry = this.#items[smallest];\n        if (rightEntry.priority < smallestEntry.priority ||\n            (rightEntry.priority === smallestEntry.priority && rightEntry.timestamp < smallestEntry.timestamp)) {\n          smallest = right;\n        }\n      }\n\n      if (smallest !== index) {\n        this.#swap(index, smallest);\n        index = smallest;\n      } else {\n        break;\n      }\n    }\n  }\n\n  #swap(i, j) {\n    [this.#items[i], this.#items[j]] = [this.#items[j], this.#items[i]];\n  }\n}\n===END FILE===\n===FILE: src/scheduler.mjs===\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  #queue = new PriorityQueue();\n  #concurrency;\n  #running = 0;\n  #results = [];\n  #nextId = 1;\n  #runningPromises = [];\n\n  constructor({ concurrency = 1 }) {\n    this.#concurrency = concurrency;\n  }\n\n  add(fn, { priority = 0, retries = 0 }) {\n    const id = this.#nextId++;\n    const task = { id, fn, priority, retries, attempts: 0 };\n    this.#queue.enqueue(task, priority);\n    return id;\n  }\n\n  async run() {\n    const results = [];\n\n    while (this.#queue.size > 0 || this.#runningPromises.length > 0) {\n      while (this.#running < this.#concurrency && this.#queue.size > 0) {\n        const task = this.#queue.dequeue();\n        const promise = this.#executeTask(task);\n        this.#runningPromises.push({ task, promise });\n        this.#running++;\n      }\n\n      await Promise.race(this.#runningPromises.map(p => p.promise));\n      this.#runningPromises = this.#runningPromises.filter(p => !p.promise.resolved);\n      this.#running--;\n    }\n\n    return results;\n  }\n\n  #executeTask(task) {\n    return (async () => {\n      let lastError = null;\n      let lastValue = null;\n\n      for (let attempt = 0; attempt <= task.retries; attempt++) {\n        task.attempts = attempt + 1;\n        try {\n          const result = await task.fn();\n          lastValue = result;\n          return { id: task.id, ok: true, value: result, error: null, attempts: task.attempts };\n        } catch (error) {\n          lastError = error;\n          if (attempt < task.retries) {\n            continue;\n          }\n        }\n      }\n\n      return { id: task.id, ok: false, value: lastValue, error: lastError, attempts: task.attempts };\n    })();\n  }\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 7339
+    },
+    {
+      "clave": "qwen35-9b",
+      "nombre": "Qwen3.5 9B",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 25536,
+      "tps": 39.06325893449589,
+      "genTokens": 950,
+      "promptTokens": 1862,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 3,
+        "fail": 2,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.6566\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.1099\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.0863\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nnot ok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 6.2733\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen35-9b\\\\bugfix-r1\\\\test\\\\cart.test.mjs:18:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    90 !== 180\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 180\n  actual: 90\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen35-9b/bugfix-r1/test/cart.test.mjs:19:10)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1201:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:831:18)\n    Test.postRun (node:internal/test_runner/test:1330:19)\n    Test.run (node:internal/test_runner/test:1258:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: el total suma varios items con y sin descuento\nnot ok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.2018\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen35-9b\\\\bugfix-r1\\\\test\\\\cart.test.mjs:22:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    150 !== 260\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 260\n  actual: 150\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen35-9b/bugfix-r1/test/cart.test.mjs:23:10)\n    Test.runInAsyncScope (node:async_hooks:226:14)\n    Test.run (node:internal/test_runner/test:1201:25)\n    Test.processPendingSubtests (node:internal/test_runner/test:831:18)\n    Test.postRun (node:internal/test_runner/test:1330:19)\n    Test.run (node:internal/test_runner/test:1258:12)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 3\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 74.4823\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  return precio - precio * (porcentaje / 100);\n}\n===END FILE===\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    total += aplicarDescuento(item.precio, item.descuento || 0);\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 7339
+    },
+    {
+      "clave": "qwen3-4b-2507",
+      "nombre": "Qwen3 4B Instruct 2507",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.m.mjs"
+      ],
+      "rondas": [],
+      "ms": 10217,
+      "tps": 74.18058752614195,
+      "genTokens": 748,
+      "promptTokens": 423,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 4,
+        "fail": 1,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 0.6344\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.1212\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.3395\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 0.6605\n  type: 'test'\n  ...\n# node:internal/modules/esm/resolve:271\n#     throw new ERR_MODULE_NOT_FOUND(\n#           ^\n# Error [ERR_MODULE_NOT_FOUND]: Cannot find module 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen3-4b-2507\\\\project-r1\\\\src\\\\scheduler.mjs' imported from C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen3-4b-2507\\\\project-r1\\\\test\\\\scheduler.test.mjs\n#     at finalizeResolution (node:internal/modules/esm/resolve:271:11)\n#     at moduleResolve (node:internal/modules/esm/resolve:861:10)\n#     at defaultResolve (node:internal/modules/esm/resolve:988:11)\n#     at \\#cachedDefaultResolve (node:internal/modules/esm/loader:700:20)\n#     at \\#resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:717:38)\n#     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:749:52)\n#     at \\#resolve (node:internal/modules/esm/loader:682:17)\n#     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:602:35)\n#     at ModuleJob.syncLink (node:internal/modules/esm/module_job:162:33)\n#     at ModuleJob.link (node:internal/modules/esm/module_job:252:17) {\n#   code: 'ERR_MODULE_NOT_FOUND',\n#   url: 'file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen3-4b-2507/project-r1/src/scheduler.mjs'\n# }\n# Node.js v26.0.0\n# Subtest: test\\\\scheduler.test.mjs\nnot ok 2 - test\\\\scheduler.test.mjs\n  ---\n  duration_ms: 51.1418\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-46-07\\\\qwen3-4b-2507\\\\project-r1\\\\test\\\\scheduler.test.mjs:1:1'\n  failureType: 'testCodeFailure'\n  exitCode: 1\n  signal: ~\n  error: 'test failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 4\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 78.5657\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\nexport class PriorityQueue {\n  constructor() {\n    this.queue = [];\n  }\n\n  enqueue(item, priority) {\n    this.queue.push({ item, priority, timestamp: Date.now() });\n    this.queue.sort((a, b) => {\n      if (a.priority !== b.priority) {\n        return a.priority - b.priority;\n      }\n      return a.timestamp - b.timestamp;\n    });\n  }\n\n  dequeue() {\n    if (this.queue.length === 0) {\n      throw new Error('Priority queue is empty');\n    }\n    return this.queue.shift().item;\n  }\n\n  get size() {\n    return this.queue.length;\n  }\n}\n===END FILE===\n===FILE: src/scheduler.m.mjs===\nexport class Scheduler {\n  constructor({ concurrency = 1 }) {\n    this.concurrency = concurrency;\n    this.tasks = [];\n    this.running = 0;\n    this.taskIds = 0;\n  }\n\n  add(fn, { priority = 0, retries = 0 } = {}) {\n    this.tasks.push({\n      id: ++this.taskIds,\n      fn,\n      priority,\n      retries,\n      attempts: 0,\n      error: null,\n      value: null,\n    });\n  }\n\n  async run() {\n    const results = [];\n    const taskQueue = [...this.tasks];\n    const runningTasks = [];\n\n    const executeTask = async (task) => {\n      let attempt = 0;\n      while (attempt <= task.retries) {\n        try {\n          const result = await task.fn();\n          task.value = result;\n          task.error = null;\n          task.attempts = attempt;\n          results.push({ id: task.id, ok: true, value: result, error: null, attempts: attempt });\n          return;\n        } catch (error) {\n          if (attempt >= task.retries) {\n            task.error = error;\n            task.attempts = attempt;\n            results.push({ id: task.id, ok: false, value: undefined, error: error.message, attempts: attempt });\n            return;\n          }\n          attempt++;\n          task.attempts = attempt;\n        }\n      }\n    };\n\n    // Sort tasks by priority (lower priority first), then by timestamp (FIFO)\n    taskQueue.sort((a, b) => {\n      if (a.priority !== b.priority) {\n        return a.priority - b.priority;\n      }\n      return a.id - b.id;\n    });\n\n    // Process tasks in order of priority and concurrency\n    while (taskQueue.length > 0) {\n      // Find the next task with lowest priority\n      const task = taskQueue.shift();\n      if (this.running >= this.concurrency) {\n        // Wait until a slot becomes available\n        // We simulate this by not starting new tasks until we have a free slot\n        // In a real async scheduler, we'd use a queue or event loop\n        // For now, we just process one at a time until concurrency is met\n        continue;\n      }\n\n      this.running++;\n      executeTask(task)\n        .then(() => {\n          this.running--;\n          // Re-add to results if not already processed\n          // We already processed in the loop, so just update\n        })\n        .catch((err) => {\n          this.running--;\n          console.error('Error in task execution:', err);\n        });\n    }\n\n    // Wait for all tasks to complete\n    // In a real implementation, we'd use a promise queue or async iteration\n    // For now, we just return the results in the order they were processed\n    return results;\n  }\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 7200
+    },
+    {
+      "clave": "qwen3-4b-2507",
+      "nombre": "Qwen3 4B Instruct 2507",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 3907,
+      "tps": 66.77716340791115,
+      "genTokens": 224,
+      "promptTokens": 1815,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.7241\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.1361\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.0775\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 1.2236\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.2219\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 73.768\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  return precio - (precio * porcentaje / 100);\n}\n===END FILE===\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    const precioConDescuento = aplicarDescuento(item.precio, item.descuento || 0);\n    total += precioConDescuento * item.cantidad;\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 7200
+    }
+  ]
+}

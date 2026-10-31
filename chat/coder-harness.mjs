@@ -23,7 +23,12 @@ export function identidadDiagnostico(d) {
 
 export const CODER_CONFIG = Object.freeze(
   JSON.parse(
-    fs.readFileSync(new URL("./coder-profile.json", import.meta.url), "utf8"),
+    fs.readFileSync(
+      process.env.BONSAI_CODER_CONFIG
+        ? path.resolve(process.env.BONSAI_CODER_CONFIG)
+        : new URL("./coder-profile.json", import.meta.url),
+      "utf8",
+    ),
   ),
 );
 export function coderOptions(raw = "") {

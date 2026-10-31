@@ -168,6 +168,8 @@ node scripts/hub.mjs discover --limit 30
 node scripts/hub.mjs search "qwen2.5 coder"
 node scripts/chat-template-check.mjs
 node scripts/moe-bench.mjs --model qwen36-35b-a3b
+node scripts/bench-coding.mjs --models gpt-oss-20b,qwen36-35b-a3b --reps 2
+node scripts/coding-report.mjs
 node scripts/fast-download.mjs --models qwen36-35b-a3b
 node scripts/hub.mjs repo unsloth/Qwen3-4B-Instruct-2507-GGUF
 
@@ -272,6 +274,35 @@ que cada modelo arranca, cabe y hace lo que promete.
 
 \* 5 tareas, una pasada. El detalle de VRAM/RAM/SSD y del modo chat está en
 [reports/MOE-2026-10-31.md](../reports/MOE-2026-10-31.md).
+
+### Coding real (proyecto + tests ocultos)
+
+Benchmark de proyecto multifichero (`PriorityQueue` + `Scheduler`) y bugfix, con
+tests ocultos ejecutados con `node --test`. El modelo no escribe los tests.
+
+| Modelo | Global | Proyecto | Bugfix | Reps |
+|---|---:|---:|---:|---:|
+| **GPT-OSS 20B** | **100 %** | 18/18 | 10/10 | 2 |
+| Qwen3.6 35B-A3B | 96 % | 17/18 | 10/10 | 2 |
+| Qwen3 30B-A3B 2507 | 86 % | 14/18 | 10/10 | 2 |
+| Qwen3 4B 2507 | 64 % | 4/9 | 5/5 | 1 |
+| Qwen3.5 9B | 57 % | 3/9 | 5/5 | 1 |
+| Qwen2.5 Coder 7B | 49 % | 2/9 | 5/5 | 1 |
+| Ornith 1.5 9B | 35 % | 0/9 | 5/5 | 1 |
+
+**Recomendación:** GPT-OSS-20B para arquitectura desde cero; Qwen3.6-35B-A3B
+para bugfix y código guiado (100 % en bugfix y ~39 tok/s); Qwen3-30B-A3B si
+manda la velocidad (~42 tok/s). Los densos pequeños sirven para ediciones, no
+para diseñar un proyecto entero.
+
+El informe incluye los hallazgos de pipeline (cercas markdown, rutas sin `src/`,
+timeout de tests, `max_tokens` y continuación) y los gráficos:
+[reports/CODING-2026-10-31.md](../reports/CODING-2026-10-31.md).
+
+En el **bucle real del IDE** (`chat/evaluar/coder.mjs`), GPT-OSS pasó 3/3 tareas.
+El perfil opt-in `chat/coder-profile-moe.json` (sin snippets) reduce `cross-file`
+de 133,6 s a 43,1 s y `failing-test` de 66,6 s a 28,9 s. Detalle:
+[reports/CODER-PIPELINE-2026-10-31.md](../reports/CODER-PIPELINE-2026-10-31.md).
 
 El catálogo completo, con los 30 modelos y las pruebas con/sin visión, está en
 [reports/MODEL-CATALOG-2026-10-31.md](../reports/MODEL-CATALOG-2026-10-31.md).

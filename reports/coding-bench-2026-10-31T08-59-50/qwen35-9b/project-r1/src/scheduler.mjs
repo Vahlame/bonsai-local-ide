@@ -1,0 +1,69 @@
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  #queue = new PriorityQueue();
+  #concurrency;
+  #taskIds = 0;
+  #results = [];
+  #running = 0;
+  #maxConcurrent = 0;
+
+  constructor({ concurrency }) {
+    this.#concurrency = concurrency;
+  }
+
+  add(fn, { priority = 0, retries = 0 }) {
+    const id = ++this.#taskIds;
+    this.#queue.enqueue({ fn, id, priority, retries }, priority);
+  }
+
+  async run() {
+    const results = [];
+    const running = new Set();
+
+    const executeTask = async (task) => {
+      const { fn, id, priority, retries } = task;
+      let attempts = 0;
+      let success = false;
+      let value;
+      let error;
+
+      while (attempts <= retries) {
+        try {
+          value = await fn();
+          success = true;
+          break;
+        } catch (e) {
+          attempts++;
+          error = e;
+        }
+      }
+
+      return { id, ok: success, value: success ? value : undefined, error: success ? undefined : error, attempts };
+    };
+
+    const executeWithConcurrency = async () => {
+      while (this.#queue.size > 0 || running.size < this.#concurrency) {
+        const tasksToRun = [];
+        let count = 0;
+
+        while (this.#queue.size > 0 && count < this.#concurrency) {
+          const item = this.#queue.dequeue();
+          tasksToRun.push(item);
+          count++;
+        }
+
+        const promises = tasksToRun.map(task => executeTask(task));
+        const outcomes = await Promise.all(promises);
+
+        for (const outcome of outcomes) {
+          results.push(outcome);
+        }
+      }
+
+      return results;
+    };
+
+    return executeWithConcurrency();
+  }
+}

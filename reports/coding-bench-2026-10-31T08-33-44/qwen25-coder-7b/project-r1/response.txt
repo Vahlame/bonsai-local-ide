@@ -1,0 +1,79 @@
+===FILE: src/priority-queue.mjs===
+```javascript
+class PriorityQueue {
+  constructor() {
+    this.queue = [];
+  }
+
+  enqueue(item, priority) {
+    const index = this.queue.findIndex(q => q.priority > priority);
+    if (index === -1) {
+      this.queue.push({ item, priority });
+    } else {
+      this.queue.splice(index, 0, { item, priority });
+    }
+  }
+
+  dequeue() {
+    if (this.queue.length === 0) {
+      throw new Error('Queue is empty');
+    }
+    return this.queue.shift().item;
+  }
+
+  get size() {
+    return this.queue.length;
+  }
+}
+
+export { PriorityQueue };
+```
+===END FILE===
+
+===FILE: src/scheduler.mjs===
+```javascript
+class Scheduler {
+  constructor({ concurrency }) {
+    this.concurrency = concurrency;
+    this.tasks = [];
+    this.running = 0;
+    this.results = [];
+    this.idCounter = 0;
+  }
+
+  add(fn, { priority = 0, retries = 0 }) {
+    this.tasks.push({ fn, priority, retries, attempts: 0, id: this.idCounter++ });
+  }
+
+  async run() {
+    while (this.tasks.length > 0 || this.running > 0) {
+      while (this.running < this.concurrency && this.tasks.length > 0) {
+        const task = this.tasks.shift();
+        this.running++;
+        this.executeTask(task);
+      }
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    return this.results;
+  }
+
+  async executeTask(task) {
+    try {
+      const result = await task.fn();
+      this.results.push({ id: task.id, ok: true, value: result });
+    } catch (error) {
+      task.attempts++;
+      if (task.attempts <= task.retries) {
+        this.tasks.push(task);
+      } else {
+        this.results.push({ id: task.id, ok: false, error });
+      }
+    } finally {
+      this.running--;
+    }
+  }
+}
+
+export { Scheduler };
+```
+===END FILE===

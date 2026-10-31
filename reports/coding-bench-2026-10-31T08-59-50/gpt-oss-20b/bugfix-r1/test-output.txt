@@ -1,0 +1,119 @@
+TAP version 13
+# Subtest: descuento del 10% sobre 100
+not ok 1 - descuento del 10% sobre 100
+  ---
+  duration_ms: 1.1206
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\gpt-oss-20b\\bugfix-r1\\test\\cart.test.mjs:6:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -900 !== 90
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 90
+  actual: -900
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/gpt-oss-20b/bugfix-r1/test/cart.test.mjs:7:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: descuento del 0% no cambia el precio
+ok 2 - descuento del 0% no cambia el precio
+  ---
+  duration_ms: 0.1454
+  type: 'test'
+  ...
+# Subtest: descuento del 25% sobre 80
+not ok 3 - descuento del 25% sobre 80
+  ---
+  duration_ms: 3.2212
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\gpt-oss-20b\\bugfix-r1\\test\\cart.test.mjs:14:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -1920 !== 60
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 60
+  actual: -1920
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/gpt-oss-20b/bugfix-r1/test/cart.test.mjs:15:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: el total multiplica por cantidad
+not ok 4 - el total multiplica por cantidad
+  ---
+  duration_ms: 0.2041
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\gpt-oss-20b\\bugfix-r1\\test\\cart.test.mjs:18:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -900 !== 180
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 180
+  actual: -900
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/gpt-oss-20b/bugfix-r1/test/cart.test.mjs:19:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: el total suma varios items con y sin descuento
+not ok 5 - el total suma varios items con y sin descuento
+  ---
+  duration_ms: 0.1415
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\gpt-oss-20b\\bugfix-r1\\test\\cart.test.mjs:22:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    -1830 !== 260
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 260
+  actual: -1830
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/gpt-oss-20b/bugfix-r1/test/cart.test.mjs:23:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 1
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 72.6234
+

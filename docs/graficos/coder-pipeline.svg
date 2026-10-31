@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1060" height="550" viewBox="0 0 1060 550" font-family="Segoe UI, system-ui, sans-serif">
+<rect width="1060" height="550" fill="#0d100b"/>
+<text x="24" y="34" fill="#e9eee0" font-size="18" font-weight="600">Pipeline del agente: tiempo por tarea</text>
+<text x="24" y="54" fill="#8d9680" font-size="12">GPT-OSS 20B · coder.mjs · PASS en verde, FAIL en rojo</text>
+<text x="24" y="120" fill="#e9eee0" font-size="10">perfil por defecto · single-bug</text>
+<rect x="300" y="105" width="580" height="18" rx="4" fill="#1a2014"/>
+<rect x="300" y="105" width="71" height="18" rx="4" fill="#cde86e"/>
+<text x="890" y="119" fill="#e9eee0" font-size="11" font-weight="700">22.1 s</text>
+<text x="24" y="158" fill="#e9eee0" font-size="10">perfil por defecto · cross-file</text>
+<rect x="300" y="143" width="580" height="18" rx="4" fill="#1a2014"/>
+<rect x="300" y="143" width="430" height="18" rx="4" fill="#cde86e"/>
+<text x="890" y="157" fill="#e9eee0" font-size="11" font-weight="700">133.6 s</text>
+<text x="24" y="196" fill="#e9eee0" font-size="10">perfil por defecto · failing-test</text>
+<rect x="300" y="181" width="580" height="18" rx="4" fill="#1a2014"/>
+<rect x="300" y="181" width="214" height="18" rx="4" fill="#cde86e"/>
+<text x="890" y="195" fill="#e9eee0" font-size="11" font-weight="700">66.6 s</text>
+<text x="24" y="234" fill="#e9eee0" font-size="10">sin repo-map · cross-file</text>
+<rect x="300" y="219" width="580" height="18" rx="4" fill="#1a2014"/>
+<rect x="300" y="219" width="222" height="18" rx="4" fill="#cde86e"/>
+<text x="890" y="233" fill="#e9eee0" font-size="11" font-weight="700">68.9 s</text>
+<text x="24" y="272" fill="#e9eee0" font-size="10">sin snippets · cross-file</text>
+<rect x="300" y="257" width="580" height="18" rx="4" fill="#1a2014"/>
+<rect x="300" y="257" width="173" height="18" rx="4" fill="#cde86e"/>
+<text x="890" y="271" fill="#e9eee0" font-size="11" font-weight="700">53.6 s</text>
+<text x="24" y="310" fill="#e9eee0" font-size="10">perfil moe-fast · cross-file</text>
+<rect x="300" y="295" width="580" height="18" rx="4" fill="#1a2014"/>
+<rect x="300" y="295" width="139" height="18" rx="4" fill="#cde86e"/>
+<text x="890" y="309" fill="#e9eee0" font-size="11" font-weight="700">43.1 s</text>
+<text x="24" y="348" fill="#e9eee0" font-size="10">perfil moe-fast (2 tareas) · single-bug</text>
+<rect x="300" y="333" width="580" height="18" rx="4" fill="#1a2014"/>
+<rect x="300" y="333" width="81" height="18" rx="4" fill="#cde86e"/>
+<text x="890" y="347" fill="#e9eee0" font-size="11" font-weight="700">25.2 s</text>
+<text x="24" y="386" fill="#e9eee0" font-size="10">perfil moe-fast (2 tareas) · failing-test</text>
+<rect x="300" y="371" width="580" height="18" rx="4" fill="#1a2014"/>
+<rect x="300" y="371" width="93" height="18" rx="4" fill="#cde86e"/>
+<text x="890" y="385" fill="#e9eee0" font-size="11" font-weight="700">28.9 s</text>
+<text x="24" y="424" fill="#e9eee0" font-size="10">sin prompt cache · cross-file</text>
+<rect x="300" y="409" width="580" height="18" rx="4" fill="#1a2014"/>
+<rect x="300" y="409" width="580" height="18" rx="4" fill="#d97878"/>
+<text x="890" y="423" fill="#e9eee0" font-size="11" font-weight="700">180.1 s</text>
+<text x="24" y="462" fill="#e9eee0" font-size="10">estrategia direct · cross-file</text>
+<rect x="300" y="447" width="580" height="18" rx="4" fill="#1a2014"/>
+<rect x="300" y="447" width="417" height="18" rx="4" fill="#d97878"/>
+<text x="890" y="461" fill="#e9eee0" font-size="11" font-weight="700">129.5 s</text>
+</svg>

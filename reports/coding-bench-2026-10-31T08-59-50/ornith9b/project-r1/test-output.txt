@@ -1,0 +1,242 @@
+TAP version 13
+# Subtest: sale primero la prioridad menor
+not ok 1 - sale primero la prioridad menor
+  ---
+  duration_ms: 1.3815
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\ornith9b\\project-r1\\test\\priority-queue.test.mjs:7:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    'media' !== 'alta'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'alta'
+  actual: 'media'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/test/priority-queue.test.mjs:12:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: en empate de prioridad sale primero el que llego antes
+not ok 2 - en empate de prioridad sale primero el que llego antes
+  ---
+  duration_ms: 0.2585
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\ornith9b\\project-r1\\test\\priority-queue.test.mjs:17:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'tercero'
+    - 'primero'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'primero'
+  actual: 'tercero'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/test/priority-queue.test.mjs:22:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: size refleja los elementos y dequeue en vacio lanza Error
+not ok 3 - size refleja los elementos y dequeue en vacio lanza Error
+  ---
+  duration_ms: 0.1771
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\ornith9b\\project-r1\\test\\priority-queue.test.mjs:27:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    'b' !== 'a'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'a'
+  actual: 'b'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/test/priority-queue.test.mjs:33:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: mezcla de prioridades y FIFO estable
+not ok 4 - mezcla de prioridades y FIFO estable
+  ---
+  duration_ms: 1.8646
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\ornith9b\\project-r1\\test\\priority-queue.test.mjs:39:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    -   'b',
+    -   'd',
+    -   'f',
+    -   'a',
+        'c',
+        'e',
+    +   'c',
+    +   'e',
+    +   'e',
+    +   'e'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'b'
+    1: 'd'
+    2: 'f'
+    3: 'a'
+    4: 'c'
+    5: 'e'
+  actual:
+    0: 'c'
+    1: 'e'
+    2: 'c'
+    3: 'e'
+    4: 'e'
+    5: 'e'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/test/priority-queue.test.mjs:45:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: respeta el limite de concurrencia
+not ok 5 - respeta el limite de concurrencia
+  ---
+  duration_ms: 1.2516
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\ornith9b\\project-r1\\test\\scheduler.test.mjs:7:1'
+  failureType: 'testCodeFailure'
+  error: 'this.queue.size is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    dispatch (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/src/scheduler.mjs:22:42)
+    Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/src/scheduler.mjs:34:5)
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/test/scheduler.test.mjs:20:21)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.start (node:internal/test_runner/test:1096:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+  ...
+# Subtest: empieza por la prioridad menor
+not ok 6 - empieza por la prioridad menor
+  ---
+  duration_ms: 0.2021
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\ornith9b\\project-r1\\test\\scheduler.test.mjs:26:1'
+  failureType: 'testCodeFailure'
+  error: 'this.queue.size is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    dispatch (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/src/scheduler.mjs:22:42)
+    Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/src/scheduler.mjs:34:5)
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/test/scheduler.test.mjs:32:11)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# Subtest: reintenta hasta tener exito
+not ok 7 - reintenta hasta tener exito
+  ---
+  duration_ms: 0.8291
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\ornith9b\\project-r1\\test\\scheduler.test.mjs:36:1'
+  failureType: 'testCodeFailure'
+  error: 'this.queue.size is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    dispatch (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/src/scheduler.mjs:22:42)
+    Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/src/scheduler.mjs:34:5)
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/test/scheduler.test.mjs:44:23)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: fallo definitivo devuelve ok:false con error
+not ok 8 - fallo definitivo devuelve ok:false con error
+  ---
+  duration_ms: 0.1889
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\ornith9b\\project-r1\\test\\scheduler.test.mjs:50:1'
+  failureType: 'testCodeFailure'
+  error: 'this.queue.size is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    dispatch (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/src/scheduler.mjs:22:42)
+    Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/src/scheduler.mjs:34:5)
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/test/scheduler.test.mjs:53:23)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: devuelve resultados en orden de finalizacion
+not ok 9 - devuelve resultados en orden de finalizacion
+  ---
+  duration_ms: 0.2312
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-59-50\\ornith9b\\project-r1\\test\\scheduler.test.mjs:59:1'
+  failureType: 'testCodeFailure'
+  error: 'this.queue.size is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    dispatch (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/src/scheduler.mjs:22:42)
+    Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/src/scheduler.mjs:34:5)
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-59-50/ornith9b/project-r1/test/scheduler.test.mjs:64:21)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 0
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 81.9811
+

@@ -49,6 +49,34 @@ el mismo GGUF y el mismo reparto; cambia cómo se cargan los pesos.
 Los detalles, el caso `none` de Nemotron (40 tok/s pero 11,5 GiB de RAM) y la
 metodología están en [reports/MOE-2026-10-31.md](../reports/MOE-2026-10-31.md).
 
+### Coding real con tests ocultos
+
+`bench-coding.mjs` mide dos tareas de proyecto: un `PriorityQueue` + `Scheduler`
+multifichero desde cero (9 tests ocultos) y un bugfix de carrito (5 tests), con
+`node --test` real. El modelo no escribe los tests.
+
+| Modelo | Global | Proyecto | Bugfix | Reps |
+|---|---:|---:|---:|---:|
+| GPT-OSS-20B | **100 %** | 18/18 | 10/10 | 2 |
+| Qwen3.6-35B-A3B | 96 % | 17/18 | 10/10 | 2 |
+| Qwen3-30B-A3B 2507 | 86 % | 14/18 | 10/10 | 2 |
+| Qwen3 4B 2507 | 64 % | 4/9 | 5/5 | 1 |
+| Qwen3.5 9B | 57 % | 3/9 | 5/5 | 1 |
+| Qwen2.5 Coder 7B | 49 % | 2/9 | 5/5 | 1 |
+| Ornith 1.5 9B | 35 % | 0/9 | 5/5 | 1 |
+
+**Recomendación:** GPT-OSS-20B para un proyecto complicado desde cero;
+Qwen3.6-35B-A3B para bugfix/código guiado; Qwen3-30B-A3B si manda la velocidad.
+
+Hallazgos de pipeline: quitar cercas markdown, normalizar rutas sin `src/`,
+timeout por test con `taskkill /T`, denominador fijo y continuación cuando
+`finish=length`. Informe: [reports/CODING-2026-10-31.md](../reports/CODING-2026-10-31.md).
+
+En el agente real del IDE, GPT-OSS pasó 3/3 tareas. El perfil opt-in
+`chat/coder-profile-moe.json` reduce `cross-file` de 133,6 s a 43,1 s y
+`failing-test` de 66,6 s a 28,9 s:
+[reports/CODER-PIPELINE-2026-10-31.md](../reports/CODER-PIPELINE-2026-10-31.md).
+
 ### Herramientas nuevas
 
 - `scripts/moe-bench.mjs`: banco de MoE con reparto, carga, hilos, batch,
@@ -62,6 +90,10 @@ metodología están en [reports/MOE-2026-10-31.md](../reports/MOE-2026-10-31.md)
   limita cada conexión a ~1,5 MB/s).
 - `scripts/chat-template-check.mjs`: audita la plantilla de **todos** los GGUF
   instalados; 34/34 con plantilla válida.
+- `scripts/bench-coding.mjs` y `scripts/coding-report.mjs`: proyecto multifichero
+  y bugfix con tests ocultos, ranking y gráficos.
+- `scripts/coder-pipeline-report.mjs` y `chat/coder-profile-moe.json`: ablaciones
+  del agente real y perfil rápido opt-in para MoE.
 - `scripts/catalog-report.mjs`: incluye el reparto MoE.
 
 ### Plantillas de chat
@@ -69,7 +101,7 @@ metodología están en [reports/MOE-2026-10-31.md](../reports/MOE-2026-10-31.md)
 Cada modelo se prueba con su `tokenizer.chat_template`, no con un prompt
 genérico. El lanzador lo pasa con `--chat-template-file`; el Model Lab y el
 benchmark de calidad usan `/v1/chat/completions` con system+user. La auditoría
-`chat-template-check.mjs` revisa los 31 modelos instalados.
+`chat-template-check.mjs` revisa los 34 modelos instalados.
 
 ### Corregido
 
@@ -89,6 +121,8 @@ benchmark de calidad usan `/v1/chat/completions` con system+user. La auditoría
 - `node scripts/model-plan.mjs`: incluye pruebas del reparto MoE y de
   `load-mode`.
 - `node scripts/chat-template-check.mjs`: **34/34**.
+- `node scripts/bench-coding.mjs --models gpt-oss-20b,qwen36-35b-a3b,qwen3-30b-a3b-2507 --reps 2`: 100 %, 96 % y 86 %.
+- `node scripts/coding-report.mjs`: genera el informe y los SVG de coding.
 
 ## Limitaciones
 
@@ -98,4 +132,3 @@ benchmark de calidad usan `/v1/chat/completions` con system+user. La auditoría
 - Nemotron 3 Nano (16,85 GiB) no cabe entero en 16 GB de RAM: usará `mmap` y
   parte de los expertos vendrá del SSD. Es el caso que mide el suelo real.
 - La calidad son 5 tareas deterministas, no un ranking estadístico.
-

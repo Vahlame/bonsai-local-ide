@@ -1,0 +1,42 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
+    0,
+    1,
+    2,
++   3
+  ]
+
+    at file:///C:/Users/user/Documents/prject_local_AI/reports/coder-gptoss-moeprofile-tasks/ws/failing-test/test/range.test.mjs:2:48
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async node:internal/modules/esm/loader:642:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [ 0, 1, 2, 3 ],
+  expected: [ 0, 1, 2 ],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v26.0.0
+✖ test\range.test.mjs (42.1509ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 48.6247
+
+✖ failing tests:
+
+test at test\range.test.mjs:1:1
+✖ test\range.test.mjs (42.1509ms)
+  'test failed'

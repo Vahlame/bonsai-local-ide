@@ -1,0 +1,11 @@
+{"t":"2026-10-31T10:12:16.707Z","cache_n":0,"prompt_n":2790,"prompt_ps":699.8,"prompt_ms":3987.114,"predicted_n":43,"predicted_ps":30.3,"predicted_ms":1384.051,"prompt_tokens":2790,"n_ctx":32768,"continued":false}
+{"t":"2026-10-31T10:12:19.215Z","cache_n":2693,"prompt_n":184,"prompt_ps":314.4,"prompt_ms":585.215,"predicted_n":55,"predicted_ps":30.9,"predicted_ms":1746.87,"prompt_tokens":2877,"n_ctx":32768,"continued":false}
+{"t":"2026-10-31T10:12:26.506Z","cache_n":2767,"prompt_n":200,"prompt_ps":338,"prompt_ms":591.781,"predicted_n":202,"predicted_ps":30.9,"predicted_ms":6510.436,"prompt_tokens":2967,"n_ctx":32768,"continued":false}
+{"t":"2026-10-31T10:12:30.325Z","cache_n":2851,"prompt_n":373,"prompt_ps":569.2,"prompt_ms":655.287,"predicted_n":86,"predicted_ps":30.8,"predicted_ms":2758.649,"prompt_tokens":3224,"n_ctx":32768,"continued":false}
+{"t":"2026-10-31T10:12:35.943Z","cache_n":2970,"prompt_n":331,"prompt_ps":506.1,"prompt_ms":653.977,"predicted_n":147,"predicted_ps":30.6,"predicted_ms":4775.172,"prompt_tokens":3301,"n_ctx":32768,"continued":false}
+{"t":"2026-10-31T10:12:42.234Z","cache_n":0,"prompt_n":2790,"prompt_ps":703.2,"prompt_ms":3967.395,"predicted_n":46,"predicted_ps":30.4,"predicted_ms":1479.982,"prompt_tokens":2790,"n_ctx":32768,"continued":false}
+{"t":"2026-10-31T10:12:45.016Z","cache_n":2693,"prompt_n":637,"prompt_ps":515,"prompt_ms":1236.983,"predicted_n":39,"predicted_ps":30.6,"predicted_ms":1241.069,"prompt_tokens":3330,"n_ctx":32768,"continued":false}
+{"t":"2026-10-31T10:12:48.415Z","cache_n":3208,"prompt_n":182,"prompt_ps":315.8,"prompt_ms":576.269,"predicted_n":81,"predicted_ps":30.4,"predicted_ms":2634.194,"prompt_tokens":3390,"n_ctx":32768,"continued":false}
+{"t":"2026-10-31T10:12:51.437Z","cache_n":3280,"prompt_n":201,"prompt_ps":337.2,"prompt_ms":596.108,"predicted_n":70,"predicted_ps":30.6,"predicted_ms":2251.643,"prompt_tokens":3481,"n_ctx":32768,"continued":false}
+{"t":"2026-10-31T10:12:56.995Z","cache_n":3365,"prompt_n":240,"prompt_ps":389.8,"prompt_ms":615.714,"predicted_n":147,"predicted_ps":30.7,"predicted_ms":4760.278,"prompt_tokens":3605,"n_ctx":32768,"continued":false}
+{"t":"2026-10-31T10:13:05.106Z","cache_n":3482,"prompt_n":367,"prompt_ps":555.2,"prompt_ms":661.058,"predicted_n":217,"predicted_ps":30.6,"predicted_ms":7047.33,"prompt_tokens":3849,"n_ctx":32768,"continued":false}

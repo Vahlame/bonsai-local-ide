@@ -1,0 +1,27 @@
+file:///C:/Users/user/Documents/prject_local_AI/reports/coder-gptoss-pipeline/ws/cross-file/src/convert.mjs:1
+export function convert(value, unit) { if (unit === 'C') return value; if (unit === 'F') return fahrenheitToCelsius(value); throw new Error('Unknown unit'); }
+                                                                                         ^
+
+ReferenceError: fahrenheitToCelsius is not defined
+    at convert (file:///C:/Users/user/Documents/prject_local_AI/reports/coder-gptoss-pipeline/ws/cross-file/src/convert.mjs:1:90)
+    at file:///C:/Users/user/Documents/prject_local_AI/reports/coder-gptoss-pipeline/ws/cross-file/test/convert.test.mjs:2:56
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async node:internal/modules/esm/loader:642:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v26.0.0
+✖ test\convert.test.mjs (54.8891ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 61.3207
+
+✖ failing tests:
+
+test at test\convert.test.mjs:1:1
+✖ test\convert.test.mjs (54.8891ms)
+  'test failed'

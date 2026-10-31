@@ -1,0 +1,85 @@
+export class Scheduler {
+  constructor({ concurrency = 1 }) {
+    this.concurrency = concurrency;
+    this.tasks = [];
+    this.running = 0;
+    this.taskMap = new Map();
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    const id = this.tasks.length;
+    this.tasks.push({
+      id,
+      fn,
+      priority,
+      retries,
+      attempts: 0,
+      result: null,
+      error: null
+    });
+    return id;
+  }
+
+  async run() {
+    const results = [];
+    const taskQueue = [...this.tasks];
+    const activeTasks = [];
+
+    const executeTask = async (task) => {
+      try {
+        task.attempts++;
+        const result = await task.fn();
+        task.result = result;
+        task.error = null;
+        results.push({ id: task.id, ok: true, value: result, attempts: task.attempts });
+      } catch (error) {
+        if (task.attempts < task.retries) {
+          task.error = error;
+          task.attempts++;
+          // Reintenta con el mismo task
+          setTimeout(() => executeTask(task), 100);
+        } else {
+          task.error = error;
+          results.push({ id: task.id, ok: false, error: error, attempts: task.attempts });
+        }
+      }
+    };
+
+    // Ordenar tareas por prioridad (menor primero), FIFO en empate
+    taskQueue.sort((a, b) => {
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+      return a.id - b.id;
+    });
+
+    // Ejecutar tareas con concurrencia
+    const executeNext = async () => {
+      if (taskQueue.length === 0) {
+        return;
+      }
+
+      // Buscar la tarea con menor prioridad (y más antigua en caso de empate)
+      const task = taskQueue.shift();
+      if (task && this.running < this.concurrency) {
+        this.running++;
+        executeTask(task);
+      } else {
+        // Si no hay concurrencia, esperar y volver a intentar
+        setTimeout(executeNext, 10);
+      }
+    };
+
+    // Iniciar ejecución
+    executeNext();
+
+    // Esperar a que todas las tareas terminen
+    while (this.running > 0) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+
+    // Ordenar resultados por orden de finalización (no por prioridad)
+    // Aquí se asume que el orden de ejecución es el orden de finalización
+    return results;
+  }
+}

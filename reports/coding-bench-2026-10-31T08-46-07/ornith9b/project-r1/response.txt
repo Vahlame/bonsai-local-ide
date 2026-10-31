@@ -1,0 +1,136 @@
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this._heap = [];
+    this._seq = 0;
+  }
+
+  enqueue(item, priority) {
+    const node = { item, priority, seq: this._seq++ };
+    this._heap.push(node);
+    this._bubbleUp(this._heap.length - 1);
+  }
+
+  dequeue() {
+    if (this._heap.length === 0) {
+      throw new Error('PriorityQueue is empty');
+    }
+    const root = this._heap[0];
+    const last = this._heap.pop();
+    if (this._heap.length > 0) {
+      this._heap[0] = last;
+      this._bubbleDown(0);
+    }
+    return root.item;
+  }
+
+  get size() {
+    return this._heap.length;
+  }
+
+  _compare(a, b) {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return a.seq - b.seq;
+  }
+
+  _bubbleUp(i) {
+    const node = this._heap[i];
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (this._compare(this._heap[parent], node) <= 0) break;
+      [this._heap[parent], this._heap[i]] = [this._heap[i], this._heap[parent]];
+      i = parent;
+    }
+  }
+
+  _bubbleDown(i) {
+    const n = this._heap.length;
+    const node = this._heap[i];
+    while (true) {
+      let smallest = i;
+      const left = 2 * i + 1;
+      const right = 2 * i + 2;
+      if (left < n && this._compare(this._heap[left], node) < 0) smallest = left;
+      if (right < n && this._compare(this._heap[right], node) < 0) smallest = right;
+      if (smallest === i) break;
+      [this._heap[smallest], this._heap[i]] = [this._heap[i], this._heap[smallest]];
+      i = smallest;
+    }
+  }
+}
+===END FILE===
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency = 1 } = {}) {
+    if (!Number.isFinite(concurrency) || concurrency < 1) {
+      throw new Error('concurrency must be a positive number');
+    }
+    this.concurrency = concurrency;
+    this._queue = new PriorityQueue();
+    this._nextId = 0;
+    this._running = 0;
+    this._finished = [];
+    this._done = false;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    if (typeof fn !== 'function') {
+      throw new TypeError('fn must be a function');
+    }
+    const id = this._nextId++;
+    const task = { id, fn, priority, retries };
+    this._queue.enqueue(task, priority);
+    return id;
+  }
+
+  async run() {
+    this._done = true;
+    while (this._running > 0 || this._queue.size > 0) {
+      while (this._running < this.concurrency && this._queue.size > 0) {
+        const task = this._queue.dequeue();
+        this._running++;
+        this._runTask(task)
+          .then((result) => this._record(result))
+          .catch((err) => this._record({ id: task.id, ok: false, error: err }));
+      }
+      await this._wait();
+    }
+  }
+
+  _runTask(task) {
+    const { id, fn, retries } = task;
+    const attempts = retries + 1;
+    let lastError;
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      try {
+        const value = await fn();
+        return { id, ok: true, value };
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    return { id, ok: false, error: lastError };
+  }
+
+  _record(result) {
+    this._finished.push(result);
+    this._running--;
+  }
+
+  _wait() {
+    return new Promise((resolve) => {
+      if (this._running === 0) {
+        resolve();
+        return;
+      }
+      this._onFinish = resolve;
+    });
+  }
+
+  get finished() {
+    return this._finished;
+  }
+}
+===END FILE===

@@ -1,0 +1,487 @@
+{
+  "stamp": "2026-10-31T09-29-38",
+  "pipeline": "single",
+  "repair": 0,
+  "think": "auto",
+  "agregados": [
+    {
+      "clave": "gpt-oss-20b",
+      "nombre": "GPT-OSS 20B",
+      "project": {
+        "pass": 18,
+        "total": 18,
+        "fail": 0,
+        "score": 100,
+        "ms": 76480.5,
+        "tps": 30.841547537462944,
+        "allPass": true,
+        "timeout": false,
+        "runs": 2
+      },
+      "bugfix": {
+        "pass": 10,
+        "total": 10,
+        "fail": 0,
+        "score": 100,
+        "ms": 159238.5,
+        "tps": 30.600821456238272,
+        "allPass": true,
+        "timeout": false,
+        "runs": 2
+      },
+      "global": 100
+    },
+    {
+      "clave": "qwen36-35b-a3b",
+      "nombre": "Qwen3.6 35B-A3B",
+      "project": {
+        "pass": 17,
+        "total": 18,
+        "fail": 1,
+        "score": 94.44444444444444,
+        "ms": 114770.5,
+        "tps": 39.280832195064775,
+        "allPass": false,
+        "timeout": false,
+        "runs": 2
+      },
+      "bugfix": {
+        "pass": 10,
+        "total": 10,
+        "fail": 0,
+        "score": 100,
+        "ms": 54377.5,
+        "tps": 37.83615854248434,
+        "allPass": true,
+        "timeout": false,
+        "runs": 2
+      },
+      "global": 96.38888888888889
+    },
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "project": {
+        "pass": 14,
+        "total": 18,
+        "fail": 4,
+        "score": 77.77777777777779,
+        "ms": 14312.5,
+        "tps": 41.98991066530297,
+        "allPass": false,
+        "timeout": false,
+        "runs": 2
+      },
+      "bugfix": {
+        "pass": 10,
+        "total": 10,
+        "fail": 0,
+        "score": 100,
+        "ms": 8214,
+        "tps": 38.9835708186605,
+        "allPass": true,
+        "timeout": false,
+        "runs": 2
+      },
+      "global": 85.55555555555557
+    }
+  ],
+  "resultados": [
+    {
+      "clave": "gpt-oss-20b",
+      "nombre": "GPT-OSS 20B",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 102987,
+      "tps": 30.65339025123346,
+      "genTokens": 3127,
+      "promptTokens": 462,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 9,
+        "fail": 0,
+        "tests": 9,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 0.912\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.126\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.3458\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 1.0182\n  type: 'test'\n  ...\n# Subtest: respeta el limite de concurrencia\nok 5 - respeta el limite de concurrencia\n  ---\n  duration_ms: 127.0574\n  type: 'test'\n  ...\n# Subtest: empieza por la prioridad menor\nok 6 - empieza por la prioridad menor\n  ---\n  duration_ms: 0.8311\n  type: 'test'\n  ...\n# Subtest: reintenta hasta tener exito\nok 7 - reintenta hasta tener exito\n  ---\n  duration_ms: 0.2563\n  type: 'test'\n  ...\n# Subtest: fallo definitivo devuelve ok:false con error\nok 8 - fallo definitivo devuelve ok:false con error\n  ---\n  duration_ms: 0.2643\n  type: 'test'\n  ...\n# Subtest: devuelve resultados en orden de finalizacion\nok 9 - devuelve resultados en orden de finalizacion\n  ---\n  duration_ms: 64.0138\n  type: 'test'\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 9\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 273.3171\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\nexport class PriorityQueue {\n  constructor() {\n    this.heap = [];\n    this.order = 0;\n  }\n\n  enqueue(item, priority) {\n    const node = { item, priority, order: this.order++ };\n    this.heap.push(node);\n    this._bubbleUp(this.heap.length - 1);\n  }\n\n  dequeue() {\n    if (this.heap.length === 0) throw new Error('PriorityQueue is empty');\n    const root = this.heap[0];\n    const last = this.heap.pop();\n    if (this.heap.length > 0) {\n      this.heap[0] = last;\n      this._bubbleDown(0);\n    }\n    return root.item;\n  }\n\n  get size() {\n    return this.heap.length;\n  }\n\n  _bubbleUp(idx) {\n    const heap = this.heap;\n    while (idx > 0) {\n      const parentIdx = (idx - 1) >> 1;\n      const parent = heap[parentIdx];\n      const node = heap[idx];\n      if (\n        node.priority < parent.priority ||\n        (node.priority === parent.priority && node.order < parent.order)\n      ) {\n        [heap[parentIdx], heap[idx]] = [heap[idx], heap[parentIdx]];\n        idx = parentIdx;\n      } else break;\n    }\n  }\n\n  _bubbleDown(idx) {\n    const heap = this.heap;\n    const length = heap.length;\n    while (true) {\n      const left = idx * 2 + 1;\n      const right = idx * 2 + 2;\n      let smallest = idx;\n\n      if (left < length) {\n        const leftNode = heap[left];\n        const currNode = heap[smallest];\n        if (\n          leftNode.priority < currNode.priority ||\n          (leftNode.priority === currNode.priority && leftNode.order < currNode.order)\n        ) {\n          smallest = left;\n        }\n      }\n\n      if (right < length) {\n        const rightNode = heap[right];\n        const currNode = heap[smallest];\n        if (\n          rightNode.priority < currNode.priority ||\n          (rightNode.priority === currNode.priority && rightNode.order < currNode.order)\n        ) {\n          smallest = right;\n        }\n      }\n\n      if (smallest !== idx) {\n        [heap[smallest], heap[idx]] = [heap[idx], heap[smallest]];\n        idx = smallest;\n      } else break;\n    }\n  }\n}\n===END FILE===\n===FILE: src/scheduler.mjs===\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency }) {\n    this.concurrency = concurrency;\n    this.queue = new PriorityQueue();\n    this.idCounter = 0;\n  }\n\n  add(fn, { priority = 0, retries = 0 } = {}) {\n    const id = this.idCounter++;\n    this.queue.enqueue({ id, fn, retries }, priority);\n    return id;\n  }\n\n  async run() {\n    const results = [];\n    if (this.queue.size === 0) return results;\n\n    const workers = Array.from({ length: this.concurrency }, async () => {\n      while (this.queue.size > 0) {\n        const task = this.queue.dequeue(); // { id, fn, retries }\n        const { id, fn, retries } = task;\n        let attempts = 0;\n        while (true) {\n          attempts++;\n          try {\n            const value = await fn();\n            results.push({ id, ok: true, value, attempts });\n            break;\n          } catch (err) {\n            if (attempts > retries) {\n              results.push({ id, ok: false, error: err, attempts });\n              break;\n            }\n          }\n        }\n      }\n    });\n\n    await Promise.all(workers);\n    return results;\n  }\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6134
+    },
+    {
+      "clave": "gpt-oss-20b",
+      "nombre": "GPT-OSS 20B",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 49974,
+      "tps": 31.029704823692423,
+      "genTokens": 1530,
+      "promptTokens": 462,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 9,
+        "fail": 0,
+        "tests": 9,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 0.6678\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.1096\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.3166\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 0.617\n  type: 'test'\n  ...\n# Subtest: respeta el limite de concurrencia\nok 5 - respeta el limite de concurrencia\n  ---\n  duration_ms: 130.738\n  type: 'test'\n  ...\n# Subtest: empieza por la prioridad menor\nok 6 - empieza por la prioridad menor\n  ---\n  duration_ms: 0.893\n  type: 'test'\n  ...\n# Subtest: reintenta hasta tener exito\nok 7 - reintenta hasta tener exito\n  ---\n  duration_ms: 0.2135\n  type: 'test'\n  ...\n# Subtest: fallo definitivo devuelve ok:false con error\nok 8 - fallo definitivo devuelve ok:false con error\n  ---\n  duration_ms: 0.2387\n  type: 'test'\n  ...\n# Subtest: devuelve resultados en orden de finalizacion\nok 9 - devuelve resultados en orden de finalizacion\n  ---\n  duration_ms: 64.5205\n  type: 'test'\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 9\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 276.701\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\nexport class PriorityQueue {\n  constructor() {\n    this._queue = [];\n    this._counter = 0;\n  }\n\n  enqueue(item, priority) {\n    this._queue.push({\n      item,\n      priority,\n      order: this._counter++,\n    });\n  }\n\n  dequeue() {\n    if (this._queue.length === 0) {\n      throw new Error('PriorityQueue is empty');\n    }\n    this._queue.sort((a, b) => {\n      if (a.priority !== b.priority) return a.priority - b.priority;\n      return a.order - b.order;\n    });\n    return this._queue.shift().item;\n  }\n\n  get size() {\n    return this._queue.length;\n  }\n}\n===END FILE===\n===FILE: src/scheduler.mjs===\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency }) {\n    if (typeof concurrency !== 'number' || concurrency <= 0) {\n      throw new Error('concurrency must be a positive number');\n    }\n    this._concurrency = concurrency;\n    this._queue = new PriorityQueue();\n    this._nextId = 1;\n  }\n\n  add(fn, { priority = 0, retries = 0 } = {}) {\n    if (typeof fn !== 'function') {\n      throw new Error('fn must be a function');\n    }\n    const id = this._nextId++;\n    this._queue.enqueue({ id, fn, retries }, priority);\n  }\n\n  async run() {\n    const results = [];\n    const workers = Array.from({ length: this._concurrency }, () => this._worker(results));\n    await Promise.all(workers);\n    return results;\n  }\n\n  async _worker(results) {\n    while (true) {\n      let task;\n      try {\n        task = this._queue.dequeue();\n      } catch (_) {\n        break; // queue empty\n      }\n\n      const { id, fn, retries } = task;\n      let attempts = 0;\n      let success = false;\n      let value, error;\n\n      while (attempts <= retries) {\n        attempts++;\n        try {\n          value = await fn();\n          success = true;\n          break;\n        } catch (e) {\n          error = e;\n        }\n      }\n\n      if (success) {\n        results.push({ id, ok: true, value, attempts });\n      } else {\n        results.push({ id, ok: false, error, attempts });\n      }\n    }\n  }\n}\n===END FILE===",
+      "rep": 2,
+      "vramPicoMiB": 6134
+    },
+    {
+      "clave": "gpt-oss-20b",
+      "nombre": "GPT-OSS 20B",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 285845,
+      "tps": 30.564818940140697,
+      "genTokens": 405,
+      "promptTokens": 1708,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.6469\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.099\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.072\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 0.687\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.1358\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 71.5054\n\n"
+      },
+      "content": "\n===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  // Aseguramos que el porcentaje esté dentro del rango 0-100\n  const pct = Math.max(0, Math.min(100, porcentaje));\n  return precio - (precio * pct) / 100;\n}\n===END FILE===\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    const precioConDescuento = aplicarDescuento(item.precio, item.descuento ?? 0);\n    total += precioConDescuento * item.cantidad;\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6134
+    },
+    {
+      "clave": "gpt-oss-20b",
+      "nombre": "GPT-OSS 20B",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 32632,
+      "tps": 30.63682397233585,
+      "genTokens": 918,
+      "promptTokens": 1663,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.6572\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.1065\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.0759\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 3.3223\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.1553\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 75.1222\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  const factor = porcentaje / 100;\n  return precio - precio * factor;\n}\n===END FILE===\n\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  return items.reduce((total, item) => {\n    const precioConDescuento = aplicarDescuento(item.precio, item.descuento ?? 0);\n    const cantidad = item.cantidad ?? 1;\n    return total + precioConDescuento * cantidad;\n  }, 0);\n}\n===END FILE===",
+      "rep": 2,
+      "vramPicoMiB": 6134
+    },
+    {
+      "clave": "qwen36-35b-a3b",
+      "nombre": "Qwen3.6 35B-A3B",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 69786,
+      "tps": 39.49748916595195,
+      "genTokens": 2722,
+      "promptTokens": 416,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 8,
+        "fail": 1,
+        "tests": 9,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 1.3183\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.1653\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.368\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 1.0509\n  type: 'test'\n  ...\n# Subtest: respeta el limite de concurrencia\nok 5 - respeta el limite de concurrencia\n  ---\n  duration_ms: 141.7215\n  type: 'test'\n  ...\n# Subtest: empieza por la prioridad menor\nok 6 - empieza por la prioridad menor\n  ---\n  duration_ms: 0.8101\n  type: 'test'\n  ...\n# Subtest: reintenta hasta tener exito\nnot ok 7 - reintenta hasta tener exito\n  ---\n  duration_ms: 0.917\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T09-29-38\\\\qwen36-35b-a3b\\\\project-r1\\\\test\\\\scheduler.test.mjs:36:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    false !== true\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: true\n  actual: false\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T09-29-38/qwen36-35b-a3b/project-r1/test/scheduler.test.mjs:45:10)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: fallo definitivo devuelve ok:false con error\nok 8 - fallo definitivo devuelve ok:false con error\n  ---\n  duration_ms: 0.2453\n  type: 'test'\n  ...\n# Subtest: devuelve resultados en orden de finalizacion\nok 9 - devuelve resultados en orden de finalizacion\n  ---\n  duration_ms: 63.5163\n  type: 'test'\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 8\n# fail 1\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 310.8093\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\nexport class PriorityQueue {\n  constructor() {\n    this._items = [];\n    this._order = 0;\n  }\n\n  enqueue(item, priority) {\n    this._items.push({ item, priority, order: this._order++ });\n  }\n\n  dequeue() {\n    if (this._items.length === 0) throw new Error('Queue is empty');\n    let minIdx = 0;\n    for (let i = 1; i < this._items.length; i++) {\n      const curr = this._items[i];\n      const min = this._items[minIdx];\n      if (curr.priority < min.priority || (curr.priority === min.priority && curr.order < min.order)) {\n        minIdx = i;\n      }\n    }\n    return this._items.splice(minIdx, 1)[0].item;\n  }\n\n  get size() {\n    return this._items.length;\n  }\n}\n===END FILE===\n===FILE: src/scheduler.mjs===\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency }) {\n    this.concurrency = concurrency;\n    this._tasks = [];\n    this._nextId = 0;\n  }\n\n  add(fn, { priority = 0, retries = 0 } = {}) {\n    const id = this._nextId++;\n    this._tasks.push({ id, fn, priority, retries });\n  }\n\n  async run() {\n    const pq = new PriorityQueue();\n    for (const task of this._tasks) {\n      pq.enqueue(task, task.priority);\n    }\n\n    const results = [];\n    const running = [];\n    const limit = this.concurrency;\n\n    const execute = async (task) => {\n      let attempts = 0;\n      let lastErr = undefined;\n      while (attempts <= task.retries) {\n        try {\n          attempts++;\n          const val = await task.fn();\n          return { id: task.id, ok: true, value: val, attempts };\n        } catch (e) {\n          lastErr = e;\n          attempts++;\n        }\n      }\n      return { id: task.id, ok: false, error: lastErr, attempts };\n    };\n\n    while (pq.size > 0 || running.length > 0) {\n      while (running.length < limit && pq.size > 0) {\n        const task = pq.dequeue();\n        const p = execute(task).then(res => {\n          results.push(res);\n          const idx = running.findIndex(r => r.task === task);\n          if (idx !== -1) running.splice(idx, 1);\n        });\n        p.task = task;\n        running.push(p);\n      }\n\n      if (running.length === 0) break;\n\n      await Promise.race(running.map(p => p.then(() => p)));\n    }\n\n    return results;\n  }\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6918
+    },
+    {
+      "clave": "qwen36-35b-a3b",
+      "nombre": "Qwen3.6 35B-A3B",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs",
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs",
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs",
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 159755,
+      "tps": 39.06417522417761,
+      "genTokens": 6216,
+      "promptTokens": 416,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 9,
+        "fail": 0,
+        "tests": 9,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 0.7606\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.1287\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.3263\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 0.6167\n  type: 'test'\n  ...\n# Subtest: respeta el limite de concurrencia\nok 5 - respeta el limite de concurrencia\n  ---\n  duration_ms: 133.6033\n  type: 'test'\n  ...\n# Subtest: empieza por la prioridad menor\nok 6 - empieza por la prioridad menor\n  ---\n  duration_ms: 0.7725\n  type: 'test'\n  ...\n# Subtest: reintenta hasta tener exito\nok 7 - reintenta hasta tener exito\n  ---\n  duration_ms: 0.2334\n  type: 'test'\n  ...\n# Subtest: fallo definitivo devuelve ok:false con error\nok 8 - fallo definitivo devuelve ok:false con error\n  ---\n  duration_ms: 0.2375\n  type: 'test'\n  ...\n# Subtest: devuelve resultados en orden de finalizacion\nok 9 - devuelve resultados en orden de finalizacion\n  ---\n  duration_ms: 61.2989\n  type: 'test'\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 9\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 262.7769\n\n"
+      },
+      "content": ".\n\n         for (let i = 0; i < limit; i++) {\n           workers.push(this._worker(pq, results));\n         }\n\n         await Promise.all(workers);\n         return results;\n       }\n\n       async _worker(pq, results) {\n         while (pq.size > 0) {\n           const task = pq.dequeue();\n           const maxAttempts = task.retries + 1;\n           let attempts = 0;\n           let lastError;\n           let value;\n           let ok = false;\n\n           for (let i = 0; i < maxAttempts; i++) {\n             attempts = i + 1;\n             try {\n               value = await task.fn();\n               ok = true;\n               break;\n             } catch (err) {\n               lastError = err;\n             }\n           }\n\n           results.push({\n             id: task.id,\n             ok,\n             value: ok ? value : undefined,\n             error: ok ? undefined : lastError,\n             attempts\n           });\n         }\n       }\n     }\n     ```\n   - Wait, `PriorityQueue` is defined in `src/priority-queue.mjs`. I need to import it in `scheduler.mjs`.\n   - The prompt says \"NO escribas tests... Responde SOLO con los archivos, exactamente así\". I will include the import statement in `scheduler.mjs`.\n   - Let's verify the `PriorityQueue` implementation again. The requirement says: `size: propiedad o método que devuelve cuántos elementos hay.` I used a getter `get size()`. That's fine.\n   - `dequeue()` throws `Error` if empty. I used `throw new Error('Queue is empty')`. That's fine.\n   - `enqueue(item, priority)` and `dequeue()` logic is correct.\n   - One potential issue: `PriorityQueue` in `scheduler.mjs` needs to be imported. `import { PriorityQueue } from './priority-queue.mjs';`\n   - Let's check concurrency limit: \"Nunca debe haber más de \"concurrency\" tareas ejecutándose a la vez.\" My pool approach guarantees exactly `concurrency` workers, each pulling one task at a time. This means at most `concurrency` tasks are active simultaneously. Correct.\n   - What if `concurrency` is 0? I'll add `const limit = this.concurrency > 0 ? this.concurrency : 1;` to avoid infinite loops or errors, but typically concurrency >= 1. I'll stick to `this.concurrency` but ensure it's used correctly. Actually, if `concurrency` is 0, the loop won't run, `Promise.all([])` resolves immediately, returns empty results. That's acceptable. I'll just use `this.concurrency`.\n   - Wait, `PriorityQueue` size getter: `get size() { return this._items.length; }`\n   - Let's refine `PriorityQueue` to be robust:\n     ```javascript\n     export class PriorityQueue {\n       constructor() {\n         this._items = [];\n         this._counter = 0;\n       }\n       enqueue(item, priority) {\n         this._items.push({ item, priority, order: this._counter++ });\n       }\n       dequeue() {\n         if (this._items.length === 0) throw new Error('Queue is empty');\n         let minIdx = 0;\n         for (let i = 1; i < this._items.length; i++) {\n           const curr = this._items[i];\n           const min = this._items[minIdx];\n           if (curr.priority < min.priority || (curr.priority === min.priority && curr.order < min.order)) {\n             minIdx = i;\n           }\n         }\n         return this._items.splice(minIdx, 1)[0].item;\n       }\n       get size() {\n         return this._items.length;\n       }\n     }\n     ```\n   - This is clean and correct.\n   - Now, `scheduler.mjs`:\n     ```javascript\n     import { PriorityQueue } from './priority-queue.mjs';\n\n     export class Scheduler {\n       constructor({ concurrency }) {\n         this.concurrency = concurrency;\n         this._tasks = [];\n         this._nextId = 0;\n       }\n\n       add(fn, { priority = 0, retries = 0 } = {}) {\n         this._tasks.push({ id: this._nextId++, fn, priority, retries });\n       }\n\n       async run() {\n         const pq = new PriorityQueue();\n         for (const task of this._tasks) {\n           pq.enqueue(task, task.priority);\n         }\n\n         const results = [];\n         const workers = [];\n         const limit = Math.max(1, this.concurrency);\n\n         for (let i = 0; i < limit; i++) {\n           workers.push(this._worker(pq, results));\n         }\n\n         await Promise.all(workers);\n         return results;\n       }\n\n       async _worker(pq, results) {\n         while (pq.size > 0) {\n           const task = pq.dequeue();\n           const maxAttempts = task.retries + 1;\n           let attempts = 0;\n           let lastError;\n           let value;\n           let ok = false;\n\n           for (let i = 0; i < maxAttempts; i++) {\n             attempts = i + 1;\n             try {\n               value = await task.fn();\n               ok = true;\n               break;\n             } catch (err) {\n               lastError = err;\n             }\n           }\n\n           results.push({\n             id: task.id,\n             ok,\n             value: ok ? value : undefined,\n             error: ok ? undefined : lastError,\n             attempts\n           });\n         }\n       }\n     }\n     ```\n   - Check requirements:\n     - `add(fn, { priority = 0, retries = 0 })` -> handled.\n     - `async run()` -> handled.\n     - Returns array in completion order -> `results.push` in worker order guarantees completion order because workers finish sequentially as tasks complete. Wait, if multiple workers finish at the exact same time, `Promise.all` resolves, but the `results.push` happens inside the async worker. The order of `results.push` calls will match the order of task completions. This is correct.\n     - `attempts` -> correctly tracks number of tries.\n     - `ok`, `value`, `error` -> correctly set.\n     - Concurrency limit -> `limit` workers ensure max concurrent tasks.\n     - Unique ID -> `this._nextId++` ensures uniqueness.\n     - No external deps -> pure JS.\n     - ESM -> `export`, `import`, `.mjs` extensions.\n   - One minor point: `add` signature in prompt: `add(fn, { priority = 0, retries = 0 })`. I used `add(fn, { priority = 0, retries = 0 } = {})` to be safe with undefined second arg. That's standard.\n   - Another point: `PriorityQueue` `dequeue` throws `Error`. I used `throw new Error('Queue is empty')`. The prompt says \"lanza Error\". That's fine.\n   - Check `size`: \"propiedad o método\". I used getter. Fine.\n   - Check `run` concurrency: \"Nunca debe haber más de \"concurrency\" tareas ejecutándose a la vez.\" My pool approach guarantees exactly `concurrency` active slots. If `concurrency` is 2, 2 workers run. Each worker runs one task at a time. So max 2 tasks active. Correct.\n   - What if `concurrency` is not provided? The prompt says `constructor({ concurrency })`. I'll assume it's always provided. I'll keep `this.concurrency`.\n   - One detail: `PriorityQueue` might be better implemented with a simple array and sort, but my O(N) scan is fine. Alternatively, I could use a sorted insertion, but O(N) enqueue/dequeue is acceptable for this scope. I'll stick with it.\n   - Let's verify the exact output format:\n     ```\n     ===FILE: src/priority-queue.mjs===\n     contenido\n     ===END FILE===\n     ===FILE: src/scheduler.mjs===\n     contenido\n     ===END FILE===\n     ```\n   - I will ensure no markdown, no extra text.\n   - I'll double check the `PriorityQueue` implementation. The prompt says `export class PriorityQueue`. I have that.\n   - I'll double check `Scheduler` implementation. `export class Scheduler`. I have that.\n   - One thing: `add` might be called multiple times. `this._tasks` accumulates them. `run` processes all. That's standard.\n   - What about `concurrency` being 0? I'll use `const limit = this.concurrency > 0 ? this.concurrency : 1;` to prevent infinite loops if concurrency is 0, but actually if it's 0, the loop won't run, and `Promise.all([])` resolves immediately, returning empty results. That's fine. I'll just use `this.concurrency` directly, but add `Math.max(1, this.concurrency)` to be safe against 0 or negative values, as concurrency pools usually require at least 1. Actually, I'll just use `this.concurrency` and assume valid input per spec. I'll stick to `const limit = this.concurrency;` but if it's 0, it won't run. I'll add `const limit = Math.max(1, this.concurrency);` to be robust.\n   - Wait, the prompt says \"límite de tareas simultáneas\". If concurrency is 0, it means no tasks run. I'll just use `this.concurrency`.\n   - Let's refine `scheduler.mjs` slightly to match exact signature:\n     `add(fn, { priority = 0, retries = 0 })` -> I'll keep the default destructuring.\n   - I'll write out the files carefully.\n\n   One potential issue: `PriorityQueue` `dequeue` throws `Error`. The prompt says \"lanza Error\". I'll use `throw new Error('empty')`.\n   Another: `size` property. I'll use `get size()`.\n   Another: `run` returns array in completion order. My implementation does that.\n   Another: `attempts` field. If `retries = 0`, `maxAttempts = 1`. Loop runs once. `attempts = 1`. Correct.\n   If `retries = 2`, `maxAttempts = 3`. Loop runs up to 3 times. `attempts` tracks correctly.\n   All good.\n\n   Let's produce the exact output.\n   I will ensure no markdown formatting around the files as requested: \"Responde SOLO con los archivos, exactamente así, sin markdown:\"\n   I will output exactly:\n   ===FILE: src/priority-queue.mjs===\n   [code]\n   ===END FILE===\n   ===FILE: src/scheduler.mjs===\n   [code]\n   ===END FILE===\n\n   Checking code one last time:\n   priority-queue.mjs:\n   ```javascript\n   export class PriorityQueue {\n     constructor() {\n       this._items = [];\n       this._counter = 0;\n     }\n     enqueue(item, priority) {\n       this._items.push({ item, priority, order: this._counter++ });\n     }\n     dequeue() {\n       if (this._items.length === 0) throw new Error('Queue is empty');\n       let minIdx = 0;\n       for (let i = 1; i < this._items.length; i++) {\n         const curr = this._items[i];\n         const min = this._items[minIdx];\n         if (curr.priority < min.priority || (curr.priority === min.priority && curr.order < min.order)) {\n           minIdx = i;\n         }\n       }\n       return this._items.splice(minIdx, 1)[0].item;\n     }\n     get size() {\n       return this._items.length;\n     }\n   }\n   ```\n   scheduler.mjs:\n   ```javascript\n   import { PriorityQueue } from './priority-queue.mjs';\n\n   export class Scheduler {\n     constructor({ concurrency }) {\n       this.concurrency = concurrency;\n       this._tasks = [];\n       this._nextId = 0;\n     }\n\n     add(fn, { priority = 0, retries = 0 } = {}) {\n       this._tasks.push({ id: this._nextId++, fn, priority, retries });\n     }\n\n     async run() {\n       const pq = new PriorityQueue();\n       for (const task of this._tasks) {\n         pq.enqueue(task, task.priority);\n       }\n\n       const results = [];\n       const workers = [];\n       const limit = Math.max(1, this.concurrency);\n\n       for (let i = 0; i < limit; i++) {\n         workers.push(this._worker(pq, results));\n       }\n\n       await Promise.all(workers);\n       return results;\n     }\n\n     async _worker(pq, results) {\n       while (pq.size > 0) {\n         const task = pq.dequeue();\n         const maxAttempts = task.retries + 1;\n         let attempts = 0;\n         let lastError;\n         let value;\n         let ok = false;\n\n         for (let i = 0; i < maxAttempts; i++) {\n           attempts = i + 1;\n           try {\n             value = await task.fn();\n             ok = true;\n             break;\n           } catch (err) {\n             lastError = err;\n           }\n         }\n\n         results.push({\n           id: task.id,\n           ok,\n           value: ok ? value : undefined,\n           error: ok ? undefined : lastError,\n           attempts\n         });\n       }\n     }\n   }\n   ```\n   Looks solid. Matches all requirements. No extra text. Proceeds. \n   One minor thing: `add` signature in prompt is `add(fn, { priority = 0, retries = 0 })`. I added `= {}` to handle cases where second arg is undefined, which is standard JS practice. It's fine.\n   I'll output exactly as requested.✅\n   Final check of the prompt: \"Responde SOLO con los archivos, exactamente así, sin markdown:\"\n   I will strictly follow that.\n   Output matches.✅\n   Proceeds. \n   [Self-Correction/Refinement during thought]\n   Wait, `PriorityQueue` `dequeue` throws `Error`. The prompt says \"lanza Error\". I'll use `throw new Error('empty')`. That's fine.\n   What about `size`? \"propiedad o método\". I used getter. Fine.\n   What about `run` concurrency? \"Nunca debe haber más de \"concurrency\" tareas ejecutándose a la vez.\" My pool approach guarantees exactly `concurrency` workers. If `concurrency` is 2, 2 workers run. Each worker runs one task at a time. So max 2 tasks active. Correct.\n   One detail: `add` might be called with only `fn`. My destructuring `= {}` handles it.\n   All good.\n   I will generate the response now. \n   Output matches exactly.✅\n   [Done] \n   Generating response. \n   *(Self-Correction/Verification during generation prep)*\n   I should ensure the exact format requested:\n   ===FILE: src/priority-queue.mjs===\n   ...\n   ===END FILE===\n   ===FILE: src/scheduler.mjs===\n   ...\n   ===END FILE===\n   No markdown, no extra text. I will output exactly that.\n   Code looks correct and robust.\n   Proceeds. \n   [Output Generation] -> *Proceeds*\n</think>\n\n===FILE: src/priority-queue.mjs===\nexport class PriorityQueue {\n  constructor() {\n    this._items = [];\n    this._counter = 0;\n  }\n\n  enqueue(item, priority) {\n    this._items.push({ item, priority, order: this._counter++ });\n  }\n\n  dequeue() {\n    if (this._items.length === 0) throw new Error('Queue is empty');\n    let minIdx = 0;\n    for (let i = 1; i < this._items.length; i++) {\n      const curr = this._items[i];\n      const min = this._items[minIdx];\n      if (curr.priority < min.priority || (curr.priority === min.priority && curr.order < min.order)) {\n        minIdx = i;\n      }\n    }\n    return this._items.splice(minIdx, 1)[0].item;\n  }\n\n  get size() {\n    return this._items.length;\n  }\n}\n===END FILE===\n===FILE: src/scheduler.mjs===\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency }) {\n    this.concurrency = concurrency;\n    this._tasks = [];\n    this._nextId = 0;\n  }\n\n  add(fn, { priority = 0, retries = 0 } = {}) {\n    this._tasks.push({ id: this._nextId++, fn, priority, retries });\n  }\n\n  async run() {\n    const pq = new PriorityQueue();\n    for (const task of this._tasks) {\n      pq.enqueue(task, task.priority);\n    }\n\n    const results = [];\n    const workers = [];\n    const limit = Math.max(1, this.concurrency);\n\n    for (let i = 0; i < limit; i++) {\n      workers.push(this._worker(pq, results));\n    }\n\n    await Promise.all(workers);\n    return results;\n  }\n\n  async _worker(pq, results) {\n    while (pq.size > 0) {\n      const task = pq.dequeue();\n      const maxAttempts = task.retries + 1;\n      let attempts = 0;\n      let lastError;\n      let value;\n      let ok = false;\n\n      for (let i = 0; i < maxAttempts; i++) {\n        attempts = i + 1;\n        try {\n          value = await task.fn();\n          ok = true;\n          break;\n        } catch (err) {\n          lastError = err;\n        }\n      }\n\n      results.push({\n        id: task.id,\n        ok,\n        value: ok ? value : undefined,\n        error: ok ? undefined : lastError,\n        attempts\n      });\n    }\n  }\n}\n===END FILE===",
+      "rep": 2,
+      "vramPicoMiB": 6918
+    },
+    {
+      "clave": "qwen36-35b-a3b",
+      "nombre": "Qwen3.6 35B-A3B",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 51170,
+      "tps": 37.78937610782224,
+      "genTokens": 1814,
+      "promptTokens": 1882,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.6996\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.1124\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.0809\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 0.7266\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.1187\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 77.2973\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  return precio - precio * (porcentaje / 100);\n}\n===END FILE===\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    total += aplicarDescuento(item.precio, item.descuento || 0) * item.cantidad;\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6918
+    },
+    {
+      "clave": "qwen36-35b-a3b",
+      "nombre": "Qwen3.6 35B-A3B",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 57585,
+      "tps": 37.88294097714644,
+      "genTokens": 2062,
+      "promptTokens": 1882,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.6263\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.0894\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.07\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 0.7283\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.1112\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 68.2226\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  return precio * (1 - porcentaje / 100);\n}\n===END FILE===\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    total += aplicarDescuento(item.precio, item.descuento || 0) * item.cantidad;\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 2,
+      "vramPicoMiB": 6918
+    },
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 14845,
+      "tps": 42.02685235686588,
+      "genTokens": 586,
+      "promptTokens": 423,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 7,
+        "fail": 2,
+        "tests": 9,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 0.6336\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.1186\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.3253\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 0.6036\n  type: 'test'\n  ...\n# Subtest: respeta el limite de concurrencia\nok 5 - respeta el limite de concurrencia\n  ---\n  duration_ms: 253.0409\n  type: 'test'\n  ...\n# Subtest: empieza por la prioridad menor\nok 6 - empieza por la prioridad menor\n  ---\n  duration_ms: 0.8818\n  type: 'test'\n  ...\n# Subtest: reintenta hasta tener exito\nnot ok 7 - reintenta hasta tener exito\n  ---\n  duration_ms: 0.7947\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T09-29-38\\\\qwen3-30b-a3b-2507\\\\project-r1\\\\test\\\\scheduler.test.mjs:36:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    2 !== 3\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 3\n  actual: 2\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T09-29-38/qwen3-30b-a3b-2507/project-r1/test/scheduler.test.mjs:47:10)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: fallo definitivo devuelve ok:false con error\nok 8 - fallo definitivo devuelve ok:false con error\n  ---\n  duration_ms: 0.2332\n  type: 'test'\n  ...\n# Subtest: devuelve resultados en orden de finalizacion\nnot ok 9 - devuelve resultados en orden de finalizacion\n  ---\n  duration_ms: 107.2724\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T09-29-38\\\\qwen3-30b-a3b-2507\\\\project-r1\\\\test\\\\scheduler.test.mjs:59:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n      [\n    +   'lenta',\n        'rapida',\n        'media',\n    -   'lenta'\n      ]\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    0: 'rapida'\n    1: 'media'\n    2: 'lenta'\n  actual:\n    0: 'lenta'\n    1: 'rapida'\n    2: 'media'\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T09-29-38/qwen3-30b-a3b-2507/project-r1/test/scheduler.test.mjs:65:10)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 7\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 436.5355\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\n```mjs\nexport class PriorityQueue {\n  constructor() {\n    this._queue = [];\n  }\n\n  enqueue(item, priority) {\n    this._queue.push({ item, priority, timestamp: Date.now() });\n  }\n\n  dequeue() {\n    if (this._queue.length === 0) {\n      throw new Error('Queue is empty');\n    }\n\n    let minIndex = 0;\n    for (let i = 1; i < this._queue.length; i++) {\n      const a = this._queue[i];\n      const b = this._queue[minIndex];\n\n      if (a.priority < b.priority || (a.priority === b.priority && a.timestamp < b.timestamp)) {\n        minIndex = i;\n      }\n    }\n\n    return this._queue.splice(minIndex, 1)[0].item;\n  }\n\n  get size() {\n    return this._queue.length;\n  }\n}\n```\n===END FILE===\n===FILE: src/scheduler.mjs===\n```mjs\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency }) {\n    this.concurrency = concurrency;\n    this.tasks = [];\n    this.running = 0;\n    this.idCounter = 0;\n    this.results = [];\n  }\n\n  add(fn, { priority = 0, retries = 0 }) {\n    const id = this.idCounter++;\n    this.tasks.push({ id, fn, priority, retries });\n  }\n\n  async run() {\n    const queue = new PriorityQueue();\n    this.tasks.forEach(task => queue.enqueue(task, task.priority));\n\n    const executeTask = async (task) => {\n      let attempts = 0;\n      let result;\n\n      while (attempts <= task.retries) {\n        try {\n          const value = await task.fn();\n          result = { ok: true, value };\n          break;\n        } catch (error) {\n          attempts++;\n          if (attempts > task.retries) {\n            result = { ok: false, error };\n          }\n        }\n      }\n\n      this.results.push({\n        id: task.id,\n        ok: result.ok,\n        value: result.value,\n        error: result.error,\n        attempts: attempts\n      });\n    };\n\n    const runTasks = async () => {\n      while (queue.size > 0) {\n        const task = queue.dequeue();\n\n        if (this.running >= this.concurrency) {\n          await new Promise(resolve => {\n            const interval = setInterval(() => {\n              if (this.running < this.concurrency) {\n                clearInterval(interval);\n                resolve();\n              }\n            }, 10);\n          });\n        }\n\n        this.running++;\n        await executeTask(task);\n        this.running--;\n      }\n    };\n\n    await runTasks();\n    return this.results;\n  }\n}\n```\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6956
+    },
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 9,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 13780,
+      "tps": 41.95296897374006,
+      "genTokens": 577,
+      "promptTokens": 423,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 7,
+        "fail": 2,
+        "tests": 9,
+        "text": "TAP version 13\n# Subtest: sale primero la prioridad menor\nok 1 - sale primero la prioridad menor\n  ---\n  duration_ms: 0.6681\n  type: 'test'\n  ...\n# Subtest: en empate de prioridad sale primero el que llego antes\nok 2 - en empate de prioridad sale primero el que llego antes\n  ---\n  duration_ms: 0.1216\n  type: 'test'\n  ...\n# Subtest: size refleja los elementos y dequeue en vacio lanza Error\nok 3 - size refleja los elementos y dequeue en vacio lanza Error\n  ---\n  duration_ms: 0.3182\n  type: 'test'\n  ...\n# Subtest: mezcla de prioridades y FIFO estable\nok 4 - mezcla de prioridades y FIFO estable\n  ---\n  duration_ms: 0.5733\n  type: 'test'\n  ...\n# Subtest: respeta el limite de concurrencia\nok 5 - respeta el limite de concurrencia\n  ---\n  duration_ms: 256.6532\n  type: 'test'\n  ...\n# Subtest: empieza por la prioridad menor\nok 6 - empieza por la prioridad menor\n  ---\n  duration_ms: 0.8935\n  type: 'test'\n  ...\n# Subtest: reintenta hasta tener exito\nnot ok 7 - reintenta hasta tener exito\n  ---\n  duration_ms: 0.8047\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T09-29-38\\\\qwen3-30b-a3b-2507\\\\project-r2\\\\test\\\\scheduler.test.mjs:36:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly equal:\n    \n    2 !== 3\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected: 3\n  actual: 2\n  operator: 'strictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T09-29-38/qwen3-30b-a3b-2507/project-r2/test/scheduler.test.mjs:47:10)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n# Subtest: fallo definitivo devuelve ok:false con error\nok 8 - fallo definitivo devuelve ok:false con error\n  ---\n  duration_ms: 0.2681\n  type: 'test'\n  ...\n# Subtest: devuelve resultados en orden de finalizacion\nnot ok 9 - devuelve resultados en orden de finalizacion\n  ---\n  duration_ms: 106.7221\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T09-29-38\\\\qwen3-30b-a3b-2507\\\\project-r2\\\\test\\\\scheduler.test.mjs:59:1'\n  failureType: 'testCodeFailure'\n  error: |-\n    Expected values to be strictly deep-equal:\n    + actual - expected\n    \n      [\n    +   'lenta',\n        'rapida',\n        'media',\n    -   'lenta'\n      ]\n    \n  code: 'ERR_ASSERTION'\n  name: 'AssertionError'\n  expected:\n    0: 'rapida'\n    1: 'media'\n    2: 'lenta'\n  actual:\n    0: 'lenta'\n    1: 'rapida'\n    2: 'media'\n  operator: 'deepStrictEqual'\n  stack: |-\n    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T09-29-38/qwen3-30b-a3b-2507/project-r2/test/scheduler.test.mjs:65:10)\n    async Test.run (node:internal/test_runner/test:1208:7)\n    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 7\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 440.027\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\n```mjs\nexport class PriorityQueue {\n  constructor() {\n    this._queue = [];\n  }\n\n  enqueue(item, priority) {\n    this._queue.push({ item, priority, timestamp: Date.now() });\n  }\n\n  dequeue() {\n    if (this._queue.length === 0) {\n      throw new Error('Queue is empty');\n    }\n\n    let minIndex = 0;\n    for (let i = 1; i < this._queue.length; i++) {\n      const a = this._queue[i];\n      const b = this._queue[minIndex];\n\n      if (a.priority < b.priority || (a.priority === b.priority && a.timestamp < b.timestamp)) {\n        minIndex = i;\n      }\n    }\n\n    return this._queue.splice(minIndex, 1)[0].item;\n  }\n\n  get size() {\n    return this._queue.length;\n  }\n}\n```\n===END FILE===\n===FILE: src/scheduler.mjs===\n```mjs\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency }) {\n    this.concurrency = concurrency;\n    this.tasks = [];\n    this.running = 0;\n    this.idCounter = 0;\n    this.results = [];\n  }\n\n  add(fn, { priority = 0, retries = 0 }) {\n    const id = this.idCounter++;\n    this.tasks.push({ id, fn, priority, retries });\n  }\n\n  async run() {\n    const queue = new PriorityQueue();\n    this.tasks.forEach(task => queue.enqueue(task, task.priority));\n\n    const executeTask = async (task) => {\n      let attempts = 0;\n      let result;\n\n      while (attempts <= task.retries) {\n        try {\n          const value = await task.fn();\n          result = { ok: true, value };\n          break;\n        } catch (error) {\n          attempts++;\n          if (attempts > task.retries) {\n            result = { ok: false, error };\n          }\n        }\n      }\n\n      this.results.push({ id: task.id, ok: result.ok, value: result.value, error: result.error, attempts });\n    };\n\n    const runTasks = async () => {\n      while (queue.size > 0) {\n        const task = queue.dequeue();\n\n        if (this.running >= this.concurrency) {\n          await new Promise(resolve => {\n            const interval = setInterval(() => {\n              if (this.running < this.concurrency) {\n                clearInterval(interval);\n                resolve();\n              }\n            }, 10);\n          });\n        }\n\n        this.running++;\n        await executeTask(task);\n        this.running--;\n      }\n    };\n\n    await runTasks();\n    return this.results;\n  }\n}\n```\n===END FILE===",
+      "rep": 2,
+      "vramPicoMiB": 6956
+    },
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 8512,
+      "tps": 38.961986517314834,
+      "genTokens": 213,
+      "promptTokens": 1832,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.6132\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.1055\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.0744\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 0.5923\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.1057\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 75.1667\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  return precio - (precio * porcentaje / 100);\n}\n===END FILE===\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    total += aplicarDescuento(item.precio, item.descuento || 0) * item.cantidad;\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6956
+    },
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "expected": 5,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 7916,
+      "tps": 39.00515512000617,
+      "genTokens": 213,
+      "promptTokens": 1833,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.6799\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.1175\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.0968\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 0.7077\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.156\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 79.4454\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  return precio - (precio * porcentaje / 100);\n}\n===END FILE===\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    total += aplicarDescuento(item.precio, item.descuento || 0) * item.cantidad;\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 2,
+      "vramPicoMiB": 6956
+    }
+  ]
+}

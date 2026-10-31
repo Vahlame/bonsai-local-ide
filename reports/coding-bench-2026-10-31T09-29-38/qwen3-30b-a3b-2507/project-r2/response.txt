@@ -1,0 +1,104 @@
+===FILE: src/priority-queue.mjs===
+```mjs
+export class PriorityQueue {
+  constructor() {
+    this._queue = [];
+  }
+
+  enqueue(item, priority) {
+    this._queue.push({ item, priority, timestamp: Date.now() });
+  }
+
+  dequeue() {
+    if (this._queue.length === 0) {
+      throw new Error('Queue is empty');
+    }
+
+    let minIndex = 0;
+    for (let i = 1; i < this._queue.length; i++) {
+      const a = this._queue[i];
+      const b = this._queue[minIndex];
+
+      if (a.priority < b.priority || (a.priority === b.priority && a.timestamp < b.timestamp)) {
+        minIndex = i;
+      }
+    }
+
+    return this._queue.splice(minIndex, 1)[0].item;
+  }
+
+  get size() {
+    return this._queue.length;
+  }
+}
+```
+===END FILE===
+===FILE: src/scheduler.mjs===
+```mjs
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency }) {
+    this.concurrency = concurrency;
+    this.tasks = [];
+    this.running = 0;
+    this.idCounter = 0;
+    this.results = [];
+  }
+
+  add(fn, { priority = 0, retries = 0 }) {
+    const id = this.idCounter++;
+    this.tasks.push({ id, fn, priority, retries });
+  }
+
+  async run() {
+    const queue = new PriorityQueue();
+    this.tasks.forEach(task => queue.enqueue(task, task.priority));
+
+    const executeTask = async (task) => {
+      let attempts = 0;
+      let result;
+
+      while (attempts <= task.retries) {
+        try {
+          const value = await task.fn();
+          result = { ok: true, value };
+          break;
+        } catch (error) {
+          attempts++;
+          if (attempts > task.retries) {
+            result = { ok: false, error };
+          }
+        }
+      }
+
+      this.results.push({ id: task.id, ok: result.ok, value: result.value, error: result.error, attempts });
+    };
+
+    const runTasks = async () => {
+      while (queue.size > 0) {
+        const task = queue.dequeue();
+
+        if (this.running >= this.concurrency) {
+          await new Promise(resolve => {
+            const interval = setInterval(() => {
+              if (this.running < this.concurrency) {
+                clearInterval(interval);
+                resolve();
+              }
+            }, 10);
+          });
+        }
+
+        this.running++;
+        await executeTask(task);
+        this.running--;
+      }
+    };
+
+    await runTasks();
+    return this.results;
+  }
+}
+```
+===END FILE===

@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: sale primero la prioridad menor
+ok 1 - sale primero la prioridad menor
+  ---
+  duration_ms: 1.5101
+  type: 'test'
+  ...
+# Subtest: en empate de prioridad sale primero el que llego antes
+ok 2 - en empate de prioridad sale primero el que llego antes
+  ---
+  duration_ms: 0.1945
+  type: 'test'
+  ...
+# Subtest: size refleja los elementos y dequeue en vacio lanza Error
+ok 3 - size refleja los elementos y dequeue en vacio lanza Error
+  ---
+  duration_ms: 0.4477
+  type: 'test'
+  ...
+# Subtest: mezcla de prioridades y FIFO estable
+ok 4 - mezcla de prioridades y FIFO estable
+  ---
+  duration_ms: 0.7933
+  type: 'test'
+  ...
+# RangeError: Map maximum size exceeded
+#     at Map.set (<anonymous>)
+#     at AsyncHook.init (node:internal/test_runner/harness:242:23)
+#     at emitInitNative (node:internal/async_hooks:207:43)
+#     at emitInitScript (node:internal/async_hooks:514:3)
+#     at promiseInitHook (node:internal/async_hooks:333:3)
+#     at promiseInitHookWithDestroyTracking (node:internal/async_hooks:337:3)
+#     at Promise.then (<anonymous>)
+#     at Promise.race (<anonymous>)
+#     at Scheduler.run (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/qwen35-9b/project-r1/src/scheduler.mjs:33:21)
+#     at runNextTicks (node:internal/process/task_queues:65:5)
+# Subtest: test\\scheduler.test.mjs
+not ok 2 - test\\scheduler.test.mjs
+  ---
+  duration_ms: 44160.9427
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-46-07\\qwen35-9b\\project-r1\\test\\scheduler.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 4
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 44180.3197
+

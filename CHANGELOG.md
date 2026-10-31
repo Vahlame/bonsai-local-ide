@@ -18,7 +18,13 @@ versionado semántico.
 - **12 hilos + batch 1024/512** por defecto en MoE y prioridad de memoria sin
   EcoQoS (`win-optimize-process.ps1`).
 - `scripts/moe-bench.mjs`, `precargar-gguf.mjs`, `win-cache.ps1` y
-  `scripts/chat-template-check.mjs` (31/31 plantillas válidas).
+  `scripts/chat-template-check.mjs` (34/34 plantillas válidas).
+- **Benchmark de coding real** (`bench-coding.mjs`): proyecto multifichero y
+  bugfix con tests ocultos, ranking y gráficos. GPT-OSS-20B 100 %, Qwen3.6-35B
+  96 %, Qwen3-30B 86 %.
+- **Perfil `chat/coder-profile-moe.json`** opt-in (`BONSAI_CODER_CONFIG`) para el
+  agente: sin snippets, cross-file 133,6 → 43,1 s y failing-test 66,6 → 28,9 s
+  con GPT-OSS, manteniendo PASS.
 - **Descarga por rangos en paralelo** (`fast-download.mjs`).
 
 ### Corregido

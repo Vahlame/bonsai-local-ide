@@ -1,0 +1,139 @@
+TAP version 13
+# Subtest: sale primero la prioridad menor
+ok 1 - sale primero la prioridad menor
+  ---
+  duration_ms: 0.79
+  type: 'test'
+  ...
+# Subtest: en empate de prioridad sale primero el que llego antes
+ok 2 - en empate de prioridad sale primero el que llego antes
+  ---
+  duration_ms: 0.1345
+  type: 'test'
+  ...
+# Subtest: size refleja los elementos y dequeue en vacio lanza Error
+ok 3 - size refleja los elementos y dequeue en vacio lanza Error
+  ---
+  duration_ms: 0.3357
+  type: 'test'
+  ...
+# Subtest: mezcla de prioridades y FIFO estable
+ok 4 - mezcla de prioridades y FIFO estable
+  ---
+  duration_ms: 1.18
+  type: 'test'
+  ...
+# Subtest: respeta el limite de concurrencia
+ok 5 - respeta el limite de concurrencia
+  ---
+  duration_ms: 146.9457
+  type: 'test'
+  ...
+# Subtest: empieza por la prioridad menor
+not ok 6 - empieza por la prioridad menor
+  ---
+  duration_ms: 19.157
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-33-44\\qwen25-coder-7b\\project-r1\\test\\scheduler.test.mjs:26:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   'baja',
+        'alta',
+        'media',
+    -   'baja'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'alta'
+    1: 'media'
+    2: 'baja'
+  actual:
+    0: 'baja'
+    1: 'alta'
+    2: 'media'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-33-44/qwen25-coder-7b/project-r1/test/scheduler.test.mjs:33:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: reintenta hasta tener exito
+not ok 7 - reintenta hasta tener exito
+  ---
+  duration_ms: 10.4367
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-33-44\\qwen25-coder-7b\\project-r1\\test\\scheduler.test.mjs:36:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 3
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 3
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-33-44/qwen25-coder-7b/project-r1/test/scheduler.test.mjs:47:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: fallo definitivo devuelve ok:false con error
+not ok 8 - fallo definitivo devuelve ok:false con error
+  ---
+  duration_ms: 6.0275
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-33-44\\qwen25-coder-7b\\project-r1\\test\\scheduler.test.mjs:50:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    undefined !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-33-44/qwen25-coder-7b/project-r1/test/scheduler.test.mjs:56:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# Subtest: devuelve resultados en orden de finalizacion
+not ok 9 - devuelve resultados en orden de finalizacion
+  ---
+  duration_ms: 73.1217
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-33-44\\qwen25-coder-7b\\project-r1\\test\\scheduler.test.mjs:59:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(r.every((x) => x.ok && x.attempts === 1))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-33-44/qwen25-coder-7b/project-r1/test/scheduler.test.mjs:66:10)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 5
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 325.1027
+

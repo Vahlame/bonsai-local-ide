@@ -1,0 +1,1 @@
+{"tipo":"texto","rel":"src/index.mjs","antes":"export {convert} from './convert.mjs';\n","despues":"export {convert} from './convert.mjs';\nexport {fahrenheitToCelsius} from './units.mjs';\n","workspace":"C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-gptoss-snippetsoff\\ws\\cross-file","ts":1793441277187}

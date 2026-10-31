@@ -1,0 +1,151 @@
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this._heap = [];
+    this._order = 0;
+  }
+
+  enqueue(item, priority) {
+    const node = { item, priority, order: this._order++ };
+    this._heap.push(node);
+    this._siftUp(this._heap.length - 1);
+  }
+
+  dequeue() {
+    if (this._heap.length === 0) throw new Error('PriorityQueue is empty');
+    const min = this._heap[0];
+    const last = this._heap.pop();
+    if (this._heap.length > 0) {
+      this._heap[0] = last;
+      this._siftDown(0);
+    }
+    return min.item;
+  }
+
+  get size() {
+    return this._heap.length;
+  }
+
+  _siftUp(idx) {
+    const heap = this._heap;
+    while (idx > 0) {
+      const parent = (idx - 1) >> 1;
+      if (this._compare(heap[idx], heap[parent]) < 0) {
+        [heap[idx], heap[parent]] = [heap[parent], heap[idx]];
+        idx = parent;
+      } else break;
+    }
+  }
+
+  _siftDown(idx) {
+    const heap = this._heap;
+    const length = heap.length;
+    while (true) {
+      let left = idx * 2 + 1;
+      let right = idx * 2 + 2;
+      let smallest = idx;
+
+      if (left < length && this._compare(heap[left], heap[smallest]) < 0) {
+        smallest = left;
+      }
+      if (right < length && this._compare(heap[right], heap[smallest]) < 0) {
+        smallest = right;
+      }
+      if (smallest !== idx) {
+        [heap[idx], heap[smallest]] = [heap[smallest], heap[idx]];
+        idx = smallest;
+      } else break;
+    }
+  }
+
+  _compare(a, b) {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return a.order - b.order;
+  }
+}
+===END FILE===
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency }) {
+    if (typeof concurrency !== 'number' || concurrency <= 0) {
+      throw new Error('concurrency must be a positive number');
+    }
+    this.concurrency = concurrency;
+    this._queue = new PriorityQueue();
+    this._idCounter = 0;
+    this._tasks = [];
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    if (typeof fn !== 'function') throw new Error('fn must be a function');
+    const id = this._idCounter++;
+    const task = { id, fn, priority, retries };
+    this._queue.enqueue(task, priority);
+    this._tasks.push(task);
+  }
+
+  async run() {
+    const results = [];
+    let running = 0;
+    const total = this._tasks.length;
+    const taskMap = new Map(); // id -> task
+
+    // Helper to start next tasks
+    const startNext = () => {
+      while (running < this.concurrency && this._queue.size > 0) {
+        const task = this._queue.dequeue();
+        taskMap.set(task.id, task);
+        running++;
+        this._executeTask(task)
+          .then((res) => {
+            results.push(res);
+          })
+          .finally(() => {
+            running--;
+            startNext();
+          });
+      }
+    };
+
+    // Execute a single task with retries
+    const self = this;
+    this._executeTask = async function (task) {
+      let attempts = 0;
+      while (true) {
+        attempts++;
+        try {
+          const value = await task.fn();
+          return {
+            id: task.id,
+            ok: true,
+            value,
+            attempts,
+          };
+        } catch (err) {
+          if (attempts > task.retries) {
+            return {
+              id: task.id,
+              ok: false,
+              error: err,
+              attempts,
+            };
+          }
+          // else retry
+        }
+      }
+    };
+
+    // Start initial batch
+    startNext();
+
+    // Wait until all tasks finished
+    while (results.length < total) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    return results;
+  }
+}
+===END FILE===

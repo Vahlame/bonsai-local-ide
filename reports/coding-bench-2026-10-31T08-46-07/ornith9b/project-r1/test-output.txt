@@ -1,0 +1,104 @@
+TAP version 13
+# Subtest: sale primero la prioridad menor
+ok 1 - sale primero la prioridad menor
+  ---
+  duration_ms: 0.7013
+  type: 'test'
+  ...
+# Subtest: en empate de prioridad sale primero el que llego antes
+ok 2 - en empate de prioridad sale primero el que llego antes
+  ---
+  duration_ms: 0.147
+  type: 'test'
+  ...
+# Subtest: size refleja los elementos y dequeue en vacio lanza Error
+ok 3 - size refleja los elementos y dequeue en vacio lanza Error
+  ---
+  duration_ms: 0.3586
+  type: 'test'
+  ...
+# Subtest: mezcla de prioridades y FIFO estable
+not ok 4 - mezcla de prioridades y FIFO estable
+  ---
+  duration_ms: 2.3842
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-46-07\\ornith9b\\project-r1\\test\\priority-queue.test.mjs:39:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+        'b',
+    +   'f',
+    +   'c',
+        'd',
+    -   'f',
+        'a',
+    -   'c',
+        'e'
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'b'
+    1: 'd'
+    2: 'f'
+    3: 'a'
+    4: 'c'
+    5: 'e'
+  actual:
+    0: 'b'
+    1: 'f'
+    2: 'c'
+    3: 'd'
+    4: 'a'
+    5: 'e'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/ornith9b/project-r1/test/priority-queue.test.mjs:45:10)
+    Test.runInAsyncScope (node:async_hooks:226:14)
+    Test.run (node:internal/test_runner/test:1201:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+    Test.postRun (node:internal/test_runner/test:1330:19)
+    Test.run (node:internal/test_runner/test:1258:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-46-07/ornith9b/project-r1/src/scheduler.mjs:46
+#         const value = await fn();
+#                       ^^^^^
+# SyntaxError: Unexpected reserved word
+#     at compileSourceTextModule (node:internal/modules/esm/utils:354:16)
+#     at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:91:18)
+#     at \#translate (node:internal/modules/esm/loader:454:20)
+#     at afterLoad (node:internal/modules/esm/loader:510:29)
+#     at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:515:12)
+#     at \#getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:558:36)
+#     at afterResolve (node:internal/modules/esm/loader:606:52)
+#     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:612:12)
+#     at ModuleJob.syncLink (node:internal/modules/esm/module_job:162:33)
+#     at ModuleJob.link (node:internal/modules/esm/module_job:252:17)
+# Node.js v26.0.0
+# Subtest: test\\scheduler.test.mjs
+not ok 2 - test\\scheduler.test.mjs
+  ---
+  duration_ms: 40.8273
+  type: 'test'
+  location: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coding-bench-2026-10-31T08-46-07\\ornith9b\\project-r1\\test\\scheduler.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 3
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 71.0697
+

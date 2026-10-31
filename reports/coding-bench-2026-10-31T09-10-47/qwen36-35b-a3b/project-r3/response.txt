@@ -1,0 +1,96 @@
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this._items = [];
+  }
+
+  enqueue(item, priority) {
+    this._items.push({ item, priority, order: this._items.length });
+  }
+
+  dequeue() {
+    if (this._items.length === 0) {
+      throw new Error('Queue is empty');
+    }
+
+    let minIdx = 0;
+    for (let i = 1; i < this._items.length; i++) {
+      const curr = this._items[i];
+      const min = this._items[minIdx];
+      if (
+        curr.priority < min.priority ||
+        (curr.priority === min.priority && curr.order < min.order)
+      ) {
+        minIdx = i;
+      }
+    }
+
+    return this._items.splice(minIdx, 1)[0].item;
+  }
+
+  get size() {
+    return this._items.length;
+  }
+}
+===END FILE===
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency }) {
+    this.concurrency = concurrency;
+    this._tasks = [];
+    this._nextId = 0;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    const id = this._nextId++;
+    this._tasks.push({ id, fn, priority, retries });
+    return id;
+  }
+
+  async _runTask(task) {
+    let attempts = 0;
+    let lastError = null;
+
+    while (attempts <= task.retries) {
+      try {
+        const value = await task.fn();
+        return { id: task.id, ok: true, value, attempts: attempts + 1 };
+      } catch (err) {
+        lastError = err;
+        attempts++;
+      }
+    }
+
+    return { id: task.id, ok: false, error: lastError, attempts };
+  }
+
+  async run() {
+    const pq = new PriorityQueue();
+    for (const task of this._tasks) {
+      pq.enqueue(task, task.priority);
+    }
+
+    const results = [];
+    const active = [];
+
+    while (pq.size > 0 || active.length > 0) {
+      while (active.length < this.concurrency && pq.size > 0) {
+        const task = pq.dequeue();
+        const p = this._runTask(task);
+        active.push(p);
+      }
+
+      if (active.length === 0) break;
+
+      const settledPromise = await Promise.race(active);
+      const result = await settledPromise;
+      results.push(result);
+      active.splice(active.indexOf(settledPromise), 1);
+    }
+
+    return results;
+  }
+}
+===END FILE===

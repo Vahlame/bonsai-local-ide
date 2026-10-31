@@ -108,6 +108,20 @@ contexto práctico, 1.536 de salida, 600 para mapa, 1.800 para snippets iniciale
 1.000 por resultado, 32 pasos, dos reparaciones y cinco minutos por tarea.
 `BONSAI_CODER_OPTIONS` permite probar presupuestos y estrategia sin editar código.
 
+Para los MoE (medido con GPT-OSS-20B) hay un perfil opt-in,
+`chat/coder-profile-moe.json`: 32k de contexto, 4k de salida, **0 snippets** y
+repo-map 600. En el harness real reduce `cross-file` de **133,6 s a 43,1 s** y
+`failing-test` de **66,6 s a 28,9 s**, manteniendo PASS. Se activa antes de
+arrancar el IDE:
+
+```powershell
+$env:BONSAI_CODER_CONFIG = "chat/coder-profile-moe.json"
+```
+
+Sin esa variable se usa el perfil histórico `chat/coder-profile.json`. El detalle
+y las ablaciones están en
+[reports/CODER-PIPELINE-2026-10-31.md](../reports/CODER-PIPELINE-2026-10-31.md).
+
 El prefijo conserva sistema, herramientas, entorno y reglas del proyecto. El estado
 variable queda después. Se mantienen el pedido original íntegro y hasta cuatro
 grupos recientes completos de llamadas/resultados. Se eliminan primero grupos

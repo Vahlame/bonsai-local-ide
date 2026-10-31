@@ -208,6 +208,11 @@
     ].filter(Boolean));
     card.append(meta);
     if (m.pruebas?.resumen) card.append(el("p", "hub-uso", `Pruebas: ${m.pruebas.resumen}`));
+    if (m.pruebas?.coding) {
+      const c = m.pruebas.coding;
+      const rank = c.rank ? `#${c.rank} · ` : "";
+      card.append(el("p", "hub-uso", `Coding real: ${rank}${c.global}% · proyecto ${c.project?.pass ?? 0}/${c.project?.total ?? 0} · bugfix ${c.bugfix?.pass ?? 0}/${c.bugfix?.total ?? 0}`));
+    }
     const acciones = el("div", "hub-actions");
     const usar = el("button", "primary hub-mini", m.oculto ? "Auxiliar" : "Usar ahora");
     usar.type = "button";

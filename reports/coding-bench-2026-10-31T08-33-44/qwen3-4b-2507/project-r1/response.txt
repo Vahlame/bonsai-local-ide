@@ -1,0 +1,125 @@
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this.queue = [];
+  }
+
+  enqueue(item, priority) {
+    this.queue.push({ item, priority, timestamp: Date.now() });
+    this.queue.sort((a, b) => {
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+      return a.timestamp - b.timestamp;
+    });
+  }
+
+  dequeue() {
+    if (this.queue.length === 0) {
+      throw new Error('Priority queue is empty');
+    }
+    return this.queue.shift().item;
+  }
+
+  get size() {
+    return this.queue.length;
+  }
+}
+===END FILE===
+===FILE: src/scheduler.m.mjs===
+export class Scheduler {
+  constructor({ concurrency = 1 }) {
+    this.concurrency = concurrency;
+    this.tasks = [];
+    this.running = 0;
+    this.taskIdCounter = 0;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    this.taskIdCounter++;
+    const id = this.taskIdCounter;
+    const task = {
+      id,
+      fn,
+      priority,
+      retries,
+      attempts: 0,
+      result: null,
+      error: null
+    };
+    this.tasks.push(task);
+    return id;
+  }
+
+  async run() {
+    const results = [];
+    const taskQueue = [...this.tasks];
+    const runningTasks = [];
+
+    const executeTask = async (task) => {
+      try {
+        task.attempts++;
+        const result = await task.fn();
+        task.result = result;
+        task.error = null;
+        results.push({ id: task.id, ok: true, value: result, attempts: task.attempts });
+      } catch (error) {
+        if (task.attempts < task.retries) {
+          task.error = error;
+          // Reintenta después de un pequeño delay
+          await new Promise(resolve => setTimeout(resolve, 10));
+          return executeTask(task);
+        } else {
+          task.error = error;
+          results.push({ id: task.id, ok: false, error: error, attempts: task.attempts });
+        }
+      }
+    };
+
+    // Ordenar tareas por prioridad y FIFO
+    taskQueue.sort((a, b) => {
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+      return a.id - b.id;
+    });
+
+    // Ejecutar tareas con concurrencia
+    while (taskQueue.length > 0) {
+      const task = taskQueue.shift();
+      if (this.running >= this.concurrency) {
+        // Esperar hasta que haya espacio
+        await new Promise(resolve => {
+          const check = () => {
+            if (this.running < this.concurrency) {
+              resolve();
+            } else {
+              setTimeout(check, 10);
+            }
+          };
+          check();
+        });
+      }
+
+      this.running++;
+      const execute = executeTask(task);
+      // Añadir a la cola de ejecución
+      const taskPromise = execute;
+      taskPromise.then(() => {
+        this.running--;
+        // Buscar el resultado en el array de resultados
+        const resultIndex = results.findIndex(r => r.id === task.id);
+        if (resultIndex !== -1) {
+          // Ya está en el array, no hacer nada
+        }
+      });
+
+      // Esperar a que se complete la tarea
+      await taskPromise;
+    }
+
+    // Asegurarse de que todas las tareas hayan sido procesadas
+    return results;
+  }
+}
+===END FILE===

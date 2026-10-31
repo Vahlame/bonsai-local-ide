@@ -1,0 +1,15 @@
+{
+  "tema": "slate",
+  "perfil": "codigo",
+  "pensar": 1024,
+  "verPensamiento": true,
+  "reglas": true,
+  "historial": 0,
+  "continuarAuto": true,
+  "saltosTope": 192,
+  "comandoSegundos": 180,
+  "agentePerfil": "small-local-coder",
+  "memoriaGlobal": true,
+  "memoriaGlobalAuto": true,
+  "memoriaGlobalTokens": 480
+}

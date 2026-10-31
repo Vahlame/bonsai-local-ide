@@ -1,0 +1,409 @@
+.
+
+         for (let i = 0; i < limit; i++) {
+           workers.push(this._worker(pq, results));
+         }
+
+         await Promise.all(workers);
+         return results;
+       }
+
+       async _worker(pq, results) {
+         while (pq.size > 0) {
+           const task = pq.dequeue();
+           const maxAttempts = task.retries + 1;
+           let attempts = 0;
+           let lastError;
+           let value;
+           let ok = false;
+
+           for (let i = 0; i < maxAttempts; i++) {
+             attempts = i + 1;
+             try {
+               value = await task.fn();
+               ok = true;
+               break;
+             } catch (err) {
+               lastError = err;
+             }
+           }
+
+           results.push({
+             id: task.id,
+             ok,
+             value: ok ? value : undefined,
+             error: ok ? undefined : lastError,
+             attempts
+           });
+         }
+       }
+     }
+     ```
+   - Wait, `PriorityQueue` is defined in `src/priority-queue.mjs`. I need to import it in `scheduler.mjs`.
+   - The prompt says "NO escribas tests... Responde SOLO con los archivos, exactamente así". I will include the import statement in `scheduler.mjs`.
+   - Let's verify the `PriorityQueue` implementation again. The requirement says: `size: propiedad o método que devuelve cuántos elementos hay.` I used a getter `get size()`. That's fine.
+   - `dequeue()` throws `Error` if empty. I used `throw new Error('Queue is empty')`. That's fine.
+   - `enqueue(item, priority)` and `dequeue()` logic is correct.
+   - One potential issue: `PriorityQueue` in `scheduler.mjs` needs to be imported. `import { PriorityQueue } from './priority-queue.mjs';`
+   - Let's check concurrency limit: "Nunca debe haber más de "concurrency" tareas ejecutándose a la vez." My pool approach guarantees exactly `concurrency` workers, each pulling one task at a time. This means at most `concurrency` tasks are active simultaneously. Correct.
+   - What if `concurrency` is 0? I'll add `const limit = this.concurrency > 0 ? this.concurrency : 1;` to avoid infinite loops or errors, but typically concurrency >= 1. I'll stick to `this.concurrency` but ensure it's used correctly. Actually, if `concurrency` is 0, the loop won't run, `Promise.all([])` resolves immediately, returns empty results. That's acceptable. I'll just use `this.concurrency`.
+   - Wait, `PriorityQueue` size getter: `get size() { return this._items.length; }`
+   - Let's refine `PriorityQueue` to be robust:
+     ```javascript
+     export class PriorityQueue {
+       constructor() {
+         this._items = [];
+         this._counter = 0;
+       }
+       enqueue(item, priority) {
+         this._items.push({ item, priority, order: this._counter++ });
+       }
+       dequeue() {
+         if (this._items.length === 0) throw new Error('Queue is empty');
+         let minIdx = 0;
+         for (let i = 1; i < this._items.length; i++) {
+           const curr = this._items[i];
+           const min = this._items[minIdx];
+           if (curr.priority < min.priority || (curr.priority === min.priority && curr.order < min.order)) {
+             minIdx = i;
+           }
+         }
+         return this._items.splice(minIdx, 1)[0].item;
+       }
+       get size() {
+         return this._items.length;
+       }
+     }
+     ```
+   - This is clean and correct.
+   - Now, `scheduler.mjs`:
+     ```javascript
+     import { PriorityQueue } from './priority-queue.mjs';
+
+     export class Scheduler {
+       constructor({ concurrency }) {
+         this.concurrency = concurrency;
+         this._tasks = [];
+         this._nextId = 0;
+       }
+
+       add(fn, { priority = 0, retries = 0 } = {}) {
+         this._tasks.push({ id: this._nextId++, fn, priority, retries });
+       }
+
+       async run() {
+         const pq = new PriorityQueue();
+         for (const task of this._tasks) {
+           pq.enqueue(task, task.priority);
+         }
+
+         const results = [];
+         const workers = [];
+         const limit = Math.max(1, this.concurrency);
+
+         for (let i = 0; i < limit; i++) {
+           workers.push(this._worker(pq, results));
+         }
+
+         await Promise.all(workers);
+         return results;
+       }
+
+       async _worker(pq, results) {
+         while (pq.size > 0) {
+           const task = pq.dequeue();
+           const maxAttempts = task.retries + 1;
+           let attempts = 0;
+           let lastError;
+           let value;
+           let ok = false;
+
+           for (let i = 0; i < maxAttempts; i++) {
+             attempts = i + 1;
+             try {
+               value = await task.fn();
+               ok = true;
+               break;
+             } catch (err) {
+               lastError = err;
+             }
+           }
+
+           results.push({
+             id: task.id,
+             ok,
+             value: ok ? value : undefined,
+             error: ok ? undefined : lastError,
+             attempts
+           });
+         }
+       }
+     }
+     ```
+   - Check requirements:
+     - `add(fn, { priority = 0, retries = 0 })` -> handled.
+     - `async run()` -> handled.
+     - Returns array in completion order -> `results.push` in worker order guarantees completion order because workers finish sequentially as tasks complete. Wait, if multiple workers finish at the exact same time, `Promise.all` resolves, but the `results.push` happens inside the async worker. The order of `results.push` calls will match the order of task completions. This is correct.
+     - `attempts` -> correctly tracks number of tries.
+     - `ok`, `value`, `error` -> correctly set.
+     - Concurrency limit -> `limit` workers ensure max concurrent tasks.
+     - Unique ID -> `this._nextId++` ensures uniqueness.
+     - No external deps -> pure JS.
+     - ESM -> `export`, `import`, `.mjs` extensions.
+   - One minor point: `add` signature in prompt: `add(fn, { priority = 0, retries = 0 })`. I used `add(fn, { priority = 0, retries = 0 } = {})` to be safe with undefined second arg. That's standard.
+   - Another point: `PriorityQueue` `dequeue` throws `Error`. I used `throw new Error('Queue is empty')`. The prompt says "lanza Error". That's fine.
+   - Check `size`: "propiedad o método". I used getter. Fine.
+   - Check `run` concurrency: "Nunca debe haber más de "concurrency" tareas ejecutándose a la vez." My pool approach guarantees exactly `concurrency` active slots. If `concurrency` is 2, 2 workers run. Each worker runs one task at a time. So max 2 tasks active. Correct.
+   - What if `concurrency` is not provided? The prompt says `constructor({ concurrency })`. I'll assume it's always provided. I'll keep `this.concurrency`.
+   - One detail: `PriorityQueue` might be better implemented with a simple array and sort, but my O(N) scan is fine. Alternatively, I could use a sorted insertion, but O(N) enqueue/dequeue is acceptable for this scope. I'll stick with it.
+   - Let's verify the exact output format:
+     ```
+     ===FILE: src/priority-queue.mjs===
+     contenido
+     ===END FILE===
+     ===FILE: src/scheduler.mjs===
+     contenido
+     ===END FILE===
+     ```
+   - I will ensure no markdown, no extra text.
+   - I'll double check the `PriorityQueue` implementation. The prompt says `export class PriorityQueue`. I have that.
+   - I'll double check `Scheduler` implementation. `export class Scheduler`. I have that.
+   - One thing: `add` might be called multiple times. `this._tasks` accumulates them. `run` processes all. That's standard.
+   - What about `concurrency` being 0? I'll use `const limit = this.concurrency > 0 ? this.concurrency : 1;` to prevent infinite loops if concurrency is 0, but actually if it's 0, the loop won't run, and `Promise.all([])` resolves immediately, returning empty results. That's fine. I'll just use `this.concurrency` directly, but add `Math.max(1, this.concurrency)` to be safe against 0 or negative values, as concurrency pools usually require at least 1. Actually, I'll just use `this.concurrency` and assume valid input per spec. I'll stick to `const limit = this.concurrency;` but if it's 0, it won't run. I'll add `const limit = Math.max(1, this.concurrency);` to be robust.
+   - Wait, the prompt says "límite de tareas simultáneas". If concurrency is 0, it means no tasks run. I'll just use `this.concurrency`.
+   - Let's refine `scheduler.mjs` slightly to match exact signature:
+     `add(fn, { priority = 0, retries = 0 })` -> I'll keep the default destructuring.
+   - I'll write out the files carefully.
+
+   One potential issue: `PriorityQueue` `dequeue` throws `Error`. The prompt says "lanza Error". I'll use `throw new Error('empty')`.
+   Another: `size` property. I'll use `get size()`.
+   Another: `run` returns array in completion order. My implementation does that.
+   Another: `attempts` field. If `retries = 0`, `maxAttempts = 1`. Loop runs once. `attempts = 1`. Correct.
+   If `retries = 2`, `maxAttempts = 3`. Loop runs up to 3 times. `attempts` tracks correctly.
+   All good.
+
+   Let's produce the exact output.
+   I will ensure no markdown formatting around the files as requested: "Responde SOLO con los archivos, exactamente así, sin markdown:"
+   I will output exactly:
+   ===FILE: src/priority-queue.mjs===
+   [code]
+   ===END FILE===
+   ===FILE: src/scheduler.mjs===
+   [code]
+   ===END FILE===
+
+   Checking code one last time:
+   priority-queue.mjs:
+   ```javascript
+   export class PriorityQueue {
+     constructor() {
+       this._items = [];
+       this._counter = 0;
+     }
+     enqueue(item, priority) {
+       this._items.push({ item, priority, order: this._counter++ });
+     }
+     dequeue() {
+       if (this._items.length === 0) throw new Error('Queue is empty');
+       let minIdx = 0;
+       for (let i = 1; i < this._items.length; i++) {
+         const curr = this._items[i];
+         const min = this._items[minIdx];
+         if (curr.priority < min.priority || (curr.priority === min.priority && curr.order < min.order)) {
+           minIdx = i;
+         }
+       }
+       return this._items.splice(minIdx, 1)[0].item;
+     }
+     get size() {
+       return this._items.length;
+     }
+   }
+   ```
+   scheduler.mjs:
+   ```javascript
+   import { PriorityQueue } from './priority-queue.mjs';
+
+   export class Scheduler {
+     constructor({ concurrency }) {
+       this.concurrency = concurrency;
+       this._tasks = [];
+       this._nextId = 0;
+     }
+
+     add(fn, { priority = 0, retries = 0 } = {}) {
+       this._tasks.push({ id: this._nextId++, fn, priority, retries });
+     }
+
+     async run() {
+       const pq = new PriorityQueue();
+       for (const task of this._tasks) {
+         pq.enqueue(task, task.priority);
+       }
+
+       const results = [];
+       const workers = [];
+       const limit = Math.max(1, this.concurrency);
+
+       for (let i = 0; i < limit; i++) {
+         workers.push(this._worker(pq, results));
+       }
+
+       await Promise.all(workers);
+       return results;
+     }
+
+     async _worker(pq, results) {
+       while (pq.size > 0) {
+         const task = pq.dequeue();
+         const maxAttempts = task.retries + 1;
+         let attempts = 0;
+         let lastError;
+         let value;
+         let ok = false;
+
+         for (let i = 0; i < maxAttempts; i++) {
+           attempts = i + 1;
+           try {
+             value = await task.fn();
+             ok = true;
+             break;
+           } catch (err) {
+             lastError = err;
+           }
+         }
+
+         results.push({
+           id: task.id,
+           ok,
+           value: ok ? value : undefined,
+           error: ok ? undefined : lastError,
+           attempts
+         });
+       }
+     }
+   }
+   ```
+   Looks solid. Matches all requirements. No extra text. Proceeds. 
+   One minor thing: `add` signature in prompt is `add(fn, { priority = 0, retries = 0 })`. I added `= {}` to handle cases where second arg is undefined, which is standard JS practice. It's fine.
+   I'll output exactly as requested.✅
+   Final check of the prompt: "Responde SOLO con los archivos, exactamente así, sin markdown:"
+   I will strictly follow that.
+   Output matches.✅
+   Proceeds. 
+   [Self-Correction/Refinement during thought]
+   Wait, `PriorityQueue` `dequeue` throws `Error`. The prompt says "lanza Error". I'll use `throw new Error('empty')`. That's fine.
+   What about `size`? "propiedad o método". I used getter. Fine.
+   What about `run` concurrency? "Nunca debe haber más de "concurrency" tareas ejecutándose a la vez." My pool approach guarantees exactly `concurrency` workers. If `concurrency` is 2, 2 workers run. Each worker runs one task at a time. So max 2 tasks active. Correct.
+   One detail: `add` might be called with only `fn`. My destructuring `= {}` handles it.
+   All good.
+   I will generate the response now. 
+   Output matches exactly.✅
+   [Done] 
+   Generating response. 
+   *(Self-Correction/Verification during generation prep)*
+   I should ensure the exact format requested:
+   ===FILE: src/priority-queue.mjs===
+   ...
+   ===END FILE===
+   ===FILE: src/scheduler.mjs===
+   ...
+   ===END FILE===
+   No markdown, no extra text. I will output exactly that.
+   Code looks correct and robust.
+   Proceeds. 
+   [Output Generation] -> *Proceeds*
+</think>
+
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this._items = [];
+    this._counter = 0;
+  }
+
+  enqueue(item, priority) {
+    this._items.push({ item, priority, order: this._counter++ });
+  }
+
+  dequeue() {
+    if (this._items.length === 0) throw new Error('Queue is empty');
+    let minIdx = 0;
+    for (let i = 1; i < this._items.length; i++) {
+      const curr = this._items[i];
+      const min = this._items[minIdx];
+      if (curr.priority < min.priority || (curr.priority === min.priority && curr.order < min.order)) {
+        minIdx = i;
+      }
+    }
+    return this._items.splice(minIdx, 1)[0].item;
+  }
+
+  get size() {
+    return this._items.length;
+  }
+}
+===END FILE===
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency }) {
+    this.concurrency = concurrency;
+    this._tasks = [];
+    this._nextId = 0;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    this._tasks.push({ id: this._nextId++, fn, priority, retries });
+  }
+
+  async run() {
+    const pq = new PriorityQueue();
+    for (const task of this._tasks) {
+      pq.enqueue(task, task.priority);
+    }
+
+    const results = [];
+    const workers = [];
+    const limit = Math.max(1, this.concurrency);
+
+    for (let i = 0; i < limit; i++) {
+      workers.push(this._worker(pq, results));
+    }
+
+    await Promise.all(workers);
+    return results;
+  }
+
+  async _worker(pq, results) {
+    while (pq.size > 0) {
+      const task = pq.dequeue();
+      const maxAttempts = task.retries + 1;
+      let attempts = 0;
+      let lastError;
+      let value;
+      let ok = false;
+
+      for (let i = 0; i < maxAttempts; i++) {
+        attempts = i + 1;
+        try {
+          value = await task.fn();
+          ok = true;
+          break;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      results.push({
+        id: task.id,
+        ok,
+        value: ok ? value : undefined,
+        error: ok ? undefined : lastError,
+        attempts
+      });
+    }
+  }
+}
+===END FILE===

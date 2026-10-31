@@ -1,0 +1,26 @@
+TAP version 13
+# Subtest: sale primero la prioridad menor
+ok 1 - sale primero la prioridad menor
+  ---
+  duration_ms: 1.1893
+  type: 'test'
+  ...
+# Subtest: en empate de prioridad sale primero el que llego antes
+ok 2 - en empate de prioridad sale primero el que llego antes
+  ---
+  duration_ms: 0.3107
+  type: 'test'
+  ...
+# Subtest: size refleja los elementos y dequeue en vacio lanza Error
+ok 3 - size refleja los elementos y dequeue en vacio lanza Error
+  ---
+  duration_ms: 0.4712
+  type: 'test'
+  ...
+# Subtest: mezcla de prioridades y FIFO estable
+ok 4 - mezcla de prioridades y FIFO estable
+  ---
+  duration_ms: 1.3567
+  type: 'test'
+  ...
+

@@ -1,0 +1,98 @@
+{
+  "stamp": "2026-10-31T08-21-50",
+  "pipeline": "single",
+  "repair": 0,
+  "think": "auto",
+  "agregados": [
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "project": {
+        "pass": 0,
+        "total": 2,
+        "fail": 2,
+        "score": 0,
+        "ms": 15554,
+        "tps": 39.44900141332812,
+        "allPass": false,
+        "runs": 1
+      },
+      "bugfix": {
+        "pass": 5,
+        "total": 5,
+        "fail": 0,
+        "score": 100,
+        "ms": 8308,
+        "tps": 38.49262167254436,
+        "allPass": true,
+        "runs": 1
+      },
+      "global": 35
+    }
+  ],
+  "resultados": [
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "task": "project",
+      "think": 2048,
+      "plan": null,
+      "planMs": 0,
+      "pipeline": "single",
+      "repair": 0,
+      "files": [
+        "src/priority-queue.mjs",
+        "src/scheduler.mjs"
+      ],
+      "rondas": [],
+      "ms": 15554,
+      "tps": 39.44900141332812,
+      "genTokens": 555,
+      "promptTokens": 423,
+      "finish": "stop",
+      "test": {
+        "code": 1,
+        "pass": 0,
+        "fail": 2,
+        "tests": 2,
+        "text": "TAP version 13\n# file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-21-50/qwen3-30b-a3b-2507/project-r1/test/priority-queue.test.mjs:3\n# import { PriorityQueue } from \"../src/priority-queue.mjs\";\n#          ^^^^^^^^^^^^^\n# SyntaxError: The requested module '../src/priority-queue.mjs' does not provide an export named 'PriorityQueue'\n#     at \\#asyncInstantiate (node:internal/modules/esm/module_job:326:21)\n#     at async ModuleJob.run (node:internal/modules/esm/module_job:429:5)\n#     at async node:internal/modules/esm/loader:642:26\n#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n# Node.js v26.0.0\n# Subtest: test\\\\priority-queue.test.mjs\nnot ok 1 - test\\\\priority-queue.test.mjs\n  ---\n  duration_ms: 52.391\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-21-50\\\\qwen3-30b-a3b-2507\\\\project-r1\\\\test\\\\priority-queue.test.mjs:1:1'\n  failureType: 'testCodeFailure'\n  exitCode: 1\n  signal: ~\n  error: 'test failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n# file:///C:/Users/user/Documents/prject_local_AI/reports/coding-bench-2026-10-31T08-21-50/qwen3-30b-a3b-2507/project-r1/test/scheduler.test.mjs:3\n# import { Scheduler } from \"../src/scheduler.mjs\";\n#          ^^^^^^^^^\n# SyntaxError: The requested module '../src/scheduler.mjs' does not provide an export named 'Scheduler'\n#     at \\#asyncInstantiate (node:internal/modules/esm/module_job:326:21)\n#     at async ModuleJob.run (node:internal/modules/esm/module_job:429:5)\n#     at async node:internal/modules/esm/loader:642:26\n#     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)\n# Node.js v26.0.0\n# Subtest: test\\\\scheduler.test.mjs\nnot ok 2 - test\\\\scheduler.test.mjs\n  ---\n  duration_ms: 45.9162\n  type: 'test'\n  location: 'C:\\\\Users\\\\user\\\\Documents\\\\prject_local_AI\\\\reports\\\\coding-bench-2026-10-31T08-21-50\\\\qwen3-30b-a3b-2507\\\\project-r1\\\\test\\\\scheduler.test.mjs:1:1'\n  failureType: 'testCodeFailure'\n  exitCode: 1\n  signal: ~\n  error: 'test failed'\n  code: 'ERR_TEST_FAILURE'\n  ...\n1..2\n# tests 2\n# suites 0\n# pass 0\n# fail 2\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 69.2407\n\n"
+      },
+      "content": "===FILE: src/priority-queue.mjs===\n```mjs\nexport class PriorityQueue {\n  constructor() {\n    this.queue = [];\n  }\n\n  enqueue(item, priority) {\n    this.queue.push({ item, priority, timestamp: Date.now() });\n  }\n\n  dequeue() {\n    if (this.queue.length === 0) {\n      throw new Error('Queue is empty');\n    }\n\n    let minIndex = 0;\n    for (let i = 1; i < this.queue.length; i++) {\n      const current = this.queue[i];\n      const previous = this.queue[minIndex];\n\n      if (current.priority < previous.priority || \n          (current.priority === previous.priority && current.timestamp < previous.timestamp)) {\n        minIndex = i;\n      }\n    }\n\n    return this.queue.splice(minIndex, 1)[0].item;\n  }\n\n  get size() {\n    return this.queue.length;\n  }\n}\n```\n===END FILE===\n===FILE: src/scheduler.mjs===\n```mjs\nimport { PriorityQueue } from './priority-queue.mjs';\n\nexport class Scheduler {\n  constructor({ concurrency }) {\n    this.concurrency = concurrency;\n    this.tasks = [];\n    this.running = 0;\n    this.results = [];\n    this.nextId = 1;\n  }\n\n  add(fn, { priority = 0, retries = 0 }) {\n    this.tasks.push({\n      fn,\n      priority,\n      retries,\n      id: this.nextId++\n    });\n  }\n\n  async run() {\n    const queue = new PriorityQueue();\n    this.tasks.forEach(task => queue.enqueue(task, task.priority));\n\n    const executeTask = async (task) => {\n      let attempts = 0;\n      let result;\n\n      while (attempts <= task.retries) {\n        try {\n          const value = await task.fn();\n          result = { ok: true, value };\n          break;\n        } catch (error) {\n          attempts++;\n          if (attempts > task.retries) {\n            result = { ok: false, error };\n          }\n        }\n      }\n\n      return { id: task.id, ok: result.ok, value: result.value, error: result.error, attempts };\n    };\n\n    const runTasks = async () => {\n      while (queue.size > 0) {\n        if (this.running >= this.concurrency) {\n          await new Promise(resolve => setTimeout(resolve, 10));\n          continue;\n        }\n\n        const task = queue.dequeue();\n        this.running++;\n\n        const taskResult = await executeTask(task);\n        this.results.push(taskResult);\n\n        this.running--;\n      }\n    };\n\n    await runTasks();\n    return this.results;\n  }\n}\n```\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6865
+    },
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "task": "bugfix",
+      "think": 2048,
+      "pipeline": "single",
+      "repair": 0,
+      "antes": {
+        "pass": 1,
+        "fail": 4,
+        "tests": 5
+      },
+      "files": [
+        "src/discount.mjs",
+        "src/cart.mjs"
+      ],
+      "rondas": [],
+      "ms": 8308,
+      "tps": 38.49262167254436,
+      "genTokens": 213,
+      "promptTokens": 1833,
+      "finish": "stop",
+      "test": {
+        "code": 0,
+        "pass": 5,
+        "fail": 0,
+        "tests": 5,
+        "text": "TAP version 13\n# Subtest: descuento del 10% sobre 100\nok 1 - descuento del 10% sobre 100\n  ---\n  duration_ms: 0.9535\n  type: 'test'\n  ...\n# Subtest: descuento del 0% no cambia el precio\nok 2 - descuento del 0% no cambia el precio\n  ---\n  duration_ms: 0.1418\n  type: 'test'\n  ...\n# Subtest: descuento del 25% sobre 80\nok 3 - descuento del 25% sobre 80\n  ---\n  duration_ms: 0.114\n  type: 'test'\n  ...\n# Subtest: el total multiplica por cantidad\nok 4 - el total multiplica por cantidad\n  ---\n  duration_ms: 0.7204\n  type: 'test'\n  ...\n# Subtest: el total suma varios items con y sin descuento\nok 5 - el total suma varios items con y sin descuento\n  ---\n  duration_ms: 0.1376\n  type: 'test'\n  ...\n1..5\n# tests 5\n# suites 0\n# pass 5\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 75.6422\n\n"
+      },
+      "content": "===FILE: src/discount.mjs===\n/**\n * Aplica un descuento porcentual a un precio.\n * @param {number} precio\n * @param {number} porcentaje 0-100\n * @returns {number}\n */\nexport function aplicarDescuento(precio, porcentaje) {\n  return precio - (precio * porcentaje / 100);\n}\n===END FILE===\n===FILE: src/cart.mjs===\nimport { aplicarDescuento } from \"./discount.mjs\";\n\n/**\n * Total del carrito. Cada item: { precio, cantidad, descuento? }\n * @param {{precio: number, cantidad: number, descuento?: number}[]} items\n * @returns {number}\n */\nexport function totalCarrito(items) {\n  let total = 0;\n  for (const item of items) {\n    total += aplicarDescuento(item.precio, item.descuento || 0) * item.cantidad;\n  }\n  return total;\n}\n===END FILE===",
+      "rep": 1,
+      "vramPicoMiB": 6865
+    }
+  ]
+}

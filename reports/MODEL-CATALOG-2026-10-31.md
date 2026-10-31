@@ -2,40 +2,41 @@
 
 Modelos instalados: **30** (15 con visión). Todos arrancados en una RTX 4060 Laptop de 8 GB.
 
-| Modelo | Clave | Tamaño | Plan | Visión | Sondas | Calidad* |
-|---|---|---:|---|:--:|---:|---:|
-| Gemma 3 4B IT | `gemma3-4b` | 2.32 GiB | 131072 tok · f16 · visión CPU | sí | 5/6 pruebas | 60% |
-| Gemma 4 E4B IT | `gemma4-e4b` | 4.64 GiB | 22528 tok · q8_0 · visión CPU | sí | 5/5 pruebas | 80% |
-| LFM3 Omni 2B | `lfm3-omni-2b` | 1.02 GiB | 128000 tok · f16 · visión CPU | sí | 5/5 pruebas | — |
-| LFM3-VL 2B | `lfm3-vl-2b` | 1.02 GiB | 128000 tok · f16 · visión CPU | sí | 5/5 pruebas | — |
-| MiniCPM-V 4.7 1B | `minicpm-v47-1b` | 0.63 GiB | 131072 tok · f16 · visión CPU | sí | 5/5 pruebas | — |
-| Nemotron 3.5 Bolt E4B | `nemotron35-e4b` | 3.49 GiB | 36864 tok · q8_0 · visión CPU | sí | 5/5 pruebas | 100% |
-| Ornith 1.5 9B | `ornith9b` | 5.38 GiB | 110592 tok · q8_0 · visión CPU | sí | 6/6 | — |
-| Qwen2.5-VL 3B | `qwen25vl-3b` | 1.80 GiB | 128000 tok · f16 · visión CPU | sí | 4/5 pruebas | — |
-| Qwen3-VL 2B Instruct | `qwen3vl-2b` | 1.03 GiB | 98304 tok · q8_0 · visión CPU | sí | 5/5 pruebas | — |
-| Qwen3-VL 4B Instruct | `qwen3vl-4b` | 2.33 GiB | 57344 tok · q8_0 · visión CPU | sí | 5/5 pruebas | 80% |
-| Qwen3-VL 8B Instruct | `qwen3vl-8b` | 4.68 GiB | 26624 tok · q8_0 · visión CPU | sí | 5/5 pruebas | — |
-| Qwen3.5 4B | `qwen35-4b` | 2.55 GiB | 131072 tok · f16 · visión CPU | sí | 5/5 pruebas | 80% |
-| Qwen3.5 9B | `qwen35-9b` | 4.35 GiB | 131072 tok · q8_0 · visión CPU | sí | 5/5 pruebas | 80% |
-| Qwen3.6 35B-A3B | `qwen36-35b-a3b` | 11.45 GiB | 32768 tok · q8_0 · visión CPU · MoE 18/40 GPU | sí | 5/5 pruebas | 80% |
-| SmolVLM2 2.2B | `smolvlm2-22b` | 1.04 GiB | 8192 tok · f16 · visión CPU | sí | 3/5 pruebas | — |
-| Checkpoint_0002500 | `k2-horizon-7b-q4-k-m` | 5.21 GiB | 18432 tok · q8_0 | no | 3/5 pruebas | — |
-| DeepSeek R1 Distill Qwen 7B | `deepseek-r1-qwen7b` | 4.36 GiB | 79872 tok · q8_0 | no | 4/5 pruebas | 60% |
-| GPT-OSS 20B | `gpt-oss-20b` | 11.28 GiB | 32768 tok · q8_0 · MoE 10/24 GPU | no | 4/4 pruebas | 100% |
-| Granite 4.0 H Tiny | `granite40-tiny` | 3.94 GiB | 131072 tok · f16 | no | 4/4 pruebas | 80% |
-| K2-Horizon-7B | `k2-horizon-7b-bartowski-q4-k-m` | 5.38 GiB | 16384 tok · q8_0 | no | 3/5 pruebas | — |
-| LFM3 1.7B | `lfm3-17b` | 1.02 GiB | 131072 tok · f16 | no | 4/4 pruebas | — |
-| Llama 3.2 3B Instruct | `llama32-3b` | 1.88 GiB | 83968 tok · q8_0 | no | 5/5 pruebas | 40% |
-| Nemotron 3 Nano 30B-A3B | `nemotron3-nano-30b` | 16.85 GiB | 32768 tok · q8_0 · MoE 15/52 GPU | no | 4/4 pruebas | 80% |
-| Phi-4 Mini Instruct | `phi4-mini` | 2.32 GiB | 65536 tok · q8_0 | no | 3/4 pruebas | — |
-| Qwen2.5 Coder 7B Instruct | `qwen25-coder-7b` | 4.36 GiB | 32768 tok · f16 | no | 5/5 pruebas | 60% |
-| Qwen3 30B-A3B 2507 | `qwen3-30b-a3b-2507` | 10.98 GiB | 32768 tok · q8_0 · MoE 19/48 GPU | no | 4/4 pruebas | 80% |
-| Qwen3 4B Instruct 2507 | `qwen3-4b-2507` | 2.33 GiB | 57344 tok · q8_0 | no | 5/5 pruebas | 80% |
-| Qwen3.8 4B Distill | `qwen38-4b-distill` | 2.59 GiB | 131072 tok · f16 | no | 4/4 pruebas | 80% |
-| SmolLM3 3B | `smollm3-3b` | 1.78 GiB | 65536 tok · f16 | no | 3/4 pruebas | — |
-| Spark X2.6 4B | `spark-x26-4b` | 3.30 GiB | 45056 tok · q8_0 | no | 4/4 pruebas | — |
+| Modelo | Clave | Tamaño | Plan | Visión | Sondas | Calidad* | Coding* |
+|---|---|---:|---|:--:|---:|---:|---:|
+| Gemma 3 4B IT | `gemma3-4b` | 2.32 GiB | 131072 tok · f16 · visión CPU | sí | 5/6 pruebas | 60% | — |
+| Gemma 4 E4B IT | `gemma4-e4b` | 4.64 GiB | 22528 tok · q8_0 · visión CPU | sí | 5/5 pruebas | 80% | — |
+| LFM3 Omni 2B | `lfm3-omni-2b` | 1.02 GiB | 128000 tok · f16 · visión CPU | sí | 5/5 pruebas | — | — |
+| LFM3-VL 2B | `lfm3-vl-2b` | 1.02 GiB | 128000 tok · f16 · visión CPU | sí | 5/5 pruebas | — | — |
+| MiniCPM-V 4.7 1B | `minicpm-v47-1b` | 0.63 GiB | 131072 tok · f16 · visión CPU | sí | 5/5 pruebas | — | — |
+| Nemotron 3.5 Bolt E4B | `nemotron35-e4b` | 3.49 GiB | 36864 tok · q8_0 · visión CPU | sí | 5/5 pruebas | 100% | — |
+| Ornith 1.5 9B | `ornith9b` | 5.38 GiB | 110592 tok · q8_0 · visión CPU | sí | 6/6 | — | 35% |
+| Qwen2.5-VL 3B | `qwen25vl-3b` | 1.80 GiB | 128000 tok · f16 · visión CPU | sí | 4/5 pruebas | — | — |
+| Qwen3-VL 2B Instruct | `qwen3vl-2b` | 1.03 GiB | 98304 tok · q8_0 · visión CPU | sí | 5/5 pruebas | — | — |
+| Qwen3-VL 4B Instruct | `qwen3vl-4b` | 2.33 GiB | 57344 tok · q8_0 · visión CPU | sí | 5/5 pruebas | 80% | — |
+| Qwen3-VL 8B Instruct | `qwen3vl-8b` | 4.68 GiB | 26624 tok · q8_0 · visión CPU | sí | 5/5 pruebas | — | — |
+| Qwen3.5 4B | `qwen35-4b` | 2.55 GiB | 131072 tok · f16 · visión CPU | sí | 5/5 pruebas | 80% | — |
+| Qwen3.5 9B | `qwen35-9b` | 4.35 GiB | 131072 tok · q8_0 · visión CPU | sí | 5/5 pruebas | 80% | 56.7% |
+| Qwen3.6 35B-A3B | `qwen36-35b-a3b` | 11.45 GiB | 32768 tok · q8_0 · visión CPU · MoE 18/40 GPU | sí | 5/5 pruebas | 80% | 96.4% |
+| SmolVLM2 2.2B | `smolvlm2-22b` | 1.04 GiB | 8192 tok · f16 · visión CPU | sí | 3/5 pruebas | — | — |
+| Checkpoint_0002500 | `k2-horizon-7b-q4-k-m` | 5.21 GiB | 18432 tok · q8_0 | no | 3/5 pruebas | — | — |
+| DeepSeek R1 Distill Qwen 7B | `deepseek-r1-qwen7b` | 4.36 GiB | 79872 tok · q8_0 | no | 4/5 pruebas | 60% | — |
+| GPT-OSS 20B | `gpt-oss-20b` | 11.28 GiB | 32768 tok · q8_0 · MoE 10/24 GPU | no | 4/4 pruebas | 100% | 100% |
+| Granite 4.0 H Tiny | `granite40-tiny` | 3.94 GiB | 131072 tok · f16 | no | 4/4 pruebas | 80% | — |
+| K2-Horizon-7B | `k2-horizon-7b-bartowski-q4-k-m` | 5.38 GiB | 16384 tok · q8_0 | no | 3/5 pruebas | — | — |
+| LFM3 1.7B | `lfm3-17b` | 1.02 GiB | 131072 tok · f16 | no | 4/4 pruebas | — | — |
+| Llama 3.2 3B Instruct | `llama32-3b` | 1.88 GiB | 83968 tok · q8_0 | no | 5/5 pruebas | 40% | — |
+| Nemotron 3 Nano 30B-A3B | `nemotron3-nano-30b` | 16.85 GiB | 32768 tok · q8_0 · MoE 15/52 GPU | no | 4/4 pruebas | 80% | — |
+| Phi-4 Mini Instruct | `phi4-mini` | 2.32 GiB | 65536 tok · q8_0 | no | 3/4 pruebas | — | — |
+| Qwen2.5 Coder 7B Instruct | `qwen25-coder-7b` | 4.36 GiB | 32768 tok · f16 | no | 5/5 pruebas | 60% | 49.4% |
+| Qwen3 30B-A3B 2507 | `qwen3-30b-a3b-2507` | 10.98 GiB | 32768 tok · q8_0 · MoE 19/48 GPU | no | 4/4 pruebas | 80% | 85.6% |
+| Qwen3 4B Instruct 2507 | `qwen3-4b-2507` | 2.33 GiB | 57344 tok · q8_0 | no | 5/5 pruebas | 80% | 63.9% |
+| Qwen3.8 4B Distill | `qwen38-4b-distill` | 2.59 GiB | 131072 tok · f16 | no | 4/4 pruebas | 80% | — |
+| SmolLM3 3B | `smollm3-3b` | 1.78 GiB | 65536 tok · f16 | no | 3/4 pruebas | — | — |
+| Spark X2.6 4B | `spark-x26-4b` | 3.30 GiB | 45056 tok · q8_0 | no | 4/4 pruebas | — | — |
 
 \* 5 de las 18 tareas del benchmark (código, SQL, JSON anidado, tool-calling, retrieval), una pasada. No es una comparación estadística.
+\* Coding: proyecto multifichero + bugfix con tests ocultos (9 + 5); 100 % = todos los tests. Detalle en [CODING-2026-10-31](CODING-2026-10-31.md).
 
 ## MoE: reparto VRAM ↔ RAM
 
@@ -48,7 +49,9 @@ Modelos instalados: **30** (15 con visión). Todos arrancados en una RTX 4060 La
 
 ## Lo que mejor funciona
 
-- **Agente/código:** Ornith 9B (110k, visión CPU), Qwen2.5 Coder 7B + draft Qwen2.5 0.5B (32k, 1,5× generación), Qwen3 4B (57k, 4/5).
+- **Proyecto complejo:** GPT-OSS 20B (100 % en 18 tests), Qwen3.6 35B-A3B (96 %), Qwen3-30B-A3B (86 %).
+- **Bugfix/edición:** Qwen3.6 35B-A3B y Qwen3-30B-A3B (100 % en 5 tests), GPT-OSS 20B (100 %).
+- **Agente del IDE:** Ornith 9B (110k, visión CPU); su 0/9 one-shot no refleja el bucle con herramientas.
 - **Visión de calidad:** Qwen3.5 4B (131k, visión CPU, 5/5), Qwen3-VL 4B (57k, 5/5), Qwen3-VL 8B (26k, 5/5), Gemma 4 E4B (22k, 5/5).
 - **Visión ultrarrápida:** MiniCPM-V 4.7 1B (131k, 2,3 GB VRAM, 180+ tok/s de texto), LFM3-VL 2B (128k, 2,7 GB), LFM3 Omni 2B (128k, 2,8 GB).
 - **Contexto máximo:** Gemma 3 4B y Qwen3.5 4B/9B, Granite 4.0 H Tiny y Qwen3.8 4B, todos a 131k con el plan automático.

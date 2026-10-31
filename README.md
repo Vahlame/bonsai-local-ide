@@ -14,8 +14,9 @@ controlado y visión — todo en tu GPU, sin nube.
 
 > **v1.9.0** — **MoE híbrido**: Qwen3.6-35B-A3B, Qwen3-30B-A3B, GPT-OSS-20B y
 > Nemotron 3 Nano reparten expertos entre 8 GB de VRAM y 16 GB de RAM.
-> Qwen3.6-35B-A3B corre a **42,5 tok/s** con `--load-mode none`. Catálogo de
-> 34 GGUF con plantilla auditada. Notas: [RELEASE-1.9.0](docs/RELEASE-1.9.0.md).
+> Qwen3.6-35B-A3B corre a **42,5 tok/s** con `--load-mode none`; **GPT-OSS-20B
+> gana el benchmark de proyecto real (18/18 tests)**. Catálogo de 34 GGUF con
+> plantilla auditada. Notas: [RELEASE-1.9.0](docs/RELEASE-1.9.0.md).
 
 ---
 
@@ -146,7 +147,10 @@ El botón **Modelos** de la barra superior abre el catálogo. Desde ahí puedes:
 - seguir el progreso, cancelar y **reanudar** una descarga cortada;
 - verificar el **SHA-256** y registrar el modelo sin reiniciar el IDE;
 - correr **MoE grandes** repartiendo expertos entre VRAM y RAM: Qwen3.6-35B-A3B
-  a **42 tok/s** con 8 GB de VRAM (`--n-cpu-moe` + `--load-mode none`).
+  a **42 tok/s** con 8 GB de VRAM (`--n-cpu-moe` + `--load-mode none`);
+- **benchmark de coding real** con proyecto multifichero y tests ocultos:
+  GPT-OSS-20B **18/18** en el proyecto, Qwen3.6-35B-A3B **17/18 + 10/10** en
+  bugfix.
 
 Cada modelo recibe su propio **plan automático**: el IDE lee la cabecera del
 GGUF (capas, cabeceras KV, contexto nativo, `full_attention_interval`) y decide
@@ -168,10 +172,13 @@ resultados quedan en `reports/model-lab-<fecha>/` y en el registro local.
 [Strata y la memoria: cómo meter más en menos RAM](docs/STRATA-Y-MEMORIA.md)
 
 **Estado de este equipo:** 29 modelos curados instalados (15 con visión) + Ornith;
-**30 modelos utilizables** en total, incluidos 4 MoE de 20–35B. El catálogo y
-los planes medidos están en
-[MODEL-CATALOG-2026-10-31](reports/MODEL-CATALOG-2026-10-31.md) y
-[MOE-2026-10-31](reports/MOE-2026-10-31.md).
+**30 modelos utilizables** en total, incluidos 4 MoE de 20–35B. El catálogo, los
+planes medidos y el ranking de coding están en
+[MODEL-CATALOG-2026-10-31](reports/MODEL-CATALOG-2026-10-31.md),
+[MOE-2026-10-31](reports/MOE-2026-10-31.md) y
+[CODING-2026-10-31](reports/CODING-2026-10-31.md).
+**Para un proyecto complicado desde cero: GPT-OSS-20B. Para bugfix rápido:
+Qwen3.6-35B-A3B o Qwen3-30B-A3B.**
 
 ---
 
@@ -451,7 +458,9 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 | [STRATA-Y-MEMORIA](docs/STRATA-Y-MEMORIA.md) | Qué es Strata y qué ideas de memoria aplican aquí |
 | [MODEL-HUB-2026-10-31](reports/MODEL-HUB-2026-10-31.md) | Evidencia: planes, VRAM, calidad y tuning por modelo |
 | [MODEL-CATALOG-2026-10-31](reports/MODEL-CATALOG-2026-10-31.md) | Catálogo completo: 30 modelos usables, visión y planes |
-| [MOE-2026-10-31](reports/MOE-2026-10-31.md) | MoE de 30–35B en 8 GB VRAM: reparto VRAM/RAM/SSD y tok/s |
+| [MOE-2026-10-31](reports/MOE-2026-10-31.md) | MoE de 30-35B en 8 GB VRAM: reparto VRAM/RAM/SSD y tok/s |
+| [CODING-2026-10-31](reports/CODING-2026-10-31.md) | Proyecto real con tests ocultos: ranking de coding y pipeline |
+| [CODER-PIPELINE-2026-10-31](reports/CODER-PIPELINE-2026-10-31.md) | Agente con herramientas: ablaciones y perfil `moe-fast` |
 | [RELEASE-1.6.2](docs/RELEASE-1.6.2.md) | Acceso directo: abre el IDE de verdad (sin `-NoBrowser`) |
 | [RELEASE-1.6.1](docs/RELEASE-1.6.1.md) | IDE sin GPU, ventana propia y pulido de interfaz |
 | [RELEASE-1.6.0](docs/RELEASE-1.6.0.md) | 110k con visión, reparto de contexto automático y compactación |

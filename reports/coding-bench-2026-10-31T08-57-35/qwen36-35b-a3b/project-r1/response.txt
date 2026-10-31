@@ -1,0 +1,87 @@
+===FILE: src/priority-queue.mjs===
+export class PriorityQueue {
+  constructor() {
+    this._items = [];
+  }
+
+  enqueue(item, priority) {
+    this._items.push({ item, priority });
+  }
+
+  dequeue() {
+    if (this._items.length === 0) {
+      throw new Error('Queue is empty');
+    }
+    let minIdx = 0;
+    let minPriority = this._items[0].priority;
+    for (let i = 1; i < this._items.length; i++) {
+      if (this._items[i].priority < minPriority) {
+        minPriority = this._items[i].priority;
+        minIdx = i;
+      }
+    }
+    return this._items.splice(minIdx, 1)[0].item;
+  }
+
+  get size() {
+    return this._items.length;
+  }
+}
+===END FILE===
+===FILE: src/scheduler.mjs===
+import { PriorityQueue } from './priority-queue.mjs';
+
+export class Scheduler {
+  constructor({ concurrency }) {
+    this.concurrency = Math.max(1, concurrency);
+    this.tasks = [];
+    this._nextId = 0;
+  }
+
+  add(fn, { priority = 0, retries = 0 } = {}) {
+    const id = ++this._nextId;
+    this.tasks.push({ id, fn, priority, retries });
+  }
+
+  async run() {
+    const pq = new PriorityQueue();
+    for (const task of this.tasks) {
+      pq.enqueue(task, task.priority);
+    }
+
+    const results = [];
+    const workers = [];
+
+    for (let i = 0; i < this.concurrency; i++) {
+      workers.push(this._worker(pq, results));
+    }
+
+    await Promise.all(workers);
+    return results;
+  }
+
+  async _worker(queue, results) {
+    while (queue.size > 0) {
+      const { id, fn, retries } = queue.dequeue();
+      let attempts = 0;
+      let lastError = null;
+      let value = undefined;
+      let ok = false;
+
+      while (attempts <= retries) {
+        attempts++;
+        try {
+          const res = await fn();
+          value = res;
+          ok = true;
+          break;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      results.push({ id, ok, value, error: lastError, attempts });
+    }
+  }
+}
+===END FILE===

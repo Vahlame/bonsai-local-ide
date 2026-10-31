@@ -1,0 +1,1 @@
+{"tipo":"texto","rel":"src/price.mjs","antes":"export function discounted(price, percent) { return price * percent / 100; }\n","despues":"export function discounted(price, percent) { return price - price * percent / 100; }\n","workspace":"C:\\Users\\user\\Documents\\prject_local_AI\\reports\\coder-gptoss-moeprofile-tasks\\ws\\single-bug","ts":1793441546517}
