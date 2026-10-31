@@ -1,0 +1,192 @@
+[
+  {
+    "modelo": "gpt-oss-20b",
+    "nombre": "GPT-OSS 20B",
+    "pasada": 1,
+    "variante": "baseline",
+    "descripcion": "plan automático",
+    "nCpuMoe": 14,
+    "capas": 24,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10718,
+    "ctx": 32768,
+    "vramPicoMiB": 6069,
+    "ramPicoMiB": 6927,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 32.5,
+      "ms": 3902,
+      "ttftMs": 486
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 53,
+      "tokPorSegundo": 33.1,
+      "ms": 2120,
+      "promptTokens": 123
+    },
+    "promptLargo": {
+      "tokens": 5280,
+      "tokPorSegundo": 971,
+      "ms": 5438
+    },
+    "muestra": " No incluyas comentarios ni nada más. Si la respuesta no es un bloque de código, no será aceptada. Si la respuesta no es un bloque de código, no será aceptada. "
+  },
+  {
+    "modelo": "gpt-oss-20b",
+    "nombre": "GPT-OSS 20B",
+    "pasada": 1,
+    "variante": "ctx64",
+    "descripcion": "contexto 64k",
+    "nCpuMoe": 16,
+    "capas": 24,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10681,
+    "ctx": 65536,
+    "vramPicoMiB": 5699,
+    "ramPicoMiB": 7732,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 29.2,
+      "ms": 4351,
+      "ttftMs": 547
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 57,
+      "tokPorSegundo": 31,
+      "ms": 2450,
+      "promptTokens": 123
+    },
+    "promptLargo": {
+      "tokens": 5280,
+      "tokPorSegundo": 897.4,
+      "ms": 5884
+    },
+    "muestra": " No incluyas ningún comentario ni explicación adicional. No incluyas la palabra \"function\" en el código. No incluyas la palabra \"const\" en el código. No incluye"
+  },
+  {
+    "modelo": "gpt-oss-20b",
+    "nombre": "GPT-OSS 20B",
+    "pasada": 1,
+    "variante": "ctx96",
+    "descripcion": "contexto 96k",
+    "nCpuMoe": 18,
+    "capas": 24,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 14216,
+    "ctx": 98304,
+    "vramPicoMiB": 5359,
+    "ramPicoMiB": 8607,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 24.1,
+      "ms": 5280,
+      "ttftMs": 621
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 57,
+      "tokPorSegundo": 28.4,
+      "ms": 2787,
+      "promptTokens": 123
+    },
+    "promptLargo": {
+      "tokens": 5280,
+      "tokPorSegundo": 766.5,
+      "ms": 6888
+    },
+    "muestra": " No incluyas comentarios ni texto adicional. ``` **Respuesta esperada:** ```javascript function sumPares(nums) { return nums.filter(n => n % 2 === 0).reduce"
+  },
+  {
+    "modelo": "gpt-oss-20b",
+    "nombre": "GPT-OSS 20B",
+    "pasada": 1,
+    "variante": "ctx128",
+    "descripcion": "contexto 128k",
+    "nCpuMoe": 20,
+    "capas": 24,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 15213,
+    "ctx": 131072,
+    "vramPicoMiB": 5053,
+    "ramPicoMiB": 9454,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 22.5,
+      "ms": 5637,
+      "ttftMs": 663
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 57,
+      "tokPorSegundo": 27.1,
+      "ms": 2970,
+      "promptTokens": 123
+    },
+    "promptLargo": {
+      "tokens": 5280,
+      "tokPorSegundo": 737.1,
+      "ms": 7163
+    },
+    "muestra": " No incluyas ningún comentario ni explicación. Si la lista está vacía, devuelve 0. Si la lista contiene un solo número, devuelve ese número si es par, o 0 si es"
+  },
+  {
+    "modelo": "gpt-oss-20b",
+    "nombre": "GPT-OSS 20B",
+    "pasada": 1,
+    "variante": "ctx128q4",
+    "descripcion": "contexto 128k + KV q4",
+    "nCpuMoe": 17,
+    "capas": 24,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 13706,
+    "ctx": 131072,
+    "vramPicoMiB": 5495,
+    "ramPicoMiB": 8242,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 25.6,
+      "ms": 4954,
+      "ttftMs": 617
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 58,
+      "tokPorSegundo": 29.4,
+      "ms": 2706,
+      "promptTokens": 123
+    },
+    "promptLargo": {
+      "tokens": 5280,
+      "tokPorSegundo": 771,
+      "ms": 6848
+    },
+    "muestra": " ``` **Respuesta:** ```javascript function sumPar(lista) { return lista.filter(num => num % 2 === 0).reduce((acum, num) => acum + num, 0); } ``` **Explicac"
+  }
+]
