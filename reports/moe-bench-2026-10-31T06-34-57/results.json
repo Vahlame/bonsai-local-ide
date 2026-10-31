@@ -1,0 +1,64 @@
+[
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "batch12",
+    "descripcion": "12 hilos, batch 1024/512",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 6723,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 10281,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 31.9,
+      "ms": 3982,
+      "ttftMs": 403
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 373.4,
+      "ms": 16796
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => num % 2 === 0 ? sum + num : sum, 0); } ``` Escribe una función de JavaScri"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 2,
+    "variante": "batch12",
+    "descripcion": "12 hilos, batch 1024/512",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9253,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 10539,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 25.2,
+      "ms": 5036,
+      "ttftMs": 902
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 405.3,
+      "ms": 15472
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => num % 2 === 0 ? sum + num : sum, 0); } ``` Escribe una función de JavaSc"
+  }
+]

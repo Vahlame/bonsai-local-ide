@@ -107,6 +107,15 @@ normales.
 - Reserva por defecto 850 MiB (contexto CUDA, buffers, grafo) y margen 300 MiB.
   Un modelo ya medido puede sobrescribir `servidor.reservaMiB` y su techo real
   (`vision.contextoMaximoManual`).
+- **MoE**: además lee la tabla de tensores (solo nombres/offsets) y separa los
+  expertos (`blk.N.ffn_*_exps.weight`) de los pesos densos. La VRAM se llena
+  primero con densos + KV y las capas de expertos que caben; el resto queda en
+  RAM con `--n-cpu-moe N`. El contexto por defecto de un MoE es 32k y el KV q8_0,
+  para que el KV no se coma la VRAM de los expertos. El reparto se recalcula al
+  arrancar con la ventana real. Si los expertos de CPU caben en RAM se usa
+  `--load-mode none` (medido: 45 vs 28 tok/s frente a mmap); si no, `mmap` para
+  que Windows pagine desde el SSD. Si el modelo trae visión, el proyector va a CPU
+  cuando así entran más capas de expertos.
 
 El plan se guarda en `models/hub-catalog.json → <clave>.plan` y se usa al pulsar
 **Usar ahora** o al elegir **Automático** en la barra del servidor. También se
@@ -115,6 +124,23 @@ puede pedir desde la API:
 ```powershell
 curl "http://127.0.0.1:8787/api/hub/plan?clave=qwen3-4b-2507"
 ```
+
+### Plantillas de chat
+
+Cada GGUF trae su `tokenizer.chat_template`; al registrarlo se guarda en
+`models/hub-catalog.json` y el lanzador lo escribe en
+`logs/chat_template_<puerto>.jinja` para pasarlo con `--chat-template-file`.
+Así el IDE, el Model Lab y el benchmark de calidad hablan con el formato real
+del modelo (system/user/assistant, herramientas y razonamiento), no con un
+prompt genérico. La auditoría de todos los instalados:
+
+```powershell
+node scripts/chat-template-check.mjs
+```
+
+Comprueba que la plantilla existe y qué declara. Las pruebas de calidad y de
+tool-calling usan `/v1/chat/completions` con mensajes `system` y `user`, de modo
+que también validan el renderizado, no solo la presencia.
 
 ## 6. API
 
@@ -140,6 +166,9 @@ node scripts/hub.mjs list
 node scripts/hub.mjs scan
 node scripts/hub.mjs discover --limit 30
 node scripts/hub.mjs search "qwen2.5 coder"
+node scripts/chat-template-check.mjs
+node scripts/moe-bench.mjs --model qwen36-35b-a3b
+node scripts/fast-download.mjs --models qwen36-35b-a3b
 node scripts/hub.mjs repo unsloth/Qwen3-4B-Instruct-2507-GGUF
 
 # descargar una entrada curada (con su proyector si lo tiene)
@@ -195,7 +224,9 @@ pruebas en el registro. `bench-model-quality` acepta `--model` y usa el plan
 AUTO del modelo, no el preset de Ornith.
 
 Evidencia de esta máquina: [reports/MODEL-CATALOG-2026-10-31.md](../reports/MODEL-CATALOG-2026-10-31.md)
-(catálogo completo, 26 modelos usables y visión con/sin proyector).
+(catálogo completo, 30 modelos usables y visión con/sin proyector) y
+[reports/MOE-2026-10-31.md](../reports/MOE-2026-10-31.md) (MoE de 30–35B con
+reparto VRAM/RAM/SSD).
 
 ### Resultados medidos en esta máquina (31-oct-2026)
 
@@ -230,7 +261,19 @@ que cada modelo arranca, cabe y hace lo que promete.
 | LFM3-VL / Omni 2B | 128.000 / f16 · visión CPU | ~2.800 MiB | — | visión rápida |
 | Qwen2.5-VL 3B | 128.000 / f16 · visión CPU | 6.543 MiB | — | visión estable |
 
-El catálogo completo, con los 26 modelos y las pruebas con/sin visión, está en
+### MoE 1.9.0 (detalle en el informe MOE)
+
+| Modelo | Plan | Carga | Generación | Calidad* | Nota |
+|---|---|---:|---:|---:|---|
+| Qwen3.6-35B-A3B | 32.768 / q8_0 · visión CPU · 18/40 GPU | none | 42,5 tok/s | 4/5 | 35B con visión y 6,5 GiB RAM |
+| Qwen3-30B-A3B 2507 | 32.768 / q8_0 · 19/48 GPU | none | 44,2 tok/s | 4/5 | el más rápido; coding 5/5 |
+| GPT-OSS-20B | 32.768 / q8_0 · 10/24 GPU | none | 32,6 tok/s | **5/5** | razonamiento y tools |
+| Nemotron 3 Nano 30B | 32.768 / q8_0 · 15/52 GPU | mmap | 29,9 tok/s | 4/5 | no cabe en RAM; caso SSD |
+
+\* 5 tareas, una pasada. El detalle de VRAM/RAM/SSD y del modo chat está en
+[reports/MOE-2026-10-31.md](../reports/MOE-2026-10-31.md).
+
+El catálogo completo, con los 30 modelos y las pruebas con/sin visión, está en
 [reports/MODEL-CATALOG-2026-10-31.md](../reports/MODEL-CATALOG-2026-10-31.md).
 
 La lectura honesta: **más contexto no es mejor si el modelo falla**. Gemma cabe a
@@ -281,4 +324,3 @@ Qwen2.5 0.5B (12 KiB/token) sí cabe.
 - Los modelos con licencia gated de Hugging Face necesitan un token; el Hub no
   gestiona credenciales todavía. Descarga el archivo manualmente y usa
   **Importar**.
-

@@ -165,10 +165,10 @@ que más se usa, y el resto debe poder calcularse o leerse sin bloquear a la GPU
 | Idea de Strata | Equivalente en llama.cpp | Cómo probarlo |
 |---|---|---|
 | KV streaming | `--no-kv-offload` + `--cache-ram` + `--kv-unified`; no es idéntico | medir contexto máximo y tok/s con KV en RAM vs VRAM |
-| Caché de expertos / offload selectivo | `--n-cpu-moe N`, `--override-tensor`, `--cpu-moe` (según build) | usar un MoE pequeño (p. ej. Qwen1.5-MoE-A2.7B Q4) y medir VRAM/RAM/tok/s |
+| Caché de expertos / offload selectivo | `--n-cpu-moe N`, `--override-tensor`, `--cpu-moe` | medido con Qwen3.6-35B-A3B, Qwen3-30B-A3B, GPT-OSS-20B y Nemotron 3 Nano: `scripts/moe-bench.mjs` |
 | Auto-fit de capas | `llama-fit-params.exe`, `--fit`, `--fit-params` | el build ya trae `llama-fit-params.exe`; comparar su plan con el nuestro |
 | MTP / draft | `--spec-type draft-simple --draft-model … --draft-tokens 4` | Qwen3 4B + Qwen3 0.6B; Qwen2.5 Coder 7B + Qwen2.5 0.5B |
-| Prefetch / mmap | `--mmap` (default), `--mlock`, `--no-mmap` | ya medido: mmap gana; no-mmap/mlock pierde |
+| Prefetch / mmap | `--mmap` (default), `--mlock`, `--no-mmap` | en densos gana mmap; en MoE con expertos en RAM gana `--load-mode none` (medido) |
 | Batching | `-b`, `-ub`, `--parallel` | matriz por modelo con `llama-bench` y el Model Lab |
 | Prioridad de hilos | `-t` | 4 hilos es el equilibrio medido en esta GPU; probar 6/8 por modelo |
 
@@ -201,6 +201,59 @@ que más se usa, y el resto debe poder calcularse o leerse sin bloquear a la GPU
 8. **Prompt lookup / draft por sufijo.** Para ediciones de código que repiten
    texto; llama.cpp tiene `--lookup-cache`/`--lookup` en algunas builds.
 
+### 4.5. MoE híbrido: lo que hace Bonsai con 8 GB VRAM y 16 GB RAM
+
+Un MoE no se carga entero en la GPU. El plan separa tres cosas:
+
+1. **Pesos densos** (atención, embeddings, router, experto compartido) → VRAM.
+2. **Expertos** → las últimas capas que caben en la VRAM restante; el resto en RAM
+   (`--n-cpu-moe N`). El reparto se recalcula en cada arranque con el contexto real,
+   no se congela al descargar.
+3. **KV** → VRAM, en `q8_0`. En MoE se prefiere q8_0 a f16 porque la mitad de KV
+   que se ahorra se convierte en capas de expertos en la GPU, que es donde se gana
+   velocidad. El contexto por defecto baja a **32k** por el mismo motivo.
+
+Además:
+
+- `--load-mode none` cuando los expertos de CPU caben en RAM: carga los pesos en
+  memoria anónima y libera el búfer host de lo que ya está en VRAM. Medido en
+  Qwen3.6-35B-A3B: **45 tok/s frente a 28 con mmap** y **817 frente a 390 tok/s**
+  de prompt. Si no caben, `--load-mode mmap` deja que Windows pagine desde el SSD.
+- `--fit off` + reparto explícito: el plan no delega en el auto-fit de llama.cpp.
+- `--cache-ram 0`: el KV de host no roba RAM a los expertos.
+- El proyector de visión va a CPU si con ello entra alguna capa de expertos más.
+- Al proceso se le sube la prioridad de memoria y se le desactiva **EcoQoS**
+  (`scripts/win-optimize-process.ps1`): en un portátil, Windows puede frenar un
+  proceso lanzado en segundo plano justo cuando está leyendo expertos.
+- Con `mmap`, `scripts/precargar-gguf.mjs` calienta solo las capas de expertos
+  que se quedan en RAM. Para medir en frío de verdad:
+  `scripts/win-cache.ps1 -PurgeStandby` purga la standby list (requiere admin).
+
+Planes calculados con la cabecera real de cada GGUF (7956 MiB libres, 32k, KV q8):
+
+| Modelo | Expertos totales | Capas GPU | Expertos GPU | Expertos RAM |
+|---|---:|---:|---:|---:|
+| Qwen3.6-35B-A3B Q2_K_XL | 9,80 GiB | 18/40 | 4.542 MiB | 5.498 MiB |
+| Qwen3-30B-A3B 2507 Q2_K_XL | 9,96 GiB | 17/48 | 3.640 MiB | 6.579 MiB |
+| GPT-OSS-20B MXFP4 | 9,46 GiB | 9/24 | 3.636 MiB | 6.060 MiB |
+| Nemotron 3 Nano 30B-A3B Q2_K_L | 15,39 GiB | 15/52 | 4.802 MiB | 10.976 MiB |
+
+El último es el caso límite: sus expertos en RAM (10,8 GiB) casi llenan los 16 GB
+del equipo. Es el único que puede tocar SSD durante la generación; por eso se mide
+aparte con `moe-bench`.
+
+Medido en Qwen3.6-35B-A3B (32k, q8_0, 19/40 capas en GPU, 12 hilos, batch 1024/512):
+
+| Modo | Generación | Prompt | RAM del proceso | VRAM |
+|---|---:|---:|---:|---:|
+| `--load-mode none` | **42,8 tok/s** | **815 tok/s** | 6,5 GiB | 6,9 GiB |
+| `--load-mode mmap` | 18,3 tok/s | 384 tok/s | 10,7 GiB | 6,9 GiB |
+| `--cpu-moe` (todo CPU) | 23,3 tok/s | 448 tok/s | 10,7 GiB | 2,4 GiB |
+| 8 hilos en vez de 12 | 40,2 tok/s | 816 tok/s | 6,5 GiB | 6,9 GiB |
+
+La diferencia no es del motor: `none` evita que los expertos se lean dos veces
+(page cache + memoria del proceso) y elimina los page faults de la generación.
+
 ---
 
 ## 5. Plan de experimentos para este repositorio
@@ -214,7 +267,7 @@ siguientes experimentos se pueden añadir sin tocar el motor:
 | Contexto/KV por modelo | `node scripts/model-lab.mjs probe --all` | arranque, VRAM, pruebas |
 | Draft especulativo | preset con `--spec-type draft-simple` + Qwen3 0.6B | tok/s y aceptación |
 | Matriz `-ub`/`-b` | `llama-bench -m … -p 512,2048 -n 128 -r 2 -b 512 -ub 128/256/512` | pp/tg tok/s |
-| MoE pequeño con offload | `--n-cpu-moe` en un Qwen1.5-MoE-A2.7B Q4 | VRAM/RAM/tok/s |
+| MoE con offload | `node scripts/moe-bench.mjs --model qwen36-35b-a3b` | VRAM/RAM/tok/s y reparto de expertos |
 | Contexto largo real | `scripts/probe-longctx.ps1` o 3 agujas | PASS/OOM y tokens reales |
 | Calidad por modelo | `node scripts/bench-model-quality.mjs --model <clave>` | 18 tareas deterministas |
 

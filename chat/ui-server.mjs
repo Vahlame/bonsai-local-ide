@@ -605,7 +605,7 @@ function catalogoModelos() {
       rol: typeof row.rol === "string" ? row.rol : "",
       uso: typeof row.uso === "string" ? row.uso : "",
       existe: bytes > 0 && (esperado === 0 || bytes === esperado),
-      gpuCompleta: row.servidor?.tipo === "gpu-completa",
+      gpuCompleta: row.servidor?.tipo === "gpu-completa" || row.servidor?.tipo === "moe-hibrido",
       margenObjetivoMiB: Number(row.servidor?.margenObjetivoMiB) || 0,
       predeterminado: clave === MODELO.modeloPredeterminado,
       fuente: typeof row.fuente === "string" ? row.fuente : "curado",
@@ -1406,9 +1406,11 @@ async function main(args) {
     } catch {
       /* sin registro: se lanza igual */
     }
-    if (preset && isNamedEnginePreset(preset)) {
+    if (preset && isNamedEnginePreset(preset) && item?.servidor?.tipo !== "moe-hibrido") {
       args.push("-EnginePreset", preset);
     } else if (preset === "CUSTOM" || preset === "AUTO") {
+      // En MoE el lanzador aplica el plan del modelo; no se le pasa un preset
+      // denso que sobreescriba contexto/KV.
       args.push("-EnginePreset", "CUSTOM");
     }
     const conVision = configuracion && typeof configuracion.vision === "boolean"
@@ -1418,6 +1420,9 @@ async function main(args) {
       : mmprojDisponible(clave);
     if (conVision) args.push("-Vision");
     else if (!optimizado) args.push("-SinVision");
+    // Un MoE que cabe en RAM arranca mucho más rápido si las páginas ya están
+    // en la page cache; el lanzador omite la precarga si el GGUF no cabe.
+    if (item?.servidor?.tipo === "moe-hibrido") args.push("-Precargar");
     if (configuracion) {
       // Solo se pasan contexto/KV si vienen definidos; si no, manda el preset.
       if (configuracion.contexto !== undefined && configuracion.contexto !== null) args.push("-ContextSize", String(configuracion.contexto));
@@ -1429,7 +1434,9 @@ async function main(args) {
       if (configuracion.hostIP) args.push("-HostIP", configuracion.hostIP);
     } else {
       const aj = leerAjustes();
-      if (aj.coderContextTokens) args.push("-ContextSize", String(aj.coderContextTokens));
+      // En MoE manda el plan (32k por defecto): pasar la ventana global de 110k
+      // dejaría casi toda la VRAM en KV y muy pocos expertos en la GPU.
+      if (aj.coderContextTokens && item?.servidor?.tipo !== "moe-hibrido") args.push("-ContextSize", String(aj.coderContextTokens));
       if (preset === "CUSTOM") args.push("-KVCacheType", ["f16", "bf16", "q8_0", "q4_0"].includes(aj.engineKv) ? aj.engineKv : "f16");
     }
     // Siempre explícito: el razonamiento que pidió el usuario si ESE modelo lo admite, o 0.
@@ -1477,7 +1484,7 @@ async function main(args) {
       const port = new URL(chat.base).port || "80";
       const datos = JSON.parse(fs.readFileSync(path.join(PROJECT, "logs", `servidor-administrado-${port}.json`), "utf8"));
       const perfil = MODELO.catalogo?.[datos.modelo]?.servidor;
-      if (datos.modelo !== modeloActualClave() || perfil?.tipo !== "gpu-completa" ||
+      if (datos.modelo !== modeloActualClave() || (perfil?.tipo !== "gpu-completa" && perfil?.tipo !== "moe-hibrido") ||
           !Number.isInteger(datos.contexto) || datos.contexto < 4096 || datos.contexto > perfil.contexto ||
           !["f16", "q8_0", "q4_0"].includes(datos.kv) || typeof datos.vision !== "boolean" ||
           (datos.mmprojCPU !== undefined && typeof datos.mmprojCPU !== "boolean") ||

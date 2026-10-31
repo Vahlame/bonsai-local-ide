@@ -62,7 +62,7 @@ function Read-Ticks([string]$Texto) {
 function Get-ModelPathDelMarcador($Info) {
     if (-not $Info -or -not $Info.modelo) { return "" }
     $fila = $Catalogo.catalogo.([string]$Info.modelo)
-    if (-not $fila -or -not $fila.archivo -or $fila.servidor.tipo -ne "gpu-completa") { return "" }
+    if (-not $fila -or -not $fila.archivo -or ($fila.servidor.tipo -ne "gpu-completa" -and $fila.servidor.tipo -ne "moe-hibrido")) { return "" }
     return [IO.Path]::GetFullPath((Join-Path $RootDir ("models\" + $fila.archivo)))
 }
 function Test-ServidorEsperado($Proceso, [string]$ModelPath) {

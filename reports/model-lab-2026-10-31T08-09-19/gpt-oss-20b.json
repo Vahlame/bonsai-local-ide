@@ -1,0 +1,219 @@
+{
+  "clave": "gpt-oss-20b",
+  "nombre": "GPT-OSS 20B",
+  "archivo": "gpt-oss-20b-gpt-oss-20b-MXFP4.gguf",
+  "fecha": "2026-10-31T08:11:00.524Z",
+  "plan": {
+    "ok": true,
+    "contexto": 32768,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 1867,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 816,
+    "kvFijoMiB": 0,
+    "totalMiB": 7873,
+    "libreMiB": 7956,
+    "disponibleMiB": 899,
+    "ctxNativo": 131072,
+    "moe": {
+      "activo": true,
+      "expertos": 32,
+      "capas": 24,
+      "capasGpu": 10,
+      "nCpuMoe": 14,
+      "expertosMiB": 9683,
+      "bytes": 10152345600,
+      "densosMiB": 1867,
+      "gpuExpertosMiB": 4040,
+      "expertosRamMiB": 5656,
+      "porCapa": [
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400,
+        423014400
+      ],
+      "rangosPorCapa": [
+        {
+          "inicio": 1272291744,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 1725037088,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 2177782432,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 2630527776,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 3083273120,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 3536018464,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 3988763808,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 4441509152,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 4894254496,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 5346999840,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 5799745184,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 6252490528,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 6705235872,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 7157981216,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 7610726560,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 8063471904,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 8516217248,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 8968962592,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 9421707936,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 9874453280,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 10327198624,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 10779943968,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 11232689312,
+          "bytes": 424120448
+        },
+        {
+          "inicio": 11685434656,
+          "bytes": 424120448
+        }
+      ],
+      "loadMode": "none",
+      "ctxTope": 32768,
+      "motivo": "10/24 capas de expertos en VRAM (4040 MiB); 14 en RAM (5656 MiB)"
+    },
+    "alternativas": {
+      "f16": {
+        "contexto": 32768,
+        "totalMiB": 4553
+      },
+      "q8_0": {
+        "contexto": 32768,
+        "totalMiB": 3833
+      },
+      "q4_0": {
+        "contexto": 32768,
+        "totalMiB": 3449
+      }
+    },
+    "motivo": "q8_0 a 32.768 tokens; 10/24 capas de expertos en VRAM (4040 MiB); 14 en RAM (5656 MiB); quedan 83 MiB de margen real",
+    "nombre": "GPT-OSS 20B"
+  },
+  "arranqueMs": 8301,
+  "nCtx": 32768,
+  "vramPicoMiB": 6045,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": false,
+      "detalle": "",
+      "ms": 1997,
+      "ttftMs": 762,
+      "tps": 22.55
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 3688,
+      "ttftMs": 595,
+      "tps": 28.48
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.reduce((acc, num) => (num % 2 === 0 ? acc + num : acc), 0);\n}",
+      "ms": 4313,
+      "ttftMs": 617,
+      "tps": 29.71
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 1784,
+      "ttftMs": 643,
+      "tps": 8.97
+    }
+  ],
+  "resumen": "3/4 pruebas",
+  "medido": true
+}

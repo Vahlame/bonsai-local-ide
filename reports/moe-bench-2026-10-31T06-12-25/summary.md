@@ -1,0 +1,26 @@
+# MoE en 8 GB VRAM + 16 GB RAM · qwen36-35b-a3b
+
+Equipo: AMD Ryzen 7 7840HS w/ Radeon 780M Graphics      · 15.3 GiB RAM · RTX 4060 Laptop.
+
+| Variante | Reparto | Hilos | Arranque | VRAM pico | RAM pico | Generación | Prompt largo |
+|---|---|---:|---:|---:|---:|---:|---:|
+| baseline | 18/40 GPU | 8 | 6.7 s | 6829 MiB | 10474 MiB | 24.5 tok/s | 331.5 tok/s (6271 tok) |
+| cpu | todo CPU | 8 | 6.2 s | 2329 MiB | 10486 MiB | 20.7 tok/s | 201.9 tok/s (6271 tok) |
+| gpu-menos | 10/40 GPU | 8 | 6.2 s | 4861 MiB | 10357 MiB | 19.1 tok/s | 257.2 tok/s (6271 tok) |
+| hilos12 | 18/40 GPU | 12 | 7.7 s | 6829 MiB | 10430 MiB | 29 tok/s | 331.8 tok/s (6271 tok) |
+| hilos16 | 18/40 GPU | 16 | 8.2 s | 6829 MiB | 10521 MiB | 27.5 tok/s | 331.7 tok/s (6271 tok) |
+| hilos20 | 18/40 GPU | 20 | 7.2 s | 6829 MiB | 10588 MiB | 28 tok/s | 336.8 tok/s (6271 tok) |
+| cpu16 | todo CPU | 16 | 5.7 s | 2329 MiB | 10550 MiB | 23.1 tok/s | 211.2 tok/s (6271 tok) |
+| gpu-menos16 | 10/40 GPU | 16 | 6.2 s | 4861 MiB | 10646 MiB | 25.8 tok/s | 263.2 tok/s (6271 tok) |
+| batch1024 | 18/40 GPU | 8 | 7.7 s | 6853 MiB | 10664 MiB | 26.5 tok/s | 466.3 tok/s (6271 tok) |
+| batch16 | 18/40 GPU | 16 | 7.7 s | 6853 MiB | 10607 MiB | 28.8 tok/s | 447.6 tok/s (6271 tok) |
+
+## Fallos
+
+- **gpu-mas** (8 capas más de expertos en GPU): llama-server terminó al arrancar: 0.00.308.357 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg) 0.00.311.916 I srv    load_model: loading model 'C:\Users\user\Documents\prject_local_AI\models\qwen36-35b-a3b-Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf' 0.01.892.388 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 99, abort
+
+## Notas
+
+- La primera pasada de cada modelo lee el GGUF del SSD; las siguientes reutilizan la page cache de Windows.
+- `RAM pico` es el working set del proceso: incluye pesos mapeados y KV en host, no la page cache compartida.
+- `prompt largo` mide el procesado de ~4k tokens: es donde más se nota el coste de traer expertos del SSD.

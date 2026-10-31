@@ -1,0 +1,157 @@
+[
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "baseline",
+    "descripcion": "plan automático",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 12273,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 6545,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 38.7,
+      "ms": 3284,
+      "ttftMs": 574
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 816.5,
+      "ms": 7681
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => num % 2 === 0 ? sum + num : sum, 0); } ``` Escribe una función de JavaSc"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "cpu",
+    "descripcion": "todos los expertos en CPU",
+    "nCpuMoe": "cpu-moe",
+    "capas": 40,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 8197,
+    "ctx": 32768,
+    "vramPicoMiB": 2351,
+    "ramPicoMiB": 10292,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 9.4,
+      "ms": 13446,
+      "ttftMs": 3151
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 239.4,
+      "ms": 26200
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => { return num % 2 === 0 ? sum + num : sum; }, 0); } ``` Escri"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "batch12",
+    "descripcion": "12 hilos, batch 1024/512",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 12222,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 6546,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 42.5,
+      "ms": 2985,
+      "ttftMs": 473
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 818.1,
+      "ms": 7666
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((acc, num) => num % 2 === 0 ? acc + num : acc, 0); } ``` Escribe una función de JavaScri"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "mmap",
+    "descripcion": "mmap (page cache)",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 11711,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 10254,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 16.9,
+      "ms": 7505,
+      "ttftMs": 1374
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 389.1,
+      "ms": 16117
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((acc, num) => { return num % 2 === 0 ? acc + num : acc; }, 0); } ``` ```ja"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "none",
+    "descripcion": "sin mmap (carga a RAM)",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 12817,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 6546,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 42,
+      "ms": 3026,
+      "ttftMs": 522
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 816.2,
+      "ms": 7683
+    },
+    "muestra": " <think> Here's a thinking process that leads to the suggested JavaScript function: 1. **Understand the Goal:** The user wants a JavaScript function that tak"
+  }
+]

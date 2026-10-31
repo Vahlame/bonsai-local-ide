@@ -1,0 +1,157 @@
+[
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "baseline",
+    "descripcion": "plan automático",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 12265,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 6545,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 40.2,
+      "ms": 3162,
+      "ttftMs": 545
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 816.2,
+      "ms": 7683
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((acc, num) => num % 2 === 0 ? acc + num : acc, 0); } ``` Escribe una función de JavaScri"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "cpu",
+    "descripcion": "todos los expertos en CPU",
+    "nCpuMoe": "cpu-moe",
+    "capas": 40,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 20312,
+    "ctx": 32768,
+    "vramPicoMiB": 2353,
+    "ramPicoMiB": 10736,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 23.3,
+      "ms": 5453,
+      "ttftMs": 815
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 447.6,
+      "ms": 14010
+    },
+    "muestra": " ```javascript function sumaPares(lista) { return lista.reduce((acc, num) => { return num % 2 === 0 ? acc + num : acc; }, 0); } ``` ```javascr"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "batch12",
+    "descripcion": "12 hilos, batch 1024/512",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 12223,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 6546,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 42.8,
+      "ms": 2964,
+      "ttftMs": 469
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 814.6,
+      "ms": 7698
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => num % 2 === 0 ? sum + num : sum, 0); } ``` Escribe una función de JavaSc"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "mmap",
+    "descripcion": "mmap (page cache)",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 11715,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 10680,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 18.3,
+      "ms": 6947,
+      "ttftMs": 1364
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 383.8,
+      "ms": 16338
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => num % 2 === 0 ? sum + num : sum, 0); } ``` Escribe una función de JavaScri"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "none",
+    "descripcion": "sin mmap (carga a RAM)",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 12709,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 6546,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 40.7,
+      "ms": 3119,
+      "ttftMs": 511
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 817.1,
+      "ms": 7675
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((acc, num) => num % 2 === 0 ? acc + num : acc, 0); } ``` Escribe una función de JavaSc"
+  }
+]

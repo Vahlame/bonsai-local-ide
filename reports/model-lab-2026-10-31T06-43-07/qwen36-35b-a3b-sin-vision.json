@@ -1,0 +1,299 @@
+{
+  "clave": "qwen36-35b-a3b",
+  "nombre": "Qwen3.6 35B-A3B",
+  "archivo": "qwen36-35b-a3b-Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf",
+  "fecha": "2026-10-31T06:43:23.272Z",
+  "plan": {
+    "ok": true,
+    "contexto": 32768,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 1682,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 340,
+    "kvFijoMiB": 0,
+    "totalMiB": 7714,
+    "libreMiB": 7956,
+    "disponibleMiB": 582,
+    "ctxNativo": 262144,
+    "moe": {
+      "activo": true,
+      "expertos": 256,
+      "capas": 40,
+      "capasGpu": 18,
+      "nCpuMoe": 22,
+      "expertosMiB": 10040,
+      "bytes": 10527703040,
+      "densosMiB": 1682,
+      "gpuExpertosMiB": 4542,
+      "expertosRamMiB": 5498,
+      "porCapa": [
+        257949696,
+        348127232,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        257949696,
+        297795584,
+        257949696,
+        257949696,
+        257949696,
+        297795584,
+        297795584
+      ],
+      "rangosPorCapa": [
+        {
+          "inicio": 664007136,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 954561760,
+          "bytes": 352206848
+        },
+        {
+          "inicio": 1332484064,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 1621418720,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 1901093600,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 2188305888,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 2475518176,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 2764452832,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 3044127712,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 3331340000,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 3618552288,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 3907486944,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 4187161824,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 4474374112,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 4761586400,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 5050521056,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 5330195936,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 5617408224,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 5904620512,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 6193555168,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 6473230048,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 6760442336,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 7047654624,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 7336589280,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 7616264160,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 7903476448,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 8190688736,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 8479623392,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 8759298272,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 9046510560,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 9333722848,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 9622657504,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 9902332384,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 10189544672,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 10476756960,
+          "bytes": 301481984
+        },
+        {
+          "inicio": 10805537504,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 11085212384,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 11372424672,
+          "bytes": 261636096
+        },
+        {
+          "inicio": 11659636960,
+          "bytes": 301481984
+        },
+        {
+          "inicio": 11988417504,
+          "bytes": 301481984
+        }
+      ],
+      "loadMode": "none",
+      "ctxTope": 32768,
+      "motivo": "18/40 capas de expertos en VRAM (4542 MiB); 22 en RAM (5498 MiB)"
+    },
+    "alternativas": {
+      "f16": {
+        "contexto": 32768,
+        "totalMiB": 3472
+      },
+      "q8_0": {
+        "contexto": 32768,
+        "totalMiB": 3172
+      },
+      "q4_0": {
+        "contexto": 32768,
+        "totalMiB": 3012
+      }
+    },
+    "motivo": "q8_0 a 32.768 tokens; 18/40 capas de expertos en VRAM (4542 MiB); 22 en RAM (5498 MiB); quedan 242 MiB de margen real",
+    "nombre": "Qwen3.6 35B-A3B"
+  },
+  "arranqueMs": 9179,
+  "nCtx": 32768,
+  "vramPicoMiB": 6835,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 666,
+      "ttftMs": 542,
+      "tps": 7.52
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}\n",
+      "ms": 514,
+      "ttftMs": 294,
+      "tps": 19.46
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.filter(n => n % 2 === 0).reduce((acc, n) => acc + n, 0);\n}",
+      "ms": 1290,
+      "ttftMs": 317,
+      "tps": 33.44
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 1533,
+      "ttftMs": 856,
+      "tps": 0
+    }
+  ],
+  "resumen": "4/4 pruebas",
+  "medido": true
+}

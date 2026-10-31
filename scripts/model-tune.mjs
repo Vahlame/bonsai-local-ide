@@ -41,7 +41,7 @@ function candidatos() {
   const vistos = new Set(out.map((m) => m.archivo));
   for (const [clave, e] of Object.entries(MODELO.catalogo || {})) {
     if (!e || typeof e.archivo !== "string" || vistos.has(e.archivo) || e.oculto) continue;
-    if (e.servidor?.tipo !== "gpu-completa") continue;
+    if (e.servidor?.tipo !== "gpu-completa" && e.servidor?.tipo !== "moe-hibrido") continue;
     let bytes = 0;
     try { bytes = fs.statSync(path.join(PROJECT, "models", e.archivo)).size; } catch { bytes = 0; }
     if (!bytes) continue;
@@ -84,6 +84,10 @@ async function tunear(item) {
   const modelo = path.join(PROJECT, "models", item.archivo);
   const kv = plan.kv;
   const base = ["-m", modelo, "-ngl", "99", "-pg", "512,128", "-r", "2", "-b", "512", "-fa", "on", "-o", "json"];
+  if (plan.moe?.activo) {
+    base.push("-lm", "mmap");
+    if (plan.moe.nCpuMoe > 0) base.push("-ncmoe", String(plan.moe.nCpuMoe));
+  }
   /** @type {any[]} */
   const variantes = [];
   const correr = async (etiqueta, extra, kvUsado = kv) => {
@@ -101,15 +105,18 @@ async function tunear(item) {
   };
 
   process.stderr.write(`\n=== ${item.clave} · ${plan.contexto} tok · KV ${kv} ===\n`);
-  for (const ub of QUICK ? [256, 512] : [128, 256, 512]) {
-    await correr(`ub=${ub} t=4`, ["-ub", String(ub), "-t", "4"]);
+  const hilosBase = plan.moe?.activo ? (QUICK ? [8, 16] : [4, 8, 12, 16]) : [4];
+  for (const t of hilosBase) {
+    for (const ub of QUICK ? [256, 512] : [128, 256, 512]) {
+      await correr(`ub=${ub} t=${t}`, ["-ub", String(ub), "-t", String(t)]);
+    }
   }
   const mejorUb = [...variantes].filter((v) => v.ok).sort((a, b) => b.tg - a.tg || b.pp - a.pp)[0]?.etiqueta?.match(/ub=(\d+)/)?.[1] || "256";
+  const mejorT = [...variantes].filter((v) => v.ok).sort((a, b) => b.tg - a.tg || b.pp - a.pp)[0]?.etiqueta?.match(/t=(\d+)/)?.[1] || "4";
   if (!QUICK) {
-    for (const t of [8, 12]) await correr(`ub=${mejorUb} t=${t}`, ["-ub", mejorUb, "-t", String(t)]);
-    for (const b of [256, 1024]) await correr(`ub=${mejorUb} t=4 b=${b}`, ["-ub", mejorUb, "-t", "4", "-b", String(b)]);
+    for (const b of [256, 1024]) await correr(`ub=${mejorUb} t=${mejorT} b=${b}`, ["-ub", mejorUb, "-t", mejorT, "-b", String(b)]);
     for (const kvAlt of ["f16", "q8_0", "q4_0"].filter((k) => k !== kv)) {
-      await correr(`ub=${mejorUb} t=4 kv=${kvAlt}`, ["-ub", mejorUb, "-t", "4"], kvAlt);
+      await correr(`ub=${mejorUb} t=${mejorT} kv=${kvAlt}`, ["-ub", mejorUb, "-t", mejorT], kvAlt);
     }
   }
   const exitosas = variantes.filter((v) => v.ok);

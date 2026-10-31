@@ -1,0 +1,359 @@
+{
+  "clave": "nemotron3-nano-30b",
+  "nombre": "Nemotron 3 Nano 30B-A3B",
+  "archivo": "nemotron3-nano-30b-Nemotron-3-Nano-30B-A3B-Q2_K_L.gguf",
+  "fecha": "2026-10-31T08:13:46.516Z",
+  "plan": {
+    "ok": true,
+    "contexto": 32768,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 1501,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 102,
+    "kvFijoMiB": 0,
+    "totalMiB": 7555,
+    "libreMiB": 7956,
+    "disponibleMiB": 503,
+    "ctxNativo": 1048576,
+    "moe": {
+      "activo": true,
+      "expertos": 128,
+      "capas": 52,
+      "capasGpu": 15,
+      "nCpuMoe": 37,
+      "expertosMiB": 15758,
+      "bytes": 16523329536,
+      "densosMiB": 1501,
+      "gpuExpertosMiB": 4802,
+      "expertosRamMiB": 10976,
+      "porCapa": [
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        718405632,
+        0,
+        718405632
+      ],
+      "rangosPorCapa": [
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 643823904,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 1400421408,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 2168727840,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 2925325344,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 3681922848,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 4450229280,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 5206826784,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 5963424288,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 6731730720,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 7488328224,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 8244925728,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 9013232160,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 9769829664,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 10526427168,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 11294733600,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 12051331104,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 12807928608,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 13564526112,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 14332832544,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 15089430048,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 15846027552,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 16602625056,
+          "bytes": 730383360
+        },
+        {
+          "inicio": 0,
+          "bytes": 0
+        },
+        {
+          "inicio": 17359222560,
+          "bytes": 730383360
+        }
+      ],
+      "loadMode": "mmap",
+      "ctxTope": 32768,
+      "motivo": "15/52 capas de expertos en VRAM (4802 MiB); 37 en RAM (10976 MiB)"
+    },
+    "alternativas": {
+      "f16": {
+        "contexto": 32768,
+        "totalMiB": 2843
+      },
+      "q8_0": {
+        "contexto": 32768,
+        "totalMiB": 2753
+      },
+      "q4_0": {
+        "contexto": 32768,
+        "totalMiB": 2705
+      }
+    },
+    "motivo": "q8_0 a 32.768 tokens; 15/52 capas de expertos en VRAM (4802 MiB); 37 en RAM (10976 MiB); quedan 401 MiB de margen real",
+    "nombre": "Nemotron 3 Nano 30B-A3B"
+  },
+  "arranqueMs": 7644,
+  "nCtx": 32768,
+  "vramPicoMiB": 6905,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": false,
+      "detalle": "",
+      "ms": 5576,
+      "ttftMs": 2256,
+      "tps": 8.61
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 5394,
+      "ttftMs": 3204,
+      "tps": 10.2
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.filter(n => n % 2 === 0).reduce((acc, n) => acc + n, 0);\n}",
+      "ms": 8839,
+      "ttftMs": 4120,
+      "tps": 15.52
+    },
+    {
+      "id": "herramienta",
+      "ok": false,
+      "detalle": "",
+      "ms": 10784,
+      "ttftMs": 5876,
+      "tps": 16.69
+    }
+  ],
+  "resumen": "2/4 pruebas",
+  "medido": true
+}

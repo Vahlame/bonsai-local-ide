@@ -15,6 +15,7 @@
  */
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -164,7 +165,71 @@ export function leerMetadatosGGUF(archivo, opciones = {}) {
     // de tokenizer se reduce a su longitud para no inflar el registro local.
     metadata[clave] = valor;
   }
-  return { version, tensorCount, metadata, headerBytes: lector.pos, archivo, bytes: talla };
+
+  // Tabla de tensores: hace falta para saber CUÁNTO pesa cada experto MoE y
+  // decidir qué capas dejan de caber en la VRAM. Solo se leen nombres, formas y
+  // offsets; no se toca ni un byte de los datos.
+  /** @type {{nombre: string, dims: number[], tipo: number, offset: number, bytes: number}[]} */
+  const tensores = [];
+  for (let i = 0; i < tensorCount; i += 1) {
+    const nombre = lector.string();
+    const nDim = lector.numero("uint32", 4);
+    if (nDim > 8) throw new Error(`tensor GGUF con ${nDim} dimensiones: ${archivo}`);
+    /** @type {number[]} */
+    const dims = [];
+    for (let d = 0; d < nDim; d += 1) dims.push(Number(lector.numero("uint64", 8)));
+    const tipo = lector.numero("uint32", 4);
+    const offset = Number(lector.numero("uint64", 8));
+    tensores.push({ nombre, dims, tipo, offset, bytes: 0 });
+  }
+  const alineacion = Math.max(1, Math.trunc(Number(metadata["general.alignment"]) || 32));
+  const dataStart = Math.ceil(lector.pos / alineacion) * alineacion;
+  // El tamaño exacto de cada tensor sale del offset del siguiente: no hay que
+  // conocer los bloques de cada cuantización.
+  const porOffset = [...tensores].sort((a, b) => a.offset - b.offset);
+  for (let i = 0; i < porOffset.length; i += 1) {
+    const t = porOffset[i];
+    const fin = i + 1 < porOffset.length ? porOffset[i + 1].offset : talla - dataStart;
+    t.bytes = Math.max(0, fin - t.offset);
+  }
+  return { version, tensorCount, metadata, tensores, dataStart, headerBytes: lector.pos, archivo, bytes: talla };
+}
+
+/**
+ * Separa los pesos MoE de los densos. Los expertos son los tensores
+ * `blk.N.ffn_{gate,up,down}_exps.weight`; todo lo demás (atención, embeddings,
+ * router, expertos compartidos) se queda en la GPU. Devuelve null si el GGUF no
+ * es MoE.
+ * @param {{metadata: Record<string, unknown>, tensores?: {nombre: string, bytes: number}[]}} meta
+ * @returns {{expertos: number, capas: number, bytes: number, porCapa: number[]} | null}
+ */
+export function analizarMoE(meta) {
+  const arq = String(meta.metadata?.["general.architecture"] || "").trim();
+  if (!arq) return null;
+  const capas = Math.max(0, Math.trunc(Number(meta.metadata?.[`${arq}.block_count`]) || 0));
+  const expertos = Math.max(0, Math.trunc(Number(meta.metadata?.[`${arq}.expert_count`]) || 0));
+  if (capas < 1 || expertos < 2) return null;
+  /** @type {number[]} */
+  const porCapa = Array.from({ length: capas }, () => 0);
+  /** @type {{inicio: number, bytes: number}[]} */
+  const rangosPorCapa = Array.from({ length: capas }, () => ({ inicio: 0, bytes: 0 }));
+  const dataStart = Math.max(0, Math.trunc(Number(meta.dataStart) || 0));
+  let bytes = 0;
+  for (const t of meta.tensores || []) {
+    const m = /^blk\.(\d+)\.ffn_.*_exps\.weight$/.exec(t.nombre);
+    if (!m) continue;
+    const capa = Number(m[1]);
+    if (capa < 0 || capa >= capas) continue;
+    porCapa[capa] += Number(t.bytes) || 0;
+    bytes += Number(t.bytes) || 0;
+    const inicio = dataStart + Number(t.offset || 0);
+    const fin = inicio + (Number(t.bytes) || 0);
+    const r = rangosPorCapa[capa];
+    if (!r.inicio || inicio < r.inicio) r.inicio = inicio;
+    if (fin - r.inicio > r.bytes) r.bytes = fin - r.inicio;
+  }
+  if (bytes <= 0) return null;
+  return { expertos, capas, bytes, porCapa, rangosPorCapa };
 }
 
 /** @param {unknown} v @param {number} porDefecto */
@@ -308,10 +373,24 @@ export function planAuto(modelo, opciones = {}) {
   const kvFijoF16 = Math.max(0, Math.trunc(Number(modelo.kvFijoF16Bytes) || 0));
   const draftBytes = Math.max(0, Math.trunc(Number(modelo.draftBytes) || 0));
   const draftMiB = Math.ceil(draftBytes / MIB);
-  const pesosMiB = Math.max(1, Math.trunc(Number(opciones.pesosMiB) || Math.ceil(bytes / MIB)));
+  // En un MoE solo los pesos densos (atención, embeddings, router, experto
+  // compartido) van a la GPU; los expertos se reparten entre VRAM y RAM.
+  const moeBytes = Math.max(0, Math.trunc(
+    Number(modelo.moe?.bytes) || (Number(modelo.moe?.expertosMiB) || 0) * MIB,
+  ));
+  const moePorCapa = Array.isArray(modelo.moe?.porCapa)
+    ? modelo.moe.porCapa.map((n) => Math.max(0, Math.trunc(Number(n) || 0)))
+    : [];
+  const esMoe = moeBytes > 0 && moePorCapa.length > 0 && moeBytes < bytes;
+  const pesosDensosMiB = esMoe ? Math.ceil((bytes - moeBytes) / MIB) : Math.ceil(bytes / MIB);
+  const pesosMiB = Math.max(1, Math.trunc(Number(opciones.pesosMiB) || pesosDensosMiB));
   const ctxNativo = Math.max(4096, Math.trunc(Number(modelo.ctxNativo) || 32768));
   const draftCtx = Number(modelo.draftCtxNativo) > 0 ? Math.max(4096, Math.trunc(Number(modelo.draftCtxNativo))) : Infinity;
-  const tope = Math.min(ctxMaximo, ctxNativo, draftCtx);
+  // Un MoE pierde mucha velocidad si el KV se come toda la VRAM y no queda
+  // ninguna capa de expertos en la GPU. Por defecto se planifica a 32k y el
+  // resto de la VRAM se dedica a expertos; el usuario puede pedir más contexto.
+  const ctxTopeMoe = Math.max(8192, Math.trunc(Number(opciones.ctxTopeMoe) || 32768));
+  const tope = Math.min(ctxMaximo, ctxNativo, draftCtx, esMoe ? ctxTopeMoe : Infinity);
   const tieneVision = Boolean(modelo.vision && (modelo.vision.bytes || 0) > 0);
   const quiereVision = opciones.vision !== false && tieneVision;
   const visionBytes = quiereVision ? Math.max(0, Math.trunc(Number(modelo.vision.bytes) || 0)) : 0;
@@ -346,7 +425,18 @@ export function planAuto(modelo, opciones = {}) {
     const q4 = calcular(visionEnGpu, "q4_0");
     let kv = "q4_0";
     let elegido = q4;
-    if (f16.contexto >= tope && q8.contexto >= tope) {
+    if (esMoe) {
+      // En un MoE el KV q8_0 es casi sin pérdida y libera la mitad de VRAM que
+      // f16: esa VRAM se convierte en capas de expertos en la GPU, que es donde
+      // de verdad se gana velocidad.
+      if (q8.contexto >= 4096) {
+        kv = "q8_0";
+        elegido = q8;
+      } else if (q4.contexto >= 4096) {
+        kv = "q4_0";
+        elegido = q4;
+      }
+    } else if (f16.contexto >= tope && q8.contexto >= tope) {
       // La ventana ya está limitada por el contexto nativo: se queda el KV más preciso.
       kv = "f16";
       elegido = f16;
@@ -365,6 +455,56 @@ export function planAuto(modelo, opciones = {}) {
         elegido = mayor;
       }
     }
+    // Reparto de expertos: la VRAM que sobra tras densos + KV se llena con las
+    // ÚLTIMAS capas MoE. `--n-cpu-moe N` mantiene las N primeras en RAM, así que
+    // las que quedan en GPU son exactamente las últimas.
+    let moe = null;
+    let gpuExpertosMiB = 0;
+    if (esMoe) {
+      const capas = moePorCapa.length;
+      const kvUsadoMiB = kvMiBModelo(Math.max(0, elegido.contexto), kv, { kvF16BytesPorToken: kvF16, kvFijoF16Bytes: kvFijoF16 });
+      const libreExpertos = Math.max(0, elegido.disponibleMiB - kvUsadoMiB);
+      let capasGpu = 0;
+      let usado = 0;
+      for (let i = capas - 1; i >= 0; i -= 1) {
+        const mib = Math.ceil(moePorCapa[i] / MIB);
+        if (usado + mib > libreExpertos) break;
+        usado += mib;
+        capasGpu += 1;
+      }
+      const nCpuMoe = capas - capasGpu;
+      let expertosRamMiB = 0;
+      for (let i = 0; i < nCpuMoe; i += 1) expertosRamMiB += Math.ceil(moePorCapa[i] / MIB);
+      // `--load-mode none` carga los pesos en memoria anónima y libera los
+      // buffers host de lo que ya está en VRAM. Medido en Qwen3.6-35B-A3B:
+      // 45 tok/s frente a 28 con mmap, y 817 frente a 390 tok/s de prompt.
+      // Solo se usa si los expertos de CPU + proyector + holgura caben en RAM;
+      // si no, mmap deja que Windows pagine desde el SSD.
+      const ramTotalMiB = Math.max(8192, Math.trunc(Number(opciones.ramTotalMiB) || Math.round(os.totalmem() / MIB)));
+      const ramUtilMiB = Math.max(4096, ramTotalMiB - 4096);
+      const cargaRamMiB = expertosRamMiB + (quiereVision && !visionEnGpu ? Math.ceil(visionBytes / MIB) : 0) + 1024;
+      const loadMode = cargaRamMiB <= ramUtilMiB * 0.9 ? "none" : "mmap";
+      gpuExpertosMiB = usado;
+      moe = {
+        activo: true,
+        expertos: Math.max(0, Math.trunc(Number(modelo.moe?.expertos) || 0)),
+        capas,
+        capasGpu,
+        nCpuMoe,
+        expertosMiB: Math.ceil(moeBytes / MIB),
+        bytes: moeBytes,
+        densosMiB: pesosMiB,
+        gpuExpertosMiB,
+        expertosRamMiB,
+        porCapa: moePorCapa,
+        rangosPorCapa: Array.isArray(modelo.moe?.rangosPorCapa) ? modelo.moe.rangosPorCapa : [],
+        loadMode,
+        ctxTope: ctxTopeMoe,
+        motivo: capasGpu > 0
+          ? `${capasGpu}/${capas} capas de expertos en VRAM (${usado} MiB); ${nCpuMoe} en RAM (${expertosRamMiB} MiB)`
+          : `todos los expertos en RAM (${expertosRamMiB} MiB); la VRAM se queda para atención y KV`,
+      };
+    }
     return {
       ok: elegido.contexto >= 4096,
       contexto: elegido.contexto,
@@ -379,10 +519,11 @@ export function planAuto(modelo, opciones = {}) {
       draftMiB,
       kvMiB: kvMiBModelo(Math.max(0, elegido.contexto), kv, { kvF16BytesPorToken: kvF16, kvFijoF16Bytes: kvFijoF16 }),
       kvFijoMiB: elegido.kvFijoMiB,
-      totalMiB: Math.ceil(elegido.totalMiB),
+      totalMiB: Math.ceil(elegido.totalMiB + gpuExpertosMiB),
       libreMiB,
-      disponibleMiB: Math.floor(elegido.disponibleMiB),
+      disponibleMiB: Math.max(0, Math.floor(elegido.disponibleMiB - gpuExpertosMiB)),
       ctxNativo,
+      moe,
       alternativas: {
         f16: { contexto: f16.contexto, totalMiB: Math.ceil(f16.totalMiB) },
         q8_0: { contexto: q8.contexto, totalMiB: Math.ceil(q8.totalMiB) },
@@ -390,7 +531,7 @@ export function planAuto(modelo, opciones = {}) {
       },
       motivo: elegido.contexto < 4096
         ? `no cabe ni a 4096 tokens: pesos ${pesosMiB} MiB + reserva ${reservaMiB} MiB + margen ${margenMiB} MiB > ${libreMiB} MiB libres`
-        : `${kv} a ${elegido.contexto.toLocaleString("es-ES")} tokens; quedan ${Math.max(0, libreMiB - Math.ceil(elegido.totalMiB))} MiB de margen real`,
+        : `${kv} a ${elegido.contexto.toLocaleString("es-ES")} tokens${moe ? `; ${moe.motivo}` : ""}; quedan ${Math.max(0, libreMiB - Math.ceil(elegido.totalMiB + gpuExpertosMiB))} MiB de margen real`,
       nombre: String(modelo.nombre || ""),
     };
   }
@@ -398,6 +539,9 @@ export function planAuto(modelo, opciones = {}) {
   if (!quiereVision) return elegir(false);
   const gpu = elegir(false);
   const cpu = elegir(true);
+  // En un MoE el proyector en CPU no solo da contexto: libera VRAM que se
+  // convierte en capas de expertos en la GPU. Si gana alguna capa, va a CPU.
+  if (esMoe && (cpu.moe?.capasGpu || 0) > (gpu.moe?.capasGpu || 0)) return cpu;
   // El proyector en CPU libera su VRAM. Se usa si el proyector es grande y así
   // se gana contexto de verdad (regla medida con Ornith: 879 MiB = +39k tokens);
   // si el proyector es pequeño o no cambia la ventana, se queda en GPU (visión rápida).
@@ -424,6 +568,7 @@ export function planAuto(modelo, opciones = {}) {
 export function entradaCatalogoDesdeGGUF(base, opciones = {}) {
   const meta = leerMetadatosGGUF(base.ruta);
   const arq = arquitecturaDesdeGGUF(meta.metadata, { archivo: base.ruta });
+  const moe = analizarMoE(meta);
   const plantilla = String(meta.metadata["tokenizer.chat_template"] || "");
   const bytes = Number(base.bytes) || meta.bytes;
   const vision = base.vision && base.vision.archivo
@@ -445,7 +590,8 @@ export function entradaCatalogoDesdeGGUF(base, opciones = {}) {
     ctxNativo: arq.ctxNativo,
     vision,
     nombre: base.nombre || arq.nombre,
-  }, { libreMiB: opciones.libreMiB, reservaMiB: opciones.reservaMiB, margenMiB: opciones.margenMiB, vision: opciones.vision });
+    moe,
+  }, { libreMiB: opciones.libreMiB, reservaMiB: opciones.reservaMiB, margenMiB: opciones.margenMiB, vision: opciones.vision, ramTotalMiB: opciones.ramTotalMiB });
   const nombre = String(base.nombre || arq.nombre || path.basename(base.archivo, ".gguf")).trim();
   const entrada = {
     clave: base.clave,
@@ -482,17 +628,18 @@ export function entradaCatalogoDesdeGGUF(base, opciones = {}) {
     kvFijoF16Bytes: arq.kvFijoF16Bytes,
     ventanaDeslizante: arq.ventanaDeslizante,
     servidor: {
-      tipo: "gpu-completa",
+      tipo: moe ? "moe-hibrido" : "gpu-completa",
       contexto: Math.min(arq.ctxNativo, 131072),
       capasAtencionCompleta: arq.capasAtencionCompleta,
       cabezasKV: arq.cabezasKV,
       dimCabeza: arq.dimCabeza,
       kvF16BytesPorToken: arq.kvF16BytesPorToken,
       kvFijoF16Bytes: arq.kvFijoF16Bytes,
+      ...(moe ? { moe: plan.moe } : {}),
       ...(base.draft?.archivo ? { draftModel: String(base.draft.archivo), draftTokens: Math.max(1, Math.trunc(Number(base.draft.tokens) || 4)), draftBytes: Number(base.draft.bytes) || 0 } : {}),
       reservaMiB: plan.reservaMiB,
       margenObjetivoMiB: Math.max(256, Math.min(6500, Math.ceil(bytes / MIB) + 900)),
-      ubatch: 256,
+      ...(moe ? { batch: 1024, ubatch: 512, threads: 12 } : { ubatch: 256 }),
       nota: `Plan automático: ${plan.motivo}. Arquitectura ${arq.arquitectura}, ${arq.capas} capas, KV f16 ${Math.round(arq.kvF16BytesPorToken / 1024)} KiB/token.`,
     },
     plan: {
@@ -505,6 +652,7 @@ export function entradaCatalogoDesdeGGUF(base, opciones = {}) {
       libreMiB: plan.libreMiB,
       reservaMiB: plan.reservaMiB,
       margenMiB: plan.margenMiB,
+      ...(plan.moe ? { moe: plan.moe } : {}),
       calculado: new Date().toISOString(),
     },
   };
@@ -602,6 +750,49 @@ export function selfTest() {
     ctxNativo: 32768,
   }, { libreMiB: 7956 });
   check("un modelo de 8 GiB no cabe en 8 GiB", planNoCabe.ok === false);
+
+  // MoE: 48 capas de 200 MiB de expertos (9,4 GiB) y 2 GiB densos.
+  const porCapaMoe = Array.from({ length: 48 }, () => 200 * MIB);
+  const moeBytes = 48 * 200 * MIB;
+  const planMoe = planAuto({
+    bytes: Math.round(11.45 * 1024 * MIB),
+    kvF16BytesPorToken: 131072,
+    ctxNativo: 262144,
+    moe: { bytes: moeBytes, capas: 48, expertos: 256, porCapa: porCapaMoe },
+  }, { libreMiB: 7956 });
+  check("MoE: activa el perfil híbrido", planMoe.moe?.activo === true);
+  check("MoE: planifica a 32k por defecto", planMoe.contexto === 32768);
+  check("MoE: la GPU solo carga los densos", planMoe.pesosMiB === Math.ceil((Math.round(11.45 * 1024 * MIB) - moeBytes) / MIB));
+  check("MoE: deja capas de expertos en la GPU", planMoe.moe.capasGpu > 0);
+  check("MoE: el reparto suma todas las capas", planMoe.moe.nCpuMoe + planMoe.moe.capasGpu === 48);
+  check("MoE: el plan no promete más VRAM que la libre", planMoe.totalMiB <= 7956);
+  check("MoE: calcula los expertos que quedan en RAM", planMoe.moe.expertosRamMiB === planMoe.moe.nCpuMoe * 200);
+  check("MoE: carga sin mmap si los expertos caben en RAM", planMoe.moe.loadMode === "none");
+
+  const planMoeGrande = planAuto({
+    bytes: Math.round(20 * 1024 * MIB),
+    kvF16BytesPorToken: 131072,
+    ctxNativo: 262144,
+    moe: { bytes: 18 * 1024 * MIB, capas: 48, expertos: 128, porCapa: Array.from({ length: 48 }, () => 384 * MIB) },
+  }, { libreMiB: 7956, ramTotalMiB: 16384 });
+  check("MoE: usa mmap si los expertos no caben en RAM", planMoeGrande.moe.loadMode === "mmap");
+
+  const analizado = analizarMoE({
+    metadata: { "general.architecture": "qwen3", "qwen3.block_count": 2, "qwen3.expert_count": 8 },
+    tensores: [
+      { nombre: "blk.0.ffn_gate_exps.weight", bytes: 100 },
+      { nombre: "blk.0.ffn_up_exps.weight", bytes: 100 },
+      { nombre: "blk.1.ffn_down_exps.weight", bytes: 100 },
+      { nombre: "blk.0.ffn_gate.weight", bytes: 999 },
+      { nombre: "token_embd.weight", bytes: 999 },
+    ],
+  });
+  check("MoE: detecta expertos por nombre de tensor", analizado?.bytes === 300);
+  check("MoE: reparte los expertos por capa", analizado?.porCapa[0] === 200 && analizado?.porCapa[1] === 100);
+  check("MoE: un modelo denso no se marca como MoE", analizarMoE({
+    metadata: { "general.architecture": "qwen3", "qwen3.block_count": 2 },
+    tensores: [{ nombre: "blk.0.ffn_gate.weight", bytes: 100 }],
+  }) === null);
 
   let rechazo = false;
   try { nombreArchivoSeguro("..\\..\\evil.gguf"); } catch { rechazo = true; }

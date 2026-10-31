@@ -1061,6 +1061,187 @@
         "archivo": "mmproj-LFM3-Omni-2B-Q8_0.gguf",
         "bytes": 506842528
       }
+    },
+    {
+      "clave": "qwen36-35b-a3b",
+      "nombre": "Qwen3.6 35B-A3B",
+      "repo": "unsloth/Qwen3.6-35B-A3B-GGUF",
+      "archivo": "Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf",
+      "bytes": 12290628576,
+      "revision": "a483e9e6cbd595906af30beda3187c2663a1118c",
+      "kvF16BytesPorToken": 20480,
+      "ctxNativo": 262144,
+      "rol": "MoE grande + visión",
+      "uso": "MoE de 35B con 3B activos: calidad de modelo grande a velocidad de uno pequeño; los expertos viven en RAM y la atención en la GPU.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 2048
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "MoE",
+        "35B",
+        "visión",
+        "Qwen3.6"
+      ],
+      "vision": {
+        "archivo": "mmproj-F16.gguf",
+        "bytes": 899283680
+      },
+      "capas": 40,
+      "moe": true
+    },
+    {
+      "clave": "qwen3-30b-a3b-2507",
+      "nombre": "Qwen3 30B-A3B 2507",
+      "repo": "unsloth/Qwen3-30B-A3B-Instruct-2507-GGUF",
+      "archivo": "Qwen3-30B-A3B-Instruct-2507-UD-Q2_K_XL.gguf",
+      "bytes": 11787538848,
+      "revision": "eea7b2be5805a5f151f8847ede8e5f9a9284bf77",
+      "kvF16BytesPorToken": 98304,
+      "ctxNativo": 262144,
+      "rol": "MoE grande",
+      "uso": "El MoE de referencia de Qwen: 30B totales y 3B activos, texto y herramientas; el más probado para offload.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 2048
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "MoE",
+        "30B",
+        "Qwen3"
+      ],
+      "vision": null,
+      "capas": 48,
+      "moe": true
+    },
+    {
+      "clave": "gpt-oss-20b",
+      "nombre": "GPT-OSS 20B",
+      "repo": "ggml-org/gpt-oss-20b-GGUF",
+      "archivo": "gpt-oss-20b-MXFP4.gguf",
+      "bytes": 12109566624,
+      "revision": "15dcfc7e7c608c6161507211ed43c5b590801b4b",
+      "kvF16BytesPorToken": 49152,
+      "ctxNativo": 131072,
+      "rol": "MoE razonamiento",
+      "uso": "MoE de OpenAI con 3.6B activos y cuantización MXFP4 nativa; razonamiento y herramientas con muy poca VRAM para los expertos.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 3072
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "MoE",
+        "20B",
+        "razonamiento"
+      ],
+      "vision": null,
+      "capas": 24,
+      "moe": true
+    },
+    {
+      "clave": "nemotron3-nano-30b",
+      "nombre": "Nemotron 3 Nano 30B-A3B",
+      "repo": "unsloth/Nemotron-3-Nano-30B-A3B-GGUF",
+      "archivo": "Nemotron-3-Nano-30B-A3B-Q2_K_L.gguf",
+      "bytes": 18096465696,
+      "revision": "9ad8b366c308f931b2a96b9306f0b41aef9cd405",
+      "kvF16BytesPorToken": 6144,
+      "ctxNativo": 1048576,
+      "rol": "MoE tipo Nemotron",
+      "uso": "El Nemotron MoE de 30B: no cabe en 16 GB de RAM, así que sirve para medir el nivel SSD→RAM y hasta dónde compensa.",
+      "licencia": "NVIDIA Open Model License",
+      "toolcalls": "auto",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 2048
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "MoE",
+        "30B",
+        "NVIDIA",
+        "SSD"
+      ],
+      "vision": null,
+      "capas": 52,
+      "moe": true
     }
   ]
 }

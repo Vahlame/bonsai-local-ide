@@ -1,0 +1,103 @@
+[
+  {
+    "clave": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "visionArchivo": "qwen36-35b-a3b-mmproj-F16.gguf",
+    "conVision": {
+      "ok": true,
+      "ctx": 32768,
+      "kv": "q8_0",
+      "vram": 6835,
+      "ms": 11548,
+      "pruebas": [
+        {
+          "id": "saludo",
+          "ok": true,
+          "detalle": "BONSAI_OK",
+          "ms": 1055,
+          "ttftMs": 873,
+          "tps": 4.74
+        },
+        {
+          "id": "json",
+          "ok": true,
+          "detalle": "{\"ok\":true,\"n\":7}\n",
+          "ms": 702,
+          "ttftMs": 471,
+          "tps": 14.25
+        },
+        {
+          "id": "codigo",
+          "ok": true,
+          "detalle": "function sumaPares(nums) {\n  return nums.filter(n => n % 2 === 0).reduce((acc, n) => acc + n, 0);\n}",
+          "ms": 1270,
+          "ttftMs": 320,
+          "tps": 34.35
+        },
+        {
+          "id": "herramienta",
+          "ok": true,
+          "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+          "ms": 1561,
+          "ttftMs": 908,
+          "tps": 0
+        },
+        {
+          "id": "vision",
+          "ok": true,
+          "detalle": "La imagen muestra la interfaz de un editor de código o IDE con el nombre \"BONSAI\" visible en la esquina superior izquierda.",
+          "ms": 8032,
+          "ttftMs": 7378,
+          "tps": 3.61
+        }
+      ],
+      "resumen": "5/5 pruebas"
+    },
+    "sinVision": {
+      "ok": true,
+      "ctx": 32768,
+      "kv": "q8_0",
+      "vram": 6835,
+      "ms": 9324,
+      "pruebas": [
+        {
+          "id": "saludo",
+          "ok": true,
+          "detalle": "BONSAI_OK",
+          "ms": 699,
+          "ttftMs": 563,
+          "tps": 7.15
+        },
+        {
+          "id": "json",
+          "ok": true,
+          "detalle": "{\"ok\":true,\"n\":7}\n",
+          "ms": 529,
+          "ttftMs": 300,
+          "tps": 18.94
+        },
+        {
+          "id": "codigo",
+          "ok": true,
+          "detalle": "function sumaPares(nums) {\n  return nums.filter(n => n % 2 === 0).reduce((acc, n) => acc + n, 0);\n}",
+          "ms": 1311,
+          "ttftMs": 317,
+          "tps": 33.26
+        },
+        {
+          "id": "herramienta",
+          "ok": true,
+          "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+          "ms": 1565,
+          "ttftMs": 879,
+          "tps": 0
+        }
+      ],
+      "resumen": "4/4 pruebas"
+    },
+    "diferencia": {
+      "contexto": 0,
+      "vram": 0
+    }
+  }
+]

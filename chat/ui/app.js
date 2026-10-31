@@ -2360,7 +2360,7 @@
     const items = estadoModelos.modelos.filter((m) => !m.oculto).map((m) => ({
       texto: m.nombre,
       nota: m.uso || m.rol || "",
-      tecla: !m.gpuCompleta ? "no disponible: usa CPU" : m.clave === estadoModelos.actual ? "cargado" : (m.existe ? "" : "falta el GGUF"),
+      tecla: !m.gpuCompleta ? "no disponible: sin plan de motor" : m.clave === estadoModelos.actual ? "cargado" : (m.existe ? "" : "falta el GGUF"),
       ico: m.clave === estadoModelos.actual ? "check" : "cpu",
       hacer: !m.gpuCompleta || m.clave === estadoModelos.actual || !m.existe || cargandoModelo ? undefined : () => void cambiarModelo(m.clave, m.nombre),
     }));

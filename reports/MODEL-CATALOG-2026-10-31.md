@@ -1,6 +1,6 @@
 # Catálogo Bonsai · 2026-10-31
 
-Modelos instalados: **26** (14 con visión). Todos arrancados en una RTX 4060 Laptop de 8 GB.
+Modelos instalados: **30** (15 con visión). Todos arrancados en una RTX 4060 Laptop de 8 GB.
 
 | Modelo | Clave | Tamaño | Plan | Visión | Sondas | Calidad* |
 |---|---|---:|---|:--:|---:|---:|
@@ -17,21 +17,34 @@ Modelos instalados: **26** (14 con visión). Todos arrancados en una RTX 4060 La
 | Qwen3-VL 8B Instruct | `qwen3vl-8b` | 4.68 GiB | 26624 tok · q8_0 · visión CPU | sí | 5/5 pruebas | — |
 | Qwen3.5 4B | `qwen35-4b` | 2.55 GiB | 131072 tok · f16 · visión CPU | sí | 5/5 pruebas | 80% |
 | Qwen3.5 9B | `qwen35-9b` | 4.35 GiB | 131072 tok · q8_0 · visión CPU | sí | 5/5 pruebas | 80% |
+| Qwen3.6 35B-A3B | `qwen36-35b-a3b` | 11.45 GiB | 32768 tok · q8_0 · visión CPU · MoE 18/40 GPU | sí | 5/5 pruebas | 80% |
 | SmolVLM2 2.2B | `smolvlm2-22b` | 1.04 GiB | 8192 tok · f16 · visión CPU | sí | 3/5 pruebas | — |
 | Checkpoint_0002500 | `k2-horizon-7b-q4-k-m` | 5.21 GiB | 18432 tok · q8_0 | no | 3/5 pruebas | — |
 | DeepSeek R1 Distill Qwen 7B | `deepseek-r1-qwen7b` | 4.36 GiB | 79872 tok · q8_0 | no | 4/5 pruebas | 60% |
+| GPT-OSS 20B | `gpt-oss-20b` | 11.28 GiB | 32768 tok · q8_0 · MoE 10/24 GPU | no | 4/4 pruebas | 100% |
 | Granite 4.0 H Tiny | `granite40-tiny` | 3.94 GiB | 131072 tok · f16 | no | 4/4 pruebas | 80% |
 | K2-Horizon-7B | `k2-horizon-7b-bartowski-q4-k-m` | 5.38 GiB | 16384 tok · q8_0 | no | 3/5 pruebas | — |
 | LFM3 1.7B | `lfm3-17b` | 1.02 GiB | 131072 tok · f16 | no | 4/4 pruebas | — |
 | Llama 3.2 3B Instruct | `llama32-3b` | 1.88 GiB | 83968 tok · q8_0 | no | 5/5 pruebas | 40% |
+| Nemotron 3 Nano 30B-A3B | `nemotron3-nano-30b` | 16.85 GiB | 32768 tok · q8_0 · MoE 15/52 GPU | no | 4/4 pruebas | 80% |
 | Phi-4 Mini Instruct | `phi4-mini` | 2.32 GiB | 65536 tok · q8_0 | no | 3/4 pruebas | — |
 | Qwen2.5 Coder 7B Instruct | `qwen25-coder-7b` | 4.36 GiB | 32768 tok · f16 | no | 5/5 pruebas | 60% |
+| Qwen3 30B-A3B 2507 | `qwen3-30b-a3b-2507` | 10.98 GiB | 32768 tok · q8_0 · MoE 19/48 GPU | no | 4/4 pruebas | 80% |
 | Qwen3 4B Instruct 2507 | `qwen3-4b-2507` | 2.33 GiB | 57344 tok · q8_0 | no | 5/5 pruebas | 80% |
 | Qwen3.8 4B Distill | `qwen38-4b-distill` | 2.59 GiB | 131072 tok · f16 | no | 4/4 pruebas | 80% |
 | SmolLM3 3B | `smollm3-3b` | 1.78 GiB | 65536 tok · f16 | no | 3/4 pruebas | — |
 | Spark X2.6 4B | `spark-x26-4b` | 3.30 GiB | 45056 tok · q8_0 | no | 4/4 pruebas | — |
 
 \* 5 de las 18 tareas del benchmark (código, SQL, JSON anidado, tool-calling, retrieval), una pasada. No es una comparación estadística.
+
+## MoE: reparto VRAM ↔ RAM
+
+| Modelo | Expertos | Capas en GPU | Capas en RAM | Expertos en RAM | Carga |
+|---|---:|---:|---:|---:|---|
+| Qwen3.6 35B-A3B | 256 | 18/40 (4542 MiB) | 22 | 5498 MiB | none |
+| GPT-OSS 20B | 32 | 10/24 (4040 MiB) | 14 | 5656 MiB | none |
+| Nemotron 3 Nano 30B-A3B | 128 | 15/52 (4802 MiB) | 37 | 10976 MiB | mmap |
+| Qwen3 30B-A3B 2507 | 128 | 19/48 (4121 MiB) | 29 | 6161 MiB | none |
 
 ## Lo que mejor funciona
 
@@ -60,6 +73,7 @@ Cada modelo multimodal se arrancó dos veces: con `--mmproj` y sin él. En los p
 | Qwen3-VL 8B Instruct | sí | 26624/26624 | 7934/7934 MiB | ~11 s |
 | Qwen3.5 4B | sí | 131072/131072 | 7860/7860 MiB | ~9,6 s |
 | Qwen3.5 9B | sí | 131072/131072 | 7784/7784 MiB | ~13 s |
+| Qwen3.6 35B-A3B | sí | 32768/32768 | 7714/7714 MiB | medido |
 | SmolVLM2 2.2B | sí | 8192/8192 | 3748/3748 MiB | ~14 s |
 
 ## Catálogo online

@@ -1,0 +1,154 @@
+[
+  {
+    "modelo": "gpt-oss-20b",
+    "nombre": "GPT-OSS 20B",
+    "pasada": 1,
+    "variante": "baseline",
+    "descripcion": "plan automático",
+    "nCpuMoe": 14,
+    "capas": 24,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 11284,
+    "ctx": 32768,
+    "vramPicoMiB": 6069,
+    "ramPicoMiB": 6927,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 32.3,
+      "ms": 3931,
+      "ttftMs": 489
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 57,
+      "tokPorSegundo": 32.5,
+      "ms": 2281,
+      "promptTokens": 123
+    },
+    "promptLargo": {
+      "tokens": 5280,
+      "tokPorSegundo": 970.6,
+      "ms": 5440
+    },
+    "muestra": " No incluyas comentarios ni texto adicional. No uses `console.log`. No uses `return` en la función. No uses `var`. Usa `let` y `const`.\" We need to produce a f"
+  },
+  {
+    "modelo": "gpt-oss-20b",
+    "nombre": "GPT-OSS 20B",
+    "pasada": 1,
+    "variante": "cpu",
+    "descripcion": "todos los expertos en CPU",
+    "nCpuMoe": "cpu-moe",
+    "capas": 24,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 7166,
+    "ctx": 32768,
+    "vramPicoMiB": 2027,
+    "ramPicoMiB": 10487,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 19.5,
+      "ms": 6529,
+      "ttftMs": 2107
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 53,
+      "tokPorSegundo": 24.1,
+      "ms": 3476,
+      "promptTokens": 123
+    },
+    "promptLargo": {
+      "tokens": 5280,
+      "tokPorSegundo": 635.7,
+      "ms": 8306
+    },
+    "muestra": " No incluyas comentarios ni texto adicional. Si la respuesta no es un código, la marcaré como incorrecta. Si no respondes, no obtendrás nada. Si necesitas más i"
+  },
+  {
+    "modelo": "gpt-oss-20b",
+    "nombre": "GPT-OSS 20B",
+    "pasada": 1,
+    "variante": "mmap",
+    "descripcion": "mmap (page cache)",
+    "nCpuMoe": 14,
+    "capas": 24,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9712,
+    "ctx": 32768,
+    "vramPicoMiB": 6069,
+    "ramPicoMiB": 10459,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 28.5,
+      "ms": 4456,
+      "ttftMs": 1190
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 53,
+      "tokPorSegundo": 31.8,
+      "ms": 2600,
+      "promptTokens": 123
+    },
+    "promptLargo": {
+      "tokens": 5280,
+      "tokPorSegundo": 872.9,
+      "ms": 6049
+    },
+    "muestra": " No incluyas comentarios ni explicaciones. No incluyas nada más que el código. No incluyas la palabra \"function\" en el código. No incluyes la palabra \"function\""
+  },
+  {
+    "modelo": "gpt-oss-20b",
+    "nombre": "GPT-OSS 20B",
+    "pasada": 1,
+    "variante": "none",
+    "descripcion": "sin mmap (carga a RAM)",
+    "nCpuMoe": 14,
+    "capas": 24,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 11213,
+    "ctx": 32768,
+    "vramPicoMiB": 6069,
+    "ramPicoMiB": 6928,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 32.6,
+      "ms": 3901,
+      "ttftMs": 502
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 57,
+      "tokPorSegundo": 32.8,
+      "ms": 2262,
+      "promptTokens": 123
+    },
+    "promptLargo": {
+      "tokens": 5280,
+      "tokPorSegundo": 972.2,
+      "ms": 5431
+    },
+    "muestra": " No incluyas comentarios ni texto adicional. Si la respuesta no es válida, no la envíes. Si la respuesta no es válida, no la envíes. Si la respuesta no es válid"
+  }
+]

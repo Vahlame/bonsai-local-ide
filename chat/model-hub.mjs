@@ -17,6 +17,7 @@
 
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -209,11 +210,13 @@ export async function planParaModelo(clave, opciones = {}) {
     ctxNativo: Number(entrada.ctxNativo) || 32768,
     vision,
     nombre: entrada.nombre || clave,
+    moe: entrada.servidor?.moe || entrada.moe || null,
   }, {
     libreMiB,
     vision: opciones.vision !== false,
     reservaMiB: Number(opciones.reservaMiB) || Number(entrada.servidor?.reservaMiB) || 850,
     pesosMiB: Number(entrada.servidor?.pesosGpuEstandarMiB) || undefined,
+    ramTotalMiB: Math.round(os.totalmem() / MIB),
     // Un modelo ya medido no debe superar su techo real aunque las cuentas den
     // más: Ornith, por ejemplo, arranca a 110.592 y falla a 114.688.
     ctxMaximo: Math.min(
@@ -451,13 +454,23 @@ export async function catalogoHub(opciones = {}) {
     const repo = String(m.repo || "").replace(/\/$/, "");
     const instalado = repo ? porRepo.get(`https://huggingface.co/${repo}`) : null;
     const kv = Number(m.kvF16BytesPorToken) || 131072;
+    // Vista previa de un MoE aún no instalado: se estima el 84 % del GGUF como
+    // expertos. El plan exacto se calcula al descargar, leyendo la tabla real.
+    const capasMoe = Math.max(1, Math.trunc(Number(m.capas) || 48));
+    const moeBytes = m.moe ? Math.round((Number(m.bytes) || 0) * 0.84) : 0;
     const plan = planAuto({
       bytes: Number(m.bytes) || 0,
       kvF16BytesPorToken: kv,
       ctxNativo: Number(m.ctxNativo) || 32768,
       vision: m.vision?.bytes ? { bytes: Number(m.vision.bytes) } : false,
       nombre: m.nombre,
-    }, { libreMiB: libre, reservaMiB: 850, margenMiB: 300 });
+      moe: moeBytes ? {
+        bytes: moeBytes,
+        capas: capasMoe,
+        expertos: 0,
+        porCapa: Array.from({ length: capasMoe }, () => Math.round(moeBytes / capasMoe)),
+      } : null,
+    }, { libreMiB: libre, reservaMiB: 850, margenMiB: 300, ramTotalMiB: Math.round(os.totalmem() / MIB) });
     return {
       ...m,
       instalado: Boolean(instalado),

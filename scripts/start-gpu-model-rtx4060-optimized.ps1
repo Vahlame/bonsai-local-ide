@@ -34,6 +34,7 @@ param (
     [int]$DormirSeg = 0,
     [switch]$Vision,
     [switch]$MmprojCPU,
+    [switch]$Precargar,
     [switch]$DryRun,
     [switch]$ManagedByIDE,
     [string]$EnginePreset = "",
@@ -113,8 +114,20 @@ if (Test-Path -LiteralPath $HubPath) {
     }
 }
 $Item = $Catalogo.catalogo.$Modelo
-if (-not $Item -or $Item.servidor.tipo -ne "gpu-completa") {
-    throw "Modelo sin perfil de GPU completa: $Modelo"
+if (-not $Item -or ($Item.servidor.tipo -ne "gpu-completa" -and $Item.servidor.tipo -ne "moe-hibrido")) {
+    throw "Modelo sin perfil de GPU completa ni MoE híbrido: $Modelo"
+}
+# En MoE manda el plan del modelo, no el preset denso: un preset de 110k deja
+# casi toda la VRAM en KV y muy pocos expertos en la GPU. El plan ya calculó
+# contexto, KV y reparto para ESTE GGUF.
+$EsMoe = $Item.servidor.tipo -eq "moe-hibrido"
+if ($EsMoe -and $Item.plan) {
+    if ($Item.plan.contexto) { $ContextSize = [string]$Item.plan.contexto }
+    if ($Item.plan.kv) { $KVCacheType = [string]$Item.plan.kv }
+    if ($null -ne $Item.plan.mmprojCPU) { $ProjectorCPU = [bool]$Item.plan.mmprojCPU }
+    if ($Item.servidor.batch) { $Batch = [int]$Item.servidor.batch }
+    if ($Item.servidor.ubatch) { $UBatch = [int]$Item.servidor.ubatch }
+    if ($Item.plan.margenMiB) { $SafetyMiB = [int]$Item.plan.margenMiB }
 }
 $ModelPath = Join-Path $RootDir ("models\" + $Item.archivo)
 if (-not (Test-Path -LiteralPath $ModelPath)) { throw "Falta el modelo: $ModelPath" }
@@ -167,6 +180,18 @@ if ($SpeculativeDecoding -and (Test-Path -LiteralPath $DraftModelPath)) {
 # =============================================================================
 $GpuProfile = $Item.servidor
 $WeightsMiB = [math]::Ceiling([int64]$Item.bytes / 1MB)
+$IsMoe = $GpuProfile.tipo -eq "moe-hibrido" -and $null -ne $GpuProfile.moe
+$LoadMode = if ($IsMoe) { [string]$GpuProfile.moe.loadMode } else { "auto" }
+if (-not $LoadMode) { $LoadMode = "mmap" }
+if ($IsMoe) {
+    # Solo los pesos densos (atención, embeddings, router) van a la GPU. Los
+    # expertos se reparten más abajo con la VRAM que sobre tras el KV.
+    $DensosMiB = [int]$GpuProfile.moe.densosMiB
+    if ($DensosMiB -le 0) {
+        $DensosMiB = [math]::Max(1, $WeightsMiB - [int]$GpuProfile.moe.expertosMiB)
+    }
+    $WeightsMiB = $DensosMiB
+}
 if (($EngineOptions -or $EnginePreset -eq 'CUSTOM') -and $Item.servidor.pesosGpuEstandarMiB) {
     $WeightsMiB = [int]$Item.servidor.pesosGpuEstandarMiB
 }
@@ -222,6 +247,11 @@ if (-not $UsandoOverride) {
 }
 
 $TechoContexto = [int]$GpuProfile.contexto
+if ($IsMoe -and $ContextSize -eq "auto" -and $GpuProfile.moe.ctxTope) {
+    # El plan MoE reserva VRAM para expertos; el contexto "auto" no debe comerse
+    # esa VRAM. Con contexto explícito se respeta lo que pida el usuario.
+    $TechoContexto = [math]::Min($TechoContexto, [int]$GpuProfile.moe.ctxTope)
+}
 if ($Vision) {
     $TechoVision = [int]$VisionProfile.contexto
     if ($ContextSize -ne 'auto' -and $VisionProfile.contextoMaximoManual) {
@@ -251,6 +281,63 @@ if ($ContextSize -eq "auto") {
 }
 
 # =============================================================================
+# REPARTO MoE (VRAM <-> RAM)
+# =============================================================================
+$NCpuMoe = 0
+$GpuExpertosMiB = 0
+$CapasMoe = 0
+if ($IsMoe) {
+    $PorCapa = @($GpuProfile.moe.porCapa)
+    $CapasMoe = $PorCapa.Count
+    if ($CapasMoe -gt 0) {
+        # La VRAM que sobra tras densos + KV se llena con las ÚLTIMAS capas de
+        # expertos (--n-cpu-moe N deja las N primeras en RAM). Así el reparto se
+        # adapta al contexto real, no al que se midió al descargar.
+        $LibreExpertos = $FreeMiB - (Get-RequiredMiB $ContextTokens $KVCacheType)
+        if ($LibreExpertos -lt 0) { throw "El plan MoE no cabe: faltan $(-$LibreExpertos) MiB para densos + KV" }
+        $CapasGpu = 0
+        $Acumulado = 0
+        for ($i = $CapasMoe - 1; $i -ge 0; $i--) {
+            $CapaMiB = [math]::Ceiling([double]$PorCapa[$i] / 1MB)
+            if ($Acumulado + $CapaMiB -gt $LibreExpertos) { break }
+            $Acumulado += $CapaMiB
+            $CapasGpu += 1
+        }
+        $GpuExpertosMiB = $Acumulado
+        $NCpuMoe = $CapasMoe - $CapasGpu
+    } else {
+        $NCpuMoe = [int]$GpuProfile.moe.nCpuMoe
+    }
+    # Decisión dinámica de carga: `none` solo si los expertos de CPU + proyector
+    # + 1 GiB de holgura caben en la RAM disponible AHORA. Si el usuario tiene
+    # el navegador/IDE abiertos, se cae a mmap en vez de arriesgar swapping.
+    $ExpertosRamMiB = 0
+    for ($i = 0; $i -lt [math]::Min($NCpuMoe, $CapasMoe); $i++) {
+        $ExpertosRamMiB += [math]::Ceiling([double]$PorCapa[$i] / 1MB)
+    }
+    $VisionRamMiB = if ($Vision -and $ProjectorCPU -and $VisionProfile) { [int]$VisionProfile.reservaMiB } else { 0 }
+    $RamNecesariaMiB = $ExpertosRamMiB + $VisionRamMiB + 1024
+    $FreeRamMiB = 0
+    try {
+        $FreeRamMiB = [int](Get-Counter '\Memory\Available MBytes' -ErrorAction Stop).CounterSamples[0].CookedValue
+    } catch {
+        try { $FreeRamMiB = [int]((Get-CimInstance Win32_OperatingSystem -ErrorAction Stop).FreePhysicalMemory / 1024) } catch { $FreeRamMiB = 0 }
+    }
+    if ($FreeRamMiB -gt 0) {
+        if ($LoadMode -eq "none" -and $FreeRamMiB -lt $RamNecesariaMiB) {
+            $LoadMode = "mmap"
+            Write-Host ("MoE: RAM disponible {0} MiB < {1} MiB necesarios; se usa mmap." -f $FreeRamMiB, $RamNecesariaMiB) -ForegroundColor Yellow
+        } elseif ($LoadMode -eq "mmap" -and $FreeRamMiB -gt $RamNecesariaMiB) {
+            $LoadMode = "none"
+            Write-Host ("MoE: RAM disponible {0} MiB; los expertos caben y se carga sin mmap." -f $FreeRamMiB) -ForegroundColor DarkCyan
+        }
+    }
+    if (-not $Item.servidor.threads) { $Threads = 12 } else { $Threads = [int]$Item.servidor.threads }
+    $TextoMoe = ("MoE: {0}/{1} capas de expertos en GPU ({2} MiB), {3} en RAM ({4} MiB); hilos={5}" -f ($CapasMoe - $NCpuMoe), $CapasMoe, $GpuExpertosMiB, $NCpuMoe, $ExpertosRamMiB, $Threads) + "; carga=" + $LoadMode
+    Write-Host $TextoMoe -ForegroundColor Magenta
+}
+
+# =============================================================================
 # ARGS
 # =============================================================================
 # f16 KV has a llama.cpp idle-crash bug with context checkpoints: disable them
@@ -259,6 +346,18 @@ if ($ContextSize -eq "auto") {
 $StableF16 = $true
 
 $ServerArgs = @("-m", $ModelPath, "--gpu-layers", "99")
+if ($IsMoe) {
+    # Reparto explícito: densos + KV en VRAM, expertos de las N primeras capas
+    # en RAM. Si los expertos de CPU caben, `none` evita page faults y duplica
+    # la velocidad; si no caben, `mmap` deja que Windows pagine desde el SSD.
+    $ServerArgs += "--fit", "off"
+    $ServerArgs += "--load-mode", $LoadMode
+    if ($NCpuMoe -ge $CapasMoe -and $CapasMoe -gt 0) {
+        $ServerArgs += "--cpu-moe"
+    } elseif ($NCpuMoe -gt 0) {
+        $ServerArgs += "--n-cpu-moe", "$NCpuMoe"
+    }
+}
 if (-not $StableF16) {
     $ServerArgs += "--fit", "off"
     $ServerArgs += "--kv-offload"
@@ -275,7 +374,7 @@ $ServerArgs += "--host", $HostIP
 $ServerArgs += "--port", "$Port"
 $ServerArgs += "--jinja"
 $ServerArgs += "--metrics"
-if (-not $StableF16) { $ServerArgs += "--cache-ram", "0" }
+if (-not $StableF16 -or $IsMoe) { $ServerArgs += "--cache-ram", "0" }
 $ServerArgs += "-lv", "4"
 $ServerArgs += "--cors-origins", "http://127.0.0.1:$Port,http://localhost:$Port,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788"
 $ServerArgs += "--temp", "0.6"
@@ -356,7 +455,9 @@ function Write-MarcadorAdministrado([int]$ServidorPid) {
         vision = [bool]$Vision; pensar = $Pensar; dormir = $DormirSeg; hostIP = $HostIP;
         pid = $PID; wrapperPid = $PID; iniciado = $WrapperTicks; enginePreset = $EnginePreset;
         llamaVersion = $LlamaVersion; activeKey = $ActiveKey; speculative = $SpeculativeDecoding;
-        optimized = $UsingOptimized; mmprojCPU = [bool]$ProjectorCPU
+        optimized = $UsingOptimized; mmprojCPU = [bool]$ProjectorCPU;
+        moe = [bool]$IsMoe; nCpuMoe = $NCpuMoe; capasMoe = $CapasMoe;
+        gpuExpertosMiB = $GpuExpertosMiB; loadMode = $LoadMode
     }
     if ($ServidorPid -gt 0) {
         $Info.pidServidor = $ServidorPid
@@ -376,6 +477,21 @@ if (-not $env:BONSAI_LLAMA_LOG_PREFIX) {
     $env:BONSAI_LLAMA_LOG_PREFIX = Join-Path $RootDir "logs\llama-server-$Port"
 }
 
+# Precalentar la page cache evita que la primera generación lea expertos del
+# SSD página a página. Solo tiene sentido si el GGUF cabe en RAM; en Nemotron 3
+# Nano (16,85 GiB) provocaría thrashing, así que se omite.
+if ($Precargar -and $IsMoe -and $LoadMode -eq "mmap") {
+    $TotalRamBytes = (Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).TotalPhysicalMemory
+    $CabeEnRam = (-not $TotalRamBytes) -or ([int64]$Item.bytes -lt ([double]$TotalRamBytes * 0.85))
+    $PreScript = Join-Path $PSScriptRoot "precargar-gguf.mjs"
+    if ($CabeEnRam -and (Test-Path -LiteralPath $PreScript) -and $NCpuMoe -gt 0) {
+        Write-Host "Precalentando la page cache de los expertos en RAM..." -ForegroundColor DarkCyan
+        try { & node $PreScript --file $ModelPath --layers $NCpuMoe | Out-Null } catch { Write-Host "Aviso: no se pudo precargar: $($_.Exception.Message)" -ForegroundColor Yellow }
+    } elseif (-not $CabeEnRam) {
+        Write-Host "Precarga omitida: el GGUF no cabe en RAM." -ForegroundColor Yellow
+    }
+}
+
 $ExecOptions = @{
     FilePath               = $BinPath
     ArgumentList           = $ArgumentLine
@@ -386,6 +502,19 @@ $ExecOptions = @{
 }
 $Exec = Start-Process @ExecOptions
 $null = $Exec.Handle
+
+# En portátiles Windows puede aplicar EcoQoS (throttling) y memoria de baja
+# prioridad a un proceso lanzado en segundo plano. En un MoE eso se nota mucho:
+# los hilos que leen expertos de RAM se frenan. Se sube la prioridad de memoria
+# y se desactiva EcoQoS sin tocar la prioridad del resto del sistema.
+if ($IsMoe) {
+    try {
+        $opt = Join-Path $PSScriptRoot "win-optimize-process.ps1"
+        if (Test-Path -LiteralPath $opt) {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $opt -Pid $Exec.Id | Out-Null
+        }
+    } catch { }
+}
 
 if ($ManagedByIDE) {
     Start-Sleep -Milliseconds 300

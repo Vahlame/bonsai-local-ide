@@ -1,0 +1,40 @@
+[
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "none",
+    "descripcion": "sin mmap (carga a RAM)",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 11266,
+    "ctx": 32768,
+    "vramPicoMiB": 6855,
+    "ramPicoMiB": 6552,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 46.8,
+      "ms": 2712,
+      "ttftMs": 421
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 128,
+      "tokPorSegundo": 46.1,
+      "ms": 3049,
+      "promptTokens": 63
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 819.7,
+      "ms": 7650
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => (num % 2 === 0 ? sum + num : sum), 0); } ``` Escribe una función de JavaSc"
+  }
+]

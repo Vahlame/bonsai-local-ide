@@ -42,6 +42,7 @@ const comando = args[0] || "list";
 const PORT = Math.max(1024, Number(arg("port", "8097")) || 8097);
 const SKIP_LONG = bandera("skip-long");
 const SIN_VISION = bandera("sin-vision");
+const PENSAR = Math.max(0, Number(arg("think", "0")) || 0);
 const TIMEOUT_ARRANQUE = Number(arg("timeout", "240000")) || 240000;
 const SOLO_JSON = bandera("json");
 
@@ -104,10 +105,15 @@ function argumentosServidor(item, plan) {
   const plantilla = path.join(PROJECT, "logs", `chat_template_lab_${PORT}.jinja`);
   const a = ["-m", path.join(PROJECT, "models", e.archivo), "--gpu-layers", "99", "--flash-attn", "on",
     "-c", String(plan.contexto), "-ctk", plan.kv, "-ctv", plan.kv,
-    "-b", String(e.servidor?.batch || 512), "-ub", String(e.servidor?.ubatch || 256), "-t", String(e.servidor?.threads || 4),
+    "-b", String(e.servidor?.batch || 512), "-ub", String(e.servidor?.ubatch || 256), "-t", String(e.servidor?.threads || (plan.moe?.activo ? 8 : 4)),
     "--host", "127.0.0.1", "--port", String(PORT), "--jinja", "--metrics", "-lv", "3",
     "--cors-origins", `http://127.0.0.1:${PORT},http://localhost:${PORT}`,
     "--spec-type", "none", "--no-context-shift", "--ctx-checkpoints", "0"];
+  if (plan.moe?.activo) {
+    a.push("--fit", "off", "--load-mode", plan.moe.loadMode || "mmap", "--cache-ram", "0");
+    if (plan.moe.nCpuMoe >= plan.moe.capas) a.push("--cpu-moe");
+    else if (plan.moe.nCpuMoe > 0) a.push("--n-cpu-moe", String(plan.moe.nCpuMoe));
+  }
   const muestreo = e.muestreo?.codigo || {};
   a.push("--temp", String(muestreo.temperature ?? 0.6));
   a.push("--top-p", String(muestreo.top_p ?? 0.9));
@@ -131,7 +137,8 @@ function argumentosServidor(item, plan) {
     a.push("--spec-type", "draft-simple", "--spec-draft-model", path.join(PROJECT, "models", draft), "--spec-draft-n-max", String(e.servidor?.draftTokens || e.draft?.tokens || 4));
   }
   // Para medir la respuesta directa, sin gastar el presupuesto en thinking.
-  a.push("--reasoning-budget", "0");
+  // En modelos de razonamiento se puede subir con `--think N`.
+  a.push("--reasoning-budget", String(PENSAR));
   return a;
 }
 
@@ -486,7 +493,7 @@ function candidatosInstalados() {
   const vistos = new Set(out.map((m) => m.archivo));
   for (const [clave, e] of Object.entries(MODELO.catalogo || {})) {
     if (!e || typeof e.archivo !== "string" || vistos.has(e.archivo) || e.oculto) continue;
-    if (e.servidor?.tipo !== "gpu-completa") continue;
+    if (e.servidor?.tipo !== "gpu-completa" && e.servidor?.tipo !== "moe-hibrido") continue;
     let bytes = 0;
     try { bytes = fs.statSync(path.join(PROJECT, "models", e.archivo)).size; } catch { bytes = 0; }
     if (!bytes || (Number(e.bytes) > 0 && bytes !== Number(e.bytes))) continue;
@@ -530,7 +537,7 @@ async function principal() {
       for (const m of candidatosInstalados()) {
         if (!m.existe || m.oculto) continue;
         const e = MODELO.catalogo?.[m.clave];
-        if (e && e.servidor?.tipo === "gpu-completa") modelos.push({ clave: m.clave, entrada: e });
+        if (e && (e.servidor?.tipo === "gpu-completa" || e.servidor?.tipo === "moe-hibrido")) modelos.push({ clave: m.clave, entrada: e });
       }
     } else {
       modelos.push(claveDeEntrada());

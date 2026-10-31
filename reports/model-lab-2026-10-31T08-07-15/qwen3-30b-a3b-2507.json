@@ -1,0 +1,339 @@
+{
+  "clave": "qwen3-30b-a3b-2507",
+  "nombre": "Qwen3 30B-A3B 2507",
+  "archivo": "qwen3-30b-a3b-2507-Qwen3-30B-A3B-Instruct-2507-UD-Q2_K_XL.gguf",
+  "fecha": "2026-10-31T08:08:46.662Z",
+  "plan": {
+    "ok": true,
+    "contexto": 32768,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 979,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 1632,
+    "kvFijoMiB": 0,
+    "totalMiB": 7882,
+    "libreMiB": 7956,
+    "disponibleMiB": 1706,
+    "ctxNativo": 262144,
+    "moe": {
+      "activo": true,
+      "expertos": 128,
+      "capas": 48,
+      "capasGpu": 19,
+      "nCpuMoe": 29,
+      "expertosMiB": 10263,
+      "bytes": 10761535488,
+      "densosMiB": 979,
+      "gpuExpertosMiB": 4121,
+      "expertosRamMiB": 6161,
+      "porCapa": [
+        218628096,
+        245366784,
+        245366784,
+        245366784,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        245366784,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        218628096,
+        245366784,
+        245366784,
+        245366784,
+        218628096,
+        245366784,
+        245366784,
+        245366784
+      ],
+      "rangosPorCapa": [
+        {
+          "inicio": 446887328,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 679557536,
+          "bytes": 246423552
+        },
+        {
+          "inicio": 938966432,
+          "bytes": 246423552
+        },
+        {
+          "inicio": 1196016032,
+          "bytes": 246423552
+        },
+        {
+          "inicio": 1453065632,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 1685539232,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 1915850144,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 2148323744,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 2378634656,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 2608945568,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 2839256480,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 3069567392,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 3299878304,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 3530189216,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 3760500128,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 3990811040,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 4221121952,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 4451432864,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 4681743776,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 4914217376,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 5144528288,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 5374839200,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 5605150112,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 5837623712,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 6067934624,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 6298245536,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 6528556448,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 6758867360,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 6991340960,
+          "bytes": 246423552
+        },
+        {
+          "inicio": 7248390560,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 7478701472,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 7711175072,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 7941485984,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 8171796896,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 8402107808,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 8632418720,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 8862729632,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 9093040544,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 9323351456,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 9553662368,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 9786135968,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 10016446880,
+          "bytes": 246423552
+        },
+        {
+          "inicio": 10273496480,
+          "bytes": 246423552
+        },
+        {
+          "inicio": 10530546080,
+          "bytes": 246423552
+        },
+        {
+          "inicio": 10789758368,
+          "bytes": 219684864
+        },
+        {
+          "inicio": 11020069280,
+          "bytes": 246423552
+        },
+        {
+          "inicio": 11280592288,
+          "bytes": 246423552
+        },
+        {
+          "inicio": 11541115296,
+          "bytes": 246423552
+        }
+      ],
+      "loadMode": "none",
+      "ctxTope": 32768,
+      "motivo": "19/48 capas de expertos en VRAM (4121 MiB); 29 en RAM (6161 MiB)"
+    },
+    "alternativas": {
+      "f16": {
+        "contexto": 32768,
+        "totalMiB": 5201
+      },
+      "q8_0": {
+        "contexto": 32768,
+        "totalMiB": 3761
+      },
+      "q4_0": {
+        "contexto": 32768,
+        "totalMiB": 2993
+      }
+    },
+    "motivo": "q8_0 a 32.768 tokens; 19/48 capas de expertos en VRAM (4121 MiB); 29 en RAM (6161 MiB); quedan 74 MiB de margen real",
+    "nombre": "Qwen3 30B-A3B 2507"
+  },
+  "arranqueMs": 8216,
+  "nCtx": 32768,
+  "vramPicoMiB": 6863,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 574,
+      "ttftMs": 433,
+      "tps": 8.73
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 572,
+      "ttftMs": 352,
+      "tps": 15.73
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.reduce((acc, num) => num % 2 === 0 ? acc + num : acc, 0);\n}",
+      "ms": 1266,
+      "ttftMs": 369,
+      "tps": 30.88
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\": 17, \"b\": 25})",
+      "ms": 1209,
+      "ttftMs": 766,
+      "tps": 0
+    }
+  ],
+  "resumen": "4/4 pruebas",
+  "medido": true
+}

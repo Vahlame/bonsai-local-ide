@@ -127,6 +127,7 @@ for (const c of binCands) if (fs.existsSync(c)) { BIN = c; break; }
 
 const MODEL = path.join(PROJECT, "models", ITEM.archivo);
 const MMPROJ = ITEM.vision?.archivo ? path.join(PROJECT, "models", ITEM.vision.archivo) : "";
+const MOE = PLAN_AUTO?.moe?.activo ? PLAN_AUTO.moe : null;
 const TEMPLATE = path.join(PROJECT, "logs", `chat_template_bench_${PORT}.jinja`);
 if (ITEM.chat_template) fs.writeFileSync(TEMPLATE, ITEM.chat_template, "utf8");
 
@@ -142,17 +143,25 @@ function buildArgs(preset) {
   const kv = String(p.kv);
   const stable = true;
   const a = ["-m", MODEL, "--gpu-layers", "99"];
+  if (MOE) {
+    a.push("--fit", "off", "--load-mode", MOE.loadMode || "mmap", "--cache-ram", "0");
+    if (MOE.nCpuMoe >= MOE.capas) a.push("--cpu-moe");
+    else if (MOE.nCpuMoe > 0) a.push("--n-cpu-moe", String(MOE.nCpuMoe));
+  }
   if (!stable) a.push("--fit", "off", "--kv-offload");
   a.push("--flash-attn", "on", "-c", String(ctx), "-ctk", kv, "-ctv", kv);
   if (!stable) a.push("-np", "1");
-  a.push("-b", String(p.batch || 512), "-ub", String(p.ubatch || 256), "-t", "4");
+  a.push("-b", String(p.batch || 512), "-ub", String(p.ubatch || 256), "-t", MOE ? "8" : "4");
   a.push("--host", "127.0.0.1", "--port", String(PORT), "--jinja", "--metrics", "-lv", "2");
   if (!stable) a.push("--cache-ram", "0");
   a.push("--cors-origins", `http://127.0.0.1:${PORT},http://localhost:${PORT}`);
   a.push("--temp", "0.6", "--top-p", "0.95", "--top-k", "20", "--min-p", "0", "--presence-penalty", "0", "--repeat-penalty", "1");
   a.push("--spec-type", "none", "--no-context-shift");
   if (stable) a.push("--ctx-checkpoints", "0");
-  a.push("--chat-template-file", TEMPLATE);
+  if (ITEM.chat_template) {
+    fs.writeFileSync(TEMPLATE, ITEM.chat_template, "utf8");
+    a.push("--chat-template-file", TEMPLATE);
+  }
   if (p.vision && MMPROJ) {
     a.push("--mmproj", MMPROJ);
     if (p.mmprojCPU) a.push("--no-mmproj-offload");

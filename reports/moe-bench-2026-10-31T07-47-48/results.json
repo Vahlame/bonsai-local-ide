@@ -1,0 +1,154 @@
+[
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "baseline",
+    "descripcion": "plan automático",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10258,
+    "ctx": 32768,
+    "vramPicoMiB": 6889,
+    "ramPicoMiB": 6987,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 41,
+      "ms": 3098,
+      "ttftMs": 416
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 48,
+      "tokPorSegundo": 41.8,
+      "ms": 1578,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1008.5,
+      "ms": 6219
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.reduce((acumulador, numero) => { return numero % 2 === 0 ? acumulador + numero : acumulador; "
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "cpu",
+    "descripcion": "todos los expertos en CPU",
+    "nCpuMoe": "cpu-moe",
+    "capas": 48,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 5655,
+    "ctx": 32768,
+    "vramPicoMiB": 2771,
+    "ramPicoMiB": 9519,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 15.3,
+      "ms": 8307,
+      "ttftMs": 2868
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 48,
+      "tokPorSegundo": 31.2,
+      "ms": 8593,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 511.8,
+      "ms": 12255
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.reduce((acumulador, numero) => { if (numero % 2 === 0) { return acumulador + nume"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "mmap",
+    "descripcion": "mmap (page cache)",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 8200,
+    "ctx": 32768,
+    "vramPicoMiB": 6889,
+    "ramPicoMiB": 10019,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 24.6,
+      "ms": 5156,
+      "ttftMs": 1702
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 48,
+      "tokPorSegundo": 38.3,
+      "ms": 3160,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 772,
+      "ms": 8125
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "none",
+    "descripcion": "sin mmap (carga a RAM)",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10211,
+    "ctx": 32768,
+    "vramPicoMiB": 6889,
+    "ramPicoMiB": 6985,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 44.2,
+      "ms": 2872,
+      "ttftMs": 417
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 48,
+      "tokPorSegundo": 44.9,
+      "ms": 1529,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1008.9,
+      "ms": 6217
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  }
+]

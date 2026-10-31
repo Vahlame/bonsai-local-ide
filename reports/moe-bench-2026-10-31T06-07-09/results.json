@@ -1,0 +1,203 @@
+[
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "baseline",
+    "descripcion": "plan automático",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10276,
+    "ctx": 32768,
+    "vramPicoMiB": 6829,
+    "ramPicoMiB": 10429,
+    "generacion": {
+      "tokens": 45,
+      "tokPorSegundo": 10.8,
+      "ms": 4075,
+      "ttftMs": 2280
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 275.2,
+      "ms": 22789
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => num % 2 === 0 ? sum + num : sum, 0); } ```"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "cpu",
+    "descripcion": "todos los expertos en CPU",
+    "nCpuMoe": "cpu-moe",
+    "capas": 40,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 7723,
+    "ctx": 32768,
+    "vramPicoMiB": 2329,
+    "ramPicoMiB": 10475,
+    "generacion": {
+      "tokens": 45,
+      "tokPorSegundo": 9.2,
+      "ms": 4765,
+      "ttftMs": 2860
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 133.7,
+      "ms": 46905
+    },
+    "muestra": " ```javascript function sumaPares(lista) { return lista.reduce((acum, val) => val % 2 === 0 ? acum + val : acum, 0); } ```"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "gpu-mas",
+    "descripcion": "8 capas más de expertos en GPU",
+    "nCpuMoe": 14,
+    "capas": 40,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": false,
+    "error": "llama-server terminó al arrancar:\n0.01.231.263 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)\n0.01.239.050 I srv    load_model: loading model 'C:\\Users\\user\\Documents\\prject_local_AI\\models\\qwen36-35b-a3b-Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf'\n0.02.764.811 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 99, abort\n0.03.390.117 W llama_model_loader: tensor overrides to CPU are used with mmap enabled - consider using --load-mode none for better performance\n0.04.003.519 E ggml_backend_cuda_buffer_type_alloc_buffer: allocating 7847.34 MiB on device 0: cudaMalloc failed: out of memory\n0.04.003.526 E alloc_tensor_range: failed to allocate CUDA0 buffer of size 8228530688\n0.04.094.027 E llama_model_load: error loading model: unable to allocate CUDA0 buffer\n0.04.094.033 E llama_model_load_from_file_impl: failed to load model\n0.04.094.036 E cmn  common_init_: failed to load model 'C:\\Users\\user\\Documents\\prject_local_AI\\models\\qwen36-35b-a3b-Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf'\n0.04.094.045 E srv    load_model: failed to load model, 'C:\\Users\\user\\Documents\\prject_local_AI\\models\\qwen36-35b-a3b-Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf'\n0.04.094.048 I srv   operator (): operator (): cleaning up before exit...\n0.04.096.172 E srv  llama_server: exiting due to model loading error"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "gpu-menos",
+    "descripcion": "8 capas menos de expertos en GPU",
+    "nCpuMoe": 30,
+    "capas": 40,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9233,
+    "ctx": 32768,
+    "vramPicoMiB": 4861,
+    "ramPicoMiB": 10581,
+    "generacion": {
+      "tokens": 45,
+      "tokPorSegundo": 11.3,
+      "ms": 3909,
+      "ttftMs": 2403
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 245.8,
+      "ms": 25511
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => num % 2 === 0 ? sum + num : sum, 0); } ```"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "hilos16",
+    "descripcion": "plan automático, 16 hilos",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 16,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9701,
+    "ctx": 32768,
+    "vramPicoMiB": 6829,
+    "ramPicoMiB": 10545,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 23.8,
+      "ms": 5342,
+      "ttftMs": 1101
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 340.6,
+      "ms": 18414
+    },
+    "muestra": " <think> Here's a thinking process that leads to the suggested JavaScript function: 1. **Understand the Goal:** The user wants a JavaScript function that tak"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "batch1024",
+    "descripcion": "plan automático, batch 1024/512",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 8,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9690,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 10702,
+    "generacion": {
+      "tokens": 45,
+      "tokPorSegundo": 14.6,
+      "ms": 3009,
+      "ttftMs": 1840
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 435.7,
+      "ms": 14394
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => num % 2 === 0 ? sum + num : sum, 0); } ```"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "precarga",
+    "descripcion": "precarga secuencial del GGUF + plan",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 3600,
+    "arranqueMs": 7712,
+    "ctx": 32768,
+    "vramPicoMiB": 6829,
+    "ramPicoMiB": 10673,
+    "generacion": {
+      "tokens": 51,
+      "tokPorSegundo": 22.1,
+      "ms": 2261,
+      "ttftMs": 1171
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 326,
+      "ms": 19237
+    },
+    "muestra": " ```javascript function sumaPares(lista) { return lista.reduce((acc, num) => { return num % 2 === 0 ? acc + num : acc; }, 0); } ```"
+  }
+]

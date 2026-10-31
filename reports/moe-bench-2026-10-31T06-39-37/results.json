@@ -1,0 +1,64 @@
+[
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "sin-mmap",
+    "descripcion": "sin mmap (carga a RAM)",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 11776,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 6546,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 45.2,
+      "ms": 2812,
+      "ttftMs": 438
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 817.6,
+      "ms": 7670
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((acc, num) => { return num % 2 === 0 ? acc + num : acc; }, 0); } ``` Escri"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 2,
+    "variante": "sin-mmap",
+    "descripcion": "sin mmap (carga a RAM)",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10207,
+    "ctx": 32768,
+    "vramPicoMiB": 6853,
+    "ramPicoMiB": 6546,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 45,
+      "ms": 2823,
+      "ttftMs": 436
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 816.3,
+      "ms": 7682
+    },
+    "muestra": " <think> Here's a thinking process that leads to the suggested JavaScript function: 1. **Understand the Goal:** The user wants a JavaScript function that tak"
+  }
+]

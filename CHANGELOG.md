@@ -4,6 +4,31 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [1.9.0] - 2026-10-31
+
+### Añadido
+
+- **Perfil `moe-hibrido`**: lee la tabla de tensores del GGUF, separa expertos de
+  pesos densos y reparte las capas de expertos entre VRAM y RAM
+  (`--n-cpu-moe N`). Contexto 32k y KV q8_0 por defecto.
+- **`--load-mode none` cuando los expertos de CPU caben en RAM** y `mmap` cuando
+  no. Medido en Qwen3.6-35B-A3B: 42,5 vs 16,9 tok/s de generación.
+- **4 MoE nuevos**: Qwen3.6-35B-A3B (visión), Qwen3-30B-A3B-2507, GPT-OSS-20B
+  y Nemotron 3 Nano 30B-A3B.
+- **12 hilos + batch 1024/512** por defecto en MoE y prioridad de memoria sin
+  EcoQoS (`win-optimize-process.ps1`).
+- `scripts/moe-bench.mjs`, `precargar-gguf.mjs`, `win-cache.ps1` y
+  `scripts/chat-template-check.mjs` (31/31 plantillas válidas).
+- **Descarga por rangos en paralelo** (`fast-download.mjs`).
+
+### Corregido
+
+- El script de parada no reconocía `moe-hibrido`: el IDE no podía apagar/cambiar
+  un MoE.
+- El IDE enviaba presets densos al lanzador MoE; ahora manda el plan del modelo.
+- `model-lab --all` y `model-tune --all` omitían los MoE.
+- `bench-model-quality` pasaba `--chat-template-file` aunque no existiera.
+
 ## [1.8.0] - 2026-10-31
 
 ### Añadido

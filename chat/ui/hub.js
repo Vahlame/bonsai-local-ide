@@ -45,7 +45,8 @@
   const planTexto = (plan) => {
     if (!plan) return "plan pendiente";
     if (!plan.ok && plan.ok !== undefined) return "no cabe";
-    return `${Number(plan.contexto || 0).toLocaleString("es-ES")} tok · ${kvTexto(plan.kv)}${plan.vision ? (plan.mmprojCPU ? " · visión CPU" : " · visión GPU") : " · sin visión"}`;
+    const moe = plan.moe?.activo ? ` · MoE ${plan.moe.capasGpu}/${plan.moe.capas} GPU · ${plan.moe.loadMode}` : "";
+    return `${Number(plan.contexto || 0).toLocaleString("es-ES")} tok · ${kvTexto(plan.kv)}${plan.vision ? (plan.mmprojCPU ? " · visión CPU" : " · visión GPU") : " · sin visión"}${moe}`;
   };
 
   let capa = null;
@@ -615,7 +616,10 @@
     try {
       const r = await api(`/api/hub/plan?clave=${encodeURIComponent(clave)}`);
       const p = r.plan;
-      const texto = `${r.entrada.nombre}\n\nPlan: ${p.contexto} tokens · KV ${p.kv}${p.vision ? (p.mmprojCPU ? " · visión CPU" : " · visión GPU") : " · sin visión"}\nVRAM: ${p.totalMiB} MiB de ${p.libreMiB} MiB · pesos ${p.pesosMiB} + KV ${p.kvMiB} + reserva ${p.reservaMiB}\nAlternativas: f16 ${p.alternativas.f16.contexto} · q8_0 ${p.alternativas.q8_0.contexto} · q4_0 ${p.alternativas.q4_0.contexto}\n\n${p.motivo}`;
+      const moe = p.moe?.activo
+        ? `\nMoE: ${p.moe.capasGpu}/${p.moe.capas} capas en GPU (${p.moe.gpuExpertosMiB} MiB), ${p.moe.nCpuMoe} en RAM (${p.moe.expertosRamMiB} MiB), carga ${p.moe.loadMode}`
+        : "";
+      const texto = `${r.entrada.nombre}\n\nPlan: ${p.contexto} tokens · KV ${p.kv}${p.vision ? (p.mmprojCPU ? " · visión CPU" : " · visión GPU") : " · sin visión"}${moe}\nVRAM: ${p.totalMiB} MiB de ${p.libreMiB} MiB · pesos ${p.pesosMiB} + KV ${p.kvMiB} + reserva ${p.reservaMiB}\nAlternativas: f16 ${p.alternativas.f16.contexto} · q8_0 ${p.alternativas.q8_0.contexto} · q4_0 ${p.alternativas.q4_0.contexto}\n\n${p.motivo}`;
       await confirmar("Plan de motor", texto, "Cerrar");
     } catch (err) { avisar(`No se pudo calcular el plan: ${err.message}`, "error"); }
   }

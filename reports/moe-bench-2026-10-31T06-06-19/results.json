@@ -1,0 +1,33 @@
+[
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "baseline",
+    "descripcion": "plan automático",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 11263,
+    "ctx": 32768,
+    "vramPicoMiB": 6829,
+    "ramPicoMiB": 8385,
+    "generacion": {
+      "tokens": 51,
+      "tokPorSegundo": 13,
+      "ms": 3845,
+      "ttftMs": 2301
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 273.8,
+      "ms": 22906
+    },
+    "muestra": " ```javascript function sumaPares(lista) { return lista.reduce((acc, num) => { return num % 2 === 0 ? acc + num : acc; }, 0); } ```"
+  }
+]

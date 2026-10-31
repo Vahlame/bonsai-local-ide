@@ -24,6 +24,7 @@ for (const [k, e] of Object.entries(reg.modelos || {})) {
     pruebas: e.pruebas?.resumen || "—",
     calidad: e.pruebas?.calidad?.porcentaje ?? null,
     rol: e.rol || "",
+    moe: e.plan?.moe || e.servidor?.moe || null,
   });
 }
 rows.push({
@@ -41,10 +42,18 @@ const md = [
   "",
   "| Modelo | Clave | Tamaño | Plan | Visión | Sondas | Calidad* |",
   "|---|---|---:|---|:--:|---:|---:|",
-  ...rows.map((r) => `| ${r.n} | \`${r.k}\` | ${gib(r.bytes)} GiB | ${r.plan.contexto ? `${r.plan.contexto} tok · ${r.plan.kv}${r.plan.mmprojCPU ? " · visión CPU" : ""}` : "—"} | ${r.vision ? "sí" : "no"} | ${r.pruebas} | ${r.calidad === null ? "—" : `${r.calidad}%`} |`),
+  ...rows.map((r) => `| ${r.n} | \`${r.k}\` | ${gib(r.bytes)} GiB | ${r.plan.contexto ? `${r.plan.contexto} tok · ${r.plan.kv}${r.plan.mmprojCPU ? " · visión CPU" : ""}${r.moe?.activo ? ` · MoE ${r.moe.capasGpu}/${r.moe.capas} GPU` : ""}` : "—"} | ${r.vision ? "sí" : "no"} | ${r.pruebas} | ${r.calidad === null ? "—" : `${r.calidad}%`} |`),
   "",
   "\\* 5 de las 18 tareas del benchmark (código, SQL, JSON anidado, tool-calling, retrieval), una pasada. No es una comparación estadística.",
   "",
+  ...(rows.some((r) => r.moe?.activo) ? [
+    "## MoE: reparto VRAM ↔ RAM",
+    "",
+    "| Modelo | Expertos | Capas en GPU | Capas en RAM | Expertos en RAM | Carga |",
+    "|---|---:|---:|---:|---:|---|",
+    ...rows.filter((r) => r.moe?.activo).map((r) => `| ${r.n} | ${r.moe.expertos} | ${r.moe.capasGpu}/${r.moe.capas} (${r.moe.gpuExpertosMiB} MiB) | ${r.moe.nCpuMoe} | ${r.moe.expertosRamMiB} MiB | ${r.moe.loadMode || "mmap"} |`),
+    "",
+  ] : []),
   "## Lo que mejor funciona",
   "",
   "- **Agente/código:** Ornith 9B (110k, visión CPU), Qwen2.5 Coder 7B + draft Qwen2.5 0.5B (32k, 1,5× generación), Qwen3 4B (57k, 4/5).",

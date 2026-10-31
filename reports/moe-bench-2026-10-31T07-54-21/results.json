@@ -1,0 +1,154 @@
+[
+  {
+    "modelo": "nemotron3-nano-30b",
+    "nombre": "Nemotron 3 Nano 30B-A3B",
+    "pasada": 1,
+    "variante": "baseline",
+    "descripcion": "plan automático",
+    "nCpuMoe": 37,
+    "capas": 52,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9215,
+    "ctx": 32768,
+    "vramPicoMiB": 6961,
+    "ramPicoMiB": 10759,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 29.9,
+      "ms": 4244,
+      "ttftMs": 5676
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 128,
+      "tokPorSegundo": 25.7,
+      "ms": 8432,
+      "promptTokens": 67
+    },
+    "promptLargo": {
+      "tokens": 6273,
+      "tokPorSegundo": 401.8,
+      "ms": 15612
+    },
+    "muestra": " Responde solo con el código. Responde solo con el código. Responde solo con the code. Responde solo con the code. Responde solo with the code. Responde solo co"
+  },
+  {
+    "modelo": "nemotron3-nano-30b",
+    "nombre": "Nemotron 3 Nano 30B-A3B",
+    "pasada": 1,
+    "variante": "cpu",
+    "descripcion": "todos los expertos en CPU",
+    "nCpuMoe": "cpu-moe",
+    "capas": 52,
+    "threads": 8,
+    "batch": 512,
+    "ubatch": 256,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 6672,
+    "ctx": 32768,
+    "vramPicoMiB": 2167,
+    "ramPicoMiB": 11786,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 18.3,
+      "ms": 6956,
+      "ttftMs": 5915
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 128,
+      "tokPorSegundo": 8.2,
+      "ms": 30319,
+      "promptTokens": 67
+    },
+    "promptLargo": {
+      "tokens": 6273,
+      "tokPorSegundo": 41.9,
+      "ms": 149636
+    },
+    "muestra": " Responde solo con el código. Responde solo con el código. Responde solo con the code. Responde solo con the code. Responde solo with the code. Responde solo co"
+  },
+  {
+    "modelo": "nemotron3-nano-30b",
+    "nombre": "Nemotron 3 Nano 30B-A3B",
+    "pasada": 1,
+    "variante": "mmap",
+    "descripcion": "mmap (page cache)",
+    "nCpuMoe": 37,
+    "capas": 52,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "mmap",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9708,
+    "ctx": 32768,
+    "vramPicoMiB": 6961,
+    "ramPicoMiB": 11618,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 29.3,
+      "ms": 4336,
+      "ttftMs": 4961
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 84,
+      "tokPorSegundo": 24.9,
+      "ms": 6743,
+      "promptTokens": 67
+    },
+    "promptLargo": {
+      "tokens": 6273,
+      "tokPorSegundo": 411.4,
+      "ms": 15249
+    },
+    "muestra": " Responde solo con el código. Responde solo con el código. Responde solo con the code. Responde solo con the code. Responde solo with the code. Responde solo wi"
+  },
+  {
+    "modelo": "nemotron3-nano-30b",
+    "nombre": "Nemotron 3 Nano 30B-A3B",
+    "pasada": 1,
+    "variante": "none",
+    "descripcion": "sin mmap (carga a RAM)",
+    "nCpuMoe": 37,
+    "capas": 52,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 18792,
+    "ctx": 32768,
+    "vramPicoMiB": 6961,
+    "ramPicoMiB": 11458,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 40,
+      "ms": 3171,
+      "ttftMs": 914
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 128,
+      "tokPorSegundo": 39.7,
+      "ms": 4053,
+      "promptTokens": 67
+    },
+    "promptLargo": {
+      "tokens": 6273,
+      "tokPorSegundo": 523.7,
+      "ms": 11978
+    },
+    "muestra": " Responde solo con el código. Responde solo con el código. Responde solo con the code. Responde solo con the code. Responde solo with the code. Responde solo wi"
+  }
+]
