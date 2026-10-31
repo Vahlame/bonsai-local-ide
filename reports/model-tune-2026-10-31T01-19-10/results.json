@@ -1,0 +1,59 @@
+[
+  {
+    "clave": "llama32-3b",
+    "plan": {
+      "ok": true,
+      "contexto": 83968,
+      "kv": "q8_0",
+      "vision": false,
+      "mmprojCPU": false,
+      "visionEnGpu": false,
+      "pesosMiB": 1926,
+      "reservaMiB": 850,
+      "margenMiB": 300,
+      "visionMiB": 0,
+      "kvMiB": 4879,
+      "totalMiB": 7955,
+      "libreMiB": 7956,
+      "disponibleMiB": 4880,
+      "ctxNativo": 131072,
+      "alternativas": {
+        "f16": {
+          "contexto": 43008,
+          "totalMiB": 7780
+        },
+        "q8_0": {
+          "contexto": 83968,
+          "totalMiB": 7955
+        },
+        "q4_0": {
+          "contexto": 131072,
+          "totalMiB": 7108
+        }
+      },
+      "motivo": "q8_0 a 83.968 tokens; quedan 1 MiB de margen real",
+      "nombre": "Llama 3.2 3B Instruct"
+    },
+    "elegido": {
+      "ubatch": 256,
+      "threads": 4,
+      "batch": 512,
+      "tg": 103.825036,
+      "pp": 4930.047049
+    },
+    "variantes": [
+      {
+        "etiqueta": "ub=256 t=4",
+        "ok": true,
+        "pp": 4930.047049,
+        "tg": 103.825036
+      },
+      {
+        "etiqueta": "ub=512 t=4",
+        "ok": true,
+        "pp": 4773.386814,
+        "tg": 104.007334
+      }
+    ]
+  }
+]

@@ -35,6 +35,19 @@ param (
 $RootDir = Split-Path -Parent $PSScriptRoot
 $BinPath = Join-Path $RootDir "bin\llama-server.exe"
 $M = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+# Model Hub: modelos descargados en models/hub-catalog.json (ver chat/model-hub.mjs).
+$HubPath = Join-Path $RootDir "models\hub-catalog.json"
+if (Test-Path -LiteralPath $HubPath) {
+    try {
+        $Hub = Get-Content -LiteralPath $HubPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        foreach ($prop in $Hub.modelos.PSObject.Properties) {
+            if ($prop.Name -like "_*") { continue }
+            if (-not $M.catalogo.PSObject.Properties[$prop.Name]) {
+                $M.catalogo | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value
+            }
+        }
+    } catch { }
+}
 
 # Registro opcional: sin esto, cuando el servidor lo lanza otra aplicacion (el cambio
 # de modelo de la interfaz) el motivo de un fallo no queda en ningun sitio visible.

@@ -39,6 +39,13 @@ export function arquitecturaDe(clave = "") {
 export function kvBytesPorToken(tipo, clave = "") {
   const bytes = MODELO.kv.bytesPorElemento?.[tipo];
   if (!bytes) throw new Error(`tipo de KV no admitido: ${tipo}`);
+  const perfil = clave ? MODELO.catalogo?.[clave]?.servidor : null;
+  // Los modelos del Hub traen la suma REAL por capa (K+V) leída del GGUF. Es más
+  // exacta que layers × heads × dim, sobre todo en modelos híbridos o con arrays
+  // de cabezas KV por capa. Se escala desde f16 con la proporción de bytes.
+  if (perfil && Number.isFinite(Number(perfil.kvF16BytesPorToken)) && Number(perfil.kvF16BytesPorToken) > 0) {
+    return Math.round(Number(perfil.kvF16BytesPorToken) * (bytes / 2));
+  }
   const m = arquitecturaDe(clave);
   return m.capasAtencionCompleta * m.cabezasKV * m.dimCabeza * 2 * bytes;
 }
@@ -50,7 +57,9 @@ export function kvBytesPorToken(tipo, clave = "") {
  * @returns {number} MiB, redondeando hacia arriba
  */
 export function kvMiB(ctx, tipo, clave = "") {
-  return Math.ceil((ctx * kvBytesPorToken(tipo, clave)) / MIB);
+  const ratio = MODELO.kv.bytesPorElemento?.[tipo] / 2;
+  const fijo = clave ? Number(MODELO.catalogo?.[clave]?.servidor?.kvFijoF16Bytes) || 0 : 0;
+  return Math.ceil((ctx * kvBytesPorToken(tipo, clave) + fijo * ratio) / MIB);
 }
 
 /**

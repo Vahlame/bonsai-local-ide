@@ -1,0 +1,119 @@
+{
+  "stamp": "20261031022407",
+  "model": "deepseek-r1-qwen7b",
+  "modelName": "DeepSeek R1 Distill Qwen 7B",
+  "think": 1024,
+  "maxTokens": 1200,
+  "tasks": [
+    {
+      "id": "data_sql_result",
+      "category": "data"
+    },
+    {
+      "id": "retrieval_needle",
+      "category": "retrieval"
+    },
+    {
+      "id": "coding_hard_calc",
+      "category": "coding"
+    },
+    {
+      "id": "instruction_nested",
+      "category": "instruction"
+    },
+    {
+      "id": "tool_call_convert",
+      "category": "tools"
+    }
+  ],
+  "presets": [
+    {
+      "preset": "AUTO",
+      "started": true,
+      "nCtx": 79872,
+      "kv": "q8_0",
+      "ctx": 79872,
+      "passed": 3,
+      "total": 5,
+      "score": 60,
+      "byCat": {
+        "data": 1,
+        "retrieval": 1,
+        "coding": 0,
+        "instruction": 1,
+        "tools": 0
+      },
+      "avgTps": 48.904861936881765,
+      "seconds": 62
+    }
+  ],
+  "raw": [
+    {
+      "preset": "AUTO",
+      "started": true,
+      "nCtx": 79872,
+      "kv": "q8_0",
+      "ctx": 79872,
+      "tasks": [
+        {
+          "id": "data_sql_result",
+          "category": "data",
+          "ok": true,
+          "detail": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]",
+          "ms": 4111,
+          "tps": 50.20918813004331,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "\n\n```json\n[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]\n```"
+        },
+        {
+          "id": "retrieval_needle",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "\n\nQX-7419",
+          "ms": 11405,
+          "tps": 45.096285580412584,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "\n\nQX-7419"
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "Unexpected end of input",
+          "ms": 0,
+          "tps": 0,
+          "rep": 1
+        },
+        {
+          "id": "instruction_nested",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"pedido\":778,\"cliente\":\"Ana\",\"items\":[{\"producto\":\"Teclado\",\"cantidad\":2,\"precio\":25},{\"producto\":\"Raton\",\"cantidad\":1,",
+          "ms": 11994,
+          "tps": 50.01654651245597,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "\n\n```json\n{\n  \"pedido\": 778,\n  \"cliente\": \"Ana\",\n  \"items\": [\n    {\n      \"producto\": \"Teclado\",\n      \"cantidad\": 2,\n      \"precio\": 25\n    },\n    {\n      \"pro"
+        },
+        {
+          "id": "tool_call_convert",
+          "category": "tools",
+          "ok": false,
+          "detail": "sin tool_call",
+          "ms": 4873,
+          "tps": 50.29742752461521,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "\n\nPara convertir 250 USD a EUR, utilizamos la tasa de cambio actual. Supongamos que la tasa es 1 EUR = 1.10 USD.\n\n\\[\n\\text{Cantidad en EUR} = \\frac{250 \\text{ U"
+        }
+      ],
+      "ms": 62170
+    }
+  ]
+}

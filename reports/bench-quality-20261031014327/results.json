@@ -1,0 +1,122 @@
+{
+  "stamp": "20261031014327",
+  "model": "llama32-3b",
+  "modelName": "Llama 3.2 3B Instruct",
+  "think": 0,
+  "maxTokens": 1200,
+  "tasks": [
+    {
+      "id": "data_sql_result",
+      "category": "data"
+    },
+    {
+      "id": "retrieval_needle",
+      "category": "retrieval"
+    },
+    {
+      "id": "coding_hard_calc",
+      "category": "coding"
+    },
+    {
+      "id": "instruction_nested",
+      "category": "instruction"
+    },
+    {
+      "id": "tool_call_convert",
+      "category": "tools"
+    }
+  ],
+  "presets": [
+    {
+      "preset": "AUTO",
+      "started": true,
+      "nCtx": 83968,
+      "kv": "q8_0",
+      "ctx": 83968,
+      "passed": 2,
+      "total": 5,
+      "score": 40,
+      "byCat": {
+        "data": 0,
+        "retrieval": 1,
+        "coding": 0,
+        "instruction": 0,
+        "tools": 1
+      },
+      "avgTps": 95.66323337386414,
+      "seconds": 11
+    }
+  ],
+  "raw": [
+    {
+      "preset": "AUTO",
+      "started": true,
+      "nCtx": 83968,
+      "kv": "q8_0",
+      "ctx": 83968,
+      "tasks": [
+        {
+          "id": "data_sql_result",
+          "category": "data",
+          "ok": false,
+          "detail": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275},{\"ciudad\":",
+          "ms": 567,
+          "tps": 98.86182692449272,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "[\n  {\"ciudad\": \"Valencia\", \"total\": 300},\n  {\"ciudad\": \"Barcelona\", \"total\": 275},\n  {\"ciudad\": \"Madrid\", \"total\": 150}\n]"
+        },
+        {
+          "id": "retrieval_needle",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419",
+          "ms": 1279,
+          "tps": 79.025145801394,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "QX-7419"
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "fallo 2+3*4",
+          "ms": 2518,
+          "tps": 100.61775106749147,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "```javascript\nfunction evaluate(expr) {\n    let output = [];\n    let operator = '+';\n    let i = 0;\n    while (i < expr.length) {\n        if (expr[i] === '(') {"
+        },
+        {
+          "id": "instruction_nested",
+          "category": "instruction",
+          "ok": false,
+          "detail": "{\"pedido\":778,\"cliente\":\"Ana\",\"items\":[{\"producto\":\"Teclado\",\"cantidad\":2,\"precio\":25},{\"producto\":\"Raton\",\"cantidad\":1,",
+          "ms": 626,
+          "tps": 100.61099865795158,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "{\"pedido\": 778, \"cliente\": \"Ana\", \"items\": [{\"producto\": \"Teclado\", \"cantidad\": 2, \"precio\": 25}, {\"producto\": \"Raton\", \"cantidad\": 1, \"precio\": 10}], \"total\": "
+        },
+        {
+          "id": "tool_call_convert",
+          "category": "tools",
+          "ok": true,
+          "detail": "nativo: {\"monto\":\"250\",\"de\":\"USD\",\"a\":\"EUR\"}",
+          "ms": 369,
+          "tps": 99.200444417991,
+          "empty": true,
+          "rep": 1,
+          "finish": "tool_calls",
+          "preview": ""
+        }
+      ],
+      "ms": 10930
+    }
+  ]
+}

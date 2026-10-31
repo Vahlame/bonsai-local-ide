@@ -1,0 +1,159 @@
+{
+  "_nota": "Catálogo curado del Model Hub. Los tamaños y revisiones se comprobaron contra la API de Hugging Face el 2026-10-30. El SHA-256 se resuelve al descargar (HF lo publica en x-linked-etag); si un modelo cambia, la revisión fija evita sorpresas. Los modelos se guardan en models/ y se registran en models/hub-catalog.json.",
+  "version": 1,
+  "modelos": [
+    {
+      "clave": "qwen3-4b-2507",
+      "nombre": "Qwen3 4B Instruct 2507",
+      "repo": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+      "archivo": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+      "bytes": 2497281120,
+      "revision": "a06e946bb6b655725eafa393f4a9745d460374c9",
+      "kvF16BytesPorToken": 147456,
+      "ctxNativo": 262144,
+      "rol": "chat + código",
+      "uso": "Modelo general pequeño y rápido. Buen equilibrio para chat, explicaciones y código; admite razonamiento y tool calls nativas.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": { "compatible": true, "presupuesto": 2048 },
+      "agente": { "saltos": 32, "avisos": 3 },
+      "muestreo": {
+        "codigo": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 },
+        "razonar": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 }
+      },
+      "etiquetas": ["recomendado", "rápido", "razona"],
+      "vision": null
+    },
+    {
+      "clave": "qwen25-coder-7b",
+      "nombre": "Qwen2.5 Coder 7B Instruct",
+      "repo": "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF",
+      "archivo": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+      "bytes": 4683074336,
+      "revision": "1f629da0c8bed16b9e50cee91c70693650e66c35",
+      "kvF16BytesPorToken": 57344,
+      "ctxNativo": 32768,
+      "rol": "código",
+      "uso": "Especialista en código con ventana nativa de 32k. Es el relevo natural de Ornith para tareas de programación cuando se busca otra familia.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "function-call xml-json tools-json",
+      "pensar": { "compatible": false },
+      "agente": { "saltos": 32, "avisos": 3 },
+      "muestreo": {
+        "codigo": { "temperature": 0.2, "top_p": 0.9, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1.05 },
+        "razonar": { "temperature": 0.2, "top_p": 0.9, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1.05 }
+      },
+      "etiquetas": ["código", "7B"],
+      "draft": { "archivo": "qwen2.5-0.5b-instruct-q4_k_m.gguf", "bytes": 491400032, "tokens": 4, "ctxNativo": 32768 },
+      "vision": null
+    },
+    {
+      "clave": "gemma3-4b",
+      "nombre": "Gemma 3 4B IT",
+      "repo": "unsloth/gemma-3-4b-it-GGUF",
+      "archivo": "gemma-3-4b-it-Q4_K_M.gguf",
+      "bytes": 2489894016,
+      "revision": "5a3566e716d80f709ed7b79817eaf7733d2a1fce",
+      "kvF16BytesPorToken": 139264,
+      "ctxNativo": 131072,
+      "rol": "chat + visión",
+      "uso": "Modelo multimodal de Google con cuantización dinámica de Unsloth. Lee imágenes y texto; útil para capturas del IDE y OCR ligero.",
+      "licencia": "Gemma Terms of Use",
+      "toolcalls": "texto",
+      "pensar": { "compatible": false },
+      "agente": { "saltos": 24, "avisos": 2 },
+      "muestreo": {
+        "codigo": { "temperature": 1.0, "top_p": 0.95, "top_k": 64, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 },
+        "razonar": { "temperature": 1.0, "top_p": 0.95, "top_k": 64, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 }
+      },
+      "etiquetas": ["visión", "multimodal", "Google"],
+      "vision": {
+        "archivo": "mmproj-BF16.gguf",
+        "bytes": 851251328
+      }
+    },
+    {
+      "clave": "llama32-3b",
+      "nombre": "Llama 3.2 3B Instruct",
+      "repo": "lmstudio-community/Llama-3.2-3B-Instruct-GGUF",
+      "archivo": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+      "bytes": 2019377440,
+      "revision": "c91307b5cf18c8106b1f8a6218c26ae4dbfee472",
+      "kvF16BytesPorToken": 114688,
+      "ctxNativo": 131072,
+      "rol": "chat rápido",
+      "uso": "Modelo muy ligero para respuestas rápidas, clasificación y tareas de agente sencillas. Deja mucha VRAM libre para contexto.",
+      "licencia": "Llama 3.2 Community License",
+      "toolcalls": "nativo",
+      "pensar": { "compatible": false },
+      "agente": { "saltos": 24, "avisos": 2 },
+      "muestreo": {
+        "codigo": { "temperature": 0.6, "top_p": 0.9, "top_k": 40, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 },
+        "razonar": { "temperature": 0.6, "top_p": 0.9, "top_k": 40, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 }
+      },
+      "etiquetas": ["rápido", "ligero"],
+      "vision": null
+    },
+    {
+      "clave": "deepseek-r1-qwen7b",
+      "nombre": "DeepSeek R1 Distill Qwen 7B",
+      "repo": "unsloth/DeepSeek-R1-Distill-Qwen-7B-GGUF",
+      "archivo": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf",
+      "bytes": 4683073248,
+      "revision": "097680e4eed7a83b3df6b0bb5e5134099cadf1b0",
+      "kvF16BytesPorToken": 57344,
+      "ctxNativo": 131072,
+      "rol": "razonamiento",
+      "uso": "Destilado de razonamiento sobre Qwen 7B. Piensa antes de contestar; útil para matemáticas y depuración, más lento en chat casual.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "texto",
+      "pensar": { "compatible": true, "presupuesto": 4096 },
+      "agente": { "saltos": 32, "avisos": 3 },
+      "muestreo": {
+        "codigo": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 },
+        "razonar": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 }
+      },
+      "etiquetas": ["razonamiento", "7B"],
+      "vision": null
+    },
+    {
+      "clave": "qwen3-06b-draft",
+      "nombre": "Qwen3 0.6B (borrador)",
+      "repo": "Qwen/Qwen3-0.6B-GGUF",
+      "archivo": "Qwen3-0.6B-Q8_0.gguf",
+      "bytes": 639446688,
+      "revision": "23749fefcc72300e3a2ad315e1317431b06b590a",
+      "kvF16BytesPorToken": 114688,
+      "ctxNativo": 32768,
+      "rol": "borrador",
+      "uso": "Modelo pequeño para decodificación especulativa con la familia Qwen3. No está pensado para chatear directamente.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": { "compatible": false },
+      "oculto": true,
+      "etiquetas": ["borrador", "spec-decode"],
+      "vision": null
+    },
+    {
+      "clave": "qwen25-05b-draft",
+      "nombre": "Qwen2.5 0.5B (borrador)",
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+      "archivo": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+      "bytes": 491400032,
+      "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+      "kvF16BytesPorToken": 12288,
+      "ctxNativo": 32768,
+      "rol": "borrador",
+      "uso": "Borrador para decodificación especulativa con Qwen2.5 Coder 7B (mismo tokenizer). No usar como chat principal.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": { "compatible": false },
+      "oculto": true,
+      "etiquetas": ["borrador", "spec-decode"],
+      "vision": null
+    }
+  ]
+}
+
+
+

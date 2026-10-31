@@ -87,6 +87,45 @@ function llamadasXml(texto) {
 /** Dialectos de texto conocidos. La clave es lo que se declara en modelo.json. */
 const PARSERS = {
   "xml-funcion": llamadasXml,
+  /**
+   * Qwen2.5 Coder emite:
+   *   <function-call>
+   *   {"name": "sumar", "arguments": {"a": 17, "b": 25}}
+   *   </function-call>
+   * Es JSON, no XML de parámetros; se acepta también dentro de <tool_call>.
+   */
+  "function-call": (texto) => {
+    /** @type {Array<{name: string, arguments: Record<string, unknown>}>} */
+    const out = [];
+    for (const bloque of String(texto || "").matchAll(/<function-call>([\s\S]*?)<\/function-call>/gi)) {
+      const json = llamadaJson((bloque[1] || "").trim());
+      if (json) out.push(json);
+    }
+    return out;
+  },
+  /**
+   * Qwen2.5 Coder, cuando la plantilla no declara tools, envuelve el JSON en
+   * `<xml>…</xml>` en vez de `<function-call>`. Misma estructura {name, arguments}.
+   */
+  "xml-json": (texto) => {
+    /** @type {Array<{name: string, arguments: Record<string, unknown>}>} */
+    const out = [];
+    for (const bloque of String(texto || "").matchAll(/<xml>([\s\S]*?)<\/xml>/gi)) {
+      const json = llamadaJson((bloque[1] || "").trim());
+      if (json) out.push(json);
+    }
+    return out;
+  },
+  /** Qwen2.5 Coder también usa `<tools>{name,arguments}</tools>` según el prompt. */
+  "tools-json": (texto) => {
+    /** @type {Array<{name: string, arguments: Record<string, unknown>}>} */
+    const out = [];
+    for (const bloque of String(texto || "").matchAll(/<tools>([\s\S]*?)<\/tools>/gi)) {
+      const json = llamadaJson((bloque[1] || "").trim());
+      if (json) out.push(json);
+    }
+    return out;
+  },
 };
 
 export const DIALECTOS = Object.keys(PARSERS);
@@ -163,6 +202,15 @@ export function selfTest() {
 
   const dosLlamadas = llamadasCrudas(`${crudoReal}\n${crudoReal}`, "xml-funcion");
   check("no repite la misma llamada dos veces", dosLlamadas.length === 1);
+
+  const qwenCoder = '<function-call>\n{"name": "sumar", "arguments": {"a": 17, "b": 25}}\n</function-call>';
+  const fc = llamadasCrudas(qwenCoder, "function-call");
+  check("lee el formato <function-call> de Qwen2.5 Coder", fc.length === 1 && fc[0].name === "sumar" && fc[0].arguments.a === 17 && fc[0].arguments.b === 25);
+  check("function-call no confunde texto normal", llamadasCrudas("hola", "function-call").length === 0);
+  const xmlJson = llamadasCrudas('<xml>\n{"name": "convertir_moneda", "arguments": {"monto": 250, "de": "USD", "a": "EUR"}}\n</xml>', "xml-json");
+  check("lee el JSON envuelto en <xml> de Qwen2.5 Coder", xmlJson.length === 1 && xmlJson[0].name === "convertir_moneda" && xmlJson[0].arguments.monto === 250);
+  const toolsJson = llamadasCrudas('<tools>\n{"name": "convertir_moneda", "arguments": {"monto": 250}}\n</tools>', "tools-json");
+  check("lee el JSON envuelto en <tools> de Qwen2.5 Coder", toolsJson.length === 1 && toolsJson[0].name === "convertir_moneda");
 
   check("sin dialecto no toca el texto", llamadasCrudas(crudoReal, "").length === 0);
   check("un dialecto desconocido no rompe", llamadasCrudas(crudoReal, "inventado").length === 0);

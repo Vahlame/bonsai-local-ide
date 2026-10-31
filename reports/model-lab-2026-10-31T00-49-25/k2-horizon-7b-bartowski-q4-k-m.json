@@ -1,0 +1,78 @@
+{
+  "clave": "k2-horizon-7b-bartowski-q4-k-m",
+  "nombre": "K2-Horizon-7B",
+  "archivo": "K2-Horizon-7B-bartowski-Q4_K_M.gguf",
+  "fecha": "2026-10-31T00:50:34.187Z",
+  "plan": {
+    "ok": true,
+    "contexto": 16384,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 5509,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "kvMiB": 1224,
+    "totalMiB": 7883,
+    "libreMiB": 7956,
+    "disponibleMiB": 1297,
+    "ctxNativo": 524288,
+    "alternativas": {
+      "f16": {
+        "contexto": 8192,
+        "totalMiB": 7811
+      },
+      "q8_0": {
+        "contexto": 16384,
+        "totalMiB": 7883
+      },
+      "q4_0": {
+        "contexto": 32768,
+        "totalMiB": 7955
+      }
+    },
+    "motivo": "q8_0 a 16.384 tokens; quedan 73 MiB de margen real",
+    "nombre": "K2-Horizon-7B"
+  },
+  "arranqueMs": 7486,
+  "nCtx": 16384,
+  "vramPicoMiB": 6377,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": false,
+      "detalle": "",
+      "ms": 1347,
+      "ttftMs": 138,
+      "tps": 35.66
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 1680,
+      "ttftMs": 60,
+      "tps": 39.88
+    },
+    {
+      "id": "codigo",
+      "ok": false,
+      "detalle": "",
+      "ms": 5277,
+      "ttftMs": 56,
+      "tps": 41.7
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "sumar({\"a\":17,\"b\":25})",
+      "ms": 1278,
+      "ttftMs": 128,
+      "tps": 17.23
+    }
+  ],
+  "resumen": "2/4 pruebas",
+  "medido": true
+}

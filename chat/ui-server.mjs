@@ -34,6 +34,23 @@ import { CoderTask, CODER_CONFIG, coderOptions, runCheck } from "./coder-harness
 import { ENGINE_PROFILES, engineProfile, isNamedEnginePreset, configMotor, CUSTOM_ENGINE, validarTechoModelo } from "./engine-profiles.mjs";
 import { EscrituraIncremental } from "./escritura-incremental.mjs";
 import { consultarRegistro } from "./registros.mjs";
+import {
+  HUB_FILE,
+  MODELS_DIR as HUB_MODELS_DIR,
+  borrarModelo,
+  buscarHuggingFace,
+  catalogoHub,
+  crearTrabajo,
+  cancelarTrabajo,
+  escanearModelos,
+  fusionarCatalogo,
+  inspeccionarRepo,
+  importarArchivo,
+  listarTrabajos,
+  planParaModelo,
+  resumen as resumenHub,
+  vramInfo,
+} from "./model-hub.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT = path.dirname(HERE);
@@ -520,7 +537,7 @@ function attachImagenes(text, imagenes) {
 }
 
 /** Carpeta de los GGUF y catálogo de modelos que se pueden cargar en caliente. */
-const MODELOS_DIR = path.join(PROJECT, "models");
+const MODELOS_DIR = HUB_MODELS_DIR;
 /**
  * Elección de modelo guardada en disco (chat\modelo-activo.json). Es lo que hace que
  * el modelo elegido en la interfaz siga puesto después de cerrar y volver a abrir:
@@ -563,6 +580,7 @@ function guardarModeloActivo(item) {
  * @returns {Array<{clave: string, nombre: string, archivo: string, bytes: number, esperado: number, rol: string, uso: string, existe: boolean, predeterminado: boolean}>}
  */
 function catalogoModelos() {
+  fusionarCatalogo();
   /** @type {Array<{clave: string, nombre: string, archivo: string, bytes: number, esperado: number, rol: string, uso: string, existe: boolean, predeterminado: boolean}>} */
   const out = [];
   const cat = MODELO.catalogo || {};
@@ -589,6 +607,14 @@ function catalogoModelos() {
       gpuCompleta: row.servidor?.tipo === "gpu-completa",
       margenObjetivoMiB: Number(row.servidor?.margenObjetivoMiB) || 0,
       predeterminado: clave === MODELO.modeloPredeterminado,
+      fuente: typeof row.fuente === "string" ? row.fuente : "curado",
+      origen: typeof row.origen === "string" ? row.origen : "",
+      licencia: typeof row.licencia === "string" ? row.licencia : "",
+      oculto: row.oculto === true,
+      vision: Boolean(row.vision?.archivo && mmprojDisponible(clave)),
+      visionArchivo: typeof row.vision?.archivo === "string" ? row.vision.archivo : "",
+      plan: row.plan || null,
+      pruebas: row.pruebas || null,
     });
   }
   return out;
@@ -1096,6 +1122,15 @@ function openBrowser(url) {
  * @param {ReturnType<typeof parseArgs>} args
  */
 async function main(args) {
+  // Model Hub: los GGUF que ya estén en models/ se registran solos. En pruebas
+  // (BONSAI_STATE definido) no se escanea el disco real salvo que se pida.
+  if (!process.env.BONSAI_STATE || process.env.BONSAI_HUB_SCAN === "1") {
+    try {
+      await escanearModelos({ silencioso: true });
+    } catch (error) {
+      process.stderr.write(`[model-hub] no se pudo escanear models/: ${error instanceof Error ? error.message : String(error)}\n`);
+    }
+  }
   loadWorkspace();
   // El historial (índice, archivos y copia de trabajo) vive en chat/historial.mjs: aquí
   // solo se recupera lo que haya quedado corrupto antes de crear el chat.
@@ -1266,17 +1301,28 @@ async function main(args) {
    * start-gpu-model-rtx4060-optimized.ps1 (f16 estable, vision, plantilla, etc.).
    * @param {string} preset
    * @param {number} puerto
+   * @param {string} [clave]
    * @returns {string}
    */
-  function comandoServidorOptimizado(preset, puerto) {
-    const nombre = isNamedEnginePreset(preset) ? preset : "8GB-VISION-MAX-Q8-100K";
-    const p = engineProfile(nombre);
+  function comandoServidorOptimizado(preset, puerto, clave = "ornith9b") {
+    const modeloItem = (MODELO.catalogo && MODELO.catalogo[clave]) || (MODELO.catalogo && MODELO.catalogo.ornith9b) || {};
+    const planGuardado = modeloItem.plan;
+    const nombre = isNamedEnginePreset(preset) ? preset : (preset === "AUTO" || preset === "CUSTOM") && planGuardado ? "" : "8GB-VISION-MAX-Q8-100K";
+    const p = nombre
+      ? engineProfile(nombre)
+      : {
+          context: Number(planGuardado?.contexto) || 16384,
+          kv: String(planGuardado?.kv || "q8_0"),
+          vision: planGuardado?.vision !== false,
+          mmprojCPU: planGuardado?.mmprojCPU === true,
+          batch: Number(modeloItem.servidor?.batch) || 512,
+          ubatch: Number(modeloItem.servidor?.ubatch) || 256,
+        };
     const ctx = Number(p.context) || 16384;
     const kv = String(p.kv || "f16");
     const vision = Boolean(p.vision);
     const estable = true;
 
-    const modeloItem = (MODELO.catalogo && MODELO.catalogo.ornith9b) || {};
     const modelPath = path.join(PROJECT, "models", modeloItem.archivo || "Ornith-1.5-9B-Q4_K_M.gguf");
     const projArchivo = modeloItem.vision && modeloItem.vision.archivo;
     const projPath = projArchivo ? path.join(PROJECT, "models", projArchivo) : "";
@@ -1293,7 +1339,7 @@ async function main(args) {
     if (!estable) a.push("--fit", "off", "--kv-offload");
     a.push("--flash-attn", "on", "-c", String(ctx), "-ctk", kv, "-ctv", kv);
     if (!estable) a.push("-np", "1");
-    a.push("-b", "512", "-ub", "256", "-t", "4", "--host", "127.0.0.1", "--port", String(puerto), "--jinja", "--metrics");
+    a.push("-b", String(Number(p.batch) || 512), "-ub", String(Number(p.ubatch) || 256), "-t", "4", "--host", "127.0.0.1", "--port", String(puerto), "--jinja", "--metrics");
     if (!estable) a.push("--cache-ram", "0");
     a.push("-lv", "4",
       "--cors-origins", `http://127.0.0.1:${puerto},http://localhost:${puerto},http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788`,
@@ -1318,7 +1364,14 @@ async function main(args) {
       const draftPath = path.join(PROJECT, "models", String(p.draftModel));
       try {
         if (fs.existsSync(draftPath)) {
-          a.push("--spec-type", "draft-simple", "--draft-model", draftPath, "--draft-tokens", String(p.draftTokens || 4));
+          a.push("--spec-type", "draft-simple", "--spec-draft-model", draftPath, "--spec-draft-n-max", String(p.draftTokens || 4));
+        }
+      } catch { /* sin draft */ }
+    } else if (modeloItem.servidor?.draftModel) {
+      const draftPath = path.join(PROJECT, "models", String(modeloItem.servidor.draftModel));
+      try {
+        if (fs.existsSync(draftPath)) {
+          a.push("--spec-type", "draft-simple", "--spec-draft-model", draftPath, "--spec-draft-n-max", String(modeloItem.servidor.draftTokens || 4));
         }
       } catch { /* sin draft */ }
     }
@@ -1341,7 +1394,9 @@ async function main(args) {
     const puerto = new URL(chat.base).port || "80";
     const preset = configuracion ? configuracion.enginePreset || "" : leerAjustes().enginePreset || "";
     // Presets optimizados RTX 4060 -> lanzador dedicado con binario sm89.
-    const optimizado = /^(8GB-VISION-MAX-Q8-100K|8GB-VISION-MAX-Q8|8GB-VISION-MAX-Q4|8GB-VISION-MAX-F16|8GB-VISION-DEFAULT-F16|8GB-VISION-ULTRA-F16|8GB-VISION-HIGH|8GB-VISION-BALANCED|8GB-VISION-SAFE|8GB-CODE-MAX|8GB-CODE-HIGH|8GB-CODE-BALANCED|8GB-CODE-FAST|8GB-RESEARCH|8GB-VISION-QUALITY|8GB-VISION-ULTRA)$/.test(preset);
+    const item = MODELO.catalogo?.[clave];
+    const optimizado = /^(8GB-VISION-MAX-Q8-100K|8GB-VISION-MAX-Q8|8GB-VISION-MAX-Q4|8GB-VISION-MAX-F16|8GB-VISION-DEFAULT-F16|8GB-VISION-ULTRA-F16|8GB-VISION-HIGH|8GB-VISION-BALANCED|8GB-VISION-SAFE|8GB-CODE-MAX|8GB-CODE-HIGH|8GB-CODE-BALANCED|8GB-CODE-FAST|8GB-RESEARCH|8GB-VISION-QUALITY|8GB-VISION-ULTRA|CUSTOM|AUTO)$/.test(preset) ||
+      Boolean(item && item.fuente === "hub");
     const script = path.join(PROJECT, "scripts", optimizado ? "start-gpu-model-rtx4060-optimized.ps1" : "start-server.ps1");
     const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-ManagedByIDE", "-Modelo", clave, "-Port", puerto];
     try {
@@ -1352,7 +1407,7 @@ async function main(args) {
     }
     if (preset && isNamedEnginePreset(preset)) {
       args.push("-EnginePreset", preset);
-    } else if (preset === "CUSTOM") {
+    } else if (preset === "CUSTOM" || preset === "AUTO") {
       args.push("-EnginePreset", "CUSTOM");
     }
     const conVision = configuracion && typeof configuracion.vision === "boolean"
@@ -1361,12 +1416,14 @@ async function main(args) {
       : typeof leerAjustes().engineVision === "boolean" ? leerAjustes().engineVision
       : mmprojDisponible(clave);
     if (conVision) args.push("-Vision");
-    else if (optimizado) args.push("-Vision:$false");
-    else args.push("-SinVision");
+    else if (!optimizado) args.push("-SinVision");
     if (configuracion) {
       // Solo se pasan contexto/KV si vienen definidos; si no, manda el preset.
       if (configuracion.contexto !== undefined && configuracion.contexto !== null) args.push("-ContextSize", String(configuracion.contexto));
       if (configuracion.kv) args.push("-KVCacheType", configuracion.kv);
+      if (configuracion.mmprojCPU === true) args.push("-MmprojCPU");
+      if (configuracion.draftModel) args.push("-DraftModel", String(configuracion.draftModel));
+      if (configuracion.draftTokens) args.push("-DraftTokens", String(configuracion.draftTokens));
       if ("dormir" in configuracion) args.push("-DormirSeg", String(configuracion.dormir));
       if (configuracion.hostIP) args.push("-HostIP", configuracion.hostIP);
     } else {
@@ -1422,11 +1479,12 @@ async function main(args) {
       if (datos.modelo !== modeloActualClave() || perfil?.tipo !== "gpu-completa" ||
           !Number.isInteger(datos.contexto) || datos.contexto < 4096 || datos.contexto > perfil.contexto ||
           !["f16", "q8_0", "q4_0"].includes(datos.kv) || typeof datos.vision !== "boolean" ||
+          (datos.mmprojCPU !== undefined && typeof datos.mmprojCPU !== "boolean") ||
           !Number.isInteger(datos.pensar) || datos.pensar < 0 || datos.pensar > 65536 ||
           !Number.isInteger(datos.dormir) || datos.dormir < 0 || datos.dormir > 86400 ||
           !["127.0.0.1", "localhost", "::1"].includes(datos.hostIP)) throw new Error("datos incompletos");
       if (datos.enginePreset && isNamedEnginePreset(datos.enginePreset)) engineProfile(datos.enginePreset);
-      return { clave: datos.modelo, contexto: datos.contexto, kv: datos.kv, vision: datos.vision, pensar: datos.pensar, dormir: datos.dormir, hostIP: datos.hostIP, enginePreset: datos.enginePreset || "" };
+      return { clave: datos.modelo, contexto: datos.contexto, kv: datos.kv, vision: datos.vision, mmprojCPU: datos.mmprojCPU === true, pensar: datos.pensar, dormir: datos.dormir, hostIP: datos.hostIP, enginePreset: datos.enginePreset || "" };
     } catch {
       // Un arranque de una versión anterior no guardaba estos parámetros.
       return { error: "no se guardó la configuración anterior; reinicia el IDE manualmente" };
@@ -2510,9 +2568,10 @@ async function main(args) {
       if (req.method === "GET" && url.pathname === "/api/server/command") {
         // Devuelve un comando PowerShell listo para pegar, con rutas absolutas.
         const preset = url.searchParams.get("preset") || "8GB-VISION-MAX-Q8-100K";
-        const comando = comandoServidorOptimizado(preset, args.llamaPort);
+        const clave = url.searchParams.get("model") || modeloGuardadoClave() || MODELO.modeloPredeterminado;
+        const comando = comandoServidorOptimizado(preset, args.llamaPort, clave);
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
-        res.end(JSON.stringify({ command: comando, preset }));
+        res.end(JSON.stringify({ command: comando, preset, model: clave }));
         return;
       }
       if (req.method === "POST" && url.pathname === "/api/server/start") {
@@ -2520,30 +2579,53 @@ async function main(args) {
         busy = true;
         try {
           const raw = JSON.parse(await readBody(req));
-          const preset = raw?.preset || "8GB-VISION-MAX-Q8-100K";
-          const modelo = raw?.model || "ornith9b";
-          
+          const preset = String(raw?.preset || "8GB-VISION-MAX-Q8-100K");
+          const modelo = String(raw?.model || modeloGuardadoClave() || MODELO.modeloPredeterminado);
+          const item = catalogoModelos().find((m) => m.clave === modelo);
+          if (!item) { res.writeHead(400).end(`modelo desconocido: ${modelo}`); return; }
+          if (!item.existe) { res.writeHead(404).end(`falta el GGUF de ${item.nombre} en models\\${item.archivo}`); return; }
+          if (!item.gpuCompleta) { res.writeHead(409).end(`El modelo ${item.nombre} no tiene perfil de GPU completa`); return; }
           const validPresets = [
             "8GB-VISION-MAX-Q8-100K", "8GB-VISION-MAX-Q8", "8GB-VISION-MAX-Q4", "8GB-VISION-MAX-F16",
             "8GB-VISION-DEFAULT-F16", "8GB-VISION-ULTRA-F16", "8GB-VISION-HIGH",
             "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
             "8GB-CODE-MAX", "8GB-CODE-HIGH", "8GB-CODE-BALANCED", "8GB-CODE-FAST",
-            "8GB-RESEARCH", "8GB-VISION-QUALITY"
+            "8GB-RESEARCH", "8GB-VISION-QUALITY", "AUTO", "CUSTOM"
           ];
           if (!validPresets.includes(preset)) {
             res.writeHead(400).end("Preset no válido");
             return;
+          }
+          /** @type {{enginePreset: string, contexto?: number, kv?: string, vision?: boolean}} */
+          let configuracion = { enginePreset: preset };
+          if (preset === "AUTO") {
+            const elegido = await planParaModelo(modelo, { vision: raw?.vision !== false });
+            if (!elegido.plan.ok) throw new Error(`El plan automático no cabe: ${elegido.plan.motivo}`);
+            configuracion = {
+              enginePreset: "CUSTOM",
+              contexto: elegido.plan.contexto,
+              kv: elegido.plan.kv,
+              vision: elegido.plan.vision,
+              mmprojCPU: elegido.plan.mmprojCPU,
+            };
+            chat.note(`plan automático para ${item.nombre}: ${elegido.plan.contexto} tokens · KV ${elegido.plan.kv}${elegido.plan.vision ? (elegido.plan.mmprojCPU ? " · visión CPU" : " · visión GPU") : ""}`);
+          } else if (preset === "CUSTOM") {
+            const contexto = Number(raw?.contexto);
+            if (!Number.isInteger(contexto) || contexto < 4096 || contexto > 131072) { res.writeHead(400).end("Ventana de contexto inválida"); return; }
+            const kv = String(raw?.kv || "q8_0");
+            if (!["f16", "bf16", "q8_0", "q4_0"].includes(kv)) { res.writeHead(400).end("KV inválida"); return; }
+            configuracion = { enginePreset: "CUSTOM", contexto, kv, vision: raw?.vision !== false && Boolean(item.vision), mmprojCPU: raw?.mmprojCPU === true };
           }
           
           // Stop any existing server first
           await apagarLlamaServer();
           await new Promise(r => setTimeout(r, 800));
           
-          // Deja que el PRESET decida contexto, KV y visión (no se fuerzan aquí).
-          // Solo el razonamiento se fija explícitamente.
+          // El preset decide contexto, KV y visión. AUTO calcula el plan con la
+          // arquitectura REAL del GGUF y la VRAM de esta máquina.
           const hijo = lanzarServidorLlama(modelo, {
-            enginePreset: preset,
-            pensar: Number(raw?.pensar) > 0 ? Number(raw.pensar) : 4096,
+            ...configuracion,
+            pensar: presupuestoPensar(modelo, Number(raw?.pensar ?? 4096)),
             dormir: 0,
             hostIP: "127.0.0.1"
           });
@@ -2554,9 +2636,10 @@ async function main(args) {
           
           await chat.connect();
           chat.vision = Boolean(chat.props?.modalities?.vision);
+          try { guardarModeloActivo(item); } catch { /* el arranque ya funcionó */ }
           
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
-          res.end(JSON.stringify({ ok: true, encendido: true, preset }));
+          res.end(JSON.stringify({ ok: true, encendido: true, preset, model: modelo, auto: preset === "AUTO" }));
         } catch (err) {
           res.writeHead(500).end(String(err.message || err));
         } finally { busy = false; }
@@ -2577,6 +2660,88 @@ async function main(args) {
         return;
       }
       
+      // ================================================================ model hub
+      if (req.method === "GET" && url.pathname === "/api/hub/status") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ ...resumenHub(), vram: await vramInfo(), modelosDir: MODELOS_DIR, hubFile: HUB_FILE }));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/hub/catalog") {
+        const libre = Number(url.searchParams.get("libreMiB")) || 0;
+        const datos = await catalogoHub(libre > 0 ? { libreMiB: libre } : {});
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(datos));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/hub/search") {
+        const q = (url.searchParams.get("q") || "").trim();
+        const datos = q ? await buscarHuggingFace(q, { limit: Number(url.searchParams.get("limit")) || 24 }) : [];
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ q, resultados: datos }));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/hub/repo") {
+        const repo = url.searchParams.get("repo") || "";
+        const datos = await inspeccionarRepo(repo);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(datos));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/hub/plan") {
+        const clave = url.searchParams.get("clave") || "";
+        const vision = url.searchParams.get("vision") !== "0";
+        const datos = await planParaModelo(clave, { vision, actual: url.searchParams.get("actual") === "1" });
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(datos));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/hub/downloads") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ trabajos: listarTrabajos() }));
+        return;
+      }
+      if (req.method === "POST" && url.pathname === "/api/hub/downloads") {
+        const raw = JSON.parse(await readBody(req));
+        const id = typeof raw?.id === "string" ? raw.id : "";
+        if (!id) { res.writeHead(400).end("falta el id de la descarga"); return; }
+        const trabajo = cancelarTrabajo(id);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ ok: true, trabajo }));
+        return;
+      }
+      if (req.method === "POST" && url.pathname === "/api/hub/download") {
+        const raw = JSON.parse(await readBody(req));
+        if (!raw || typeof raw !== "object") { res.writeHead(400).end("cuerpo no válido"); return; }
+        const trabajo = await crearTrabajo(raw);
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ ok: true, ...trabajo }));
+        return;
+      }
+      if (req.method === "POST" && url.pathname === "/api/hub/import") {
+        const raw = JSON.parse(await readBody(req));
+        if (raw && raw.scan === true) {
+          const datos = await escanearModelos({});
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: true, ...datos }));
+          return;
+        }
+        const ruta = raw && typeof raw.ruta === "string" ? raw.ruta : "";
+        if (!ruta) { res.writeHead(400).end("falta la ruta del .gguf"); return; }
+        const entrada = await importarArchivo(ruta, { nombre: raw.nombre });
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ ok: true, modelo: entrada }));
+        return;
+      }
+      if (req.method === "POST" && url.pathname === "/api/hub/delete") {
+        const raw = JSON.parse(await readBody(req));
+        const clave = raw && typeof raw.clave === "string" ? raw.clave : "";
+        if (!clave) { res.writeHead(400).end("falta la clave del modelo"); return; }
+        const datos = borrarModelo(clave, { confirmar: raw.confirmar === true });
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ ok: true, ...datos }));
+        return;
+      }
+
       if (req.method === "GET" && url.pathname === "/api/modelos") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
         // `guardado` = el que arrancará la próxima vez; `actual` = el que está cargado ahora.
@@ -2610,6 +2775,10 @@ async function main(args) {
           res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end(`modelo desconocido: ${clave}`);
           return;
         }
+        if (item.oculto) {
+          res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end(`${item.nombre} es un modelo auxiliar (borrador), no un modelo de chat`);
+          return;
+        }
         if (!item.gpuCompleta) {
           res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end(`El modelo ${item.nombre} no tiene un perfil verificado de GPU completa; selecciona Ornith.`);
           return;
@@ -2617,6 +2786,20 @@ async function main(args) {
         if (!item.existe) {
           res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end(`el GGUF de ${item.nombre} no está entero en models\\${item.archivo}`);
           return;
+        }
+        // AUTO: el plan sale del GGUF real (capas, cabezas KV, ventana nativa) y
+        // de la VRAM de ESTA máquina. Es el camino por defecto para modelos del Hub.
+        if (raw.auto === true || (item.fuente === "hub" && raw.enginePreset === undefined && raw.contexto === undefined && raw.kv === undefined)) {
+          const elegido = await planParaModelo(clave, { vision: raw.vision !== false });
+          if (!elegido.plan.ok) {
+            res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end(`El modelo ${item.nombre} no cabe con la VRAM actual: ${elegido.plan.motivo}`);
+            return;
+          }
+          raw.enginePreset = "CUSTOM";
+          raw.contexto = elegido.plan.contexto;
+          raw.kv = elegido.plan.kv;
+          raw.vision = elegido.plan.vision;
+          raw.mmprojCPU = elegido.plan.mmprojCPU === true;
         }
         // `recargar`: el mismo modelo, reiniciado (p. ej. para encender el razonamiento, que
         // se fija al arrancar llama-server).
@@ -2636,15 +2819,19 @@ async function main(args) {
           const anterior = await configuracionAnterior();
           if (anterior?.error) throw new Error(`No se puede cambiar sin una configuración anterior recuperable: ${anterior.error}`);
           const actualAjustes = leerAjustes();
-          const cfg = configMotor(raw, actualAjustes, anterior);
+          const cfg = { ...configMotor(raw, actualAjustes, anterior), mmprojCPU: raw.mmprojCPU === true };
           // Validación temprana del techo del modelo: si no cabe, falla ANTES de parar el servidor.
           const techo = validarTechoModelo(clave, cfg.contexto, cfg.vision);
           if (!techo.ok) throw new Error(`${techo.motivo}. El cambio se rechaza sin apagar el modelo actual.`);
           await cambiarConRecuperacion({
             anterior,
             liberar: async (alDetener) => {
-              const modeloCatalogo = catalogoModelos().find((m) => m.clave === objetivo);
-              const margenVRAM = modeloCatalogo?.margenObjetivoMiB || 6500;
+              const modeloCatalogo = catalogoModelos().find((m) => m.clave === clave);
+              // VRAM que hay que dejar libre antes de arrancar. No se usa
+              // margenObjetivoMiB: en el lanzador histórico ese campo es un
+              // margen que se SUMA al requisito, no un umbral de VRAM libre.
+              const planTotal = Number(modeloCatalogo?.plan?.totalMiB) || (Math.ceil((Number(modeloCatalogo?.esperado) || 0) / (1024 * 1024)) + 1500);
+              const margenVRAM = Math.min(7800, Math.max(3500, planTotal + 200));
               if (!(await liberarGpu(35000, alDetener, margenVRAM))) throw new Error("no se pudo liberar la GPU o el puerto");
             },
             arrancar: async (restaurar) => {
@@ -2658,6 +2845,7 @@ async function main(args) {
                 contexto: cfg.contexto,
                 kv: cfg.kv,
                 vision: cfg.vision,
+                mmprojCPU: cfg.mmprojCPU === true,
                 dormir: cfg.dormir,
                 hostIP: cfg.hostIP,
                 pensar,

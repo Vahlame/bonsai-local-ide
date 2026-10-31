@@ -1,0 +1,86 @@
+{
+  "clave": "llama32-3b",
+  "nombre": "Llama 3.2 3B Instruct",
+  "archivo": "Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+  "fecha": "2026-10-31T01:18:40.179Z",
+  "plan": {
+    "ok": true,
+    "contexto": 83968,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 1926,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "kvMiB": 4879,
+    "totalMiB": 7955,
+    "libreMiB": 7956,
+    "disponibleMiB": 4880,
+    "ctxNativo": 131072,
+    "alternativas": {
+      "f16": {
+        "contexto": 43008,
+        "totalMiB": 7780
+      },
+      "q8_0": {
+        "contexto": 83968,
+        "totalMiB": 7955
+      },
+      "q4_0": {
+        "contexto": 131072,
+        "totalMiB": 7108
+      }
+    },
+    "motivo": "q8_0 a 83.968 tokens; quedan 1 MiB de margen real",
+    "nombre": "Llama 3.2 3B Instruct"
+  },
+  "arranqueMs": 3742,
+  "nCtx": 83968,
+  "vramPicoMiB": 7289,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 139,
+      "ttftMs": 76,
+      "tps": 35.97
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 118,
+      "ttftMs": 24,
+      "tps": 76.27
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.filter(num => num % 2 === 0).reduce((a, b) => a + b, 0);\n}",
+      "ms": 424,
+      "ttftMs": 24,
+      "tps": 94.56
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "sumar({\"a\": 17, \"b\": 25})",
+      "ms": 276,
+      "ttftMs": 118,
+      "tps": 0
+    },
+    {
+      "id": "contexto8k",
+      "ok": true,
+      "detalle": "CLAVE-7391",
+      "ms": 2085,
+      "ttftMs": 2016,
+      "tps": 2.4
+    }
+  ],
+  "resumen": "5/5 pruebas",
+  "medido": true
+}

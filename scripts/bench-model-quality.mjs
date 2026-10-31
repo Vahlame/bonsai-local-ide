@@ -9,6 +9,8 @@
  * Uso:
  *   node scripts/bench-model-quality.mjs                       # 5 presets por defecto
  *   node scripts/bench-model-quality.mjs --presets A,B,C
+ *   node scripts/bench-model-quality.mjs --model qwen3-4b-2507            # plan AUTO del modelo
+ *   node scripts/bench-model-quality.mjs --model qwen3-4b-2507 --presets 8GB-VISION-HIGH
  *   node scripts/bench-model-quality.mjs --tasks coding_impl_js,reasoning_math
  *   node scripts/bench-model-quality.mjs --port 8092 --think 1024 --max-tokens 1200
  *   node scripts/bench-model-quality.mjs --sampling --preset 8GB-CODE-BALANCED --repeat 2
@@ -22,6 +24,8 @@ import path from "node:path";
 import vm from "node:vm";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { planParaModelo, leerRegistro, guardarRegistro } from "../chat/model-hub.mjs";
+import { dialectoDe, llamadasCrudas } from "../chat/adaptadores.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT = path.dirname(HERE);
@@ -78,7 +82,41 @@ const onlyTasks = (arg("tasks", "") || "").split(",").map((s) => s.trim()).filte
 const presetsFile = path.join(PROJECT, "config", "local-engine-presets-rtx4060-optimized.json");
 const PRESETS = JSON.parse(fs.readFileSync(presetsFile, "utf8"));
 const MODELO = JSON.parse(fs.readFileSync(path.join(PROJECT, "chat", "modelo.json"), "utf8"));
-const ITEM = MODELO.catalogo.ornith9b;
+// Model Hub: modelos descargados viven en models/hub-catalog.json.
+try {
+  const hub = JSON.parse(fs.readFileSync(path.join(PROJECT, "models", "hub-catalog.json"), "utf8"));
+  for (const [clave, entrada] of Object.entries(hub.modelos || {})) {
+    if (!clave.startsWith("_") && entrada && typeof entrada === "object" && !MODELO.catalogo[clave]) MODELO.catalogo[clave] = entrada;
+  }
+} catch { /* solo catálogo curado */ }
+const MODEL_KEY = arg("model", "ornith9b");
+const ITEM = MODELO.catalogo[MODEL_KEY];
+if (!ITEM) throw new Error(`modelo desconocido: ${MODEL_KEY}`);
+let PLAN_AUTO = null;
+try {
+  PLAN_AUTO = (await planParaModelo(MODEL_KEY, { vision: true })).plan;
+} catch {
+  // Un GGUF que no se puede planificar aún se prueba con el techo del catálogo.
+}
+const ITEM_PLAN = PLAN_AUTO || ITEM.plan || { contexto: ITEM.servidor?.contexto || 16384, kv: "q8_0", vision: Boolean(ITEM.vision?.archivo), mmprojCPU: ITEM.vision?.offload === false };
+if (!PRESETS.AUTO) {
+  PRESETS.AUTO = {
+    label: `AUTO · ${ITEM.nombre || MODEL_KEY}`,
+    context: Number(ITEM_PLAN.contexto) || 16384,
+    kv: String(ITEM_PLAN.kv || "q8_0"),
+    batch: Number(ITEM.servidor?.batch) || 512,
+    ubatch: Number(ITEM.servidor?.ubatch) || 256,
+    vision: ITEM_PLAN.vision !== false && Boolean(ITEM.vision?.archivo),
+    mmprojCPU: ITEM_PLAN.mmprojCPU === true,
+    coderOutputTokens: 4096,
+    thinkingTokens: 2048,
+  };
+}
+if (arg("presets", "") === "") {
+  // Con --model se mide el plan AUTO de ESE modelo; el default histórico sigue
+  // siendo la lista de 5 presets para Ornith.
+  if (process.argv.includes("--model")) presets.length = 0, presets.push("AUTO");
+}
 
 const binCands = [
   path.join(PROJECT, ".local", "opt", "bonsai-inference", "build-RTX4060-Opt-sm89", "bin", "llama-server.exe"),
@@ -115,8 +153,13 @@ function buildArgs(preset) {
   a.push("--spec-type", "none", "--no-context-shift");
   if (stable) a.push("--ctx-checkpoints", "0");
   a.push("--chat-template-file", TEMPLATE);
-  if (p.vision && MMPROJ) a.push("--mmproj", MMPROJ, "--mmproj-offload", "--mmproj-device", "CUDA0", "--image-max-tokens", "512");
-  a.push("--reasoning-budget", String(THINK), "--reasoning-format", "deepseek");
+  if (p.vision && MMPROJ) {
+    a.push("--mmproj", MMPROJ);
+    if (p.mmprojCPU) a.push("--no-mmproj-offload");
+    else a.push("--mmproj-offload", "--mmproj-device", "CUDA0");
+    a.push("--image-max-tokens", "512");
+  }
+  if (THINK > 0 && ITEM.pensar?.compatible !== false) a.push("--reasoning-budget", String(THINK), "--reasoning-format", "deepseek");
   return a;
 }
 
@@ -385,12 +428,23 @@ const TASKS = [
     check: async (content, raw) => {
       const msg = raw?.choices?.[0]?.message;
       const calls = msg?.tool_calls || [];
-      const call = calls.find((c) => c?.function?.name === "convertir_moneda");
+      let call = calls.find((c) => c?.function?.name === "convertir_moneda");
+      let formato = "nativo";
+      if (!call) {
+        // Modelos como Qwen2.5 Coder escriben la llamada en texto.
+        const dialecto = dialectoDe(MODEL_KEY, MODELO.catalogo);
+        const crudas = llamadasCrudas(content, dialecto);
+        const texto = crudas.find((c) => /convertir_moneda/i.test(c.name));
+        if (texto) {
+          call = { function: { name: texto.name, arguments: JSON.stringify(texto.arguments) } };
+          formato = "texto";
+        }
+      }
       if (!call) return { ok: false, detail: "sin tool_call" };
       let argsObj = {};
       try { argsObj = JSON.parse(call.function.arguments || "{}"); } catch { /* invalido */ }
       const ok = Number(argsObj.monto) === 250 && /usd/i.test(String(argsObj.de)) && /eur/i.test(String(argsObj.a));
-      return { ok, detail: JSON.stringify(argsObj).slice(0,100) };
+      return { ok, detail: `${formato}: ${JSON.stringify(argsObj).slice(0, 100)}` };
     },
   },
 ];
@@ -585,7 +639,7 @@ async function main() {
   });
 
   // JSON
-  fs.writeFileSync(path.join(outDir, "results.json"), JSON.stringify({ stamp, think: THINK, maxTokens: MAX_TOKENS, tasks: ACTIVE_TASKS.map((t) => ({ id: t.id, category: t.category })), presets: summary, raw: rows }, null, 2), "utf8");
+  fs.writeFileSync(path.join(outDir, "results.json"), JSON.stringify({ stamp, model: MODEL_KEY, modelName: ITEM.nombre, think: THINK, maxTokens: MAX_TOKENS, tasks: ACTIVE_TASKS.map((t) => ({ id: t.id, category: t.category })), presets: summary, raw: rows }, null, 2), "utf8");
 
   // Markdown
   const md = [];
@@ -617,6 +671,32 @@ async function main() {
     for (const t of row.tasks) md.push(`| ${t.id} | ${t.category} | ${t.ok ? "✅" : "❌"} | ${String(t.detail).replace(/\|/g, "\\|")} | ${t.ms} | ${t.tps ? t.tps.toFixed(1) : "-"} |`);
   }
   fs.writeFileSync(path.join(outDir, "results.md"), md.join("\n"), "utf8");
+
+  // El registro del Hub guarda un resumen para que la UI no tenga que leer
+  // reports/. No pisa las pruebas de arranque/vision de model-lab.
+  try {
+    const registro = leerRegistro();
+    const entrada = registro.modelos[MODEL_KEY];
+    if (entrada) {
+      const total = summary.reduce((n, s) => n + s.total, 0);
+      const pasadas = summary.reduce((n, s) => n + s.passed, 0);
+      entrada.pruebas = {
+        ...(entrada.pruebas || {}),
+        calidad: {
+          fecha: new Date().toISOString(),
+          tareas: ACTIVE_TASKS.length,
+          pasadas,
+          total,
+          porcentaje: total ? Math.round((pasadas / total) * 1000) / 10 : 0,
+          detalle: summary.map((s) => `${s.preset}: ${s.passed}/${s.total}`),
+          informe: path.join(outDir, "results.md"),
+        },
+      };
+      guardarRegistro(registro);
+    }
+  } catch (error) {
+    console.error(`No se pudo anotar la calidad en el registro: ${error instanceof Error ? error.message : String(error)}`);
+  }
 
   // SVG
   // SVG

@@ -19,6 +19,21 @@ $ExpectedExes = @(
     [IO.Path]::GetFullPath((Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"))
 )
 $Catalogo = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+# Model Hub: modelos descargados en models/hub-catalog.json. Sin esto, un
+# llama-server de un modelo del Hub no se reconocería como propio y no se podría
+# detener ni cambiar.
+$HubPath = Join-Path $RootDir "models\hub-catalog.json"
+if (Test-Path -LiteralPath $HubPath) {
+    try {
+        $Hub = Get-Content -LiteralPath $HubPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        foreach ($prop in $Hub.modelos.PSObject.Properties) {
+            if ($prop.Name -like "_*") { continue }
+            if (-not $Catalogo.catalogo.PSObject.Properties[$prop.Name]) {
+                $Catalogo.catalogo | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value
+            }
+        }
+    } catch { }
+}
 # Cualquiera de estos lanzadores es "nuestro" (historico u optimizado).
 $StartScripts = @(
     (Join-Path $RootDir "scripts\start-server.ps1"),

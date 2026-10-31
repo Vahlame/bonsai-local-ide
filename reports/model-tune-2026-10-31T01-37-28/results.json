@@ -1,0 +1,300 @@
+[
+  {
+    "clave": "k2-horizon-7b-q4-k-m",
+    "error": "ninguna variante de llama-bench arrancó"
+  },
+  {
+    "clave": "gemma3-4b",
+    "plan": {
+      "ok": true,
+      "contexto": 131072,
+      "kv": "f16",
+      "vision": false,
+      "mmprojCPU": false,
+      "visionEnGpu": false,
+      "pesosMiB": 2375,
+      "reservaMiB": 850,
+      "margenMiB": 300,
+      "visionMiB": 0,
+      "kvMiB": 2676,
+      "kvFijoMiB": 116,
+      "totalMiB": 6201,
+      "libreMiB": 7956,
+      "disponibleMiB": 4315,
+      "ctxNativo": 131072,
+      "alternativas": {
+        "f16": {
+          "contexto": 131072,
+          "totalMiB": 6201
+        },
+        "q8_0": {
+          "contexto": 131072,
+          "totalMiB": 4947
+        },
+        "q4_0": {
+          "contexto": 131072,
+          "totalMiB": 4278
+        }
+      },
+      "motivo": "f16 a 131.072 tokens; quedan 1755 MiB de margen real",
+      "nombre": "Gemma 3 4B IT"
+    },
+    "elegido": {
+      "ubatch": 512,
+      "threads": 4,
+      "batch": 512,
+      "tg": 83.138279,
+      "pp": 4255.522657
+    },
+    "variantes": [
+      {
+        "etiqueta": "ub=256 t=4",
+        "ok": true,
+        "pp": 4198.142506,
+        "tg": 83.18045
+      },
+      {
+        "etiqueta": "ub=512 t=4",
+        "ok": true,
+        "pp": 4255.522657,
+        "tg": 83.138279
+      }
+    ]
+  },
+  {
+    "clave": "k2-horizon-7b-bartowski-q4-k-m",
+    "error": "ninguna variante de llama-bench arrancó"
+  },
+  {
+    "clave": "llama32-3b",
+    "plan": {
+      "ok": true,
+      "contexto": 83968,
+      "kv": "q8_0",
+      "vision": false,
+      "mmprojCPU": false,
+      "visionEnGpu": false,
+      "pesosMiB": 1926,
+      "reservaMiB": 850,
+      "margenMiB": 300,
+      "visionMiB": 0,
+      "kvMiB": 4879,
+      "kvFijoMiB": 0,
+      "totalMiB": 7955,
+      "libreMiB": 7956,
+      "disponibleMiB": 4880,
+      "ctxNativo": 131072,
+      "alternativas": {
+        "f16": {
+          "contexto": 43008,
+          "totalMiB": 7780
+        },
+        "q8_0": {
+          "contexto": 83968,
+          "totalMiB": 7955
+        },
+        "q4_0": {
+          "contexto": 131072,
+          "totalMiB": 7108
+        }
+      },
+      "motivo": "q8_0 a 83.968 tokens; quedan 1 MiB de margen real",
+      "nombre": "Llama 3.2 3B Instruct"
+    },
+    "elegido": {
+      "ubatch": 512,
+      "threads": 4,
+      "batch": 512,
+      "tg": 104.025271,
+      "pp": 4936.613022
+    },
+    "variantes": [
+      {
+        "etiqueta": "ub=256 t=4",
+        "ok": true,
+        "pp": 4964.028432,
+        "tg": 103.872872
+      },
+      {
+        "etiqueta": "ub=512 t=4",
+        "ok": true,
+        "pp": 4936.613022,
+        "tg": 104.025271
+      }
+    ]
+  },
+  {
+    "clave": "ornith9b",
+    "plan": {
+      "ok": true,
+      "contexto": 110592,
+      "kv": "q8_0",
+      "vision": false,
+      "mmprojCPU": false,
+      "visionEnGpu": false,
+      "pesosMiB": 4864,
+      "reservaMiB": 620,
+      "margenMiB": 300,
+      "visionMiB": 0,
+      "kvMiB": 1836,
+      "kvFijoMiB": 0,
+      "totalMiB": 7620,
+      "libreMiB": 7956,
+      "disponibleMiB": 2172,
+      "ctxNativo": 262144,
+      "alternativas": {
+        "f16": {
+          "contexto": 67584,
+          "totalMiB": 7896
+        },
+        "q8_0": {
+          "contexto": 110592,
+          "totalMiB": 7620
+        },
+        "q4_0": {
+          "contexto": 110592,
+          "totalMiB": 6756
+        }
+      },
+      "motivo": "q8_0 a 110.592 tokens; quedan 336 MiB de margen real",
+      "nombre": "Ornith 1.5 9B"
+    },
+    "elegido": {
+      "ubatch": 512,
+      "threads": 4,
+      "batch": 512,
+      "tg": 42.774172,
+      "pp": 1935.225506
+    },
+    "variantes": [
+      {
+        "etiqueta": "ub=256 t=4",
+        "ok": true,
+        "pp": 1831.304209,
+        "tg": 42.449479
+      },
+      {
+        "etiqueta": "ub=512 t=4",
+        "ok": true,
+        "pp": 1935.225506,
+        "tg": 42.774172
+      }
+    ]
+  },
+  {
+    "clave": "qwen25-coder-7b",
+    "plan": {
+      "ok": true,
+      "contexto": 32768,
+      "kv": "f16",
+      "vision": false,
+      "mmprojCPU": false,
+      "visionEnGpu": false,
+      "pesosMiB": 4467,
+      "reservaMiB": 850,
+      "margenMiB": 300,
+      "visionMiB": 0,
+      "kvMiB": 1792,
+      "kvFijoMiB": 0,
+      "totalMiB": 7409,
+      "libreMiB": 7956,
+      "disponibleMiB": 2339,
+      "ctxNativo": 32768,
+      "alternativas": {
+        "f16": {
+          "contexto": 32768,
+          "totalMiB": 7409
+        },
+        "q8_0": {
+          "contexto": 32768,
+          "totalMiB": 6569
+        },
+        "q4_0": {
+          "contexto": 32768,
+          "totalMiB": 6121
+        }
+      },
+      "motivo": "f16 a 32.768 tokens; quedan 547 MiB de margen real",
+      "nombre": "Qwen2.5 Coder 7B Instruct"
+    },
+    "elegido": {
+      "ubatch": 512,
+      "threads": 4,
+      "batch": 512,
+      "tg": 52.24794,
+      "pp": 2471.767993
+    },
+    "variantes": [
+      {
+        "etiqueta": "ub=256 t=4",
+        "ok": true,
+        "pp": 2270.231563,
+        "tg": 51.790253
+      },
+      {
+        "etiqueta": "ub=512 t=4",
+        "ok": true,
+        "pp": 2471.767993,
+        "tg": 52.24794
+      }
+    ]
+  },
+  {
+    "clave": "qwen3-4b-2507",
+    "plan": {
+      "ok": true,
+      "contexto": 57344,
+      "kv": "q8_0",
+      "vision": false,
+      "mmprojCPU": false,
+      "visionEnGpu": false,
+      "pesosMiB": 2382,
+      "reservaMiB": 850,
+      "margenMiB": 300,
+      "visionMiB": 0,
+      "kvMiB": 4284,
+      "kvFijoMiB": 0,
+      "totalMiB": 7816,
+      "libreMiB": 7956,
+      "disponibleMiB": 4424,
+      "ctxNativo": 262144,
+      "alternativas": {
+        "f16": {
+          "contexto": 30720,
+          "totalMiB": 7852
+        },
+        "q8_0": {
+          "contexto": 57344,
+          "totalMiB": 7816
+        },
+        "q4_0": {
+          "contexto": 110592,
+          "totalMiB": 7906
+        }
+      },
+      "motivo": "q8_0 a 57.344 tokens; quedan 140 MiB de margen real",
+      "nombre": "Qwen3 4B Instruct 2507"
+    },
+    "elegido": {
+      "ubatch": 256,
+      "threads": 4,
+      "batch": 512,
+      "tg": 82.382997,
+      "pp": 3703.035093
+    },
+    "variantes": [
+      {
+        "etiqueta": "ub=256 t=4",
+        "ok": true,
+        "pp": 3703.035093,
+        "tg": 82.382997
+      },
+      {
+        "etiqueta": "ub=512 t=4",
+        "ok": true,
+        "pp": 3667.030679,
+        "tg": 82.297646
+      }
+    ]
+  }
+]

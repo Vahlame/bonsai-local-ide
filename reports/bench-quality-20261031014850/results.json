@@ -1,0 +1,122 @@
+{
+  "stamp": "20261031014850",
+  "model": "qwen25-coder-7b",
+  "modelName": "Qwen2.5 Coder 7B Instruct",
+  "think": 0,
+  "maxTokens": 1200,
+  "tasks": [
+    {
+      "id": "data_sql_result",
+      "category": "data"
+    },
+    {
+      "id": "retrieval_needle",
+      "category": "retrieval"
+    },
+    {
+      "id": "coding_hard_calc",
+      "category": "coding"
+    },
+    {
+      "id": "instruction_nested",
+      "category": "instruction"
+    },
+    {
+      "id": "tool_call_convert",
+      "category": "tools"
+    }
+  ],
+  "presets": [
+    {
+      "preset": "AUTO",
+      "started": true,
+      "nCtx": 32768,
+      "kv": "f16",
+      "ctx": 32768,
+      "passed": 3,
+      "total": 5,
+      "score": 60,
+      "byCat": {
+        "data": 0,
+        "retrieval": 1,
+        "coding": 0,
+        "instruction": 1,
+        "tools": 1
+      },
+      "avgTps": 49.782345551805236,
+      "seconds": 20
+    }
+  ],
+  "raw": [
+    {
+      "preset": "AUTO",
+      "started": true,
+      "nCtx": 32768,
+      "kv": "f16",
+      "ctx": 32768,
+      "tasks": [
+        {
+          "id": "data_sql_result",
+          "category": "data",
+          "ok": false,
+          "detail": "[{\"ciudad\":\"Madrid\",\"total\":150},{\"ciudad\":\"Valencia\",\"total\":300}]",
+          "ms": 727,
+          "tps": 50.311512112496544,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "[\n    {\"ciudad\":\"Madrid\",\"total\":150},\n    {\"ciudad\":\"Valencia\",\"total\":300}\n]"
+        },
+        {
+          "id": "retrieval_needle",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419",
+          "ms": 2431,
+          "tps": 46.03627658594973,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "QX-7419"
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "fallo 10/2-3",
+          "ms": 8243,
+          "tps": 50.888127196167694,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "```js\nfunction evaluate(expr) {\n  function applyOp(a, b, op) {\n    switch (op) {\n      case '+': return a + b;\n      case '-': return a - b;\n      case '*': ret"
+        },
+        {
+          "id": "instruction_nested",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"pedido\":778,\"cliente\":\"Ana\",\"items\":[{\"producto\":\"Teclado\",\"cantidad\":2,\"precio\":25},{\"producto\":\"Raton\",\"cantidad\":1,",
+          "ms": 1838,
+          "tps": 51.10298205555287,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "```json\n{\n  \"pedido\": 778,\n  \"cliente\": \"Ana\",\n  \"items\": [\n    {\n      \"producto\": \"Teclado\",\n      \"cantidad\": 2,\n      \"precio\": 25\n    },\n    {\n      \"produ"
+        },
+        {
+          "id": "tool_call_convert",
+          "category": "tools",
+          "ok": true,
+          "detail": "texto: {\"monto\":250,\"de\":\"USD\",\"a\":\"EUR\"}",
+          "ms": 906,
+          "tps": 50.57282980885937,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "<function-call>\n  {\"name\": \"convertir_moneda\", \"arguments\": {\"monto\": 250, \"de\": \"USD\", \"a\": \"EUR\"}}\n</function-call>"
+        }
+      ],
+      "ms": 19720
+    }
+  ]
+}

@@ -34,6 +34,8 @@ const LINEAS_DE_FALLO = 50;
 /** @type {Suite[]} */
 const AISLADAS = [
   { archivo: "chat/modelo.mjs" },
+  { archivo: "chat/model-plan.mjs" },
+  { archivo: "chat/prueba-model-hub.mjs", timeout: 180_000 },
   { archivo: "chat/bonsai-chat.mjs", args: ["--self-test"] },
   { archivo: "chat/actions.mjs" },
   { archivo: "chat/prueba-entorno-local.mjs" },

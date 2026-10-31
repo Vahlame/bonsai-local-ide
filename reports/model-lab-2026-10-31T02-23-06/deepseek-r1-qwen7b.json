@@ -1,0 +1,88 @@
+{
+  "clave": "deepseek-r1-qwen7b",
+  "nombre": "DeepSeek R1 Distill Qwen 7B",
+  "archivo": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf",
+  "fecha": "2026-10-31T02:24:02.687Z",
+  "plan": {
+    "ok": true,
+    "contexto": 79872,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 4467,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 2321,
+    "kvFijoMiB": 0,
+    "totalMiB": 7938,
+    "libreMiB": 7956,
+    "disponibleMiB": 2339,
+    "ctxNativo": 131072,
+    "alternativas": {
+      "f16": {
+        "contexto": 40960,
+        "totalMiB": 7857
+      },
+      "q8_0": {
+        "contexto": 79872,
+        "totalMiB": 7938
+      },
+      "q4_0": {
+        "contexto": 131072,
+        "totalMiB": 7633
+      }
+    },
+    "motivo": "q8_0 a 79.872 tokens; quedan 18 MiB de margen real",
+    "nombre": "DeepSeek R1 Distill Qwen 7B"
+  },
+  "arranqueMs": 5235,
+  "nCtx": 79872,
+  "vramPicoMiB": 6809,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "\n\n</think>\n\nBONSAI_OK",
+      "ms": 310,
+      "ttftMs": 151,
+      "tps": 25.81
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "\n\n</think>\n\n```json\n{\"ok\":true,\"n\":7}\n```",
+      "ms": 396,
+      "ttftMs": 81,
+      "tps": 40.4
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n    return nums.reduce((acc, num) => num % 2 === 0 ? acc + num : acc, 0);\n}",
+      "ms": 3189,
+      "ttftMs": 87,
+      "tps": 49.25
+    },
+    {
+      "id": "herramienta",
+      "ok": false,
+      "detalle": "\n\n</think>\n\nPara calcular \\(17 + 25\\) usando la herramienta de suma, seguiremos estos pasos:\n\n1. **Sumar las decenas:**\n   \\[\n   10 + 20 = 30\n   \\]\n\n2. **Sumar ",
+      "ms": 2770,
+      "ttftMs": 86,
+      "tps": 49.1
+    },
+    {
+      "id": "contexto8k",
+      "ok": true,
+      "detalle": "\n\nLa clave de despliegue es CLAVE-7391.\n</think>\n\nCLAVE-7391",
+      "ms": 4278,
+      "ttftMs": 3677,
+      "tps": 6.08
+    }
+  ],
+  "resumen": "4/5 pruebas",
+  "medido": true
+}

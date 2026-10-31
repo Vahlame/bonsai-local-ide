@@ -241,7 +241,17 @@
   const MODEL_PATH = "models\\Ornith-1.5-9B-Q4_K_M.gguf";
   const PROJ_PATH = "models\\mmproj-Ornith-1.5-9B-BF16.gguf";
   const TEMPLATE_PATH = "logs\\chat_template_8080.jinja";
-  const MODEL_KEY = "ornith9b";
+  let MODEL_KEY = "ornith9b";
+
+  async function cargarModeloActivo() {
+    try {
+      const res = await fetch("/api/modelos", { cache: "no-store" });
+      if (!res.ok) return;
+      const datos = await res.json();
+      MODEL_KEY = datos.guardado || datos.actual || MODEL_KEY;
+    } catch { /* se queda el predeterminado */ }
+  }
+  void cargarModeloActivo();
 
   async function copyServerCommand() {
     const preset = presetSelect.value;
@@ -249,7 +259,7 @@
     const originalText = btn.querySelector("span").textContent;
     try {
       // El comando lo construye el servidor con rutas absolutas reales.
-      const res = await fetch(`/api/server/command?preset=${encodeURIComponent(preset)}`, { cache: "no-store" });
+      const res = await fetch(`/api/server/command?preset=${encodeURIComponent(preset)}&model=${encodeURIComponent(MODEL_KEY)}`, { cache: "no-store" });
       if (!res.ok) throw new Error("No se pudo generar el comando");
       const data = await res.json();
       await navigator.clipboard.writeText(data.command);
@@ -326,7 +336,8 @@
     
     try {
       // El endpoint arranca el binario optimizado con el preset elegido; el preset
-      // decide contexto, KV y visión. Solo se fija el presupuesto de razonamiento.
+      // decide contexto, KV y visión. AUTO calcula el plan con el GGUF real.
+      await cargarModeloActivo();
       const res = await fetch("/api/server/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

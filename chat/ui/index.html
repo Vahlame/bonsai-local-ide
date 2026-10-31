@@ -627,6 +627,7 @@
         <span>Terminal</span>
       </button>
       <select class="server-preset" id="server-preset" title="Preset de motor" aria-label="Preset de motor optimizado">
+        <option value="AUTO" selected>🤖 Automático · plan por modelo</option>
         <option value="8GB-VISION-MAX-Q8-100K">🏆 110k · q8_0 · visión CPU</option>
         <option value="8GB-VISION-MAX-Q8">⚡ 71k · q8_0 · visión GPU</option>
         <option value="8GB-VISION-MAX-Q4">🗺️ 110k · q4_0 · visión GPU</option>
@@ -649,6 +650,7 @@
         <span>Desconectado</span>
       </span>
     </div>
+    <button class="ghost" id="hub-abrir" type="button" title="Catálogo de modelos: buscar, descargar y probar">Modelos</button>
     <button class="ghost" id="cerrar-bonsai" type="button" title="Apagar el servidor de IA y cerrar el IDE">Cerrar IDE e IA</button>
     <button class="ghost" id="carpeta" type="button" title="Cambiar carpeta de trabajo">Carpeta</button>
     <button class="ghost" id="ayuda" type="button" aria-controls="help" aria-expanded="false">Ayuda</button>
@@ -772,6 +774,8 @@
     document.addEventListener("visibilitychange", () => { if (!document.hidden) loadStats(); });
   </script>
   <script src="/ui/ide.js"></script>
+  <!-- Model Hub: catálogo, descargas reanudables y pruebas por modelo -->
+  <script src="/ui/hub.js"></script>
   <!-- Editor con pestanas, paleta de comandos, busqueda, git y ajustes -->
   <script src="/ui/app.js"></script>
   <script src="/ui/paneles.js"></script>

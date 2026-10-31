@@ -4,6 +4,43 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [1.7.0] - 2026-10-31
+
+### Añadido
+
+- **Model Hub**: catálogo curado, búsqueda real en Hugging Face, descarga
+  reanudable con verificación SHA-256, importación de GGUF locales y borrado
+  seguro. Interfaz propia en el IDE (botón **Modelos** y menú del chip).
+- **Plan de motor por modelo**: `chat/model-plan.mjs` lee la cabecera GGUF
+  (capas, cabezas KV, `full_attention_interval`, ventana deslizante, contexto
+  nativo) y calcula contexto, KV y visión GPU/CPU con la VRAM real. Los modelos
+  descargados se registran en `models/hub-catalog.json` y aparecen en el selector
+  sin reiniciar.
+- **Plan con ventana deslizante**: Gemma 3 4B pasa de 61k a **131k** porque solo
+  5 de sus 34 capas guardan KV por token; las locales usan una ventana fija.
+- **Decodificación especulativa por modelo**: Qwen2.5 Coder 7B + draft Qwen2.5
+  0.5B pasa de 47,2 a 68,8–71,8 tok/s (1,46–1,52×) con +469 MiB de VRAM.
+- **Tool calls de Qwen2.5 Coder**: adaptadores `function-call`, `xml-json` y
+  `tools-json` para sus tres envoltorios de texto.
+- **Model Lab** (`scripts/model-lab.mjs`): arranca cada modelo con su plan y mide
+  arranque, VRAM pico, ventana real, TTFT, tok/s, JSON, código ejecutado,
+  tool-calling, retrieval y visión.
+- **Preset Automático** en la barra del servidor (`/api/server/start` con
+  `AUTO`) y auto-plan al cambiar de modelo desde el selector.
+- **Benchmark de calidad por modelo** (`bench-model-quality.mjs --model`), con
+  el plan AUTO del modelo en vez del preset de Ornith.
+- Investigación [STRATA-Y-MEMORIA](docs/STRATA-Y-MEMORIA.md): cómo reparte
+  Strata GPU/RAM/SSD, KV streaming, caché de expertos, MTP y qué se puede
+  aplicar a llama.cpp en 8 GB.
+- Documentación [MODEL-HUB](docs/MODEL-HUB.md) y pruebas
+  `chat/model-plan.mjs` + `chat/prueba-model-hub.mjs`.
+
+### Cambiado
+
+- El lanzador optimizado y `start-server.ps1` fusionan el registro del Hub;
+  `Get-RequiredMiB` usa el KV real del GGUF cuando existe.
+- El chat oculta modelos auxiliares (borradores) y los identifica con `oculto`.
+
 ## [1.6.2] - 2026-10-30
 
 ### Corregido

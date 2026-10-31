@@ -394,7 +394,16 @@ try {
   check("VRAM libre visible",await pagina.locator('#vram-free').isVisible());
   if(artefactos)await pagina.screenshot({path:path.join(artefactos,'ui-desktop.png')});
 
-  // ---- 5. Errores de consola al final (todo lo anterior incluido) ----
+  // ---- 5. Model Hub: se abre, carga catálogo y muestra pestañas ----
+  await pagina.click('#hub-abrir');
+  await pagina.locator('.hub-dialog').waitFor({timeout:10000});
+  await pagina.waitForFunction(()=>document.querySelectorAll('.hub-card').length>0,{timeout:15000});
+  check("el Model Hub se abre y pinta tarjetas", (await pagina.locator('.hub-card').count()) > 0);
+  check("el Hub tiene pestaña de búsqueda", (await pagina.locator('.hub-tab', {hasText:'Hugging Face'}).count()) === 1);
+  await pagina.keyboard.press('Escape');
+  await pagina.waitForFunction(()=>!document.querySelector('.hub-dialog'),{timeout:3000});
+
+  // ---- 6. Errores de consola al final (todo lo anterior incluido) ----
   check("sin errores de consola durante toda la prueba", erroresConsola.length === 0, erroresConsola.slice(0, 3).join(" | "));
   check("el modelo simulado recibió peticiones del chat", peticionesChat >= 2, String(peticionesChat));
 } catch (error) {

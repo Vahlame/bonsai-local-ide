@@ -1,0 +1,59 @@
+[
+  {
+    "clave": "qwen25-coder-7b",
+    "plan": {
+      "ok": true,
+      "contexto": 32768,
+      "kv": "f16",
+      "vision": false,
+      "mmprojCPU": false,
+      "visionEnGpu": false,
+      "pesosMiB": 4467,
+      "reservaMiB": 850,
+      "margenMiB": 300,
+      "visionMiB": 0,
+      "kvMiB": 1792,
+      "totalMiB": 7409,
+      "libreMiB": 7956,
+      "disponibleMiB": 2339,
+      "ctxNativo": 32768,
+      "alternativas": {
+        "f16": {
+          "contexto": 32768,
+          "totalMiB": 7409
+        },
+        "q8_0": {
+          "contexto": 32768,
+          "totalMiB": 6569
+        },
+        "q4_0": {
+          "contexto": 32768,
+          "totalMiB": 6121
+        }
+      },
+      "motivo": "f16 a 32.768 tokens; quedan 547 MiB de margen real",
+      "nombre": "Qwen2.5 Coder 7B Instruct"
+    },
+    "elegido": {
+      "ubatch": 512,
+      "threads": 4,
+      "batch": 512,
+      "tg": 52.1686,
+      "pp": 2471.903222
+    },
+    "variantes": [
+      {
+        "etiqueta": "ub=256 t=4",
+        "ok": true,
+        "pp": 2471.454106,
+        "tg": 52.02173
+      },
+      {
+        "etiqueta": "ub=512 t=4",
+        "ok": true,
+        "pp": 2471.903222,
+        "tg": 52.1686
+      }
+    ]
+  }
+]

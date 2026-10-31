@@ -33,6 +33,7 @@ param (
     [int]$Pensar = 0,
     [int]$DormirSeg = 0,
     [switch]$Vision,
+    [switch]$MmprojCPU,
     [switch]$DryRun,
     [switch]$ManagedByIDE,
     [string]$EnginePreset = "",
@@ -60,9 +61,11 @@ $EngineOptions = $null
 $SafetyMiB = if ($MarginOverrideMiB -ge 0) { $MarginOverrideMiB } else { 200 }
 $SpeculativeDecoding = $false
 $DraftModelPath = ""
+$DraftMiB = 0
 $DraftTokensCount = 4
 $Batch = 512
 $UBatch = 256
+$ProjectorCPU = $false
 
 if ($EnginePreset -and $EnginePreset -ne 'CUSTOM') {
     $EngineOptions = $Presets.$EnginePreset
@@ -93,6 +96,22 @@ if ($MarginOverrideMiB -ge 0) { $SafetyMiB = $MarginOverrideMiB }
 # MODEL + BINARY
 # =============================================================================
 $Catalogo = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+# Model Hub: los modelos descargados viven en models/hub-catalog.json. Se fusionan
+# aquí para que este lanzador (y el registro de parada) los trate como modelos más.
+$HubPath = Join-Path $RootDir "models\hub-catalog.json"
+if (Test-Path -LiteralPath $HubPath) {
+    try {
+        $Hub = Get-Content -LiteralPath $HubPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        foreach ($prop in $Hub.modelos.PSObject.Properties) {
+            if ($prop.Name -like "_*") { continue }
+            if (-not $Catalogo.catalogo.PSObject.Properties[$prop.Name]) {
+                $Catalogo.catalogo | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value
+            }
+        }
+    } catch {
+        Write-Host "Aviso: no se pudo leer models/hub-catalog.json: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
 $Item = $Catalogo.catalogo.$Modelo
 if (-not $Item -or $Item.servidor.tipo -ne "gpu-completa") {
     throw "Modelo sin perfil de GPU completa: $Modelo"
@@ -112,6 +131,36 @@ foreach ($cand in $Candidates) {
     if (Test-Path -LiteralPath $cand) { $BinPath = $cand; break }
 }
 $UsingOptimized = $BinPath -like "*build-RTX4060-Opt-sm89*"
+$Threads = 4
+# Perfil del modelo (Hub): batch/ubatch/hilos medidos o recomendados. En presets
+# nombrados manda el preset; para CUSTOM/AUTO manda el modelo.
+if (($EnginePreset -eq 'CUSTOM' -or -not $EnginePreset) -and $Item.servidor) {
+    if ($Item.servidor.batch) { $Batch = [int]$Item.servidor.batch }
+    if ($Item.servidor.ubatch) { $UBatch = [int]$Item.servidor.ubatch }
+    if ($Item.servidor.threads) { $Threads = [int]$Item.servidor.threads }
+}
+# CUSTOM/AUTO: el plan del modelo decide si el proyector vive en CPU. En los
+# presets nombrados manda el preset (`mmprojCPU`).
+if (($EnginePreset -eq 'CUSTOM' -or -not $EnginePreset) -and $Item.vision -and $Item.vision.offload -eq $false) {
+    $ProjectorCPU = $true
+}
+if ($MmprojCPU) { $ProjectorCPU = $true }
+# Draft explícito por parámetro (model-lab y pruebas). Si el preset ya lo puso,
+# no se toca; si viene vacío, se ignora.
+# Draft del propio modelo (Model Hub): si no se pasó -DraftModel, se usa el
+# que declara su perfil. Así el plan de VRAM y el arranque van en el mismo sitio.
+if (-not $DraftModel -and $Item.servidor -and $Item.servidor.draftModel) {
+    $DraftModel = [string]$Item.servidor.draftModel
+    if ($Item.servidor.draftTokens) { $DraftTokens = [int]$Item.servidor.draftTokens }
+}
+if ($DraftModel) {
+    $DraftModelPath = if ([IO.Path]::IsPathRooted($DraftModel)) { $DraftModel } else { Join-Path $RootDir ("models\" + $DraftModel) }
+    $SpeculativeDecoding = Test-Path -LiteralPath $DraftModelPath
+    if (-not $SpeculativeDecoding) { Write-Host "Aviso: no existe el borrador $DraftModelPath" -ForegroundColor Yellow }
+}
+if ($SpeculativeDecoding -and (Test-Path -LiteralPath $DraftModelPath)) {
+    $DraftMiB = [math]::Ceiling((Get-Item -LiteralPath $DraftModelPath).Length / 1MB)
+}
 
 # =============================================================================
 # VRAM
@@ -149,8 +198,15 @@ if ($Vision) {
 
 function Get-RequiredMiB([int]$ContextTokens, [string]$CacheType) {
     $bytes = $KvBytesPerElement[$CacheType]
-    $cacheBytes = $ContextTokens * [double]$GpuProfile.capasAtencionCompleta * $GpuProfile.cabezasKV * $GpuProfile.dimCabeza * 2 * $bytes
-    return $WeightsMiB + [math]::Ceiling($cacheBytes / 1MB) + [int]$GpuProfile.reservaMiB + $VisionMiB + $SafetyMiB
+    # Los modelos del Hub traen la suma REAL por capa (K+V, f16) leída del GGUF.
+    # Se escala a la cuantización elegida; es más exacta que layers × heads × dim.
+    if ($GpuProfile.kvF16BytesPorToken) {
+        $cacheBytes = $ContextTokens * ([double]$GpuProfile.kvF16BytesPorToken) * ($bytes / 2.0)
+        if ($GpuProfile.kvFijoF16Bytes) { $cacheBytes += [double]$GpuProfile.kvFijoF16Bytes * ($bytes / 2.0) }
+    } else {
+        $cacheBytes = $ContextTokens * [double]$GpuProfile.capasAtencionCompleta * $GpuProfile.cabezasKV * $GpuProfile.dimCabeza * 2 * $bytes
+    }
+    return $WeightsMiB + [math]::Ceiling($cacheBytes / 1MB) + [int]$GpuProfile.reservaMiB + $VisionMiB + $DraftMiB + $SafetyMiB
 }
 
 $FreeMiB = 0
@@ -214,7 +270,7 @@ $ServerArgs += "-ctv", $KVCacheType
 if (-not $StableF16) { $ServerArgs += "-np", "1" }
 $ServerArgs += "-b", "$Batch"
 $ServerArgs += "-ub", "$UBatch"
-$ServerArgs += "-t", "4"
+$ServerArgs += "-t", "$Threads"
 $ServerArgs += "--host", $HostIP
 $ServerArgs += "--port", "$Port"
 $ServerArgs += "--jinja"
@@ -255,8 +311,8 @@ if ($Pensar -gt 0) {
 
 if ($SpeculativeDecoding -and (Test-Path -LiteralPath $DraftModelPath)) {
     $ServerArgs += "--spec-type", "draft-simple"
-    $ServerArgs += "--draft-model", $DraftModelPath
-    $ServerArgs += "--draft-tokens", "$DraftTokensCount"
+    $ServerArgs += "--spec-draft-model", $DraftModelPath
+    $ServerArgs += "--spec-draft-n-max", "$DraftTokensCount"
 }
 
 # =============================================================================
@@ -300,7 +356,7 @@ function Write-MarcadorAdministrado([int]$ServidorPid) {
         vision = [bool]$Vision; pensar = $Pensar; dormir = $DormirSeg; hostIP = $HostIP;
         pid = $PID; wrapperPid = $PID; iniciado = $WrapperTicks; enginePreset = $EnginePreset;
         llamaVersion = $LlamaVersion; activeKey = $ActiveKey; speculative = $SpeculativeDecoding;
-        optimized = $UsingOptimized
+        optimized = $UsingOptimized; mmprojCPU = [bool]$ProjectorCPU
     }
     if ($ServidorPid -gt 0) {
         $Info.pidServidor = $ServidorPid

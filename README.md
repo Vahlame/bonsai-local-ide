@@ -5,16 +5,18 @@ Chat con agente, editor con pestañas, diffs, git, terminal integrado, navegador
 controlado y visión — todo en tu GPU, sin nube.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-1.6.2-cde86e">
+  <img alt="version" src="https://img.shields.io/badge/version-1.7.0-cde86e">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v1.6.2** — **110.592 tokens con visión y KV q8_0** en la RTX 4060 (proyector de
-> visión en RAM), reparto de contexto automático, compactación estructurada y un IDE
-> en **ventana propia sin GPU** (0 MiB de VRAM). Notas: [RELEASE-1.6.2](docs/RELEASE-1.6.2.md).
+> **v1.7.0** — **Model Hub**: catálogo y búsqueda en Hugging Face, descargas
+> reanudables con SHA-256, importación de GGUF locales y **un plan de motor
+> automático por modelo** (contexto, KV y visión según la VRAM real). Incluye
+> **Model Lab** para probar cada modelo y la investigación
+> [Strata y la memoria](docs/STRATA-Y-MEMORIA.md). Notas: [RELEASE-1.7.0](docs/RELEASE-1.7.0.md).
 
 ---
 
@@ -128,6 +130,39 @@ flowchart TD
 | `8GB-CODE-BALANCED` | 32.768 | q8_0 | — | Casi sin pérdida |
 | `8GB-CODE-FAST` | 16.384 | f16 | — | Máximo throughput |
 | `8GB-RESEARCH` | 65.536 | q4_0 | — | Experimental |
+
+---
+
+## 🗂️ Model Hub: trae tus propios modelos
+
+El botón **Modelos** de la barra superior abre el catálogo. Desde ahí puedes:
+
+- buscar en **Hugging Face** y ver los GGUF de cada repo con su tamaño y
+  cuantización;
+- descargar del catálogo curado (Qwen3 4B, Qwen2.5 Coder 7B, Gemma 3 4B con
+  visión, Llama 3.2 3B, DeepSeek R1 Distill 7B…), por **URL directa** o
+  importando un `.gguf` que ya tengas;
+- seguir el progreso, cancelar y **reanudar** una descarga cortada;
+- verificar el **SHA-256** y registrar el modelo sin reiniciar el IDE.
+
+Cada modelo recibe su propio **plan automático**: el IDE lee la cabecera del
+GGUF (capas, cabeceras KV, contexto nativo, `full_attention_interval`) y decide
+contexto, KV f16/q8_0/q4_0 y si el proyector de visión va en GPU o CPU. También
+se puede lanzar desde la línea de comandos:
+
+```powershell
+node scripts/hub.mjs list
+node scripts/hub.mjs search "qwen2.5 coder"
+node scripts/hub.mjs download qwen3-4b-2507
+node scripts/model-lab.mjs probe --all
+```
+
+El **Model Lab** arranca cada modelo con su plan y mide arranque, VRAM pico,
+TTFT, tok/s, JSON, código ejecutado, tool-calling, retrieval y visión. Los
+resultados quedan en `reports/model-lab-<fecha>/` y en el registro local.
+
+👉 [Guía del Model Hub](docs/MODEL-HUB.md) ·
+[Strata y la memoria: cómo meter más en menos RAM](docs/STRATA-Y-MEMORIA.md)
 
 ---
 
@@ -400,6 +435,10 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 
 | Documento | Contenido |
 |---|---|
+| [RELEASE-1.7.0](docs/RELEASE-1.7.0.md) | Model Hub, plan por modelo y Model Lab |
+| [MODEL-HUB](docs/MODEL-HUB.md) | Catálogo, descargas, API y plan automático |
+| [STRATA-Y-MEMORIA](docs/STRATA-Y-MEMORIA.md) | Qué es Strata y qué ideas de memoria aplican aquí |
+| [MODEL-HUB-2026-10-31](reports/MODEL-HUB-2026-10-31.md) | Evidencia: planes, VRAM, calidad y tuning por modelo |
 | [RELEASE-1.6.2](docs/RELEASE-1.6.2.md) | Acceso directo: abre el IDE de verdad (sin `-NoBrowser`) |
 | [RELEASE-1.6.1](docs/RELEASE-1.6.1.md) | IDE sin GPU, ventana propia y pulido de interfaz |
 | [RELEASE-1.6.0](docs/RELEASE-1.6.0.md) | 110k con visión, reparto de contexto automático y compactación |

@@ -26,10 +26,24 @@ const extra = leerPresets(optimizado);
 export const ENGINE_PROFILES = Object.freeze({ ...base, ...extra });
 
 const MODELO_FILE = new URL("../chat/modelo.json", import.meta.url);
+const HUB_FILE = new URL("../models/hub-catalog.json", import.meta.url);
 let MODELO_CACHE = null;
 function cargarModelo() {
   if (!MODELO_CACHE) {
     MODELO_CACHE = JSON.parse(fs.readFileSync(MODELO_FILE, "utf8"));
+    // Los modelos descargados viven en models/hub-catalog.json. Se fusionan aquí
+    // para que la validación del techo y el selector los vean sin depender del
+    // orden de importación de módulos.
+    try {
+      const hub = JSON.parse(fs.readFileSync(HUB_FILE, "utf8"));
+      for (const [clave, entrada] of Object.entries(hub.modelos || {})) {
+        if (!clave.startsWith("_") && entrada && typeof entrada === "object" && !MODELO_CACHE.catalogo[clave]) {
+          MODELO_CACHE.catalogo[clave] = entrada;
+        }
+      }
+    } catch {
+      /* sin Hub: solo catálogo curado */
+    }
   }
   return MODELO_CACHE;
 }

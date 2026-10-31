@@ -105,6 +105,8 @@
     return cerrar;
   }
   window.bonsaiAvisar = avisar;
+  window.bonsaiConfirmar = confirmar;
+  window.bonsaiPreguntar = preguntar;
 
   // ==================================================================== diálogo
   /**
@@ -2355,7 +2357,7 @@
   function menuModelos(ancla) {
     const desde = ancla || $("#modelo-boton") || $("#modelo-chip");
     const r = desde?.getBoundingClientRect();
-    const items = estadoModelos.modelos.map((m) => ({
+    const items = estadoModelos.modelos.filter((m) => !m.oculto).map((m) => ({
       texto: m.nombre,
       nota: m.uso || m.rol || "",
       tecla: !m.gpuCompleta ? "no disponible: usa CPU" : m.clave === estadoModelos.actual ? "cargado" : (m.existe ? "" : "falta el GGUF"),
@@ -2364,6 +2366,7 @@
     }));
     if (!items.length) items.push({ texto: "No hay modelos en chat\\modelo.json (o el servidor no responde)", ico: "alerta" });
     items.push(null);
+    items.push({ texto: "Catálogo de modelos…", nota: "buscar y descargar GGUF de Hugging Face", ico: "bajar", hacer: () => window.bonsaiHub?.abrir() });
     items.push({ texto: "Actualizar estado", ico: "recargar", hacer: () => void refrescarModelos() });
     menu(r?.left || 100, (r?.bottom || 40) + 4, items);
   }
@@ -2416,7 +2419,7 @@
     cargandoModelo = nombre;
     pintarChipModelo();
     try {
-      const r = await api("/api/modelos", { cuerpo: { clave } });
+      const r = await api("/api/modelos", { cuerpo: { clave, auto: true } });
       cargandoModelo = "";
       cerrar();
       avisar(r.cambiado ? `${r.nombre} cargado · ventana ${r.nCtx} tok${r.pensar ? ` · razona con hasta ${r.pensar} tokens` : ""}` : `${r.nombre} ya estaba cargado`, "ok", 6000);
@@ -2619,6 +2622,8 @@
     // El modelo también puede cambiar por fuera de la app (start-server.ps1 -Modelo, otra
     // pestaña): el chip se refresca solo para no enseñar uno que ya no está cargado.
     setInterval(() => void refrescarModelos(), 15000);
+    // El Model Hub avisa cuando termina una descarga o se borra un modelo.
+    window.addEventListener("bonsai:modelos-cambiados", () => void refrescarModelos());
     // Los intervalos no trabajan con la pestaña oculta; al volver se refresca de inmediato.
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) return;

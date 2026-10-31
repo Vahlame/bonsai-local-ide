@@ -1,0 +1,61 @@
+[
+  {
+    "clave": "deepseek-r1-qwen7b",
+    "plan": {
+      "ok": true,
+      "contexto": 79872,
+      "kv": "q8_0",
+      "vision": false,
+      "mmprojCPU": false,
+      "visionEnGpu": false,
+      "pesosMiB": 4467,
+      "reservaMiB": 850,
+      "margenMiB": 300,
+      "visionMiB": 0,
+      "draftMiB": 0,
+      "kvMiB": 2321,
+      "kvFijoMiB": 0,
+      "totalMiB": 7938,
+      "libreMiB": 7956,
+      "disponibleMiB": 2339,
+      "ctxNativo": 131072,
+      "alternativas": {
+        "f16": {
+          "contexto": 40960,
+          "totalMiB": 7857
+        },
+        "q8_0": {
+          "contexto": 79872,
+          "totalMiB": 7938
+        },
+        "q4_0": {
+          "contexto": 131072,
+          "totalMiB": 7633
+        }
+      },
+      "motivo": "q8_0 a 79.872 tokens; quedan 18 MiB de margen real",
+      "nombre": "DeepSeek R1 Distill Qwen 7B"
+    },
+    "elegido": {
+      "ubatch": 512,
+      "threads": 4,
+      "batch": 512,
+      "tg": 51.422069,
+      "pp": 2481.281217
+    },
+    "variantes": [
+      {
+        "etiqueta": "ub=256 t=4",
+        "ok": true,
+        "pp": 2420.808876,
+        "tg": 51.402074
+      },
+      {
+        "etiqueta": "ub=512 t=4",
+        "ok": true,
+        "pp": 2481.281217,
+        "tg": 51.422069
+      }
+    ]
+  }
+]

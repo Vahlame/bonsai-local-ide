@@ -1,0 +1,59 @@
+[
+  {
+    "clave": "qwen3-4b-2507",
+    "plan": {
+      "ok": true,
+      "contexto": 57344,
+      "kv": "q8_0",
+      "vision": false,
+      "mmprojCPU": false,
+      "visionEnGpu": false,
+      "pesosMiB": 2382,
+      "reservaMiB": 850,
+      "margenMiB": 300,
+      "visionMiB": 0,
+      "kvMiB": 4284,
+      "totalMiB": 7816,
+      "libreMiB": 7956,
+      "disponibleMiB": 4424,
+      "ctxNativo": 262144,
+      "alternativas": {
+        "f16": {
+          "contexto": 30720,
+          "totalMiB": 7852
+        },
+        "q8_0": {
+          "contexto": 57344,
+          "totalMiB": 7816
+        },
+        "q4_0": {
+          "contexto": 110592,
+          "totalMiB": 7906
+        }
+      },
+      "motivo": "q8_0 a 57.344 tokens; quedan 140 MiB de margen real",
+      "nombre": "Qwen3 4B Instruct 2507"
+    },
+    "elegido": {
+      "ubatch": 512,
+      "threads": 4,
+      "batch": 512,
+      "tg": 82.334914,
+      "pp": 3791.258886
+    },
+    "variantes": [
+      {
+        "etiqueta": "ub=256 t=4",
+        "ok": true,
+        "pp": 3752.882716,
+        "tg": 82.160667
+      },
+      {
+        "etiqueta": "ub=512 t=4",
+        "ok": true,
+        "pp": 3791.258886,
+        "tg": 82.334914
+      }
+    ]
+  }
+]

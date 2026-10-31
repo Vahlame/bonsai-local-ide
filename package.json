@@ -1,6 +1,6 @@
 {
   "name": "bonsai-local-ide",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "private": true,
   "description": "Bonsai Local IDE: agente de desarrollo local con llama-server para Windows 10 y 11",
   "license": "MIT",
@@ -19,6 +19,10 @@
     "benchmark:quality": "node scripts/bench-model-quality.mjs",
     "benchmark:sampling": "node scripts/bench-model-quality.mjs --sampling --repeat 2",
     "benchmark:project": "node scripts/bench-project.mjs",
+    "models:hub": "node scripts/hub.mjs",
+    "models:lab": "node scripts/model-lab.mjs",
+    "models:tune": "node scripts/model-tune.mjs",
+    "models:quality": "node scripts/bench-model-quality.mjs",
     "probe:context": "powershell -ExecutionPolicy Bypass -File scripts/probe-rtx4060-context.ps1",
     "build:rtx4060": "powershell -ExecutionPolicy Bypass -File scripts/build-rtx4060-optimized.ps1",
     "test": "node scripts/run-tests.mjs",
