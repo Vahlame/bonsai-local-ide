@@ -419,3 +419,5 @@ versionado semántico.
 
 [1.2.0]: https://github.com/Vahlame/bonsai-local-ide/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Vahlame/bonsai-local-ide/releases/tag/v1.1.0
+[2.2.0]: https://github.com/Vahlame/bonsai-local-ide/compare/v2.1.0...v2.2.0
+[2.1.0]: https://github.com/Vahlame/bonsai-local-ide/releases/tag/v2.1.0
