@@ -1,0 +1,31 @@
+diff --git a/ggml/src/ggml-cuda/mmvq.cu b/ggml/src/ggml-cuda/mmvq.cu
+index 930f1ad..4c93691 100644
+--- a/ggml/src/ggml-cuda/mmvq.cu
++++ b/ggml/src/ggml-cuda/mmvq.cu
+@@ -2,6 +2,7 @@
+ #include "quantize.cuh"
+ #include "unary.cuh"
+ #include "vecdotq.cuh"
++#include "mmvq-4060-config.h"
+ 
+ #include <cstdint>
+ #include <type_traits>
+@@ -450,6 +451,18 @@ static constexpr __device__ int get_mmvq_mmid_max_batch_for_device() {
+ }
+ 
+ static constexpr __host__ __device__ int calc_nwarps(ggml_type type, int ncols_dst, mmvq_parameter_table_id table_id, bool small_k = false, bool halve_iters = false) {
++#if GGML_CUDA_MMVQ_4060_NWARPS > 0
++    if (table_id == MMVQ_PARAMETERS_GENERIC && ncols_dst == 1) {
++        switch (type) {
++            case GGML_TYPE_Q4_K:
++            case GGML_TYPE_Q5_K:
++            case GGML_TYPE_Q6_K:
++                return GGML_CUDA_MMVQ_4060_NWARPS;
++            default:
++                break;
++        }
++    }
++#endif
+     if (table_id == MMVQ_PARAMETERS_GENERIC) {
+         switch (ncols_dst) {
+             case 1:

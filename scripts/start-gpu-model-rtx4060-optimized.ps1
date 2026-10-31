@@ -120,15 +120,36 @@ $Item = $Catalogo.catalogo.$Modelo
 if (-not $Item -or ($Item.servidor.tipo -ne "gpu-completa" -and $Item.servidor.tipo -ne "moe-hibrido")) {
     throw "Modelo sin perfil de GPU completa ni MoE híbrido: $Modelo"
 }
+$EsMoe = $Item.servidor.tipo -eq "moe-hibrido"
+# Measured, machine-specific MoE split table. It is used only for MoE models
+# and only when the file exists; the old estimator remains the fallback.
+$MeasuredMoePath = Join-Path $RootDir "config\measured-moe-profiles.json"
+$MeasuredMoe = $null
+if (Test-Path -LiteralPath $MeasuredMoePath) {
+    try { $MeasuredMoe = Get-Content -LiteralPath $MeasuredMoePath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {
+        Write-Host "Aviso: no se pudo leer measured-moe-profiles.json: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+function Get-MeasuredMoeEntry([string]$Key) {
+    if (-not $MeasuredMoe -or -not $MeasuredMoe.models) { return $null }
+    $prop = $MeasuredMoe.models.PSObject.Properties[$Key]
+    if (-not $prop) { return $null }
+    return $prop.Value
+}
+$MeasuredMoeEntry = if ($EsMoe) { Get-MeasuredMoeEntry ([string]$Item.clave) } else { $null }
+# Dense models also have a planned KV. An explicit context must not silently
+# downgrade a near-lossless q8_0 plan to q4_0.
+if ($Item.plan -and $Item.plan.kv -and -not $PSBoundParameters.ContainsKey('KVCacheType')) {
+    $KVCacheType = [string]$Item.plan.kv
+}
 # En MoE manda el plan del modelo, no el preset denso: un preset de 110k deja
 # casi toda la VRAM en KV y muy pocos expertos en la GPU. El plan ya calculó
 # contexto, KV y reparto para ESTE GGUF.
-$EsMoe = $Item.servidor.tipo -eq "moe-hibrido"
 if ($EsMoe -and $Item.plan) {
     if (-not $ContextoExplicito) {
         if ($Item.plan.contexto) { $ContextSize = [string]$Item.plan.contexto }
-        if ($Item.plan.kv) { $KVCacheType = [string]$Item.plan.kv }
     }
+    if ($Item.plan.kv -and -not $PSBoundParameters.ContainsKey('KVCacheType')) { $KVCacheType = [string]$Item.plan.kv }
     if ($null -ne $Item.plan.mmprojCPU) { $ProjectorCPU = [bool]$Item.plan.mmprojCPU }
     if ($Item.servidor.batch) { $Batch = [int]$Item.servidor.batch }
     if ($Item.servidor.ubatch) { $UBatch = [int]$Item.servidor.ubatch }
@@ -142,13 +163,15 @@ if ([int64]$Item.bytes -gt 0 -and (Get-Item -LiteralPath $ModelPath).Length -ne 
 
 $BinPath = Join-Path $RootDir "bin\llama-server.exe"
 $Candidates = @(
+    (Join-Path $RootDir "bin\builds\lab-server-mvq2\bin\llama-server.exe"),
     (Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"),
-    (Join-Path $env:USERPROFILE ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe")
+    (Join-Path $env:USERPROFILE ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"),
+    (Join-Path $RootDir "bin\llama-server.exe")
 )
 foreach ($cand in $Candidates) {
     if (Test-Path -LiteralPath $cand) { $BinPath = $cand; break }
 }
-$UsingOptimized = $BinPath -like "*build-RTX4060-Opt-sm89*"
+$UsingOptimized = ($BinPath -like "*build-RTX4060-Opt-sm89*") -or ($BinPath -like "*lab-server-mvq2*")
 $Threads = 4
 # Perfil del modelo (Hub): batch/ubatch/hilos medidos o recomendados. En presets
 # nombrados manda el preset; para CUSTOM/AUTO manda el modelo.
@@ -313,6 +336,30 @@ if ($IsMoe) {
     } else {
         $NCpuMoe = [int]$GpuProfile.moe.nCpuMoe
     }
+    # Measured table wins over the analytic estimate. The table was produced by
+    # loading llama-server at each context and finding the largest n-cpu-moe
+    # that survived 2048 prompt + 128/256 generated tokens without OOM.
+    $MeasuredMoeChoice = $null
+    if ($MeasuredMoeEntry -and $MeasuredMoeEntry.contexts) {
+        $Candidates = @($MeasuredMoeEntry.contexts | Sort-Object { [int]$_.ctx })
+        $MeasuredMoeChoice = $Candidates | Where-Object { [int]$_.ctx -ge $ContextTokens } | Select-Object -First 1
+        if (-not $MeasuredMoeChoice) { $MeasuredMoeChoice = $Candidates[-1] }
+        $NCpuMoe = [int]$MeasuredMoeChoice.nCpuMoe
+        # If another application is already using VRAM, move enough experts
+        # back to RAM to preserve the measured safety margin.
+        $DeltaFree = [int]$MeasuredMoe.freeVramAssumedMiB - $FreeMiB
+        if ($DeltaFree -gt 0 -and [double]$MeasuredMoeEntry.perLayerMiB -gt 0) {
+            $ExtraCpu = [math]::Ceiling($DeltaFree / [double]$MeasuredMoeEntry.perLayerMiB)
+            $NCpuMoe = [math]::Min($CapasMoe, $NCpuMoe + [int]$ExtraCpu)
+            Write-Host ("MoE medido: VRAM libre {0} MiB (< {1}); +{2} capas a CPU" -f $FreeMiB, $MeasuredMoe.freeVramAssumedMiB, $ExtraCpu) -ForegroundColor Yellow
+        }
+        $CapasGpu = $CapasMoe - $NCpuMoe
+        $GpuExpertosMiB = 0
+        for ($i = $NCpuMoe; $i -lt $CapasMoe; $i++) {
+            $GpuExpertosMiB += [math]::Ceiling([double]$PorCapa[$i] / 1MB)
+        }
+        Write-Host ("MoE medido: contexto {0}, n-cpu-moe {1} (fila {2}), ~{3} MiB de expertos en GPU" -f $ContextTokens, $NCpuMoe, $MeasuredMoeChoice.ctx, $GpuExpertosMiB) -ForegroundColor Green
+    }
     if ($GpuExtra -gt 0 -and $NCpuMoe -ge $GpuExtra) {
         $NCpuMoe -= $GpuExtra
         $GpuExpertosMiB = 0
@@ -346,6 +393,10 @@ if ($IsMoe) {
         }
     }
     if (-not $Item.servidor.threads) { $Threads = 12 } else { $Threads = [int]$Item.servidor.threads }
+    if ($MeasuredMoeEntry -and $MeasuredMoeEntry.threads) {
+        $Threads = [int]$MeasuredMoeEntry.threads
+        Write-Host ("MoE medido: {0} hilos (tabla, no {1} del catálogo)" -f $Threads, $Item.servidor.threads) -ForegroundColor Green
+    }
     $TextoMoe = ("MoE: {0}/{1} capas de expertos en GPU ({2} MiB), {3} en RAM ({4} MiB); hilos={5}" -f ($CapasMoe - $NCpuMoe), $CapasMoe, $GpuExpertosMiB, $NCpuMoe, $ExpertosRamMiB, $Threads) + "; carga=" + $LoadMode
     Write-Host $TextoMoe -ForegroundColor Magenta
 }

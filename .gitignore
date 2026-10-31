@@ -82,3 +82,10 @@ URL-CURSOR.txt
 # Historial de asistentes externos
 .aider*
 URL-CURSOR.txt
+
+# Performance lab: large profiler artifacts and local worktrees
+reports/profile-*/*.nsys-rep
+reports/profile-*/*.sqlite
+reports/profile-*/*.ncu-rep
+forks/llama.cpp-4060/
+bin/builds/
