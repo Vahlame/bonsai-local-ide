@@ -42,6 +42,7 @@ import {
   catalogoHub,
   crearTrabajo,
   cancelarTrabajo,
+  descubrirHuggingFace,
   escanearModelos,
   fusionarCatalogo,
   inspeccionarRepo,
@@ -2678,6 +2679,15 @@ async function main(args) {
         const datos = q ? await buscarHuggingFace(q, { limit: Number(url.searchParams.get("limit")) || 24 }) : [];
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
         res.end(JSON.stringify({ q, resultados: datos }));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/hub/discover") {
+        const datos = await descubrirHuggingFace({
+          limit: Number(url.searchParams.get("limit")) || 30,
+          sort: url.searchParams.get("sort") || "trendingScore",
+        });
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ resultados: datos, actualizado: new Date().toISOString() }));
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/hub/repo") {

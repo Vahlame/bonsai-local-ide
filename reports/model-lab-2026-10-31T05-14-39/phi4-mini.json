@@ -1,0 +1,80 @@
+{
+  "clave": "phi4-mini",
+  "nombre": "Phi-4 Mini Instruct",
+  "archivo": "phi4-mini-Phi-4-mini-instruct-Q4_K_M.gguf",
+  "fecha": "2026-10-31T05:16:05.995Z",
+  "plan": {
+    "ok": true,
+    "contexto": 65536,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 2377,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 4352,
+    "kvFijoMiB": 0,
+    "totalMiB": 7879,
+    "libreMiB": 7956,
+    "disponibleMiB": 4429,
+    "ctxNativo": 131072,
+    "alternativas": {
+      "f16": {
+        "contexto": 34816,
+        "totalMiB": 7879
+      },
+      "q8_0": {
+        "contexto": 65536,
+        "totalMiB": 7879
+      },
+      "q4_0": {
+        "contexto": 124928,
+        "totalMiB": 7919
+      }
+    },
+    "motivo": "q8_0 a 65.536 tokens; quedan 77 MiB de margen real",
+    "nombre": "Phi-4 Mini Instruct"
+  },
+  "arranqueMs": 4442,
+  "nCtx": 65536,
+  "vramPicoMiB": 7129,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 172,
+      "ttftMs": 111,
+      "tps": 23.26
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 136,
+      "ttftMs": 24,
+      "tps": 66.18
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n    return nums.reduce((acc, num) => (num % 2 === 0 ? acc + num : acc), 0);\n}",
+      "ms": 506,
+      "ttftMs": 28,
+      "tps": 79.52
+    },
+    {
+      "id": "herramienta",
+      "ok": false,
+      "detalle": "Claro, puedo simular una función de suma para calcular el resultado de 17+25. Aquí está una función simple en Python:\n\n```python\ndef sum_two_numbers(a, b):\n    ",
+      "ms": 1280,
+      "ttftMs": 28,
+      "tps": 82.81
+    }
+  ],
+  "resumen": "3/4 pruebas",
+  "medido": true
+}

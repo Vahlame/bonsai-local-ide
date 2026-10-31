@@ -1,0 +1,88 @@
+{
+  "clave": "qwen3vl-2b",
+  "nombre": "Qwen3-VL 2B Instruct",
+  "archivo": "Qwen3VL-2B-Instruct-Q4_K_M.gguf",
+  "fecha": "2026-10-31T03:41:12.218Z",
+  "plan": {
+    "ok": true,
+    "contexto": 98304,
+    "kv": "q8_0",
+    "vision": true,
+    "mmprojCPU": true,
+    "visionEnGpu": false,
+    "pesosMiB": 1057,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 5712,
+    "kvFijoMiB": 0,
+    "totalMiB": 7919,
+    "libreMiB": 7956,
+    "disponibleMiB": 5749,
+    "ctxNativo": 262144,
+    "alternativas": {
+      "f16": {
+        "contexto": 51200,
+        "totalMiB": 7807
+      },
+      "q8_0": {
+        "contexto": 98304,
+        "totalMiB": 7919
+      },
+      "q4_0": {
+        "contexto": 131072,
+        "totalMiB": 6239
+      }
+    },
+    "motivo": "q8_0 a 98.304 tokens; quedan 37 MiB de margen real",
+    "nombre": "Qwen3-VL 2B Instruct"
+  },
+  "arranqueMs": 3105,
+  "nCtx": 98304,
+  "vramPicoMiB": 7339,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 157,
+      "ttftMs": 116,
+      "tps": 32.05
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 82,
+      "ttftMs": 20,
+      "tps": 111.11
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n    return nums.reduce((acum, num) => {\n        if (num % 2 === 0) {\n            return acum + num;\n        }\n        return acum;\n    }, 0);\n}",
+      "ms": 352,
+      "ttftMs": 20,
+      "tps": 151
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\": 17, \"b\": 25})",
+      "ms": 228,
+      "ttftMs": 112,
+      "tps": 0
+    },
+    {
+      "id": "vision",
+      "ok": true,
+      "detalle": "La imagen muestra una interfaz de un editor de código en la plataforma Bonsai, con una lista de archivos de explorador y una ventana de conversación, y se puede leer la palabra \"ajustar\" en el texto d",
+      "ms": 7748,
+      "ttftMs": 7418,
+      "tps": 6.58
+    }
+  ],
+  "resumen": "5/5 pruebas",
+  "medido": true
+}

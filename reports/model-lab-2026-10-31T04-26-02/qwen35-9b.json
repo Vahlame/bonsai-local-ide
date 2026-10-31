@@ -1,0 +1,88 @@
+{
+  "clave": "qwen35-9b",
+  "nombre": "Qwen3.5 9B",
+  "archivo": "qwen35-9b-Qwen3.5-9B-Q3_K_M.gguf",
+  "fecha": "2026-10-31T04:27:15.834Z",
+  "plan": {
+    "ok": true,
+    "contexto": 131072,
+    "kv": "q8_0",
+    "vision": true,
+    "mmprojCPU": true,
+    "visionEnGpu": false,
+    "pesosMiB": 4458,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 2176,
+    "kvFijoMiB": 0,
+    "totalMiB": 7784,
+    "libreMiB": 7956,
+    "disponibleMiB": 2348,
+    "ctxNativo": 262144,
+    "alternativas": {
+      "f16": {
+        "contexto": 73728,
+        "totalMiB": 7912
+      },
+      "q8_0": {
+        "contexto": 131072,
+        "totalMiB": 7784
+      },
+      "q4_0": {
+        "contexto": 131072,
+        "totalMiB": 6760
+      }
+    },
+    "motivo": "q8_0 a 131.072 tokens; quedan 172 MiB de margen real",
+    "nombre": "Qwen3.5 9B"
+  },
+  "arranqueMs": 8369,
+  "nCtx": 131072,
+  "vramPicoMiB": 7121,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 408,
+      "ttftMs": 261,
+      "tps": 12.25
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 342,
+      "ttftMs": 133,
+      "tps": 26.39
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.filter(n => n % 2 === 0).reduce((a, b) => a + b, 0);\n}",
+      "ms": 1020,
+      "ttftMs": 115,
+      "tps": 42.24
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 1000,
+      "ttftMs": 391,
+      "tps": 0
+    },
+    {
+      "id": "vision",
+      "ok": true,
+      "detalle": "La imagen muestra la interfaz de una aplicación de desarrollo llamado \"Bonsai\", donde se visualiza un explorador de archivos con nombres de archivos como \"chat/actions.mjs\" y \"chat/modelo.json\", junto",
+      "ms": 13313,
+      "ttftMs": 12205,
+      "tps": 4.06
+    }
+  ],
+  "resumen": "5/5 pruebas",
+  "medido": true
+}

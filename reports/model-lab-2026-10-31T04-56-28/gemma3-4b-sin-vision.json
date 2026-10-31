@@ -1,0 +1,80 @@
+{
+  "clave": "gemma3-4b",
+  "nombre": "Gemma 3 4B IT",
+  "archivo": "gemma-3-4b-it-Q4_K_M.gguf",
+  "fecha": "2026-10-31T04:56:37.781Z",
+  "plan": {
+    "ok": true,
+    "contexto": 131072,
+    "kv": "f16",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 2375,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 2676,
+    "kvFijoMiB": 116,
+    "totalMiB": 6201,
+    "libreMiB": 7956,
+    "disponibleMiB": 4315,
+    "ctxNativo": 131072,
+    "alternativas": {
+      "f16": {
+        "contexto": 131072,
+        "totalMiB": 6201
+      },
+      "q8_0": {
+        "contexto": 131072,
+        "totalMiB": 4947
+      },
+      "q4_0": {
+        "contexto": 131072,
+        "totalMiB": 4278
+      }
+    },
+    "motivo": "f16 a 131.072 tokens; quedan 1755 MiB de margen real",
+    "nombre": "Gemma 3 4B IT"
+  },
+  "arranqueMs": 4661,
+  "nCtx": 131072,
+  "vramPicoMiB": 5769,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK\n",
+      "ms": 198,
+      "ttftMs": 93,
+      "tps": 30.3
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "```json\n{\"ok\":true,\"n\":7}\n```\n",
+      "ms": 233,
+      "ttftMs": 33,
+      "tps": 64.38
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  let suma = 0;\n  for (let i = 0; i < nums.length; i++) {\n    if (nums[i] % 2 === 0) {\n      suma += nums[i];\n    }\n  }\n  return suma;\n}",
+      "ms": 1020,
+      "ttftMs": 30,
+      "tps": 75.56
+    },
+    {
+      "id": "herramienta",
+      "ok": false,
+      "detalle": "```python\ndef sumar(a, b):\n  \"\"\"Calcula la suma de dos números.\n\n  Args:\n    a: El primer número.\n    b: El segundo número.\n\n  Returns:\n    La suma de a y b.\n  ",
+      "ms": 1302,
+      "ttftMs": 33,
+      "tps": 76.1
+    }
+  ],
+  "resumen": "3/4 pruebas",
+  "medido": true
+}

@@ -1,0 +1,80 @@
+{
+  "clave": "ornith9b",
+  "nombre": "Ornith 1.5 9B",
+  "archivo": "Ornith-1.5-9B-Q4_K_M.gguf",
+  "fecha": "2026-10-31T04:56:49.721Z",
+  "plan": {
+    "ok": true,
+    "contexto": 110592,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 4864,
+    "reservaMiB": 620,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 1836,
+    "kvFijoMiB": 0,
+    "totalMiB": 7620,
+    "libreMiB": 7956,
+    "disponibleMiB": 2172,
+    "ctxNativo": 262144,
+    "alternativas": {
+      "f16": {
+        "contexto": 67584,
+        "totalMiB": 7896
+      },
+      "q8_0": {
+        "contexto": 110592,
+        "totalMiB": 7620
+      },
+      "q4_0": {
+        "contexto": 110592,
+        "totalMiB": 6756
+      }
+    },
+    "motivo": "q8_0 a 110.592 tokens; quedan 336 MiB de margen real",
+    "nombre": "Ornith 1.5 9B"
+  },
+  "arranqueMs": 6094,
+  "nCtx": 110592,
+  "vramPicoMiB": 7475,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 299,
+      "ttftMs": 163,
+      "tps": 16.72
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 363,
+      "ttftMs": 134,
+      "tps": 24.86
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.reduce((acc, n) => acc + (n % 2 === 0 ? n : 0), 0);\n}",
+      "ms": 1318,
+      "ttftMs": 134,
+      "tps": 33.41
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 1215,
+      "ttftMs": 475,
+      "tps": 0
+    }
+  ],
+  "resumen": "4/4 pruebas",
+  "medido": true
+}

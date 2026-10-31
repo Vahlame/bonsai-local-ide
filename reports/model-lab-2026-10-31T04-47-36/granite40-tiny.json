@@ -1,0 +1,80 @@
+{
+  "clave": "granite40-tiny",
+  "nombre": "Granite 4.0 H Tiny",
+  "archivo": "granite40-tiny-granite-4.0-h-tiny-Q4_K_M.gguf",
+  "fecha": "2026-10-31T04:47:44.383Z",
+  "plan": {
+    "ok": true,
+    "contexto": 131072,
+    "kv": "f16",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 4035,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 1024,
+    "kvFijoMiB": 0,
+    "totalMiB": 6209,
+    "libreMiB": 7956,
+    "disponibleMiB": 2771,
+    "ctxNativo": 1048576,
+    "alternativas": {
+      "f16": {
+        "contexto": 131072,
+        "totalMiB": 6209
+      },
+      "q8_0": {
+        "contexto": 131072,
+        "totalMiB": 5729
+      },
+      "q4_0": {
+        "contexto": 131072,
+        "totalMiB": 5473
+      }
+    },
+    "motivo": "f16 a 131.072 tokens; quedan 1747 MiB de margen real",
+    "nombre": "Granite 4.0 H Tiny"
+  },
+  "arranqueMs": 6245,
+  "nCtx": 131072,
+  "vramPicoMiB": 5597,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 261,
+      "ttftMs": 206,
+      "tps": 19.16
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 125,
+      "ttftMs": 58,
+      "tps": 72
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.filter(num => num % 2 === 0).reduce((sum, num) => sum + num, 0);\n}",
+      "ms": 372,
+      "ttftMs": 101,
+      "tps": 107.82
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\": 17, \"b\": 25})",
+      "ms": 347,
+      "ttftMs": 224,
+      "tps": 0
+    }
+  ],
+  "resumen": "4/4 pruebas",
+  "medido": true
+}

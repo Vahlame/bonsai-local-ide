@@ -1,0 +1,88 @@
+{
+  "clave": "qwen25vl-3b",
+  "nombre": "Qwen2.5-VL 3B",
+  "archivo": "qwen25vl-3b-Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf",
+  "fecha": "2026-10-31T04:28:41.836Z",
+  "plan": {
+    "ok": true,
+    "contexto": 128000,
+    "kv": "f16",
+    "vision": true,
+    "mmprojCPU": true,
+    "visionEnGpu": false,
+    "pesosMiB": 1841,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 4500,
+    "kvFijoMiB": 0,
+    "totalMiB": 7491,
+    "libreMiB": 7956,
+    "disponibleMiB": 4965,
+    "ctxNativo": 128000,
+    "alternativas": {
+      "f16": {
+        "contexto": 128000,
+        "totalMiB": 7491
+      },
+      "q8_0": {
+        "contexto": 128000,
+        "totalMiB": 5382
+      },
+      "q4_0": {
+        "contexto": 128000,
+        "totalMiB": 4257
+      }
+    },
+    "motivo": "f16 a 128.000 tokens; quedan 465 MiB de margen real",
+    "nombre": "Qwen2.5-VL 3B"
+  },
+  "arranqueMs": 6808,
+  "nCtx": 128000,
+  "vramPicoMiB": 6543,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 225,
+      "ttftMs": 142,
+      "tps": 22.32
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 134,
+      "ttftMs": 38,
+      "tps": 67.16
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.filter(n => n % 2 === 0).reduce((acc, n) => acc + n, 0);\n}",
+      "ms": 452,
+      "ttftMs": 66,
+      "tps": 88.89
+    },
+    {
+      "id": "herramienta",
+      "ok": false,
+      "detalle": "```python\ndef sumar(a, b):\n    return a + b\n\nresultado = sumar(17, 25)\nprint(resultado)\n```",
+      "ms": 362,
+      "ttftMs": 56,
+      "tps": 88.4
+    },
+    {
+      "id": "vision",
+      "ok": true,
+      "detalle": "En la imagen se ve un explorador de archivos con varios archivos y carpetas, incluyendo \"chat/modelo.js\" y \"chat/variables.js\".",
+      "ms": 13350,
+      "ttftMs": 12996,
+      "tps": 2.48
+    }
+  ],
+  "resumen": "4/5 pruebas",
+  "medido": true
+}

@@ -1,0 +1,103 @@
+[
+  {
+    "clave": "minicpm-v47-1b",
+    "nombre": "MiniCPM-V 4.7 1B",
+    "visionArchivo": "mmproj-model-f16.gguf",
+    "conVision": {
+      "ok": true,
+      "ctx": 131072,
+      "kv": "f16",
+      "vram": 2305,
+      "ms": 8357,
+      "pruebas": [
+        {
+          "id": "saludo",
+          "ok": true,
+          "detalle": "BONSAI_OK",
+          "ms": 105,
+          "ttftMs": 74,
+          "tps": 47.62
+        },
+        {
+          "id": "json",
+          "ok": true,
+          "detalle": "{\n  \"ok\": true,\n  \"n\": 7\n}",
+          "ms": 99,
+          "ttftMs": 25,
+          "tps": 173.47
+        },
+        {
+          "id": "codigo",
+          "ok": true,
+          "detalle": "function sumaPares(nums) {\n  return nums.filter(n => n % 2 === 0).reduce((a, b) => a + b);\n}",
+          "ms": 192,
+          "ttftMs": 26,
+          "tps": 209.42
+        },
+        {
+          "id": "herramienta",
+          "ok": true,
+          "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+          "ms": 313,
+          "ttftMs": 52,
+          "tps": 83.07
+        },
+        {
+          "id": "vision",
+          "ok": true,
+          "detalle": "La imagen muestra un panel de herramientas de Bonsai de Ventana 77244 con una lista de archivos de conversaciones.",
+          "ms": 25872,
+          "ttftMs": 25742,
+          "tps": 1.12
+        }
+      ],
+      "resumen": "5/5 pruebas"
+    },
+    "sinVision": {
+      "ok": true,
+      "ctx": 131072,
+      "kv": "f16",
+      "vram": 2305,
+      "ms": 2339,
+      "pruebas": [
+        {
+          "id": "saludo",
+          "ok": true,
+          "detalle": "BONSAI_OK",
+          "ms": 115,
+          "ttftMs": 83,
+          "tps": 43.48
+        },
+        {
+          "id": "json",
+          "ok": true,
+          "detalle": "{\n  \"ok\": true,\n  \"n\": 7\n}",
+          "ms": 101,
+          "ttftMs": 25,
+          "tps": 168.32
+        },
+        {
+          "id": "codigo",
+          "ok": true,
+          "detalle": "function sumaPares(nums) {\n  return nums.filter(n => n % 2 === 0).reduce((a, b) => a + b);\n}",
+          "ms": 187,
+          "ttftMs": 23,
+          "tps": 215.05
+        },
+        {
+          "id": "herramienta",
+          "ok": true,
+          "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+          "ms": 305,
+          "ttftMs": 46,
+          "tps": 85.53
+        }
+      ],
+      "resumen": "4/4 pruebas"
+    },
+    "diferencia": {
+      "contexto": 0,
+      "vram": 0
+    }
+  }
+]

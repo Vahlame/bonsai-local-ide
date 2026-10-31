@@ -1,0 +1,88 @@
+{
+  "clave": "qwen3vl-8b",
+  "nombre": "Qwen3-VL 8B Instruct",
+  "archivo": "qwen3vl-8b-Qwen3VL-8B-Instruct-Q4_K_M.gguf",
+  "fecha": "2026-10-31T04:37:59.608Z",
+  "plan": {
+    "ok": true,
+    "contexto": 26624,
+    "kv": "q8_0",
+    "vision": true,
+    "mmprojCPU": true,
+    "visionEnGpu": false,
+    "pesosMiB": 4795,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 1989,
+    "kvFijoMiB": 0,
+    "totalMiB": 7934,
+    "libreMiB": 7956,
+    "disponibleMiB": 2011,
+    "ctxNativo": 262144,
+    "alternativas": {
+      "f16": {
+        "contexto": 12288,
+        "totalMiB": 7673
+      },
+      "q8_0": {
+        "contexto": 26624,
+        "totalMiB": 7934
+      },
+      "q4_0": {
+        "contexto": 49152,
+        "totalMiB": 7889
+      }
+    },
+    "motivo": "q8_0 a 26.624 tokens; quedan 22 MiB de margen real",
+    "nombre": "Qwen3-VL 8B Instruct"
+  },
+  "arranqueMs": 8344,
+  "nCtx": 26624,
+  "vramPicoMiB": 6747,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 309,
+      "ttftMs": 136,
+      "tps": 16.23
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 271,
+      "ttftMs": 46,
+      "tps": 33.33
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n    return nums.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0);\n}",
+      "ms": 942,
+      "ttftMs": 48,
+      "tps": 42.55
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\": 17, \"b\": 25})",
+      "ms": 679,
+      "ttftMs": 275,
+      "tps": 0
+    },
+    {
+      "id": "vision",
+      "ok": true,
+      "detalle": "Una interfaz de desarrollo de software con un explorador de archivos y una conversación de chat.",
+      "ms": 11204,
+      "ttftMs": 10754,
+      "tps": 1.79
+    }
+  ],
+  "resumen": "5/5 pruebas",
+  "medido": true
+}

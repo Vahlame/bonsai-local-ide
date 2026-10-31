@@ -5,18 +5,17 @@ Chat con agente, editor con pestañas, diffs, git, terminal integrado, navegador
 controlado y visión — todo en tu GPU, sin nube.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-1.7.0-cde86e">
+  <img alt="version" src="https://img.shields.io/badge/version-1.8.0-cde86e">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v1.7.0** — **Model Hub**: catálogo y búsqueda en Hugging Face, descargas
-> reanudables con SHA-256, importación de GGUF locales y **un plan de motor
-> automático por modelo** (contexto, KV y visión según la VRAM real). Incluye
-> **Model Lab** para probar cada modelo y la investigación
-> [Strata y la memoria](docs/STRATA-Y-MEMORIA.md). Notas: [RELEASE-1.7.0](docs/RELEASE-1.7.0.md).
+> **v1.8.0** — **25 modelos GGUF curados instalados** (14 con visión) y
+> **catálogo online “Descubrir”** en vivo desde Hugging Face. Qwen3.5 4B/9B,
+> Qwen3-VL 2B/4B/8B, Gemma 4 E4B, Nemotron 3.5, MiniCPM-V, LFM3 y más, todos
+> probados con y sin proyector. Notas: [RELEASE-1.8.0](docs/RELEASE-1.8.0.md).
 
 ---
 
@@ -137,6 +136,8 @@ flowchart TD
 
 El botón **Modelos** de la barra superior abre el catálogo. Desde ahí puedes:
 
+- **Descubrir** en vivo los GGUF con más tracción en Hugging Face, sin listas
+  que envejezcan;
 - buscar en **Hugging Face** y ver los GGUF de cada repo con su tamaño y
   cuantización;
 - descargar del catálogo curado (Qwen3 4B, Qwen2.5 Coder 7B, Gemma 3 4B con
@@ -163,6 +164,10 @@ resultados quedan en `reports/model-lab-<fecha>/` y en el registro local.
 
 👉 [Guía del Model Hub](docs/MODEL-HUB.md) ·
 [Strata y la memoria: cómo meter más en menos RAM](docs/STRATA-Y-MEMORIA.md)
+
+**Estado de este equipo:** 25 modelos curados instalados (14 con visión) + Ornith;
+**26 modelos utilizables** en total. El catálogo y los planes medidos están en
+[MODEL-CATALOG-2026-10-31](reports/MODEL-CATALOG-2026-10-31.md).
 
 ---
 
@@ -435,10 +440,12 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 
 | Documento | Contenido |
 |---|---|
+| [RELEASE-1.8.0](docs/RELEASE-1.8.0.md) | Catálogo de 25 modelos y descubrimiento online |
 | [RELEASE-1.7.0](docs/RELEASE-1.7.0.md) | Model Hub, plan por modelo y Model Lab |
 | [MODEL-HUB](docs/MODEL-HUB.md) | Catálogo, descargas, API y plan automático |
 | [STRATA-Y-MEMORIA](docs/STRATA-Y-MEMORIA.md) | Qué es Strata y qué ideas de memoria aplican aquí |
 | [MODEL-HUB-2026-10-31](reports/MODEL-HUB-2026-10-31.md) | Evidencia: planes, VRAM, calidad y tuning por modelo |
+| [MODEL-CATALOG-2026-10-31](reports/MODEL-CATALOG-2026-10-31.md) | Catálogo completo: 26 modelos usables, visión y planes |
 | [RELEASE-1.6.2](docs/RELEASE-1.6.2.md) | Acceso directo: abre el IDE de verdad (sin `-NoBrowser`) |
 | [RELEASE-1.6.1](docs/RELEASE-1.6.1.md) | IDE sin GPU, ventana propia y pulido de interfaz |
 | [RELEASE-1.6.0](docs/RELEASE-1.6.0.md) | 110k con visión, reparto de contexto automático y compactación |

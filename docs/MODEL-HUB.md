@@ -16,6 +16,7 @@ Pestañas:
 | Pestaña | Qué hace |
 |---|---|
 | **Recomendados** | catálogo curado (`config/model-catalog.json`) con tamaño, plan estimado, licencia y visión |
+| **Descubrir** | catálogo **online** en vivo: los GGUF con más tracción en Hugging Face ahora; se refresca sin actualizar el IDE |
 | **Instalados** | modelos registrados en `models/hub-catalog.json`, con plan, pruebas y borrado |
 | **Buscar en Hugging Face** | búsqueda real en la API de HF; al abrir un repo se eligen archivo y proyector |
 | **Desde URL** | cualquier `.gguf` HTTPS con SHA-256 opcional |
@@ -25,7 +26,24 @@ Las descargas muestran progreso, velocidad, ETA y se pueden **cancelar**. Al
 terminar se verifica el SHA-256 (si el origen lo publica) y el modelo queda
 disponible en el selector sin reiniciar el IDE.
 
-## 2. Catálogo curado
+## 2. Catálogo online
+
+La pestaña **Descubrir** consulta en vivo la API pública de Hugging Face con
+`filter=gguf&sort=trendingScore`. No hay una lista que envejezca: si mañana
+aparece un modelo nuevo con tracción, aparece ahí y se puede abrir para ver sus
+cuantizaciones. El botón **Actualizar catálogo online** vuelve a consultar.
+
+Además del catálogo curado y de la búsqueda, esto da tres formas de descubrir:
+
+1. **Recomendados** — lo que ya sabemos que cabe y está probado;
+2. **Descubrir** — novedades de Hugging Face, sin descargar nada hasta elegir;
+3. **Buscar** — consulta concreta por nombre o familia.
+
+`config/model-catalog.json` sigue siendo la fuente de los recomendados; para
+añadir un modelo fijo basta copiar una entrada. La lista online no necesita
+mantenimiento.
+
+## 3. Catálogo curado
 
 `config/model-catalog.json` es la lista de modelos recomendados. Cada entrada
 tiene:
@@ -55,7 +73,7 @@ una descarga reproducible.
 Para añadir un modelo: copia una entrada, pon su `repo`/`archivo`/`bytes` y, si
 tiene visión, el `mmproj`. No hace falta tocar código.
 
-## 3. Registro local
+## 4. Registro local
 
 Los modelos descargados o importados se guardan en:
 
@@ -71,7 +89,7 @@ muestreo, visión, origen, licencia, fechas y resultados de pruebas. Al importar
 selector, el lanzador, el cambio en caliente y las pruebas los ven como modelos
 normales.
 
-## 4. Plan automático (por qué cada modelo es distinto)
+## 5. Plan automático (por qué cada modelo es distinto)
 
 `chat/model-plan.mjs` lee la cabecera del GGUF (sin tensores) y calcula:
 
@@ -98,13 +116,14 @@ puede pedir desde la API:
 curl "http://127.0.0.1:8787/api/hub/plan?clave=qwen3-4b-2507"
 ```
 
-## 5. API
+## 6. API
 
 | Método | Ruta | Uso |
 |---|---|---|
 | GET | `/api/hub/status` | resumen, VRAM, rutas |
 | GET | `/api/hub/catalog` | curado + instalados + trabajos + VRAM |
 | GET | `/api/hub/search?q=` | búsqueda en Hugging Face |
+| GET | `/api/hub/discover` | catálogo online: GGUF en tendencia (limit/sort) |
 | GET | `/api/hub/repo?repo=` | archivos, tamaños, revisión y proyectores |
 | GET | `/api/hub/plan?clave=` | plan calculado para un modelo |
 | POST | `/api/hub/download` | `{clave}`, `{repo,archivo}` o `{url,nombre,sha256}` |
@@ -119,6 +138,7 @@ Ejemplos:
 # catálogo
 node scripts/hub.mjs list
 node scripts/hub.mjs scan
+node scripts/hub.mjs discover --limit 30
 node scripts/hub.mjs search "qwen2.5 coder"
 node scripts/hub.mjs repo unsloth/Qwen3-4B-Instruct-2507-GGUF
 
@@ -137,7 +157,7 @@ node scripts/hub.mjs plan qwen3-4b-2507
 node scripts/model-lab.mjs probe --model qwen3-4b-2507
 ```
 
-## 6. Descarga reanudable y verificación
+## 7. Descarga reanudable y verificación
 
 - Se escribe en `models/<archivo>.gguf.part`; si se corta, la siguiente descarga
   pide `Range: bytes=<tamaño>-` y continúa.
@@ -149,7 +169,7 @@ node scripts/model-lab.mjs probe --model qwen3-4b-2507
   pide la cabecera con `redirect:"manual"` para no perderlo.
 - La revisión se fija al commit (`resolve/<sha>/…`), no a `main`.
 
-## 7. Seguridad
+## 8. Seguridad
 
 - Solo HTTPS; se rechazan hosts privados (`127.0.0.1`, `10.*`, `192.168.*`,
   `172.16-31.*`, `169.254.*`, `.local`, loopback IPv6) salvo que se active
@@ -161,7 +181,7 @@ node scripts/model-lab.mjs probe --model qwen3-4b-2507
 - El catálogo y los pesos son datos locales; el IDE solo sale a Internet para
   buscar/descargar cuando el usuario lo pide.
 
-## 8. Pruebas
+## 9. Pruebas
 
 ```powershell
 node chat/model-plan.mjs               # parser, planes, nombres seguros
@@ -174,7 +194,8 @@ node scripts/bench-model-quality.mjs --model qwen3-4b-2507
 pruebas en el registro. `bench-model-quality` acepta `--model` y usa el plan
 AUTO del modelo, no el preset de Ornith.
 
-Evidencia de esta máquina: [reports/MODEL-HUB-2026-10-31.md](../reports/MODEL-HUB-2026-10-31.md).
+Evidencia de esta máquina: [reports/MODEL-CATALOG-2026-10-31.md](../reports/MODEL-CATALOG-2026-10-31.md)
+(catálogo completo, 26 modelos usables y visión con/sin proyector).
 
 ### Resultados medidos en esta máquina (31-oct-2026)
 
@@ -192,6 +213,25 @@ que cada modelo arranca, cabe y hace lo que promete.
 | Llama 3.2 3B | 83.968 / q8_0 | 7.345 MiB | 5/5 | 2/5 | muy rápido (~100 t/s), tool nativa, flojo en matemáticas |
 | DeepSeek R1 Distill 7B | 79.872 / q8_0 | 6.865 MiB | 4/5 | 3/5 | razona antes de contestar; tool calls no, SQL/JSON/retrieval bien |
 | K2-Horizon 7B (×2) | 16–18k / q8_0 | ~6.370 MiB | 3/5 | — | respuestas vacías intermitentes; no recomendado para el agente |
+
+### Ampliación 1.8.0 (catálogo completo en el informe)
+
+| Modelo | Plan | VRAM pico | Calidad* | Nota |
+|---|---:|---:|---:|---|
+| Nemotron 3.5 Bolt E4B | 36.864 / q8_0 · visión CPU | 2.709 MiB | **5/5** | mejor del lote nuevo |
+| Qwen3.5 4B | 131.072 / f16 · visión CPU | 7.117 MiB | 4/5 | 131k y visión |
+| Qwen3.5 9B | 131.072 / q8_0 · visión CPU | 7.121 MiB | 4/5 | 9B moderno |
+| Qwen3-VL 4B | 57.344 / q8_0 · visión CPU | 7.069 MiB | 4/5 | visión de calidad |
+| Qwen3-VL 8B | 26.624 / q8_0 · visión CPU | 6.747 MiB | — | 8B de visión |
+| Gemma 4 E4B | 22.528 / q8_0 · visión CPU | 3.367 MiB | 4/5 | tool calls nativas |
+| Granite 4.0 H Tiny | 131.072 / f16 | 5.597 MiB | 4/5 | 147 tok/s |
+| Qwen3.8 4B Distill | 131.072 / f16 | 7.087 MiB | 4/5 | texto moderno |
+| MiniCPM-V 4.7 1B | 131.072 / f16 · visión CPU | 2.305 MiB | — | 180+ tok/s |
+| LFM3-VL / Omni 2B | 128.000 / f16 · visión CPU | ~2.800 MiB | — | visión rápida |
+| Qwen2.5-VL 3B | 128.000 / f16 · visión CPU | 6.543 MiB | — | visión estable |
+
+El catálogo completo, con los 26 modelos y las pruebas con/sin visión, está en
+[reports/MODEL-CATALOG-2026-10-31.md](../reports/MODEL-CATALOG-2026-10-31.md).
 
 La lectura honesta: **más contexto no es mejor si el modelo falla**. Gemma cabe a
 131k gracias a su atención local, pero su tool-calling no sirve para el agente;
@@ -228,7 +268,7 @@ a 49k de contexto, pide ~4,5 GB solo para su caché; no cabe junto al 4B. Por es
 el draft se declara por modelo y el plan lo descarta si no hay VRAM. El de
 Qwen2.5 0.5B (12 KiB/token) sí cabe.
 
-## 9. Limitaciones conocidas
+## 10. Limitaciones conocidas
 
 - GGUF partidos (`-00001-of-00002.gguf`) todavía no se agrupan; se puede
   descargar cada parte, pero el registro espera un archivo principal.
@@ -241,3 +281,4 @@ Qwen2.5 0.5B (12 KiB/token) sí cabe.
 - Los modelos con licencia gated de Hugging Face necesitan un token; el Hub no
   gestiona credenciales todavía. Descarga el archivo manualmente y usa
   **Importar**.
+

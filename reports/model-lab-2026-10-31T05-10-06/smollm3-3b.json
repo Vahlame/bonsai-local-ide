@@ -1,0 +1,80 @@
+{
+  "clave": "smollm3-3b",
+  "nombre": "SmolLM3 3B",
+  "archivo": "smollm3-3b-SmolLM3-Q4_K_M.gguf",
+  "fecha": "2026-10-31T05:10:13.807Z",
+  "plan": {
+    "ok": true,
+    "contexto": 65536,
+    "kv": "f16",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 1827,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 4608,
+    "kvFijoMiB": 0,
+    "totalMiB": 7585,
+    "libreMiB": 7956,
+    "disponibleMiB": 4979,
+    "ctxNativo": 65536,
+    "alternativas": {
+      "f16": {
+        "contexto": 65536,
+        "totalMiB": 7585
+      },
+      "q8_0": {
+        "contexto": 65536,
+        "totalMiB": 5425
+      },
+      "q4_0": {
+        "contexto": 65536,
+        "totalMiB": 4273
+      }
+    },
+    "motivo": "f16 a 65.536 tokens; quedan 371 MiB de margen real",
+    "nombre": "SmolLM3 3B"
+  },
+  "arranqueMs": 3120,
+  "nCtx": 65536,
+  "vramPicoMiB": 6605,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "\nBONSAI_OK",
+      "ms": 204,
+      "ttftMs": 148,
+      "tps": 29.41
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "\n{\"ok\":true,\"n\":7}",
+      "ms": 145,
+      "ttftMs": 52,
+      "tps": 68.97
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n    return nums.reduce((a, b) => a + (b % 2 === 0 ? b : 0), 0);\n}",
+      "ms": 449,
+      "ttftMs": 56,
+      "tps": 93.96
+    },
+    {
+      "id": "herramienta",
+      "ok": false,
+      "detalle": "\nPara calcular la suma de 17 y 25 utilizando la herramienta sumar, primero debemos definir la función sumar. Luego, llamamos a esta función con los argumentos 1",
+      "ms": 1101,
+      "ttftMs": 49,
+      "tps": 102.63
+    }
+  ],
+  "resumen": "3/4 pruebas",
+  "medido": true
+}

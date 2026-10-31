@@ -1,0 +1,80 @@
+{
+  "clave": "qwen35-9b",
+  "nombre": "Qwen3.5 9B",
+  "archivo": "qwen35-9b-Qwen3.5-9B-Q3_K_M.gguf",
+  "fecha": "2026-10-31T04:28:12.177Z",
+  "plan": {
+    "ok": true,
+    "contexto": 131072,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 4458,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 2176,
+    "kvFijoMiB": 0,
+    "totalMiB": 7784,
+    "libreMiB": 7956,
+    "disponibleMiB": 2348,
+    "ctxNativo": 262144,
+    "alternativas": {
+      "f16": {
+        "contexto": 73728,
+        "totalMiB": 7912
+      },
+      "q8_0": {
+        "contexto": 131072,
+        "totalMiB": 7784
+      },
+      "q4_0": {
+        "contexto": 131072,
+        "totalMiB": 6760
+      }
+    },
+    "motivo": "q8_0 a 131.072 tokens; quedan 172 MiB de margen real",
+    "nombre": "Qwen3.5 9B"
+  },
+  "arranqueMs": 6095,
+  "nCtx": 131072,
+  "vramPicoMiB": 7121,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 322,
+      "ttftMs": 218,
+      "tps": 15.53
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 289,
+      "ttftMs": 105,
+      "tps": 31.25
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.filter(n => n % 2 === 0).reduce((a, b) => a + b, 0);\n}",
+      "ms": 1086,
+      "ttftMs": 142,
+      "tps": 40.26
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 1060,
+      "ttftMs": 434,
+      "tps": 0
+    }
+  ],
+  "resumen": "4/4 pruebas",
+  "medido": true
+}

@@ -320,15 +320,18 @@ export function detectarVision(archivo) {
     return null;
   }
   if (!nombres.length) return null;
-  const tokens = (s) => s.toLowerCase().replace(/\.gguf$/i, "").split(/[^a-z0-9.]+/).filter((t) => t && t.length > 1 && !/^(mmproj|model|f16|bf16|q8_0|gguf)$/.test(t));
+  const ignorar = /^(mmproj|model|f16|bf16|f32|q8_0|q4_0|q4_k_m|q5_k_m|instruct|it|chat|base|gguf|\d+(?:\.\d+)?b|\d+(?:\.\d+)?)$/i;
+  const tokens = (s) => s.toLowerCase().replace(/\.gguf$/i, "").split(/[^a-z0-9.]+/).filter((t) => t && t.length > 1 && !ignorar.test(t));
   const base = new Set(tokens(archivo));
   let mejor = null;
   for (const nombre of nombres) {
-    const comunes = tokens(nombre).filter((t) => base.has(t));
-    const puntuacion = comunes.length + (comunes.some((t) => /\d+b$/.test(t)) ? 1 : 0);
+    // Solo una coincidencia de FAMILIA cuenta. "4b", "instruct" o "q4_k_m" no
+    // identifican un modelo: antes eso asignaba el proyector de Qwen3-VL a Spark.
+    const comunes = tokens(nombre).filter((t) => base.has(t) && t.length >= 5);
+    const puntuacion = comunes.length;
     if (!mejor || puntuacion > mejor.puntuacion) mejor = { archivo: nombre, puntuacion };
   }
-  if (!mejor || mejor.puntuacion < 2) return null;
+  if (!mejor || mejor.puntuacion < 1) return null;
   return { archivo: mejor.archivo, bytes: tamanoArchivo(mejor.archivo) };
 }
 
@@ -504,6 +507,40 @@ export async function buscarHuggingFace(q, opciones = {}) {
       licencia: m.cardData?.license || (m.tags || []).find((t) => String(t).startsWith("license:"))?.slice(8) || "",
       etiquetas: m.tags || [],
       tarea: m.pipeline_tag || "",
+    }));
+}
+
+/**
+ * Catálogo online de novedades: los GGUF con más tracción ahora mismo.
+ * Es la pestaña "Descubrir"; no descarga nada hasta que el usuario elige.
+ * @param {{limit?: number, sort?: string}} [opciones]
+ */
+export async function descubrirHuggingFace(opciones = {}) {
+  const limite = Math.max(1, Math.min(60, Number(opciones.limit) || 30));
+  const orden = ["trendingScore", "downloads", "likes", "lastModified"].includes(String(opciones.sort))
+    ? String(opciones.sort)
+    : "trendingScore";
+  const url = new URL("https://huggingface.co/api/models");
+  url.searchParams.set("filter", "gguf");
+  url.searchParams.set("sort", orden);
+  url.searchParams.set("direction", "-1");
+  url.searchParams.set("limit", String(limite));
+  url.searchParams.set("full", "true");
+  const datos = await pedirJson(url.toString());
+  if (!Array.isArray(datos)) return [];
+  return datos
+    .filter((m) => !m.private)
+    .map((m) => ({
+      repo: m.id,
+      nombre: m.id,
+      descargas: Number(m.downloads) || 0,
+      likes: Number(m.likes) || 0,
+      actualizado: m.lastModified || "",
+      licencia: m.cardData?.license || (m.tags || []).find((t) => String(t).startsWith("license:"))?.slice(8) || "",
+      etiquetas: (m.tags || []).filter((t) => !String(t).startsWith("base_model:") && !String(t).startsWith("license:")),
+      tarea: m.pipeline_tag || "",
+      vision: (m.tags || []).some((t) => /vision|multimodal|image-text|image-to-text/i.test(String(t))),
+      tendencia: Number(m.trendingScore) || 0,
     }));
 }
 
@@ -701,6 +738,11 @@ export async function crearTrabajo(pedido = {}) {
   let clave = String(pedido.clave || "");
   let nombre = String(pedido.nombre || "");
   let licencia = String(pedido.licencia || "");
+  /** Prefijo local para no pisar proyectores homónimos de otros modelos. */
+  const localizar = (a, prefijo) => {
+    const p = String(prefijo || "").replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48);
+    return p ? { ...a, archivo: nombreArchivoSeguro(`${p}-${a.archivo}`) } : a;
+  };
 
   if (pedido.url && !pedido.repo) {
     const a = await archivoUrlDirecta(pedido.url, { nombre: pedido.archivo || pedido.nombre, bytes: pedido.bytes, sha256: pedido.sha256 });
@@ -717,30 +759,31 @@ export async function crearTrabajo(pedido = {}) {
       origen = origen || (repo ? `https://huggingface.co/${repo}` : "");
       if (repo && curado.archivo) {
         const a = await archivoHF(repo, curado.archivo, revision);
-        archivos.push({ ...a, bytes: Number(curado.bytes) || a.bytes, sha256: curado.sha256 || a.sha256, tipo: "modelo" });
+        archivos.push({ ...localizar(a, curado.clave || clave), bytes: Number(curado.bytes) || a.bytes, sha256: curado.sha256 || a.sha256, tipo: "modelo" });
       }
       if (curado.vision?.archivo) {
         if (curado.vision.url) {
           const a = await archivoUrlDirecta(curado.vision.url, { nombre: curado.vision.archivo, bytes: curado.vision.bytes, sha256: curado.vision.sha256 });
-          archivos.push({ ...a, tipo: "vision" });
+          archivos.push({ ...localizar(a, curado.clave || clave), tipo: "vision" });
         } else if (repo) {
           const a = await archivoHF(repo, curado.vision.archivo, revision);
-          archivos.push({ ...a, bytes: Number(curado.vision.bytes) || a.bytes, sha256: curado.vision.sha256 || a.sha256, tipo: "vision" });
+          archivos.push({ ...localizar(a, curado.clave || clave), bytes: Number(curado.vision.bytes) || a.bytes, sha256: curado.vision.sha256 || a.sha256, tipo: "vision" });
         }
       }
       if (curado.url && !archivos.length) {
         const a = await archivoUrlDirecta(curado.url, { nombre: curado.archivo || curado.nombre, bytes: curado.bytes, sha256: curado.sha256 });
-        archivos.push({ ...a, tipo: "modelo" });
+        archivos.push({ ...localizar(a, curado.clave || clave), tipo: "modelo" });
         origen = origen || "url";
       }
     } else {
       if (!repo || !pedido.archivo) throw new Error("faltan repo y archivo para descargar");
       const a = await archivoHF(repo, pedido.archivo, revision);
-      archivos.push({ ...a, bytes: Number(pedido.bytes) || a.bytes, sha256: pedido.sha256 || a.sha256, tipo: "modelo" });
+      const prefijo = String(pedido.clave || repo.split("/").pop() || "modelo");
+      archivos.push({ ...localizar(a, prefijo), bytes: Number(pedido.bytes) || a.bytes, sha256: pedido.sha256 || a.sha256, tipo: "modelo" });
       origen = origen || `https://huggingface.co/${repo}`;
       if (pedido.vision?.archivo) {
         const v = await archivoHF(repo, pedido.vision.archivo, revision);
-        archivos.push({ ...v, bytes: Number(pedido.vision.bytes) || v.bytes, sha256: pedido.vision.sha256 || v.sha256, tipo: "vision" });
+        archivos.push({ ...localizar(v, prefijo), bytes: Number(pedido.vision.bytes) || v.bytes, sha256: pedido.vision.sha256 || v.sha256, tipo: "vision" });
       }
     }
   }

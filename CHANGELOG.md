@@ -4,6 +4,28 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [1.8.0] - 2026-10-31
+
+### Añadido
+
+- **Catálogo online “Descubrir”**: consulta en vivo los GGUF con más tracción en
+  Hugging Face, con botón de actualización y apertura de repo/cuantización.
+- **25 modelos curados instalados** (14 con visión) y **26 utilizables** con
+  Ornith: Qwen3.5 4B/9B, Qwen3.8 4B, Qwen3-VL 2B/4B/8B, Qwen2.5-VL 3B,
+  Gemma 4 E4B, Nemotron 3.5 Bolt E4B, MiniCPM-V 4.7 1B, LFM3 1.7B/2B/Omni,
+  SmolVLM2, SmolLM3, Granite 4.0, Phi-4 Mini, Spark X2.6 y los anteriores.
+- **Pruebas con y sin visión** de todos los modelos multimodales y tabla de
+  contexto/VRAM/tiempo por imagen.
+- `scripts/catalog-report.mjs` y `scripts/vision-matrix.mjs`.
+
+### Corregido
+
+- Proyectores homónimos con prefijo por modelo (Gemma 3/4, Qwen3.5).
+- Detección de visión conservadora: Spark ya no hereda el proyector de Qwen3-VL.
+- Registro concurrente entre descargas, Model Lab y tuning.
+- Ornith vuelve a `-ub 256` (512 no cabe a 110k).
+- Model Lab espera a que la VRAM se libere de verdad entre modelos.
+
 ## [1.7.0] - 2026-10-31
 
 ### Añadido

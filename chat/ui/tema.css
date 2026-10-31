@@ -1047,3 +1047,5 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 }
 .hub-repo-vista > .hub-mini { align-self: flex-start; }
 .hub-url > .hub-mini { align-self: flex-start; }
+.hub-descubrir-head h3 { margin: 0 0 4px; font-size: 15px; }
+.hub-descubrir-head .hub-uso { margin: 0 0 6px; }

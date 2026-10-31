@@ -41,6 +41,7 @@ const bandera = (nombre) => args.includes(`--${nombre}`);
 const comando = args[0] || "list";
 const PORT = Math.max(1024, Number(arg("port", "8097")) || 8097);
 const SKIP_LONG = bandera("skip-long");
+const SIN_VISION = bandera("sin-vision");
 const TIMEOUT_ARRANQUE = Number(arg("timeout", "240000")) || 240000;
 const SOLO_JSON = bandera("json");
 
@@ -134,8 +135,8 @@ function argumentosServidor(item, plan) {
   return a;
 }
 
-async function iniciar(item) {
-  const planCalculado = await planParaModelo(item.clave, { vision: true });
+async function iniciar(item, conVision = !SIN_VISION) {
+  const planCalculado = await planParaModelo(item.clave, { vision: conVision });
   const plan = planCalculado.plan;
   if (!plan.ok) throw new Error(`el plan no cabe: ${plan.motivo}`);
   await esperarGpuLibre(Math.max(3500, plan.totalMiB + 200));
@@ -320,8 +321,8 @@ function promptLargo() {
 /**
  * @param {{clave: string, entrada: any}} item
  */
-async function probar(item) {
-  const srv = await iniciar(item);
+async function probar(item, conVision = !SIN_VISION) {
+  const srv = await iniciar(item, conVision);
   const pruebas = [];
   /**
    * @param {string} id
@@ -395,7 +396,7 @@ async function probar(item) {
         return { ok: /CLAVE-7391/i.test(r.texto), detalle: r.texto.slice(0, 160), metrica: { ttftMs: r.ttftMs, tps: Number(r.tps.toFixed(2)) } };
       });
     }
-    if (srv.plan.vision && item.entrada.vision?.archivo) {
+    if (conVision && srv.plan.vision && item.entrada.vision?.archivo) {
       await añadir("vision", async () => {
         const capturas = path.join(PROJECT, "capturas");
         const archivos = fs.existsSync(capturas) ? fs.readdirSync(capturas).filter((n) => /\.(png|jpg|jpeg)$/i.test(n)) : [];
@@ -542,21 +543,23 @@ async function principal() {
     for (const item of modelos) {
       process.stderr.write(`\n=== ${item.clave} (${item.entrada.nombre}) ===\n`);
       try {
-        const r = await probar(item);
+        const r = await probar(item, !SIN_VISION);
         todos.push(r);
-        fs.writeFileSync(path.join(dir, `${item.clave}.json`), JSON.stringify(r, null, 2), "utf8");
-        actualizarRegistro(r);
+        const sufijo = SIN_VISION ? "-sin-vision" : "";
+        fs.writeFileSync(path.join(dir, `${item.clave}${sufijo}.json`), JSON.stringify(r, null, 2), "utf8");
+        if (!SIN_VISION) actualizarRegistro(r);
         process.stderr.write(`${r.resumen} · ${r.plan.contexto} tok ${r.plan.kv} · ${r.vramPicoMiB} MiB · ${r.arranqueMs} ms\n`);
         for (const p of r.pruebas) process.stderr.write(`  ${p.ok ? "OK  " : "FALLO"} ${p.id}: ${p.detalle.slice(0, 90)}\n`);
       } catch (error) {
         const r = { clave: item.clave, nombre: item.entrada.nombre, fecha: new Date().toISOString(), error: error instanceof Error ? error.message : String(error), pruebas: [], resumen: "no arrancó" };
         todos.push(r);
-        fs.writeFileSync(path.join(dir, `${item.clave}.json`), JSON.stringify(r, null, 2), "utf8");
+        const sufijo = SIN_VISION ? "-sin-vision" : "";
+        fs.writeFileSync(path.join(dir, `${item.clave}${sufijo}.json`), JSON.stringify(r, null, 2), "utf8");
         process.stderr.write(`FALLO ${item.clave}: ${r.error}\n`);
       }
     }
     const md = [
-      `# Model Lab · ${stamp}`,
+      `# Model Lab${SIN_VISION ? " (sin visión)" : ""} · ${stamp}`,
       "",
       "| Modelo | Plan | Arranque | VRAM pico | Pruebas |",
       "|---|---|---:|---:|---|",

@@ -1,0 +1,80 @@
+{
+  "clave": "lfm3-17b",
+  "nombre": "LFM3 1.7B",
+  "archivo": "LFM3-1.7B-Q4_K_M.gguf",
+  "fecha": "2026-10-31T03:25:33.133Z",
+  "plan": {
+    "ok": true,
+    "contexto": 131072,
+    "kv": "f16",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 1049,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 2816,
+    "kvFijoMiB": 0,
+    "totalMiB": 5015,
+    "libreMiB": 7956,
+    "disponibleMiB": 5757,
+    "ctxNativo": 262144,
+    "alternativas": {
+      "f16": {
+        "contexto": 131072,
+        "totalMiB": 5015
+      },
+      "q8_0": {
+        "contexto": 131072,
+        "totalMiB": 3695
+      },
+      "q4_0": {
+        "contexto": 131072,
+        "totalMiB": 2991
+      }
+    },
+    "motivo": "f16 a 131.072 tokens; quedan 2941 MiB de margen real",
+    "nombre": "LFM3 1.7B"
+  },
+  "arranqueMs": 3110,
+  "nCtx": 131072,
+  "vramPicoMiB": 2791,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 116,
+      "ttftMs": 87,
+      "tps": 43.1
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 91,
+      "ttftMs": 39,
+      "tps": 98.9
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.filter(num => num % 2 === 0).reduce((sum, num) => sum + num, 0);\n}",
+      "ms": 268,
+      "ttftMs": 34,
+      "tps": 149.81
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 174,
+      "ttftMs": 68,
+      "tps": 0
+    }
+  ],
+  "resumen": "4/4 pruebas",
+  "medido": true
+}

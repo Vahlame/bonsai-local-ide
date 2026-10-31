@@ -56,6 +56,9 @@
     pestana: "recomendados",
     busqueda: "",
     resultados: [],
+    descubiertos: [],
+    descubriendo: false,
+    descubrirError: "",
     repo: null,
     cargando: false,
     error: "",
@@ -90,6 +93,7 @@
     const barra = el("div", "hub-tabs");
     const tabs = [
       ["recomendados", "Recomendados"],
+      ["descubrir", "Descubrir"],
       ["instalados", "Instalados"],
       ["buscar", "Buscar en Hugging Face"],
       ["url", "Desde URL"],
@@ -100,6 +104,10 @@
       b.type = "button";
       b.addEventListener("click", () => {
         estado.pestana = id;
+        if (id === "descubrir" && !estado.descubiertos.length) {
+          void cargarDescubrir();
+          return;
+        }
         pintar();
       });
       barra.append(b);
@@ -265,6 +273,68 @@
     fila.append(info, ico("flechaDerecha", 14));
     fila.addEventListener("click", () => void abrirRepo(m.repo));
     return fila;
+  }
+
+  async function cargarDescubrir() {
+    if (estado.descubriendo) return;
+    estado.descubriendo = true;
+    estado.descubrirError = "";
+    pintar();
+    try {
+      const r = await api("/api/hub/discover?limit=30&sort=trendingScore", { timeout: 60000 });
+      estado.descubiertos = r.resultados || [];
+    } catch (err) {
+      estado.descubrirError = err.message;
+    } finally {
+      estado.descubriendo = false;
+      pintar();
+    }
+  }
+
+  function vistaDescubrir() {
+    const caja = el("div", "hub-buscar");
+    const cab = el("div", "hub-descubrir-head");
+    cab.append(
+      el("h3", "", "Novedades en Hugging Face"),
+      el("p", "hub-uso", "Modelos GGUF con más tracción ahora mismo. Al abrir uno ves sus archivos, cuantizaciones y si trae proyector de visión; el plan de VRAM se calcula al descargarlo."),
+    );
+    caja.append(cab);
+    if (estado.descubriendo) {
+      caja.append(el("p", "hub-vacio", "Consultando el catálogo online…"));
+      return caja;
+    }
+    if (estado.descubrirError) {
+      caja.append(el("p", "hub-vacio", `No se pudo consultar: ${estado.descubrirError}`));
+      const reintentar = el("button", "primary hub-mini", "Reintentar");
+      reintentar.type = "button";
+      reintentar.addEventListener("click", () => void cargarDescubrir());
+      caja.append(reintentar);
+      return caja;
+    }
+    if (!estado.descubiertos.length) {
+      const cargar = el("button", "primary hub-mini", "Cargar catálogo online");
+      cargar.type = "button";
+      cargar.addEventListener("click", () => void cargarDescubrir());
+      caja.append(cargar);
+      return caja;
+    }
+    const lista = el("div", "hub-results");
+    for (const m of estado.descubiertos) {
+      const fila = el("button", "hub-result");
+      fila.type = "button";
+      const info = el("span");
+      const meta = [m.vision ? "👁 visión" : "", m.descargas ? `${m.descargas.toLocaleString("es-ES")} descargas` : "", m.licencia ? `© ${m.licencia}` : ""].filter(Boolean).join(" · ");
+      info.append(el("strong", "", m.repo), el("small", "", meta));
+      fila.append(info, ico("flechaDerecha", 14));
+      fila.addEventListener("click", () => void abrirRepo(m.repo));
+      lista.append(fila);
+    }
+    caja.append(lista);
+    const recargar = el("button", "ghost hub-mini", "Actualizar catálogo online");
+    recargar.type = "button";
+    recargar.addEventListener("click", () => { estado.descubiertos = []; void cargarDescubrir(); });
+    caja.append(recargar);
+    return caja;
   }
 
   function vistaBuscar() {
@@ -436,6 +506,7 @@
 
   function cuerpo() {
     if (!estado.catalogo) return el("p", "hub-vacio", "Cargando catálogo…");
+    if (estado.pestana === "descubrir") return vistaDescubrir();
     if (estado.pestana === "instalados") return vistaInstalados();
     if (estado.pestana === "buscar") return estado.repo ? vistaRepo() : vistaBuscar();
     if (estado.pestana === "url") return vistaUrl();
@@ -577,7 +648,7 @@
     document.body.append(capa);
     capa.addEventListener("click", (e) => { if (e.target === capa) cerrarHub(); });
     document.addEventListener("keydown", tecla, true);
-    estado = { catalogo: null, trabajos: [], pestana: "recomendados", busqueda: "", resultados: [], repo: null, cargando: false, error: "", ultimoListo: "" };
+    estado = { catalogo: null, trabajos: [], pestana: "recomendados", busqueda: "", resultados: [], descubiertos: [], descubriendo: false, descubrirError: "", repo: null, cargando: false, error: "", ultimoListo: "" };
     pintar();
     void refrescar();
     arrancarPoll();

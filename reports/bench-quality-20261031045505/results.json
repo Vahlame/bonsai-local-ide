@@ -1,0 +1,119 @@
+{
+  "stamp": "20261031045505",
+  "model": "qwen38-4b-distill",
+  "modelName": "Qwen3.8 4B Distill",
+  "think": 1024,
+  "maxTokens": 1200,
+  "tasks": [
+    {
+      "id": "data_sql_result",
+      "category": "data"
+    },
+    {
+      "id": "retrieval_needle",
+      "category": "retrieval"
+    },
+    {
+      "id": "coding_hard_calc",
+      "category": "coding"
+    },
+    {
+      "id": "instruction_nested",
+      "category": "instruction"
+    },
+    {
+      "id": "tool_call_convert",
+      "category": "tools"
+    }
+  ],
+  "presets": [
+    {
+      "preset": "AUTO",
+      "started": true,
+      "nCtx": 131072,
+      "kv": "f16",
+      "ctx": 131072,
+      "passed": 4,
+      "total": 5,
+      "score": 80,
+      "byCat": {
+        "data": 1,
+        "retrieval": 1,
+        "coding": 0,
+        "instruction": 1,
+        "tools": 1
+      },
+      "avgTps": 70.04255626754104,
+      "seconds": 34
+    }
+  ],
+  "raw": [
+    {
+      "preset": "AUTO",
+      "started": true,
+      "nCtx": 131072,
+      "kv": "f16",
+      "ctx": 131072,
+      "tasks": [
+        {
+          "id": "data_sql_result",
+          "category": "data",
+          "ok": true,
+          "detail": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]",
+          "ms": 2481,
+          "tps": 71.04643409959785,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "[{\"ciudad\":\"Valencia\",\"total\":300},{\"ciudad\":\"Barcelona\",\"total\":275}]"
+        },
+        {
+          "id": "retrieval_needle",
+          "category": "retrieval",
+          "ok": true,
+          "detail": "QX-7419",
+          "ms": 2286,
+          "tps": 68.45220878887795,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "QX-7419"
+        },
+        {
+          "id": "coding_hard_calc",
+          "category": "coding",
+          "ok": false,
+          "detail": "Unexpected end of input",
+          "ms": 0,
+          "tps": 0,
+          "rep": 1
+        },
+        {
+          "id": "instruction_nested",
+          "category": "instruction",
+          "ok": true,
+          "detail": "{\"pedido\":778,\"cliente\":\"Ana\",\"items\":[{\"producto\":\"Teclado\",\"cantidad\":2,\"precio\":25},{\"producto\":\"Raton\",\"cantidad\":1,",
+          "ms": 3757,
+          "tps": 70.40624947533804,
+          "empty": false,
+          "rep": 1,
+          "finish": "stop",
+          "preview": "```json\n{\n  \"pedido\": 778,\n  \"cliente\": \"Ana\",\n  \"items\": [\n    {\n      \"producto\": \"Teclado\",\n      \"cantidad\": 2,\n      \"precio\": 25\n    },\n    {\n      \"produ"
+        },
+        {
+          "id": "tool_call_convert",
+          "category": "tools",
+          "ok": true,
+          "detail": "nativo: {\"monto\":250,\"de\":\"USD\",\"a\":\"EUR\"}",
+          "ms": 1603,
+          "tps": 70.26533270635036,
+          "empty": true,
+          "rep": 1,
+          "finish": "tool_calls",
+          "preview": ""
+        }
+      ],
+      "ms": 33781
+    }
+  ]
+}

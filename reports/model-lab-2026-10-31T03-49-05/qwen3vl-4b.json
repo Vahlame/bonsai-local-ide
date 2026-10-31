@@ -1,0 +1,88 @@
+{
+  "clave": "qwen3vl-4b",
+  "nombre": "Qwen3-VL 4B Instruct",
+  "archivo": "Qwen3VL-4B-Instruct-Q4_K_M.gguf",
+  "fecha": "2026-10-31T03:50:08.101Z",
+  "plan": {
+    "ok": true,
+    "contexto": 57344,
+    "kv": "q8_0",
+    "vision": true,
+    "mmprojCPU": true,
+    "visionEnGpu": false,
+    "pesosMiB": 2382,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 4284,
+    "kvFijoMiB": 0,
+    "totalMiB": 7816,
+    "libreMiB": 7956,
+    "disponibleMiB": 4424,
+    "ctxNativo": 262144,
+    "alternativas": {
+      "f16": {
+        "contexto": 30720,
+        "totalMiB": 7852
+      },
+      "q8_0": {
+        "contexto": 57344,
+        "totalMiB": 7816
+      },
+      "q4_0": {
+        "contexto": 110592,
+        "totalMiB": 7906
+      }
+    },
+    "motivo": "q8_0 a 57.344 tokens; quedan 140 MiB de margen real",
+    "nombre": "Qwen3-VL 4B Instruct"
+  },
+  "arranqueMs": 5360,
+  "nCtx": 57344,
+  "vramPicoMiB": 7069,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 164,
+      "ttftMs": 87,
+      "tps": 30.49
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 153,
+      "ttftMs": 31,
+      "tps": 58.82
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n    return nums.filter(n => n % 2 === 0).reduce((acc, n) => acc + n, 0);\n}",
+      "ms": 549,
+      "ttftMs": 31,
+      "tps": 72.99
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\": 17, \"b\": 25})",
+      "ms": 411,
+      "ttftMs": 167,
+      "tps": 0
+    },
+    {
+      "id": "vision",
+      "ok": true,
+      "detalle": "Se ve la interfaz de una aplicación de código abierto llamada Bonsai, con una lista de archivos de un proyecto de chat en el explorador y un área de conversación en la parte derecha.",
+      "ms": 7928,
+      "ttftMs": 7340,
+      "tps": 5.55
+    }
+  ],
+  "resumen": "5/5 pruebas",
+  "medido": true
+}

@@ -1,0 +1,88 @@
+{
+  "clave": "smolvlm2-22b",
+  "nombre": "SmolVLM2 2.2B",
+  "archivo": "smolvlm2-22b-SmolVLM2-2.2B-Instruct-Q4_K_M.gguf",
+  "fecha": "2026-10-31T04:14:02.031Z",
+  "plan": {
+    "ok": true,
+    "contexto": 8192,
+    "kv": "f16",
+    "vision": true,
+    "mmprojCPU": true,
+    "visionEnGpu": false,
+    "pesosMiB": 1062,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 1536,
+    "kvFijoMiB": 0,
+    "totalMiB": 3748,
+    "libreMiB": 7956,
+    "disponibleMiB": 5744,
+    "ctxNativo": 8192,
+    "alternativas": {
+      "f16": {
+        "contexto": 8192,
+        "totalMiB": 3748
+      },
+      "q8_0": {
+        "contexto": 8192,
+        "totalMiB": 3028
+      },
+      "q4_0": {
+        "contexto": 8192,
+        "totalMiB": 2644
+      }
+    },
+    "motivo": "f16 a 8192 tokens; quedan 4208 MiB de margen real",
+    "nombre": "SmolVLM2 2.2B"
+  },
+  "arranqueMs": 3099,
+  "nCtx": 8192,
+  "vramPicoMiB": 2679,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": " BONSAI_OK, estoy aquí para ayudarte con cualquier pregunta o desafío que puedas tener. ¡Disfruta de la conversación!\n\nP",
+      "ms": 341,
+      "ttftMs": 64,
+      "tps": 138.24
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": " {\n  \"ok\": true,\n  \"n\": 7\n}",
+      "ms": 127,
+      "ttftMs": 43,
+      "tps": 118.11
+    },
+    {
+      "id": "codigo",
+      "ok": false,
+      "detalle": "// Importamos la función de suma de pares\nconst sumaPares = require('./sumaPares');\n\n// Test the function\nconsole.log(sumaPares([1, 2, 3, 4, 5])); // Expected output: 10\nconsole.log(sumaPares([10, 20, 30, 40, 50])); // Expected output: 150",
+      "ms": 1224,
+      "ttftMs": 22,
+      "tps": 180.18
+    },
+    {
+      "id": "herramienta",
+      "ok": false,
+      "detalle": " ```python\n# This Python script demonstrates the use of the built-in sum function to calculate the sum of two numbers.\n# It does not use any external libraries ",
+      "ms": 1008,
+      "ttftMs": 30,
+      "tps": 178.57
+    },
+    {
+      "id": "vision",
+      "ok": true,
+      "detalle": " The image shows a screenshot of a webpage with a list of URLs. The URLs are displayed in a column format, with the first column containing the URL and the second column containing the corresponding t",
+      "ms": 14293,
+      "ttftMs": 13610,
+      "tps": 8.4
+    }
+  ],
+  "resumen": "3/5 pruebas",
+  "medido": true
+}

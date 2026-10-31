@@ -1,0 +1,80 @@
+{
+  "clave": "minicpm-v47-1b",
+  "nombre": "MiniCPM-V 4.7 1B",
+  "archivo": "MiniCPM-V-4_7-1B-Q4_K_M.gguf",
+  "fecha": "2026-10-31T04:02:49.251Z",
+  "plan": {
+    "ok": true,
+    "contexto": 131072,
+    "kv": "f16",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 641,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 1536,
+    "kvFijoMiB": 0,
+    "totalMiB": 3327,
+    "libreMiB": 7956,
+    "disponibleMiB": 6165,
+    "ctxNativo": 262144,
+    "alternativas": {
+      "f16": {
+        "contexto": 131072,
+        "totalMiB": 3327
+      },
+      "q8_0": {
+        "contexto": 131072,
+        "totalMiB": 2607
+      },
+      "q4_0": {
+        "contexto": 131072,
+        "totalMiB": 2223
+      }
+    },
+    "motivo": "f16 a 131.072 tokens; quedan 4629 MiB de margen real",
+    "nombre": "MiniCPM-V 4.7 1B"
+  },
+  "arranqueMs": 2339,
+  "nCtx": 131072,
+  "vramPicoMiB": 2305,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 115,
+      "ttftMs": 83,
+      "tps": 43.48
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\n  \"ok\": true,\n  \"n\": 7\n}",
+      "ms": 101,
+      "ttftMs": 25,
+      "tps": 168.32
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.filter(n => n % 2 === 0).reduce((a, b) => a + b);\n}",
+      "ms": 187,
+      "ttftMs": 23,
+      "tps": 215.05
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 305,
+      "ttftMs": 46,
+      "tps": 85.53
+    }
+  ],
+  "resumen": "4/4 pruebas",
+  "medido": true
+}

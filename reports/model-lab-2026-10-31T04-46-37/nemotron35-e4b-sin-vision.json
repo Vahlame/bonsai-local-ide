@@ -1,0 +1,80 @@
+{
+  "clave": "nemotron35-e4b",
+  "nombre": "Nemotron 3.5 Bolt E4B",
+  "archivo": "nemotron35-e4b-NVIDIA-Nemotron-3.5-Bolt-E4B-UD-Q2_K_XL.gguf",
+  "fecha": "2026-10-31T04:47:30.279Z",
+  "plan": {
+    "ok": true,
+    "contexto": 36864,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 3569,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 3213,
+    "kvFijoMiB": 0,
+    "totalMiB": 7932,
+    "libreMiB": 7956,
+    "disponibleMiB": 3237,
+    "ctxNativo": 131072,
+    "alternativas": {
+      "f16": {
+        "contexto": 18432,
+        "totalMiB": 7743
+      },
+      "q8_0": {
+        "contexto": 36864,
+        "totalMiB": 7932
+      },
+      "q4_0": {
+        "contexto": 69632,
+        "totalMiB": 7932
+      }
+    },
+    "motivo": "q8_0 a 36.864 tokens; quedan 24 MiB de margen real",
+    "nombre": "Nemotron 3.5 Bolt E4B"
+  },
+  "arranqueMs": 3850,
+  "nCtx": 36864,
+  "vramPicoMiB": 2709,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 288,
+      "ttftMs": 194,
+      "tps": 17.36
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 167,
+      "ttftMs": 42,
+      "tps": 54.22
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.reduce((sum, num) => (num % 2 === 0 ? sum + num : sum), 0);\n}",
+      "ms": 657,
+      "ttftMs": 88,
+      "tps": 68.6
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 302,
+      "ttftMs": 154,
+      "tps": 0
+    }
+  ],
+  "resumen": "4/4 pruebas",
+  "medido": true
+}

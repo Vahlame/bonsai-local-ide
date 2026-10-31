@@ -4,6 +4,7 @@
  *
  *   node scripts/hub.mjs list
  *   node scripts/hub.mjs scan
+ *   node scripts/hub.mjs discover [--limit 30] [--sort trendingScore]
  *   node scripts/hub.mjs search "qwen3 coder"
  *   node scripts/hub.mjs repo unsloth/Qwen3-4B-Instruct-2507-GGUF
  *   node scripts/hub.mjs download qwen3-4b-2507
@@ -27,6 +28,7 @@ import {
   buscarHuggingFace,
   catalogoHub,
   crearTrabajo,
+  descubrirHuggingFace,
   importarArchivo,
   inspeccionarRepo,
   leerCurado,
@@ -133,6 +135,15 @@ try {
     if (json) salida(r);
     else process.stdout.write(`${tabla(r.map((m) => ({ repo: m.repo, descargas: m.descargas, licencia: m.licencia })), [
       { clave: "repo", titulo: "REPO" },
+      { clave: "descargas", titulo: "DESCARGAS" },
+      { clave: "licencia", titulo: "LICENCIA" },
+    ])}\n`);
+  } else if (comando === "discover") {
+    const r = await descubrirHuggingFace({ limit: Number(opcion("limit", "30")), sort: opcion("sort", "trendingScore") });
+    if (json) salida(r);
+    else process.stdout.write(`${tabla(r.map((m) => ({ repo: m.repo, vision: m.vision ? "sí" : "", descargas: m.descargas, licencia: m.licencia })), [
+      { clave: "repo", titulo: "REPO" },
+      { clave: "vision", titulo: "VISIÓN" },
       { clave: "descargas", titulo: "DESCARGAS" },
       { clave: "licencia", titulo: "LICENCIA" },
     ])}\n`);

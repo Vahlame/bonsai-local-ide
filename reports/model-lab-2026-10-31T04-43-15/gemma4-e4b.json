@@ -1,0 +1,88 @@
+{
+  "clave": "gemma4-e4b",
+  "nombre": "Gemma 4 E4B IT",
+  "archivo": "gemma4-e4b-gemma-4-E4B-it-Q4_K_M.gguf",
+  "fecha": "2026-10-31T04:44:28.736Z",
+  "plan": {
+    "ok": true,
+    "contexto": 22528,
+    "kv": "q8_0",
+    "vision": true,
+    "mmprojCPU": true,
+    "visionEnGpu": false,
+    "pesosMiB": 4747,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 1964,
+    "kvFijoMiB": 0,
+    "totalMiB": 7861,
+    "libreMiB": 7956,
+    "disponibleMiB": 2059,
+    "ctxNativo": 131072,
+    "alternativas": {
+      "f16": {
+        "contexto": 12288,
+        "totalMiB": 7913
+      },
+      "q8_0": {
+        "contexto": 22528,
+        "totalMiB": 7861
+      },
+      "q4_0": {
+        "contexto": 43008,
+        "totalMiB": 7882
+      }
+    },
+    "motivo": "q8_0 a 22.528 tokens; quedan 95 MiB de margen real",
+    "nombre": "Gemma 4 E4B IT"
+  },
+  "arranqueMs": 7617,
+  "nCtx": 22528,
+  "vramPicoMiB": 3367,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 687,
+      "ttftMs": 432,
+      "tps": 7.28
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 233,
+      "ttftMs": 42,
+      "tps": 38.79
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "const sumaPares = (nums) => {\n  return nums.reduce((acc, num) => {\n    if (num % 2 === 0) {\n      return acc + num;\n    }\n    return acc;\n  }, 0);\n};",
+      "ms": 1186,
+      "ttftMs": 44,
+      "tps": 54.05
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 1141,
+      "ttftMs": 105,
+      "tps": 41.19
+    },
+    {
+      "id": "vision",
+      "ok": true,
+      "detalle": "Here's a thinking process to arrive at the desired description:\n\n1.  **Analyze the Request:**\n    *   Describe what is seen in the image in one sentence.\n    *   If there is legible text, mention one ",
+      "ms": 14125,
+      "ttftMs": 12210,
+      "tps": 8.28
+    }
+  ],
+  "resumen": "5/5 pruebas",
+  "medido": true
+}

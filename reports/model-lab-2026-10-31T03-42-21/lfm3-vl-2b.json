@@ -1,0 +1,88 @@
+{
+  "clave": "lfm3-vl-2b",
+  "nombre": "LFM3-VL 2B",
+  "archivo": "lfm3-vl-2b-LFM3-VL-2B-Q4_K_M.gguf",
+  "fecha": "2026-10-31T03:42:30.753Z",
+  "plan": {
+    "ok": true,
+    "contexto": 128000,
+    "kv": "f16",
+    "vision": true,
+    "mmprojCPU": true,
+    "visionEnGpu": false,
+    "pesosMiB": 1049,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 2750,
+    "kvFijoMiB": 0,
+    "totalMiB": 4949,
+    "libreMiB": 7956,
+    "disponibleMiB": 5757,
+    "ctxNativo": 128000,
+    "alternativas": {
+      "f16": {
+        "contexto": 128000,
+        "totalMiB": 4949
+      },
+      "q8_0": {
+        "contexto": 128000,
+        "totalMiB": 3660
+      },
+      "q4_0": {
+        "contexto": 128000,
+        "totalMiB": 2973
+      }
+    },
+    "motivo": "f16 a 128.000 tokens; quedan 3007 MiB de margen real",
+    "nombre": "LFM3-VL 2B"
+  },
+  "arranqueMs": 3086,
+  "nCtx": 128000,
+  "vramPicoMiB": 2753,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 150,
+      "ttftMs": 120,
+      "tps": 33.33
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\": true, \"n\": 7}",
+      "ms": 97,
+      "ttftMs": 33,
+      "tps": 113.4
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.reduce((sum, num) => (num % 2 === 0 ? sum + num : sum), 0);\n}",
+      "ms": 266,
+      "ttftMs": 33,
+      "tps": 150.94
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 172,
+      "ttftMs": 68,
+      "tps": 0
+    },
+    {
+      "id": "vision",
+      "ok": true,
+      "detalle": "La imagen muestra una interfaz de código en un editor con una lista de archivos y texto de conversación visible.",
+      "ms": 3625,
+      "ttftMs": 3480,
+      "tps": 6.62
+    }
+  ],
+  "resumen": "5/5 pruebas",
+  "medido": true
+}

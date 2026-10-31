@@ -15,13 +15,37 @@
       "uso": "Modelo general pequeño y rápido. Buen equilibrio para chat, explicaciones y código; admite razonamiento y tool calls nativas.",
       "licencia": "Apache-2.0",
       "toolcalls": "nativo",
-      "pensar": { "compatible": true, "presupuesto": 2048 },
-      "agente": { "saltos": 32, "avisos": 3 },
-      "muestreo": {
-        "codigo": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 },
-        "razonar": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 }
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 2048
       },
-      "etiquetas": ["recomendado", "rápido", "razona"],
+      "agente": {
+        "saltos": 32,
+        "avisos": 3
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "recomendado",
+        "rápido",
+        "razona"
+      ],
       "vision": null
     },
     {
@@ -37,14 +61,41 @@
       "uso": "Especialista en código con ventana nativa de 32k. Es el relevo natural de Ornith para tareas de programación cuando se busca otra familia.",
       "licencia": "Apache-2.0",
       "toolcalls": "function-call xml-json tools-json",
-      "pensar": { "compatible": false },
-      "agente": { "saltos": 32, "avisos": 3 },
-      "muestreo": {
-        "codigo": { "temperature": 0.2, "top_p": 0.9, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1.05 },
-        "razonar": { "temperature": 0.2, "top_p": 0.9, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1.05 }
+      "pensar": {
+        "compatible": false
       },
-      "etiquetas": ["código", "7B"],
-      "draft": { "archivo": "qwen2.5-0.5b-instruct-q4_k_m.gguf", "bytes": 491400032, "tokens": 4, "ctxNativo": 32768 },
+      "agente": {
+        "saltos": 32,
+        "avisos": 3
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.2,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1.05
+        },
+        "razonar": {
+          "temperature": 0.2,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1.05
+        }
+      },
+      "etiquetas": [
+        "código",
+        "7B"
+      ],
+      "draft": {
+        "archivo": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        "bytes": 491400032,
+        "tokens": 4,
+        "ctxNativo": 32768
+      },
       "vision": null
     },
     {
@@ -60,13 +111,36 @@
       "uso": "Modelo multimodal de Google con cuantización dinámica de Unsloth. Lee imágenes y texto; útil para capturas del IDE y OCR ligero.",
       "licencia": "Gemma Terms of Use",
       "toolcalls": "texto",
-      "pensar": { "compatible": false },
-      "agente": { "saltos": 24, "avisos": 2 },
-      "muestreo": {
-        "codigo": { "temperature": 1.0, "top_p": 0.95, "top_k": 64, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 },
-        "razonar": { "temperature": 1.0, "top_p": 0.95, "top_k": 64, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 }
+      "pensar": {
+        "compatible": false
       },
-      "etiquetas": ["visión", "multimodal", "Google"],
+      "agente": {
+        "saltos": 24,
+        "avisos": 2
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 64,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 64,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "multimodal",
+        "Google"
+      ],
       "vision": {
         "archivo": "mmproj-BF16.gguf",
         "bytes": 851251328
@@ -85,13 +159,35 @@
       "uso": "Modelo muy ligero para respuestas rápidas, clasificación y tareas de agente sencillas. Deja mucha VRAM libre para contexto.",
       "licencia": "Llama 3.2 Community License",
       "toolcalls": "nativo",
-      "pensar": { "compatible": false },
-      "agente": { "saltos": 24, "avisos": 2 },
-      "muestreo": {
-        "codigo": { "temperature": 0.6, "top_p": 0.9, "top_k": 40, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 },
-        "razonar": { "temperature": 0.6, "top_p": 0.9, "top_k": 40, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 }
+      "pensar": {
+        "compatible": false
       },
-      "etiquetas": ["rápido", "ligero"],
+      "agente": {
+        "saltos": 24,
+        "avisos": 2
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 40,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 40,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "rápido",
+        "ligero"
+      ],
       "vision": null
     },
     {
@@ -107,13 +203,36 @@
       "uso": "Destilado de razonamiento sobre Qwen 7B. Piensa antes de contestar; útil para matemáticas y depuración, más lento en chat casual.",
       "licencia": "Apache-2.0",
       "toolcalls": "texto",
-      "pensar": { "compatible": true, "presupuesto": 4096 },
-      "agente": { "saltos": 32, "avisos": 3 },
-      "muestreo": {
-        "codigo": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 },
-        "razonar": { "temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0, "presence_penalty": 0, "repeat_penalty": 1 }
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 4096
       },
-      "etiquetas": ["razonamiento", "7B"],
+      "agente": {
+        "saltos": 32,
+        "avisos": 3
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "razonamiento",
+        "7B"
+      ],
       "vision": null
     },
     {
@@ -129,9 +248,14 @@
       "uso": "Modelo pequeño para decodificación especulativa con la familia Qwen3. No está pensado para chatear directamente.",
       "licencia": "Apache-2.0",
       "toolcalls": "nativo",
-      "pensar": { "compatible": false },
+      "pensar": {
+        "compatible": false
+      },
       "oculto": true,
-      "etiquetas": ["borrador", "spec-decode"],
+      "etiquetas": [
+        "borrador",
+        "spec-decode"
+      ],
       "vision": null
     },
     {
@@ -147,13 +271,796 @@
       "uso": "Borrador para decodificación especulativa con Qwen2.5 Coder 7B (mismo tokenizer). No usar como chat principal.",
       "licencia": "Apache-2.0",
       "toolcalls": "nativo",
-      "pensar": { "compatible": false },
+      "pensar": {
+        "compatible": false
+      },
       "oculto": true,
-      "etiquetas": ["borrador", "spec-decode"],
+      "etiquetas": [
+        "borrador",
+        "spec-decode"
+      ],
       "vision": null
+    },
+    {
+      "clave": "qwen35-4b",
+      "nombre": "Qwen3.5 4B",
+      "repo": "unsloth/Qwen3.5-4B-GGUF",
+      "archivo": "Qwen3.5-4B-Q4_K_M.gguf",
+      "bytes": 2740937888,
+      "revision": "e87f176479d0855a907a41277aca2f8ee7a09523",
+      "kvF16BytesPorToken": 32768,
+      "ctxNativo": 131072,
+      "rol": "chat + visión",
+      "uso": "Generación Qwen3.5 con visión y contexto largo; el 4B cabe con holgura y deja VRAM para contexto.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 2048
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "moderno",
+        "Qwen3.5"
+      ],
+      "vision": {
+        "archivo": "mmproj-BF16.gguf",
+        "bytes": 675569344
+      }
+    },
+    {
+      "clave": "qwen35-9b",
+      "nombre": "Qwen3.5 9B",
+      "repo": "unsloth/Qwen3.5-9B-GGUF",
+      "archivo": "Qwen3.5-9B-Q3_K_M.gguf",
+      "bytes": 4673643744,
+      "revision": "3885219b6810b007914f3a7950a8d1b469d598a5",
+      "kvF16BytesPorToken": 32768,
+      "ctxNativo": 131072,
+      "rol": "chat + visión",
+      "uso": "9B moderno con visión; Q3_K_M para que quepa entero en 8 GB y conserve contexto.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 2048
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "9B",
+        "Qwen3.5"
+      ],
+      "vision": {
+        "archivo": "mmproj-BF16.gguf",
+        "bytes": 921705024
+      }
+    },
+    {
+      "clave": "qwen38-4b-distill",
+      "nombre": "Qwen3.8 4B Distill",
+      "repo": "empero-ai/Qwen3.8-4B-Distill-GGUF",
+      "archivo": "Qwen3.8-4B-Q4_K_M.gguf",
+      "bytes": 2783446304,
+      "revision": "391fc7d103e3942a408def3e4f51c2f85d464417",
+      "kvF16BytesPorToken": 131072,
+      "ctxNativo": 131072,
+      "rol": "chat + código",
+      "uso": "Destilado de Qwen3.8 en 4B; texto rápido y moderno para comparar con Qwen3.5.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 2048
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "moderno",
+        "4B",
+        "Qwen3.8"
+      ],
+      "vision": null
+    },
+    {
+      "clave": "qwen3vl-2b",
+      "nombre": "Qwen3-VL 2B Instruct",
+      "repo": "Qwen/Qwen3-VL-2B-Instruct-GGUF",
+      "archivo": "Qwen3VL-2B-Instruct-Q4_K_M.gguf",
+      "bytes": 1107409952,
+      "revision": "52d6c8ffea26cc873ac5ad116f8631268d7eb503",
+      "kvF16BytesPorToken": 73728,
+      "ctxNativo": 131072,
+      "rol": "visión",
+      "uso": "Visión compacta de Qwen3-VL: imágenes, capturas y OCR ligero con muy poca VRAM.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": false
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "2B",
+        "Qwen3-VL"
+      ],
+      "vision": {
+        "archivo": "mmproj-Qwen3VL-2B-Instruct-Q8_0.gguf",
+        "bytes": 445053216
+      }
+    },
+    {
+      "clave": "qwen3vl-4b",
+      "nombre": "Qwen3-VL 4B Instruct",
+      "repo": "Qwen/Qwen3-VL-4B-Instruct-GGUF",
+      "archivo": "Qwen3VL-4B-Instruct-Q4_K_M.gguf",
+      "bytes": 2497281664,
+      "revision": "1cd86afb9a95c410a6038ab3b40d8b578c892266",
+      "kvF16BytesPorToken": 147456,
+      "ctxNativo": 131072,
+      "rol": "visión",
+      "uso": "El equilibrio de Qwen3-VL: 4B, visión nítida y contexto amplio en 8 GB.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": false
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "4B",
+        "Qwen3-VL"
+      ],
+      "vision": {
+        "archivo": "mmproj-Qwen3VL-4B-Instruct-Q8_0.gguf",
+        "bytes": 453974304
+      }
+    },
+    {
+      "clave": "qwen3vl-8b",
+      "nombre": "Qwen3-VL 8B Instruct",
+      "repo": "Qwen/Qwen3-VL-8B-Instruct-GGUF",
+      "archivo": "Qwen3VL-8B-Instruct-Q4_K_M.gguf",
+      "bytes": 5027784800,
+      "revision": "f982a07559d4a2f6c8744d840bf6fccab30eea96",
+      "kvF16BytesPorToken": 147456,
+      "ctxNativo": 131072,
+      "rol": "visión",
+      "uso": "8B de visión para tareas difíciles; Q4 y proyector en CPU para conservar contexto.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": false
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "8B",
+        "Qwen3-VL"
+      ],
+      "vision": {
+        "archivo": "mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf",
+        "bytes": 752289728
+      }
+    },
+    {
+      "clave": "qwen25vl-3b",
+      "nombre": "Qwen2.5-VL 3B",
+      "repo": "ggml-org/Qwen2.5-VL-3B-Instruct-GGUF",
+      "archivo": "Qwen2.5-VL-3B-Instruct-Q4_K_M.gguf",
+      "bytes": 1929901056,
+      "revision": "5037fcf163dd95d1e41d1974465f0898ed108ca2",
+      "kvF16BytesPorToken": 73728,
+      "ctxNativo": 131072,
+      "rol": "visión",
+      "uso": "Visión probada de la generación anterior; referencia estable para comparar con Qwen3-VL.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": false
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "3B",
+        "Qwen2.5-VL"
+      ],
+      "vision": {
+        "archivo": "mmproj-Qwen2.5-VL-3B-Instruct-Q8_0.gguf",
+        "bytes": 844757728
+      }
+    },
+    {
+      "clave": "minicpm-v47-1b",
+      "nombre": "MiniCPM-V 4.7 1B",
+      "repo": "openbmb/MiniCPM-V-4.7-1B-gguf",
+      "archivo": "MiniCPM-V-4_7-1B-Q4_K_M.gguf",
+      "bytes": 672003680,
+      "revision": "345adbfa02c4a4671e61b7c75502dc9bf24fa93d",
+      "kvF16BytesPorToken": 114688,
+      "ctxNativo": 131072,
+      "rol": "visión",
+      "uso": "Visión ultraligera; OCR y descripción de capturas con 1B y contexto enorme.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "auto",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 1024
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "1B",
+        "MiniCPM"
+      ],
+      "vision": {
+        "archivo": "mmproj-model-f16.gguf",
+        "bytes": 1110117984
+      }
+    },
+    {
+      "clave": "gemma4-e4b",
+      "nombre": "Gemma 4 E4B IT",
+      "repo": "unsloth/gemma-4-E4B-it-GGUF",
+      "archivo": "gemma-4-E4B-it-Q4_K_M.gguf",
+      "bytes": 4977171584,
+      "revision": "bfc15c382204943c3a8fff0c750b94ae2364d7a3",
+      "kvF16BytesPorToken": 139264,
+      "ctxNativo": 131072,
+      "rol": "chat + visión",
+      "uso": "Gemma 4 de 4B efectivos; visión y texto con la arquitectura más nueva de Google.",
+      "licencia": "Gemma Terms of Use",
+      "toolcalls": "texto",
+      "pensar": {
+        "compatible": false
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "Gemma 4",
+        "moderno"
+      ],
+      "vision": {
+        "archivo": "mmproj-BF16.gguf",
+        "bytes": 991552320
+      }
+    },
+    {
+      "clave": "phi4-mini",
+      "nombre": "Phi-4 Mini Instruct",
+      "repo": "unsloth/Phi-4-mini-instruct-GGUF",
+      "archivo": "Phi-4-mini-instruct-Q4_K_M.gguf",
+      "bytes": 2491874272,
+      "revision": "78eb92a46fc37e6b524df991ed9aca9bc6aa7b80",
+      "kvF16BytesPorToken": 131072,
+      "ctxNativo": 131072,
+      "rol": "chat + código",
+      "uso": "3.8B de Microsoft, texto rápido y muy bueno para su tamaño; sin visión.",
+      "licencia": "MIT",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": false
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "texto",
+        "3.8B",
+        "Phi-4"
+      ],
+      "vision": null
+    },
+    {
+      "clave": "granite40-tiny",
+      "nombre": "Granite 4.0 H Tiny",
+      "repo": "ibm-granite/granite-4.0-h-tiny-GGUF",
+      "archivo": "granite-4.0-h-tiny-Q4_K_M.gguf",
+      "bytes": 4230976352,
+      "revision": "08d5a8a9741dd5c1a95d2d39e25253226aa1464e",
+      "kvF16BytesPorToken": 65536,
+      "ctxNativo": 131072,
+      "rol": "chat empresarial",
+      "uso": "Modelo híbrido de IBM para texto y herramientas; probar su tool-calling y contexto.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "auto",
+      "pensar": {
+        "compatible": false
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "texto",
+        "IBM",
+        "herramientas"
+      ],
+      "vision": null
+    },
+    {
+      "clave": "nemotron35-e4b",
+      "nombre": "Nemotron 3.5 Bolt E4B",
+      "repo": "unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF",
+      "archivo": "NVIDIA-Nemotron-3.5-Bolt-E4B-UD-Q2_K_XL.gguf",
+      "bytes": 3742102720,
+      "revision": "b738967d6da3441a7d1c71fcec15e49e32e16ecd",
+      "kvF16BytesPorToken": 65536,
+      "ctxNativo": 131072,
+      "rol": "chat + visión",
+      "uso": "4B efectivos de NVIDIA con visión; cuantización Q2 para entrar en 8 GB.",
+      "licencia": "NVIDIA Open Model License",
+      "toolcalls": "auto",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 2048
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "NVIDIA",
+        "moderno"
+      ],
+      "vision": {
+        "archivo": "mmproj-Q8_0.gguf",
+        "bytes": 559875776
+      }
+    },
+    {
+      "clave": "lfm3-vl-2b",
+      "nombre": "LFM3-VL 2B",
+      "repo": "LiquidAI/LFM3-VL-2B-GGUF",
+      "archivo": "LFM3-VL-2B-Q4_K_M.gguf",
+      "bytes": 1099627808,
+      "revision": "b36554cfd35854b06429900131730cd80f092cdb",
+      "kvF16BytesPorToken": 32768,
+      "ctxNativo": 131072,
+      "rol": "visión",
+      "uso": "Visión pequeña y rápida de Liquid AI; ideal para capturas y preguntas cortas.",
+      "licencia": "LFM Open License",
+      "toolcalls": "auto",
+      "pensar": {
+        "compatible": false
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "2B",
+        "Liquid"
+      ],
+      "vision": {
+        "archivo": "mmproj-LFM3-VL-2B-Q8_0.gguf",
+        "bytes": 203031872
+      }
+    },
+    {
+      "clave": "lfm3-17b",
+      "nombre": "LFM3 1.7B",
+      "repo": "LiquidAI/LFM3-1.7B-GGUF",
+      "archivo": "LFM3-1.7B-Q4_K_M.gguf",
+      "bytes": 1099627808,
+      "revision": "bad5729bba61d076fff20d2548e62526665af215",
+      "kvF16BytesPorToken": 32768,
+      "ctxNativo": 131072,
+      "rol": "chat rápido",
+      "uso": "1.7B muy rápido para clasificación, resúmenes y respuestas cortas.",
+      "licencia": "LFM Open License",
+      "toolcalls": "auto",
+      "pensar": {
+        "compatible": false
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "texto",
+        "1.7B",
+        "Liquid"
+      ],
+      "vision": null
+    },
+    {
+      "clave": "smollm3-3b",
+      "nombre": "SmolLM3 3B",
+      "repo": "ggml-org/SmolLM3-3B-GGUF",
+      "archivo": "SmolLM3-Q4_K_M.gguf",
+      "bytes": 1915305312,
+      "revision": "4965cb60b150737b68a0408c36aeefb65078f894",
+      "kvF16BytesPorToken": 73728,
+      "ctxNativo": 131072,
+      "rol": "chat + herramientas",
+      "uso": "3B de Hugging Face con contexto largo y tool-calling; buen banco de pruebas.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "auto",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 1024
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "texto",
+        "3B",
+        "HuggingFace"
+      ],
+      "vision": null
+    },
+    {
+      "clave": "spark-x26-4b",
+      "nombre": "Spark X2.6 4B",
+      "repo": "XHToken/Spark-X2.6-4B-GGUF",
+      "archivo": "Spark-X2.6-4B-Q4_K_M.gguf",
+      "bytes": 3543441312,
+      "revision": "0e8aa39a34063946ce07bbaaff392093b11b6829",
+      "kvF16BytesPorToken": 131072,
+      "ctxNativo": 131072,
+      "rol": "chat + código",
+      "uso": "4B alternativo para comparar razonamiento y código con Qwen/Gemma.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "auto",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 1024
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "texto",
+        "4B",
+        "Spark"
+      ],
+      "vision": null
+    },
+    {
+      "clave": "smolvlm2-22b",
+      "nombre": "SmolVLM2 2.2B",
+      "repo": "ggml-org/SmolVLM2-2.2B-Instruct-GGUF",
+      "archivo": "SmolVLM2-2.2B-Instruct-Q4_K_M.gguf",
+      "bytes": 1112602656,
+      "revision": "1bc3c9f74ceafd4c8d4411cc9cf188bba3798f91",
+      "kvF16BytesPorToken": 24576,
+      "ctxNativo": 131072,
+      "rol": "visión",
+      "uso": "Visión ligera de Hugging Face; imágenes y vídeo corto en muy poca VRAM.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "auto",
+      "pensar": {
+        "compatible": false
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "2.2B",
+        "SmolVLM"
+      ],
+      "vision": {
+        "archivo": "mmproj-SmolVLM2-2.2B-Instruct-Q8_0.gguf",
+        "bytes": 592523200
+      }
+    },
+    {
+      "clave": "lfm3-omni-2b",
+      "nombre": "LFM3 Omni 2B",
+      "repo": "LiquidAI/LFM3-Omni-2B-GGUF",
+      "archivo": "LFM3-Omni-2B-Q4_K_M.gguf",
+      "bytes": 1099630080,
+      "revision": "3d29af2ad166f8299c2d820937e47dc0add20ffc",
+      "kvF16BytesPorToken": 32768,
+      "ctxNativo": 131072,
+      "rol": "visión + audio",
+      "uso": "Modelo omni de Liquid AI; visión y audio en 2B, para probar límites de llama.cpp.",
+      "licencia": "LFM Open License",
+      "toolcalls": "auto",
+      "pensar": {
+        "compatible": false
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "visión",
+        "audio",
+        "2B"
+      ],
+      "vision": {
+        "archivo": "mmproj-LFM3-Omni-2B-Q8_0.gguf",
+        "bytes": 506842528
+      }
     }
   ]
 }
-
-
-

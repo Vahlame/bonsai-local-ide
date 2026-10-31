@@ -1,0 +1,80 @@
+{
+  "clave": "spark-x26-4b",
+  "nombre": "Spark X2.6 4B",
+  "archivo": "spark-x26-4b-Spark-X2.6-4B-Q4_K_M.gguf",
+  "fecha": "2026-10-31T05:27:49.095Z",
+  "plan": {
+    "ok": true,
+    "contexto": 45056,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 3380,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 3366,
+    "kvFijoMiB": 0,
+    "totalMiB": 7896,
+    "libreMiB": 7956,
+    "disponibleMiB": 3426,
+    "ctxNativo": 1048576,
+    "alternativas": {
+      "f16": {
+        "contexto": 22528,
+        "totalMiB": 7698
+      },
+      "q8_0": {
+        "contexto": 45056,
+        "totalMiB": 7896
+      },
+      "q4_0": {
+        "contexto": 86016,
+        "totalMiB": 7932
+      }
+    },
+    "motivo": "q8_0 a 45.056 tokens; quedan 60 MiB de margen real",
+    "nombre": "Spark X2.6 4B"
+  },
+  "arranqueMs": 3749,
+  "nCtx": 45056,
+  "vramPicoMiB": 4041,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK</think>",
+      "ms": 408,
+      "ttftMs": 317,
+      "tps": 14.71
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 200,
+      "ttftMs": 68,
+      "tps": 45
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n    return nums.filter(num => num % 2 === 0).reduce((sum, num) => sum + num, 0);\n}",
+      "ms": 771,
+      "ttftMs": 80,
+      "tps": 57.1
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 353,
+      "ttftMs": 151,
+      "tps": 0
+    }
+  ],
+  "resumen": "4/4 pruebas",
+  "medido": true
+}
