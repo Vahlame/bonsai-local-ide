@@ -1,0 +1,81 @@
+{
+  "clave": "qwen3-30b-a3b-2507",
+  "nombre": "Qwen3 30B-A3B 2507",
+  "rep": 1,
+  "ok": true,
+  "files": [
+    "server.mjs",
+    "public/index.html",
+    "public/app.js",
+    "public/styles.css",
+    "package.json"
+  ],
+  "api": [
+    {
+      "id": "lista-inicial",
+      "ok": true,
+      "detalle": "HTTP 200 []"
+    },
+    {
+      "id": "crear",
+      "ok": true,
+      "detalle": "HTTP 201 {\"id\":\"1793457310901\",\"title\":\"Comprar leche\",\"status\":\"todo\",\"priority\":2,\"createdAt\":\"2026-10-31T1"
+    },
+    {
+      "id": "listar-creada",
+      "ok": true,
+      "detalle": "HTTP 200"
+    },
+    {
+      "id": "cambiar-estado",
+      "ok": false,
+      "detalle": "HTTP 404 null"
+    },
+    {
+      "id": "stats",
+      "ok": false,
+      "detalle": "HTTP 200 {\"todo\":1,\"doing\":0,\"done\":0,\"total\":1}"
+    },
+    {
+      "id": "html",
+      "ok": true,
+      "detalle": "HTTP 200 1411 bytes"
+    },
+    {
+      "id": "estaticos",
+      "ok": false,
+      "detalle": "app.js=404 styles.css=404"
+    },
+    {
+      "id": "borrar",
+      "ok": false,
+      "detalle": "HTTP 404"
+    }
+  ],
+  "ui": [
+    {
+      "id": "input",
+      "ok": true,
+      "detalle": "input encontrado"
+    },
+    {
+      "id": "añadir",
+      "ok": true,
+      "detalle": "botón encontrado"
+    },
+    {
+      "id": "tarea-visible",
+      "ok": false,
+      "detalle": "0 coincidencias"
+    }
+  ],
+  "screenshot": "reports\\webapp-bench-2026-10-31T14-33-20\\qwen3-30b-a3b-2507\\run1\\screenshot.png",
+  "apiPass": 4,
+  "uiPass": 2,
+  "score": 55,
+  "ms": 104314,
+  "tps": 38.61319197475007,
+  "genTokens": 3866,
+  "finish": "stop",
+  "retryLength": false
+}

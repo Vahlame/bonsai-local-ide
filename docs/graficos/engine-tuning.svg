@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="996" viewBox="0 0 1040 996" font-family="Segoe UI, system-ui, sans-serif">
+<rect width="1040" height="996" fill="#0d100b"/>
+<text x="24" y="34" fill="#e9eee0" font-size="18" font-weight="600">Tuning del motor · Qwen3-30B-A3B</text>
+<text x="24" y="54" fill="#8d9680" font-size="12">Generación en tok/s · misma máquina, mismo GGUF</text>
+<text x="24" y="118" fill="#e9eee0" font-size="10">ngram-simple</text>
+<rect x="300" y="105" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="105" width="580" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="118" fill="#e9eee0" font-size="11" font-weight="700">71.6</text>
+<text x="24" y="156" fill="#e9eee0" font-size="10">ngram-mod</text>
+<rect x="300" y="143" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="143" width="517" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="156" fill="#e9eee0" font-size="11" font-weight="700">63.8</text>
+<text x="24" y="194" fill="#e9eee0" font-size="10">ngram-map-k</text>
+<rect x="300" y="181" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="181" width="428" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="194" fill="#e9eee0" font-size="11" font-weight="700">52.8</text>
+<text x="24" y="232" fill="#e9eee0" font-size="10">gpu-3</text>
+<rect x="300" y="219" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="219" width="376" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="232" fill="#e9eee0" font-size="11" font-weight="700">46.4</text>
+<text x="24" y="270" fill="#e9eee0" font-size="10">baseline</text>
+<rect x="300" y="257" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="257" width="359" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="270" fill="#e9eee0" font-size="11" font-weight="700">44.3</text>
+<text x="24" y="308" fill="#e9eee0" font-size="10">poll0</text>
+<rect x="300" y="295" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="295" width="357" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="308" fill="#e9eee0" font-size="11" font-weight="700">44.1</text>
+<text x="24" y="346" fill="#e9eee0" font-size="10">kvq4</text>
+<rect x="300" y="333" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="333" width="357" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="346" fill="#e9eee0" font-size="11" font-weight="700">44.1</text>
+<text x="24" y="384" fill="#e9eee0" font-size="10">tb16</text>
+<rect x="300" y="371" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="371" width="354" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="384" fill="#e9eee0" font-size="11" font-weight="700">43.7</text>
+<text x="24" y="422" fill="#e9eee0" font-size="10">ctx16k</text>
+<rect x="300" y="409" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="409" width="354" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="422" fill="#e9eee0" font-size="11" font-weight="700">43.7</text>
+<text x="24" y="460" fill="#e9eee0" font-size="10">gpu-3-kvq4</text>
+<rect x="300" y="447" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="447" width="353" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="460" fill="#e9eee0" font-size="11" font-weight="700">43.6</text>
+<text x="24" y="498" fill="#e9eee0" font-size="10">gpu-3-16k</text>
+<rect x="300" y="485" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="485" width="347" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="498" fill="#e9eee0" font-size="11" font-weight="700">42.8</text>
+<text x="24" y="536" fill="#e9eee0" font-size="10">norepack</text>
+<rect x="300" y="523" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="523" width="340" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="536" fill="#e9eee0" font-size="11" font-weight="700">42.0</text>
+<text x="24" y="574" fill="#e9eee0" font-size="10">prio2</text>
+<rect x="300" y="561" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="561" width="338" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="574" fill="#e9eee0" font-size="11" font-weight="700">41.7</text>
+<text x="24" y="612" fill="#e9eee0" font-size="10">mask12</text>
+<rect x="300" y="599" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="599" width="334" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="612" fill="#e9eee0" font-size="11" font-weight="700">41.2</text>
+<text x="24" y="650" fill="#e9eee0" font-size="10">draft-qwen3-16k</text>
+<rect x="300" y="637" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="637" width="307" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="650" fill="#e9eee0" font-size="11" font-weight="700">37.9</text>
+<text x="24" y="688" fill="#e9eee0" font-size="10">batch2048</text>
+<rect x="300" y="675" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="675" width="293" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="688" fill="#e9eee0" font-size="11" font-weight="700">36.2</text>
+<text x="24" y="726" fill="#e9eee0" font-size="10">draft-qwen3-cpu</text>
+<rect x="300" y="713" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="713" width="160" height="16" rx="4" fill="#cde86e"/>
+<text x="890" y="726" fill="#e9eee0" font-size="11" font-weight="700">19.7</text>
+<text x="24" y="764" fill="#e9eee0" font-size="10">draft-qwen3</text>
+<rect x="300" y="751" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="751" width="0" height="16" rx="4" fill="#d97878"/>
+<text x="890" y="764" fill="#e9eee0" font-size="11" font-weight="700">FALLO</text>
+<text x="24" y="802" fill="#e9eee0" font-size="10">draft-qwen3-8</text>
+<rect x="300" y="789" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="789" width="0" height="16" rx="4" fill="#d97878"/>
+<text x="890" y="802" fill="#e9eee0" font-size="11" font-weight="700">FALLO</text>
+<text x="24" y="840" fill="#e9eee0" font-size="10">gpu-6</text>
+<rect x="300" y="827" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="827" width="0" height="16" rx="4" fill="#d97878"/>
+<text x="890" y="840" fill="#e9eee0" font-size="11" font-weight="700">FALLO</text>
+<text x="24" y="878" fill="#e9eee0" font-size="10">gpu-4</text>
+<rect x="300" y="865" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="865" width="0" height="16" rx="4" fill="#d97878"/>
+<text x="890" y="878" fill="#e9eee0" font-size="11" font-weight="700">FALLO</text>
+<text x="24" y="916" fill="#e9eee0" font-size="10">gpu-5</text>
+<rect x="300" y="903" width="580" height="16" rx="4" fill="#1a2014"/>
+<rect x="300" y="903" width="0" height="16" rx="4" fill="#d97878"/>
+<text x="890" y="916" fill="#e9eee0" font-size="11" font-weight="700">FALLO</text>
+</svg>

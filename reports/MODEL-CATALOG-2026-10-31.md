@@ -47,11 +47,22 @@ Modelos instalados: **30** (15 con visión). Todos arrancados en una RTX 4060 La
 | Nemotron 3 Nano 30B-A3B | 128 | 15/52 (4802 MiB) | 37 | 10976 MiB | mmap |
 | Qwen3 30B-A3B 2507 | 128 | 19/48 (4121 MiB) | 29 | 6161 MiB | none |
 
+## Web app real
+
+Taskboard full-stack sin dependencias, con tests ocultos de API y UI Playwright.
+
+| Modelo | Global | API | UI |
+|---|---:|---:|---:|
+| Qwen3.6 35B-A3B | 91.3% | 7/8 | 3/3 |
+| GPT-OSS 20B | 100% | 8/8 | 3/3 |
+| Qwen3 30B-A3B 2507 | 55% | 4/8 | 2/3 |
+
 ## Lo que mejor funciona
 
 - **Proyecto complejo:** GPT-OSS 20B (100 % en 18 tests), Qwen3.6 35B-A3B (96 %), Qwen3-30B-A3B (86 %).
 - **Bugfix/edición:** Qwen3.6 35B-A3B y Qwen3-30B-A3B (100 % en 5 tests), GPT-OSS 20B (100 %).
 - **Agente del IDE:** Ornith 9B (110k, visión CPU); su 0/9 one-shot no refleja el bucle con herramientas.
+- **Web app:** GPT-OSS 20B (8/8 API + 3/3 UI), Qwen3.6 35B-A3B (7/8 + 3/3).
 - **Visión de calidad:** Qwen3.5 4B (131k, visión CPU, 5/5), Qwen3-VL 4B (57k, 5/5), Qwen3-VL 8B (26k, 5/5), Gemma 4 E4B (22k, 5/5).
 - **Visión ultrarrápida:** MiniCPM-V 4.7 1B (131k, 2,3 GB VRAM, 180+ tok/s de texto), LFM3-VL 2B (128k, 2,7 GB), LFM3 Omni 2B (128k, 2,8 GB).
 - **Contexto máximo:** Gemma 3 4B y Qwen3.5 4B/9B, Granite 4.0 H Tiny y Qwen3.8 4B, todos a 131k con el plan automático.

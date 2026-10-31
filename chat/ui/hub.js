@@ -213,6 +213,10 @@
       const rank = c.rank ? `#${c.rank} · ` : "";
       card.append(el("p", "hub-uso", `Coding real: ${rank}${c.global}% · proyecto ${c.project?.pass ?? 0}/${c.project?.total ?? 0} · bugfix ${c.bugfix?.pass ?? 0}/${c.bugfix?.total ?? 0}`));
     }
+    if (m.pruebas?.webapp) {
+      const w = m.pruebas.webapp;
+      card.append(el("p", "hub-uso", `Web app: ${w.global}% · API ${w.api}/${w.apiTotal} · UI ${w.ui}/${w.uiTotal}`));
+    }
     const acciones = el("div", "hub-actions");
     const usar = el("button", "primary hub-mini", m.oculto ? "Auxiliar" : "Usar ahora");
     usar.type = "button";

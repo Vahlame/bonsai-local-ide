@@ -1,0 +1,196 @@
+{
+  "stamp": "2026-10-31T14-35-37",
+  "spec": "none",
+  "agregados": [
+    {
+      "clave": "gpt-oss-20b",
+      "nombre": "GPT-OSS 20B",
+      "apiPass": 8,
+      "totalApi": 8,
+      "uiPass": 3,
+      "totalUi": 3,
+      "score": 100,
+      "runs": 1,
+      "ms": 149628,
+      "tps": 27,
+      "screenshot": "reports\\webapp-bench-2026-10-31T14-35-37\\gpt-oss-20b\\run1\\screenshot.png"
+    },
+    {
+      "clave": "qwen36-35b-a3b",
+      "nombre": "Qwen3.6 35B-A3B",
+      "apiPass": 7,
+      "totalApi": 8,
+      "uiPass": 3,
+      "totalUi": 3,
+      "score": 91.25,
+      "runs": 1,
+      "ms": 140361,
+      "tps": 44,
+      "screenshot": "reports\\webapp-bench-2026-10-31T14-35-37\\qwen36-35b-a3b\\run1\\screenshot.png"
+    }
+  ],
+  "resultados": [
+    {
+      "clave": "gpt-oss-20b",
+      "nombre": "GPT-OSS 20B",
+      "rep": 1,
+      "ok": true,
+      "files": [
+        "server.mjs",
+        "public/index.html",
+        "public/app.js",
+        "public/styles.css",
+        "package.json"
+      ],
+      "api": [
+        {
+          "id": "lista-inicial",
+          "ok": true,
+          "detalle": "HTTP 200 []"
+        },
+        {
+          "id": "crear",
+          "ok": true,
+          "detalle": "HTTP 201 {\"id\":1,\"title\":\"Comprar leche\",\"status\":\"todo\",\"priority\":2,\"createdAt\":\"2026-10-31T14:38:14.195Z\"}"
+        },
+        {
+          "id": "listar-creada",
+          "ok": true,
+          "detalle": "HTTP 200"
+        },
+        {
+          "id": "cambiar-estado",
+          "ok": true,
+          "detalle": "HTTP 200 {\"id\":1,\"title\":\"Comprar leche\",\"status\":\"doing\",\"priority\":2,\"createdAt\":\"2026-10-31T14:38:14.195Z\""
+        },
+        {
+          "id": "stats",
+          "ok": true,
+          "detalle": "HTTP 200 {\"todo\":0,\"doing\":1,\"done\":0,\"total\":1}"
+        },
+        {
+          "id": "html",
+          "ok": true,
+          "detalle": "HTTP 200 804 bytes"
+        },
+        {
+          "id": "estaticos",
+          "ok": true,
+          "detalle": "app.js=200 styles.css=200"
+        },
+        {
+          "id": "borrar",
+          "ok": true,
+          "detalle": "HTTP 204"
+        }
+      ],
+      "ui": [
+        {
+          "id": "input",
+          "ok": true,
+          "detalle": "input encontrado"
+        },
+        {
+          "id": "añadir",
+          "ok": true,
+          "detalle": "botón encontrado"
+        },
+        {
+          "id": "tarea-visible",
+          "ok": true,
+          "detalle": "1 coincidencias"
+        }
+      ],
+      "screenshot": "reports\\webapp-bench-2026-10-31T14-35-37\\gpt-oss-20b\\run1\\screenshot.png",
+      "apiPass": 8,
+      "uiPass": 3,
+      "score": 100,
+      "ms": 149628,
+      "tps": 26.99764282246451,
+      "genTokens": 3927,
+      "finish": "stop",
+      "retryLength": false
+    },
+    {
+      "clave": "qwen36-35b-a3b",
+      "nombre": "Qwen3.6 35B-A3B",
+      "rep": 1,
+      "ok": true,
+      "files": [
+        "server.mjs",
+        "public/index.html",
+        "public/app.js",
+        "public/styles.css",
+        "package.json"
+      ],
+      "api": [
+        {
+          "id": "lista-inicial",
+          "ok": true,
+          "detalle": "HTTP 200 []"
+        },
+        {
+          "id": "crear",
+          "ok": true,
+          "detalle": "HTTP 201 {\"id\":\"c319b580-2c08-418f-8c5e-1c3a311daa00\",\"title\":\"Comprar leche\",\"status\":\"todo\",\"priority\":2,\"c"
+        },
+        {
+          "id": "listar-creada",
+          "ok": true,
+          "detalle": "HTTP 200"
+        },
+        {
+          "id": "cambiar-estado",
+          "ok": true,
+          "detalle": "HTTP 200 {\"id\":\"c319b580-2c08-418f-8c5e-1c3a311daa00\",\"title\":\"Comprar leche\",\"status\":\"doing\",\"priority\":2,\""
+        },
+        {
+          "id": "stats",
+          "ok": true,
+          "detalle": "HTTP 200 {\"todo\":0,\"doing\":1,\"done\":0,\"total\":1}"
+        },
+        {
+          "id": "html",
+          "ok": true,
+          "detalle": "HTTP 200 1221 bytes"
+        },
+        {
+          "id": "estaticos",
+          "ok": false,
+          "detalle": "app.js=404 styles.css=404"
+        },
+        {
+          "id": "borrar",
+          "ok": true,
+          "detalle": "HTTP 204"
+        }
+      ],
+      "ui": [
+        {
+          "id": "input",
+          "ok": true,
+          "detalle": "input encontrado"
+        },
+        {
+          "id": "añadir",
+          "ok": true,
+          "detalle": "botón encontrado"
+        },
+        {
+          "id": "tarea-visible",
+          "ok": true,
+          "detalle": "1 coincidencias"
+        }
+      ],
+      "screenshot": "reports\\webapp-bench-2026-10-31T14-35-37\\qwen36-35b-a3b\\run1\\screenshot.png",
+      "apiPass": 7,
+      "uiPass": 3,
+      "score": 91.25,
+      "ms": 140361,
+      "tps": 44.17353297075299,
+      "genTokens": 6033,
+      "finish": "stop",
+      "retryLength": false
+    }
+  ]
+}

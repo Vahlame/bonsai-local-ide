@@ -150,7 +150,9 @@ El botón **Modelos** de la barra superior abre el catálogo. Desde ahí puedes:
   a **42 tok/s** con 8 GB de VRAM (`--n-cpu-moe` + `--load-mode none`);
 - **benchmark de coding real** con proyecto multifichero y tests ocultos:
   GPT-OSS-20B **18/18** en el proyecto, Qwen3.6-35B-A3B **17/18 + 10/10** en
-  bugfix.
+  bugfix;
+- **benchmark de web app real**: Taskboard full-stack con API y UI probada en
+  navegador; GPT-OSS-20B **8/8 API + 3/3 UI**.
 
 Cada modelo recibe su propio **plan automático**: el IDE lee la cabecera del
 GGUF (capas, cabeceras KV, contexto nativo, `full_attention_interval`) y decide
@@ -461,6 +463,8 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 | [MOE-2026-10-31](reports/MOE-2026-10-31.md) | MoE de 30-35B en 8 GB VRAM: reparto VRAM/RAM/SSD y tok/s |
 | [CODING-2026-10-31](reports/CODING-2026-10-31.md) | Proyecto real con tests ocultos: ranking de coding y pipeline |
 | [CODER-PIPELINE-2026-10-31](reports/CODER-PIPELINE-2026-10-31.md) | Agente con herramientas: ablaciones y perfil `moe-fast` |
+| [WEBAPP-2026-10-31](reports/WEBAPP-2026-10-31.md) | Taskboard full-stack: API + UI real en navegador |
+| [ENGINE-2026-10-31](reports/ENGINE-2026-10-31.md) | Tuning de tok/s, ngram, draft, batch, VRAM y clocks |
 | [RELEASE-1.6.2](docs/RELEASE-1.6.2.md) | Acceso directo: abre el IDE de verdad (sin `-NoBrowser`) |
 | [RELEASE-1.6.1](docs/RELEASE-1.6.1.md) | IDE sin GPU, ventana propia y pulido de interfaz |
 | [RELEASE-1.6.0](docs/RELEASE-1.6.0.md) | 110k con visión, reparto de contexto automático y compactación |

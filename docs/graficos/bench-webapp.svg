@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="374" viewBox="0 0 1040 374" font-family="Segoe UI, system-ui, sans-serif">
+<rect width="1040" height="374" fill="#0d100b"/>
+<text x="24" y="34" fill="#e9eee0" font-size="18" font-weight="600">Web app real: Taskboard full-stack</text>
+<text x="24" y="54" fill="#8d9680" font-size="12">API oculta + UI Playwright · global = 70% API + 30% UI</text>
+<rect x="300" y="78" width="12" height="12" rx="2" fill="#cde86e"/><text x="318" y="89" fill="#b9c2ad" font-size="11">API</text>
+<rect x="380" y="78" width="12" height="12" rx="2" fill="#6ab7e8"/><text x="398" y="89" fill="#b9c2ad" font-size="11">UI</text>
+<text x="24" y="136" fill="#e9eee0" font-size="12" font-weight="600">GPT-OSS 20B</text>
+<rect x="300" y="118" width="580" height="14" rx="4" fill="#1a2014"/>
+<rect x="300" y="118" width="580" height="14" rx="4" fill="#cde86e"/>
+<text x="306" y="129" fill="#0d100b" font-size="9" font-weight="700">8/8 API</text>
+<rect x="300" y="138" width="580" height="14" rx="4" fill="#1a2014"/>
+<rect x="300" y="138" width="580" height="14" rx="4" fill="#6ab7e8"/>
+<text x="306" y="149" fill="#0d100b" font-size="9" font-weight="700">3/3 UI</text>
+<text x="892" y="138" fill="#e9eee0" font-size="14" font-weight="700">100%</text>
+<text x="24" y="200" fill="#e9eee0" font-size="12" font-weight="600">Qwen3.6 35B-A3B</text>
+<rect x="300" y="182" width="580" height="14" rx="4" fill="#1a2014"/>
+<rect x="300" y="182" width="508" height="14" rx="4" fill="#cde86e"/>
+<text x="306" y="193" fill="#0d100b" font-size="9" font-weight="700">7/8 API</text>
+<rect x="300" y="202" width="580" height="14" rx="4" fill="#1a2014"/>
+<rect x="300" y="202" width="580" height="14" rx="4" fill="#6ab7e8"/>
+<text x="306" y="213" fill="#0d100b" font-size="9" font-weight="700">3/3 UI</text>
+<text x="892" y="202" fill="#e9eee0" font-size="14" font-weight="700">91%</text>
+<text x="24" y="264" fill="#e9eee0" font-size="12" font-weight="600">Qwen3 30B-A3B 2507</text>
+<rect x="300" y="246" width="580" height="14" rx="4" fill="#1a2014"/>
+<rect x="300" y="246" width="290" height="14" rx="4" fill="#cde86e"/>
+<text x="306" y="257" fill="#0d100b" font-size="9" font-weight="700">4/8 API</text>
+<rect x="300" y="266" width="580" height="14" rx="4" fill="#1a2014"/>
+<rect x="300" y="266" width="387" height="14" rx="4" fill="#6ab7e8"/>
+<text x="306" y="277" fill="#0d100b" font-size="9" font-weight="700">2/3 UI</text>
+<text x="892" y="266" fill="#e9eee0" font-size="14" font-weight="700">55%</text>
+</svg>

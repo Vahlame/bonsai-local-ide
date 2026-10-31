@@ -1,0 +1,78 @@
+[
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "draft-qwen3-16k",
+    "descripcion": "draft Qwen3 0.6B, 16k y KV q4",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10752,
+    "ctx": 16384,
+    "vramPicoMiB": 7273,
+    "ramPicoMiB": 7262,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 37.9,
+      "ms": 3348,
+      "ttftMs": 423
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 37,
+      "tokPorSegundo": 24.5,
+      "ms": 1924,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 935.1,
+      "ms": 6707
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "draft-qwen3-cpu",
+    "descripcion": "draft Qwen3 0.6B en CPU",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 12191,
+    "ctx": 32768,
+    "vramPicoMiB": 7169,
+    "ramPicoMiB": 10251,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 19.7,
+      "ms": 6444,
+      "ttftMs": 718
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 48,
+      "tokPorSegundo": 19.1,
+      "ms": 3507,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 524.4,
+      "ms": 11960
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  }
+]

@@ -1,0 +1,154 @@
+[
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "baseline",
+    "descripcion": "plan automático",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10214,
+    "ctx": 32768,
+    "vramPicoMiB": 6855,
+    "ramPicoMiB": 6552,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 46.4,
+      "ms": 2735,
+      "ttftMs": 443
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 128,
+      "tokPorSegundo": 45.7,
+      "ms": 3069,
+      "promptTokens": 63
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 819.8,
+      "ms": 7650
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((acc, num) => (num % 2 === 0 ? acc + num : acc), 0); } ``` Escribe una función de Java"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "ngram-simple",
+    "descripcion": "especulación ngram-simple",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10185,
+    "ctx": 32768,
+    "vramPicoMiB": 6855,
+    "ramPicoMiB": 6666,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 68.8,
+      "ms": 1845,
+      "ttftMs": 432
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 128,
+      "tokPorSegundo": 45.4,
+      "ms": 3088,
+      "promptTokens": 63
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 817.8,
+      "ms": 7668
+    },
+    "muestra": " ```javascript function sumaPares(lista) { return lista.reduce((acc, num) => num % 2 === 0 ? acc + num : acc, 0); } ``` Escribe una función de JavaScript "
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "ngram-map-k",
+    "descripcion": "especulación ngram-map-k",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10178,
+    "ctx": 32768,
+    "vramPicoMiB": 6855,
+    "ramPicoMiB": 6678,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 66.4,
+      "ms": 1911,
+      "ttftMs": 437
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 128,
+      "tokPorSegundo": 44.6,
+      "ms": 3136,
+      "promptTokens": 63
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 817.2,
+      "ms": 7673
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => { return num % 2 === 0 ? sum + num : sum; }, 0); } ``` ```ja"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "nombre": "Qwen3.6 35B-A3B",
+    "pasada": 1,
+    "variante": "ngram-mod",
+    "descripcion": "especulación ngram-mod",
+    "nCpuMoe": 22,
+    "capas": 40,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10182,
+    "ctx": 32768,
+    "vramPicoMiB": 6869,
+    "ramPicoMiB": 6705,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 59.8,
+      "ms": 2125,
+      "ttftMs": 448
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 128,
+      "tokPorSegundo": 44.9,
+      "ms": 3120,
+      "promptTokens": 63
+    },
+    "promptLargo": {
+      "tokens": 6271,
+      "tokPorSegundo": 817.1,
+      "ms": 7675
+    },
+    "muestra": " ```javascript function sumOfEvens(numbers) { return numbers.reduce((sum, num) => { return num % 2 === 0 ? sum + num : sum; }, 0); } ``` ```ja"
+  }
+]

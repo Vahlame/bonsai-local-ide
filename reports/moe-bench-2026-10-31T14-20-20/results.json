@@ -1,0 +1,488 @@
+[
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "baseline",
+    "descripcion": "plan automático",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 8699,
+    "ctx": 32768,
+    "vramPicoMiB": 6889,
+    "ramPicoMiB": 6985,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 44.3,
+      "ms": 2866,
+      "ttftMs": 406
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 48,
+      "tokPorSegundo": 44.5,
+      "ms": 1502,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1011.8,
+      "ms": 6199
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.reduce((acumulador, numero) => { if (numero % 2 === 0) { return acumulador + nume"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "ngram-simple",
+    "descripcion": "especulación ngram-simple",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 8673,
+    "ctx": 32768,
+    "vramPicoMiB": 6891,
+    "ramPicoMiB": 7008,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 71.6,
+      "ms": 1773,
+      "ttftMs": 412
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 37,
+      "tokPorSegundo": 44.5,
+      "ms": 1241,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1011,
+      "ms": 6204
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "ngram-map-k",
+    "descripcion": "especulación ngram-map-k",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9187,
+    "ctx": 32768,
+    "vramPicoMiB": 6891,
+    "ramPicoMiB": 7009,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 52.8,
+      "ms": 2405,
+      "ttftMs": 460
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 45,
+      "tokPorSegundo": 44.5,
+      "ms": 1455,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1011.1,
+      "ms": 6203
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "ngram-mod",
+    "descripcion": "especulación ngram-mod",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9177,
+    "ctx": 32768,
+    "vramPicoMiB": 6891,
+    "ramPicoMiB": 7031,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 63.8,
+      "ms": 1990,
+      "ttftMs": 427
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 48,
+      "tokPorSegundo": 44.8,
+      "ms": 1479,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1009.8,
+      "ms": 6211
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "draft-qwen3",
+    "descripcion": "draft Qwen3 0.6B (n=4)",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": false,
+    "error": "llama-server terminó al arrancar:\n0.00.318.340 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)\n0.00.321.303 I srv    load_model: loading model 'C:\\Users\\user\\Documents\\prject_local_AI\\models\\qwen3-30b-a3b-2507-Qwen3-30B-A3B-Instruct-2507-UD-Q2_K_XL.gguf'\n0.01.659.368 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 99, abort\n0.01.947.579 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden\n0.07.952.652 I cmn          init: llama threadpool init, n_threads = 12\n0.08.288.736 I common_speculative_init_result: loading draft model 'C:\\Users\\user\\Documents\\prject_local_AI\\models\\Qwen3-0.6B-Q8_0.gguf'\n0.08.565.314 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden\n0.09.083.592 E ggml_backend_cuda_buffer_type_alloc_buffer: allocating 3584.00 MiB on device 0: cudaMalloc failed: out of memory\n0.09.083.597 E alloc_tensor_range: failed to allocate CUDA0 buffer of size 3758096384\n0.09.261.315 E llama_init_from_model: failed to initialize the context: failed to allocate buffer for kv cache\n0.09.261.321 E common_speculative_init_result: failed to create MTP context\n0.09.261.682 E srv    load_model: failed to create MTP context\n0.09.261.697 I srv   operator (): operator (): cleaning up before exit...\n0.09.262.669 E srv  llama_server: exiting due to model loading error"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "draft-qwen3-8",
+    "descripcion": "draft Qwen3 0.6B (n=8)",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": false,
+    "error": "llama-server terminó al arrancar:\n0.00.319.923 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)\n0.00.324.152 I srv    load_model: loading model 'C:\\Users\\user\\Documents\\prject_local_AI\\models\\qwen3-30b-a3b-2507-Qwen3-30B-A3B-Instruct-2507-UD-Q2_K_XL.gguf'\n0.01.724.876 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 99, abort\n0.02.000.939 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden\n0.08.015.750 I cmn          init: llama threadpool init, n_threads = 12\n0.08.354.741 I common_speculative_init_result: loading draft model 'C:\\Users\\user\\Documents\\prject_local_AI\\models\\Qwen3-0.6B-Q8_0.gguf'\n0.08.643.083 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden\n0.09.314.140 E ggml_backend_cuda_buffer_type_alloc_buffer: allocating 3584.00 MiB on device 0: cudaMalloc failed: out of memory\n0.09.314.144 E alloc_tensor_range: failed to allocate CUDA0 buffer of size 3758096384\n0.09.316.070 E llama_init_from_model: failed to initialize the context: failed to allocate buffer for kv cache\n0.09.316.074 E common_speculative_init_result: failed to create MTP context\n0.09.316.426 E srv    load_model: failed to create MTP context\n0.09.316.440 I srv   operator (): operator (): cleaning up before exit...\n0.09.317.357 E srv  llama_server: exiting due to model loading error"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "prio2",
+    "descripcion": "prioridad de proceso alta",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 8666,
+    "ctx": 32768,
+    "vramPicoMiB": 6889,
+    "ramPicoMiB": 6987,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 41.7,
+      "ms": 3044,
+      "ttftMs": 428
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 48,
+      "tokPorSegundo": 40.5,
+      "ms": 1613,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1011.7,
+      "ms": 6200
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "poll0",
+    "descripcion": "sin polling de CPU",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 8667,
+    "ctx": 32768,
+    "vramPicoMiB": 6889,
+    "ramPicoMiB": 6986,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 44.1,
+      "ms": 2877,
+      "ttftMs": 414
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 48,
+      "tokPorSegundo": 44.8,
+      "ms": 1497,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1011.5,
+      "ms": 6201
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "tb16",
+    "descripcion": "12 hilos + 16 en prompt",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9176,
+    "ctx": 32768,
+    "vramPicoMiB": 6889,
+    "ramPicoMiB": 6988,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 43.7,
+      "ms": 2905,
+      "ttftMs": 442
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 37,
+      "tokPorSegundo": 43.1,
+      "ms": 1284,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1009.2,
+      "ms": 6215
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "norepack",
+    "descripcion": "sin repack de pesos",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9184,
+    "ctx": 32768,
+    "vramPicoMiB": 6889,
+    "ramPicoMiB": 6987,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 42,
+      "ms": 3021,
+      "ttftMs": 450
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 37,
+      "tokPorSegundo": 42.5,
+      "ms": 1291,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1005.2,
+      "ms": 6240
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "kvq4",
+    "descripcion": "KV q4_0",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 8691,
+    "ctx": 32768,
+    "vramPicoMiB": 6121,
+    "ramPicoMiB": 6987,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 44.1,
+      "ms": 2881,
+      "ttftMs": 445
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 39,
+      "tokPorSegundo": 44.5,
+      "ms": 1322,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 952.8,
+      "ms": 6583
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "ctx16k",
+    "descripcion": "contexto 16k",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9218,
+    "ctx": 16384,
+    "vramPicoMiB": 6057,
+    "ramPicoMiB": 6970,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 43.7,
+      "ms": 2904,
+      "ttftMs": 411
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 48,
+      "tokPorSegundo": 44.1,
+      "ms": 1520,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1010.1,
+      "ms": 6209
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.reduce((acumulador, numero) => { return numero % 2 === 0 ? acumulador + numero : acumulador; "
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "batch2048",
+    "descripcion": "batch 2048/1024",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 2048,
+    "ubatch": 1024,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9170,
+    "ctx": 32768,
+    "vramPicoMiB": 6991,
+    "ramPicoMiB": 7024,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 36.2,
+      "ms": 3511,
+      "ttftMs": 431
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 48,
+      "tokPorSegundo": 41,
+      "ms": 1605,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1343.6,
+      "ms": 4668
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "mask12",
+    "descripcion": "afinidad a 12 CPU lógicas",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 8667,
+    "ctx": 32768,
+    "vramPicoMiB": 6889,
+    "ramPicoMiB": 6960,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 41.2,
+      "ms": 3085,
+      "ttftMs": 432
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 37,
+      "tokPorSegundo": 42.1,
+      "ms": 1303,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1009.4,
+      "ms": 6214
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  }
+]

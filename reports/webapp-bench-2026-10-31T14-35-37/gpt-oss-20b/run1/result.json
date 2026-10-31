@@ -1,0 +1,81 @@
+{
+  "clave": "gpt-oss-20b",
+  "nombre": "GPT-OSS 20B",
+  "rep": 1,
+  "ok": true,
+  "files": [
+    "server.mjs",
+    "public/index.html",
+    "public/app.js",
+    "public/styles.css",
+    "package.json"
+  ],
+  "api": [
+    {
+      "id": "lista-inicial",
+      "ok": true,
+      "detalle": "HTTP 200 []"
+    },
+    {
+      "id": "crear",
+      "ok": true,
+      "detalle": "HTTP 201 {\"id\":1,\"title\":\"Comprar leche\",\"status\":\"todo\",\"priority\":2,\"createdAt\":\"2026-10-31T14:38:14.195Z\"}"
+    },
+    {
+      "id": "listar-creada",
+      "ok": true,
+      "detalle": "HTTP 200"
+    },
+    {
+      "id": "cambiar-estado",
+      "ok": true,
+      "detalle": "HTTP 200 {\"id\":1,\"title\":\"Comprar leche\",\"status\":\"doing\",\"priority\":2,\"createdAt\":\"2026-10-31T14:38:14.195Z\""
+    },
+    {
+      "id": "stats",
+      "ok": true,
+      "detalle": "HTTP 200 {\"todo\":0,\"doing\":1,\"done\":0,\"total\":1}"
+    },
+    {
+      "id": "html",
+      "ok": true,
+      "detalle": "HTTP 200 804 bytes"
+    },
+    {
+      "id": "estaticos",
+      "ok": true,
+      "detalle": "app.js=200 styles.css=200"
+    },
+    {
+      "id": "borrar",
+      "ok": true,
+      "detalle": "HTTP 204"
+    }
+  ],
+  "ui": [
+    {
+      "id": "input",
+      "ok": true,
+      "detalle": "input encontrado"
+    },
+    {
+      "id": "añadir",
+      "ok": true,
+      "detalle": "botón encontrado"
+    },
+    {
+      "id": "tarea-visible",
+      "ok": true,
+      "detalle": "1 coincidencias"
+    }
+  ],
+  "screenshot": "reports\\webapp-bench-2026-10-31T14-35-37\\gpt-oss-20b\\run1\\screenshot.png",
+  "apiPass": 8,
+  "uiPass": 3,
+  "score": 100,
+  "ms": 149628,
+  "tps": 26.99764282246451,
+  "genTokens": 3927,
+  "finish": "stop",
+  "retryLength": false
+}

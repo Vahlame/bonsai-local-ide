@@ -77,6 +77,26 @@ En el agente real del IDE, GPT-OSS pasó 3/3 tareas. El perfil opt-in
 `failing-test` de 66,6 s a 28,9 s:
 [reports/CODER-PIPELINE-2026-10-31.md](../reports/CODER-PIPELINE-2026-10-31.md).
 
+### Web app real
+
+Taskboard full-stack con API y UI probada en navegador:
+
+| Modelo | Global | API | UI |
+|---|---:|---:|---:|
+| GPT-OSS-20B | **100 %** | 8/8 | 3/3 |
+| Qwen3.6-35B-A3B | 91 % | 7/8 | 3/3 |
+| Qwen3-30B-A3B 2507 | 55 % | 4/8 | 2/3 |
+
+Informe y capturas: [reports/WEBAPP-2026-10-31.md](../reports/WEBAPP-2026-10-31.md).
+
+### Tuning del motor
+
+`ngram-simple` sube la generación cruda a 71,6 tok/s pero deja el chat en 44,5;
+el draft Qwen3 0.6B no compensa; 3 capas más de expertos en GPU dan +4,7 %
+(46,4 tok/s) y 4 producen OOM. La base sigue siendo `--load-mode none` + 12
+hilos + batch 1024/512:
+[reports/ENGINE-2026-10-31.md](../reports/ENGINE-2026-10-31.md).
+
 ### Herramientas nuevas
 
 - `scripts/moe-bench.mjs`: banco de MoE con reparto, carga, hilos, batch,
@@ -94,6 +114,9 @@ En el agente real del IDE, GPT-OSS pasó 3/3 tareas. El perfil opt-in
   y bugfix con tests ocultos, ranking y gráficos.
 - `scripts/coder-pipeline-report.mjs` y `chat/coder-profile-moe.json`: ablaciones
   del agente real y perfil rápido opt-in para MoE.
+- `scripts/bench-webapp.mjs` y `scripts/webapp-report.mjs`: web app full-stack
+  con API y UI Playwright, capturas y ranking.
+- `scripts/engine-report.mjs`: matriz de tuning de tok/s y latencias.
 - `scripts/catalog-report.mjs`: incluye el reparto MoE.
 
 ### Plantillas de chat
@@ -123,6 +146,8 @@ benchmark de calidad usan `/v1/chat/completions` con system+user. La auditoría
 - `node scripts/chat-template-check.mjs`: **34/34**.
 - `node scripts/bench-coding.mjs --models gpt-oss-20b,qwen36-35b-a3b,qwen3-30b-a3b-2507 --reps 2`: 100 %, 96 % y 86 %.
 - `node scripts/coding-report.mjs`: genera el informe y los SVG de coding.
+- `node scripts/bench-webapp.mjs --models gpt-oss-20b,qwen36-35b-a3b,qwen3-30b-a3b-2507`: 100 %, 91 % y 55 %.
+- `node scripts/engine-report.mjs`: matriz de tuning y SVG de tok/s.
 
 ## Limitaciones
 

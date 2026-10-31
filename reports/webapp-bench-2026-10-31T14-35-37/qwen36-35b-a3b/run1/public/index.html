@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taskboard</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Taskboard</h1>
+    <div class="stats-container" id="stats">
+      <span class="stat">Total: <b>0</b></span>
+      <span class="stat">Todo: <b>0</b></span>
+      <span class="stat">Doing: <b>0</b></span>
+      <span class="stat">Done: <b>0</b></span>
+    </div>
+  </header>
+
+  <main>
+    <div class="input-group">
+      <input type="text" id="task-input" placeholder="Nueva tarea...">
+      <button id="add-btn">Añadir</button>
+    </div>
+
+    <div class="board" id="board">
+      <div class="column" data-status="todo">
+        <h2>Por Hacer</h2>
+        <div class="task-list" id="list-todo"></div>
+      </div>
+      <div class="column" data-status="doing">
+        <h2>En Progreso</h2>
+        <div class="task-list" id="list-doing"></div>
+      </div>
+      <div class="column" data-status="done">
+        <h2>Hecho</h2>
+        <div class="task-list" id="list-done"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/public/app.js"></script>
+</body>
+</html>

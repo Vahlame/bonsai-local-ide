@@ -170,6 +170,9 @@ node scripts/chat-template-check.mjs
 node scripts/moe-bench.mjs --model qwen36-35b-a3b
 node scripts/bench-coding.mjs --models gpt-oss-20b,qwen36-35b-a3b --reps 2
 node scripts/coding-report.mjs
+node scripts/bench-webapp.mjs --models gpt-oss-20b,qwen36-35b-a3b
+node scripts/webapp-report.mjs
+node scripts/engine-report.mjs
 node scripts/fast-download.mjs --models qwen36-35b-a3b
 node scripts/hub.mjs repo unsloth/Qwen3-4B-Instruct-2507-GGUF
 
@@ -303,6 +306,30 @@ En el **bucle real del IDE** (`chat/evaluar/coder.mjs`), GPT-OSS pasó 3/3 tarea
 El perfil opt-in `chat/coder-profile-moe.json` (sin snippets) reduce `cross-file`
 de 133,6 s a 43,1 s y `failing-test` de 66,6 s a 28,9 s. Detalle:
 [reports/CODER-PIPELINE-2026-10-31.md](../reports/CODER-PIPELINE-2026-10-31.md).
+
+### Web app real (API + UI en navegador)
+
+Taskboard full-stack sin dependencias: API CRUD + stats + persistencia y UI de
+tablero. Tests ocultos de API (8) y Playwright/Edge (3).
+
+| Modelo | Global | API | UI | Captura |
+|---|---:|---:|---:|---|
+| **GPT-OSS 20B** | **100 %** | 8/8 | 3/3 | [ver](../docs/graficos/webapp-gpt-oss-20b.png) |
+| Qwen3.6 35B-A3B | 91 % | 7/8 | 3/3 | [ver](../docs/graficos/webapp-qwen36-35b-a3b.png) |
+| Qwen3 30B-A3B 2507 | 55 % | 4/8 | 2/3 | [ver](../docs/graficos/webapp-qwen3-30b-a3b-2507.png) |
+
+GPT-OSS es el que mejor sigue el contrato de archivos y API. Qwen3.6 funciona
+pero inlinó los estáticos; Qwen3-30B falla PATCH/DELETE por un `slice(13)`.
+Informe: [reports/WEBAPP-2026-10-31.md](../reports/WEBAPP-2026-10-31.md).
+
+### Tuning del motor
+
+`reports/ENGINE-2026-10-31.md`: `ngram-simple` acelera la generación cruda
+(71,6 tok/s) pero no el chat real (44,5); el draft Qwen3 0.6B no compensa; 3
+capas más de expertos en GPU dan +4,7 % (46,4 tok/s) y 4 capas ya producen OOM.
+La base sigue siendo `--load-mode none` + 12 hilos + batch 1024/512. El lanzador
+acepta `-GpuExtra 3` para meter 3 capas más de expertos en GPU (+4,7 % medido,
+con riesgo de OOM).
 
 El catálogo completo, con los 30 modelos y las pruebas con/sin visión, está en
 [reports/MODEL-CATALOG-2026-10-31.md](../reports/MODEL-CATALOG-2026-10-31.md).

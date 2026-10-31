@@ -62,23 +62,39 @@ if (item.chat_template) {
   fs.writeFileSync(plantilla, item.chat_template, "utf8");
 }
 
-/** @param {any} plan @param {{nCpuMoe?: number, cpuMoe?: boolean, threads?: number, loadMode?: string, batch?: number, ubatch?: number}} o */
+/** @param {any} plan @param {{nCpuMoe?: number, cpuMoe?: boolean, threads?: number, threadsBatch?: number, loadMode?: string, batch?: number, ubatch?: number, ctx?: number, kv?: string, prio?: number, poll?: number, cpuMask?: string, noRepack?: boolean, specType?: string, draft?: string, draftN?: number}} o */
 function argumentos(plan, o = {}) {
   const e = item;
+  const kv = o.kv || plan.kv;
   const a = [
     "-m", path.join(PROJECT, "models", e.archivo),
     "--gpu-layers", "99", "--flash-attn", "on",
-    "-c", String(plan.contexto), "-ctk", plan.kv, "-ctv", plan.kv,
+    "-c", String(o.ctx || plan.contexto), "-ctk", kv, "-ctv", kv,
     "-b", String(o.batch || e.servidor?.batch || 512),
     "-ub", String(o.ubatch || e.servidor?.ubatch || 256),
     "-t", String(o.threads || 8),
     "--host", "127.0.0.1", "--port", String(PUERTO),
     "--jinja", "--metrics", "-lv", "3", "--no-context-shift", "--ctx-checkpoints", "0",
-    "--cache-ram", "0", "--reasoning-budget", "0", "--spec-type", "none",
+    "--cache-ram", "0", "--reasoning-budget", "0",
     "--temp", "0.2", "--top-p", "0.9", "--top-k", "20", "--min-p", "0.05",
     "--presence-penalty", "0", "--repeat-penalty", "1",
     "--cors-origins", `http://127.0.0.1:${PUERTO},http://localhost:${PUERTO}`,
   ];
+  if (o.threadsBatch) a.push("-tb", String(o.threadsBatch));
+  if (o.prio !== undefined) a.push("--prio", String(o.prio));
+  if (o.poll !== undefined) a.push("--poll", String(o.poll));
+  if (o.cpuMask) a.push("--cpu-mask", String(o.cpuMask));
+  if (o.noRepack) a.push("--no-repack");
+  const spec = o.specType || "none";
+  a.push("--spec-type", spec);
+  if (o.draft) {
+    const draftPath = path.join(PROJECT, "models", o.draft);
+    if (fs.existsSync(draftPath)) {
+      a.push("--spec-draft-model", draftPath, "--spec-draft-n-max", String(o.draftN || 4));
+      if (o.specDraftKv) a.push("--spec-draft-type-k", o.specDraftKv, "--spec-draft-type-v", o.specDraftKv);
+      if (o.specDraftNgl !== undefined) a.push("--spec-draft-ngl", String(o.specDraftNgl));
+    }
+  }
   a.push("--load-mode", o.loadMode || perfil.moe?.loadMode || "mmap");
   if (item.chat_template) a.push("--chat-template-file", plantilla);
   if (o.cpuMoe) a.push("--cpu-moe");
@@ -273,6 +289,25 @@ function variantes(plan) {
   const hilosPlan = Number(perfil.threads) || 12;
   const batchPlan = Number(perfil.batch) || 1024;
   const ubatchPlan = Number(perfil.ubatch) || 512;
+  const ajuste = [
+    { id: "ngram-simple", nombre: "especulación ngram-simple", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, specType: "ngram-simple" } },
+    { id: "ngram-map-k", nombre: "especulación ngram-map-k", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, specType: "ngram-map-k" } },
+    { id: "ngram-mod", nombre: "especulación ngram-mod", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, specType: "ngram-mod" } },
+    { id: "draft-qwen3", nombre: "draft Qwen3 0.6B (n=4)", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, specType: "draft-simple", draft: "Qwen3-0.6B-Q8_0.gguf", draftN: 4 } },
+    { id: "draft-qwen3-8", nombre: "draft Qwen3 0.6B (n=8)", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, specType: "draft-simple", draft: "Qwen3-0.6B-Q8_0.gguf", draftN: 8 } },
+    { id: "draft-qwen3-16k", nombre: "draft Qwen3 0.6B, 16k y KV q4", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, ctx: 16384, specType: "draft-simple", draft: "Qwen3-0.6B-Q8_0.gguf", draftN: 4, specDraftKv: "q4_0" } },
+    { id: "draft-qwen3-cpu", nombre: "draft Qwen3 0.6B en CPU", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, specType: "draft-simple", draft: "Qwen3-0.6B-Q8_0.gguf", draftN: 4, specDraftNgl: 0 } },
+    { id: "draft-qwen25", nombre: "draft Qwen2.5 0.5B (n=4)", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, specType: "draft-simple", draft: "qwen2.5-0.5b-instruct-q4_k_m.gguf", draftN: 4 } },
+    { id: "prio2", nombre: "prioridad de proceso alta", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, prio: 2 } },
+    { id: "poll0", nombre: "sin polling de CPU", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, poll: 0 } },
+    { id: "tb16", nombre: "12 hilos + 16 en prompt", o: { nCpuMoe: n, threads: 12, threadsBatch: 16, batch: 1024, ubatch: 512 } },
+    { id: "norepack", nombre: "sin repack de pesos", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, noRepack: true } },
+    { id: "kvq4", nombre: "KV q4_0", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, kv: "q4_0" } },
+    { id: "ctx16k", nombre: "contexto 16k", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, ctx: 16384 } },
+    { id: "batch2048", nombre: "batch 2048/1024", o: { nCpuMoe: n, threads: 12, batch: 2048, ubatch: 1024 } },
+    { id: "ub256", nombre: "batch 1024 / ubatch 256", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 256 } },
+    { id: "mask12", nombre: "afinidad a 12 CPU lógicas", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, cpuMask: "0xFFF" } },
+  ];
   const lista = [
     { id: "baseline", nombre: "plan automático", o: { nCpuMoe: n, threads: hilosPlan, batch: batchPlan, ubatch: ubatchPlan } },
     { id: "cpu", nombre: "todos los expertos en CPU", o: { cpuMoe: true, threads: 8, loadMode: "mmap" } },
@@ -283,6 +318,12 @@ function variantes(plan) {
     { id: "hilos20", nombre: "plan automático, 20 hilos", o: { nCpuMoe: n, threads: 20 } },
     { id: "cpu16", nombre: "todos los expertos en CPU, 16 hilos", o: { cpuMoe: true, threads: 16, loadMode: "mmap" } },
     { id: "gpu-menos16", nombre: "8 capas menos en GPU, 16 hilos", o: { nCpuMoe: Math.min(capas, n + 8), threads: 16 } },
+    { id: "gpu-3", nombre: "3 capas más de expertos en GPU", o: { nCpuMoe: Math.max(0, n - 3), threads: 12, batch: 1024, ubatch: 512 } },
+    { id: "gpu-4", nombre: "4 capas más de expertos en GPU", o: { nCpuMoe: Math.max(0, n - 4), threads: 12, batch: 1024, ubatch: 512 } },
+    { id: "gpu-5", nombre: "5 capas más de expertos en GPU", o: { nCpuMoe: Math.max(0, n - 5), threads: 12, batch: 1024, ubatch: 512 } },
+    { id: "gpu-6", nombre: "6 capas más de expertos en GPU", o: { nCpuMoe: Math.max(0, n - 6), threads: 12, batch: 1024, ubatch: 512 } },
+    { id: "gpu-3-kvq4", nombre: "3 capas más + KV q4", o: { nCpuMoe: Math.max(0, n - 3), threads: 12, batch: 1024, ubatch: 512, kv: "q4_0" } },
+    { id: "gpu-3-16k", nombre: "3 capas más + contexto 16k", o: { nCpuMoe: Math.max(0, n - 3), threads: 12, batch: 1024, ubatch: 512, ctx: 16384 } },
     { id: "batch1024", nombre: "plan automático, batch 1024/512", o: { nCpuMoe: n, threads: 8, batch: 1024, ubatch: 512 } },
     { id: "batch16", nombre: "16 hilos, batch 1024/512", o: { nCpuMoe: n, threads: 16, batch: 1024, ubatch: 512 } },
     { id: "batch12", nombre: "12 hilos, batch 1024/512", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512 } },
@@ -290,6 +331,7 @@ function variantes(plan) {
     { id: "none", nombre: "sin mmap (carga a RAM)", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, loadMode: "none" } },
     { id: "precarga", nombre: "mmap + precarga de expertos CPU", o: { nCpuMoe: n, threads: 12, batch: 1024, ubatch: 512, loadMode: "mmap", precargar: true } },
     { id: "precarga16", nombre: "mmap + precarga + 16 hilos", o: { nCpuMoe: n, threads: 16, batch: 1024, ubatch: 512, loadMode: "mmap", precargar: true } },
+    ...ajuste.filter((v) => VARIANTES_PEDIDAS.includes(v.id)),
   ].filter((v) => v.o.nCpuMoe === undefined || v.o.cpuMoe || v.o.nCpuMoe < capas);
   let salida = lista;
   if (!FRIO) salida = salida.filter((v) => v.id !== "precarga" && v.id !== "precarga16");

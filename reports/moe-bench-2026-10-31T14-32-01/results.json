@@ -1,0 +1,40 @@
+[
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "baseline",
+    "descripcion": "plan automático",
+    "nCpuMoe": 29,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9205,
+    "ctx": 32768,
+    "vramPicoMiB": 6889,
+    "ramPicoMiB": 6964,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 45.7,
+      "ms": 2776,
+      "ttftMs": 413
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 37,
+      "tokPorSegundo": 43.7,
+      "ms": 1265,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1003.8,
+      "ms": 6248
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  }
+]

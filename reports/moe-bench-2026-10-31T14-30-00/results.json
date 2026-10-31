@@ -1,0 +1,131 @@
+[
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "gpu-3",
+    "descripcion": "3 capas más de expertos en GPU",
+    "nCpuMoe": 26,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 10294,
+    "ctx": 32768,
+    "vramPicoMiB": 7537,
+    "ramPicoMiB": 6337,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 46.4,
+      "ms": 2738,
+      "ttftMs": 415
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 37,
+      "tokPorSegundo": 45.5,
+      "ms": 1214,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1056,
+      "ms": 5939
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "gpu-6",
+    "descripcion": "6 capas más de expertos en GPU",
+    "nCpuMoe": 23,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": false,
+    "error": "llama-server terminó al arrancar:\n0.00.348.148 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)\n0.00.352.994 I srv    load_model: loading model 'C:\\Users\\user\\Documents\\prject_local_AI\\models\\qwen3-30b-a3b-2507-Qwen3-30B-A3B-Instruct-2507-UD-Q2_K_XL.gguf'\n0.01.278.673 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 99, abort\n0.01.573.032 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden\n0.07.428.451 E ggml_backend_cuda_buffer_type_alloc_buffer: allocating 1632.00 MiB on device 0: cudaMalloc failed: out of memory\n0.07.428.456 E alloc_tensor_range: failed to allocate CUDA0 buffer of size 1711276032\n0.07.566.076 E llama_init_from_model: failed to initialize the context: failed to allocate buffer for kv cache\n0.07.566.084 E cmn  common_init_: failed to create context with model 'C:\\Users\\user\\Documents\\prject_local_AI\\models\\qwen3-30b-a3b-2507-Qwen3-30B-A3B-Instruct-2507-UD-Q2_K_XL.gguf'\n0.07.566.085 E cmn  common_init_: failed to create context with model 'C:\\Users\\user\\Documents\\prject_local_AI\\models\\qwen3-30b-a3b-2507-Qwen3-30B-A3B-Instruct-2507-UD-Q2_K_XL.gguf'\n0.07.566.088 E srv    load_model: failed to create_context with model 'C:\\Users\\user\\Documents\\prject_local_AI\\models\\qwen3-30b-a3b-2507-Qwen3-30B-A3B-Instruct-2507-UD-Q2_K_XL.gguf'\n0.07.566.091 I srv   operator (): operator (): cleaning up before exit...\n0.07.567.621 E srv  llama_server: exiting due to model loading error"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "gpu-3-kvq4",
+    "descripcion": "3 capas más + KV q4",
+    "nCpuMoe": 26,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 9168,
+    "ctx": 32768,
+    "vramPicoMiB": 6769,
+    "ramPicoMiB": 6337,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 43.6,
+      "ms": 2911,
+      "ttftMs": 440
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 38,
+      "tokPorSegundo": 43.7,
+      "ms": 1262,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 985.3,
+      "ms": 6365
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "nombre": "Qwen3 30B-A3B 2507",
+    "pasada": 1,
+    "variante": "gpu-3-16k",
+    "descripcion": "3 capas más + contexto 16k",
+    "nCpuMoe": 26,
+    "capas": 48,
+    "threads": 12,
+    "batch": 1024,
+    "ubatch": 512,
+    "loadMode": "none",
+    "ok": true,
+    "precargaMs": 0,
+    "arranqueMs": 8668,
+    "ctx": 16384,
+    "vramPicoMiB": 6705,
+    "ramPicoMiB": 6318,
+    "generacion": {
+      "tokens": 128,
+      "tokPorSegundo": 42.8,
+      "ms": 2968,
+      "ttftMs": 419
+    },
+    "chat": {
+      "plantilla": true,
+      "tokens": 37,
+      "tokPorSegundo": 43.7,
+      "ms": 1239,
+      "promptTokens": 65
+    },
+    "promptLargo": {
+      "tokens": 6272,
+      "tokPorSegundo": 1051.3,
+      "ms": 5966
+    },
+    "muestra": "```javascript function sumaPares(lista) { return lista.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0); } ``````javascript function sumaPare"
+  }
+]

@@ -1,0 +1,542 @@
+===FILE: server.mjs===
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PORT = process.env.PORT || 3000;
+const HOST = '127.0.0.1';
+const DATA_FILE = path.join(__dirname, 'data.json');
+
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.json': 'application/json'
+};
+
+function readTasks() {
+  try {
+    const data = fs.readFileSync(DATA_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch (e) {
+    return [];
+  }
+}
+
+function writeTasks(tasks) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(tasks, null, 2), 'utf-8');
+}
+
+function createTask(title, status = 'todo', priority = 'medium') {
+  return {
+    id: crypto.randomUUID(),
+    title,
+    status,
+    priority,
+    createdAt: new Date().toISOString()
+  };
+}
+
+const server = http.createServer((req, res) => {
+  const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+  const pathname = parsedUrl.pathname;
+
+  // Serve static files
+  if (pathname === '/' || pathname === '/index.html') {
+    const filePath = path.join(__dirname, 'public', 'index.html');
+    const ext = path.extname(filePath);
+    res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'text/plain' });
+    fs.createReadStream(filePath).pipe(res);
+    return;
+  }
+
+  if (pathname.startsWith('/public/')) {
+    const filePath = path.join(__dirname, pathname);
+    const ext = path.extname(filePath);
+    if (fs.existsSync(filePath)) {
+      res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'text/plain' });
+      fs.createReadStream(filePath).pipe(res);
+    } else {
+      res.writeHead(404);
+      res.end('Not Found');
+    }
+    return;
+  }
+
+  // API Routes
+  const apiPrefix = '/api';
+  if (pathname.startsWith(apiPrefix)) {
+    const apiPath = pathname.slice(apiPrefix.length);
+
+    // GET /api/tasks
+    if (req.method === 'GET' && apiPath === '/tasks') {
+      const tasks = readTasks();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(tasks));
+      return;
+    }
+
+    // GET /api/stats
+    if (req.method === 'GET' && apiPath === '/stats') {
+      const tasks = readTasks();
+      const stats = {
+        todo: tasks.filter(t => t.status === 'todo').length,
+        doing: tasks.filter(t => t.status === 'doing').length,
+        done: tasks.filter(t => t.status === 'done').length,
+        total: tasks.length
+      };
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(stats));
+      return;
+    }
+
+    // POST /api/tasks
+    if (req.method === 'POST' && apiPath === '/tasks') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', () => {
+        try {
+          const { title, status, priority } = JSON.parse(body || '{}');
+          if (!title) throw new Error('Title is required');
+          
+          const tasks = readTasks();
+          const newTask = createTask(title, status || 'todo', priority || 'medium');
+          tasks.push(newTask);
+          writeTasks(tasks);
+          
+          res.writeHead(201, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(newTask));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+      return;
+    }
+
+    // PATCH /api/tasks/:id
+    if (req.method === 'PATCH' && apiPath.startsWith('/tasks/')) {
+      const id = apiPath.split('/')[2];
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', () => {
+        try {
+          const updates = JSON.parse(body || '{}');
+          const tasks = readTasks();
+          const index = tasks.findIndex(t => t.id === id);
+          
+          if (index === -1) {
+            res.writeHead(404);
+            res.end('Not Found');
+            return;
+          }
+
+          // Validate status if provided
+          if (updates.status && !['todo', 'doing', 'done'].includes(updates.status)) {
+            throw new Error('Invalid status');
+          }
+
+          tasks[index] = { ...tasks[index], ...updates };
+          writeTasks(tasks);
+          
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(tasks[index]));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+      return;
+    }
+
+    // DELETE /api/tasks/:id
+    if (req.method === 'DELETE' && apiPath.startsWith('/tasks/')) {
+      const id = apiPath.split('/')[2];
+      const tasks = readTasks();
+      const newTasks = tasks.filter(t => t.id !== id);
+      
+      if (tasks.length === newTasks.length) {
+        res.writeHead(404);
+        res.end('Not Found');
+        return;
+      }
+      
+      writeTasks(newTasks);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+  }
+
+  // 404 for everything else
+  res.writeHead(404);
+  res.end('Not Found');
+});
+
+server.listen(PORT, HOST, () => {
+  console.log(`Server running at http://${HOST}:${PORT}/`);
+});
+===END FILE===
+
+===FILE: public/index.html===
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Taskboard</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Taskboard</h1>
+    <div class="stats-container" id="stats">
+      <span class="stat">Total: <b>0</b></span>
+      <span class="stat">Todo: <b>0</b></span>
+      <span class="stat">Doing: <b>0</b></span>
+      <span class="stat">Done: <b>0</b></span>
+    </div>
+  </header>
+
+  <main>
+    <div class="input-group">
+      <input type="text" id="task-input" placeholder="Nueva tarea...">
+      <button id="add-btn">Añadir</button>
+    </div>
+
+    <div class="board" id="board">
+      <div class="column" data-status="todo">
+        <h2>Por Hacer</h2>
+        <div class="task-list" id="list-todo"></div>
+      </div>
+      <div class="column" data-status="doing">
+        <h2>En Progreso</h2>
+        <div class="task-list" id="list-doing"></div>
+      </div>
+      <div class="column" data-status="done">
+        <h2>Hecho</h2>
+        <div class="task-list" id="list-done"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/public/app.js"></script>
+</body>
+</html>
+===END FILE===
+
+===FILE: public/app.js===
+document.addEventListener('DOMContentLoaded', () => {
+  const taskInput = document.getElementById('task-input');
+  const addBtn = document.getElementById('add-btn');
+  const board = document.getElementById('board');
+  const statsContainer = document.getElementById('stats');
+
+  // Load initial data
+  loadTasks();
+  loadStats();
+
+  // Event Listeners
+  addBtn.addEventListener('click', addTask);
+  taskInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') addTask();
+  });
+
+  // Delegate events for dynamic elements
+  board.addEventListener('click', handleBoardClick);
+
+  async function loadTasks() {
+    try {
+      const res = await fetch('/api/tasks');
+      const tasks = await res.json();
+      renderTasks(tasks);
+    } catch (e) {
+      console.error('Error loading tasks', e);
+    }
+  }
+
+  async function loadStats() {
+    try {
+      const res = await fetch('/api/stats');
+      const stats = await res.json();
+      renderStats(stats);
+    } catch (e) {
+      console.error('Error loading stats', e);
+    }
+  }
+
+  function renderTasks(tasks) {
+    const lists = {
+      todo: document.getElementById('list-todo'),
+      doing: document.getElementById('list-doing'),
+      done: document.getElementById('list-done')
+    };
+
+    // Clear lists
+    Object.values(lists).forEach(el => el.innerHTML = '');
+
+    tasks.forEach(task => {
+      const card = document.createElement('div');
+      card.className = 'task-card';
+      card.dataset.id = task.id;
+      
+      const title = document.createElement('div');
+      title.className = 'task-title';
+      title.textContent = task.title;
+      
+      const priority = document.createElement('span');
+      priority.className = 'task-priority';
+      priority.textContent = `[${task.priority}]`;
+      
+      const controls = document.createElement('div');
+      controls.className = 'task-controls';
+
+      // Add buttons based on status
+      if (task.status !== 'doing') {
+        const moveBtn = document.createElement('button');
+        moveBtn.textContent = '→';
+        moveBtn.title = 'Mover a Doing';
+        moveBtn.dataset.action = 'move-to-doing';
+        controls.appendChild(moveBtn);
+      }
+      
+      if (task.status !== 'done') {
+        const moveBtn = document.createElement('button');
+        moveBtn.textContent = '✓';
+        moveBtn.title = 'Mover a Done';
+        moveBtn.dataset.action = 'move-to-done';
+        controls.appendChild(moveBtn);
+      }
+
+      if (task.status !== 'todo') {
+        const moveBtn = document.createElement('button');
+        moveBtn.textContent = '←';
+        moveBtn.title = 'Mover a Todo';
+        moveBtn.dataset.action = 'move-to-todo';
+        controls.appendChild(moveBtn);
+      }
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '×';
+      delBtn.title = 'Eliminar';
+      delBtn.dataset.action = 'delete';
+      controls.appendChild(delBtn);
+
+      card.appendChild(title);
+      card.appendChild(priority);
+      card.appendChild(controls);
+      lists[task.status].appendChild(card);
+    });
+  }
+
+  function renderStats(stats) {
+    const spans = statsContainer.querySelectorAll('b');
+    spans[0].textContent = stats.total;
+    spans[1].textContent = stats.todo;
+    spans[2].textContent = stats.doing;
+    spans[3].textContent = stats.done;
+  }
+
+  async function addTask() {
+    const title = taskInput.value.trim();
+    if (!title) return;
+
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
+      if (res.ok) {
+        taskInput.value = '';
+        loadTasks();
+        loadStats();
+      }
+    } catch (e) {
+      console.error('Error adding task', e);
+    }
+  }
+
+  async function handleBoardClick(e) {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    const card = btn.closest('.task-card');
+    if (!card) return;
+
+    const id = card.dataset.id;
+    const action = btn.dataset.action;
+
+    if (action === 'delete') {
+      try {
+        await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+        loadTasks();
+        loadStats();
+      } catch (e) {
+        console.error('Error deleting', e);
+      }
+    } else if (action.startsWith('move-to-')) {
+      const newStatus = action.split('-')[2]; // todo, doing, done
+      try {
+        await fetch(`/api/tasks/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        loadTasks();
+        loadStats();
+      } catch (e) {
+        console.error('Error moving task', e);
+      }
+    }
+  }
+});
+===END FILE===
+
+===FILE: public/styles.css===
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f4f5f7;
+  margin: 0;
+  padding: 20px;
+  color: #172b4d;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+h1 {
+  margin: 0;
+}
+
+.stats-container {
+  display: flex;
+  gap: 15px;
+  background: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.stat {
+  font-size: 0.9rem;
+}
+
+.input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+#task-input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #dfe1e6;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+#add-btn {
+  padding: 10px 20px;
+  background-color: #0079bf;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#add-btn:hover {
+  background-color: #005a87;
+}
+
+.board {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.column {
+  flex: 1;
+  background-color: #e2e4e8;
+  border-radius: 8px;
+  padding: 10px;
+  min-height: 200px;
+}
+
+.column h2 {
+  font-size: 1rem;
+  margin-top: 0;
+  margin-bottom: 10px;
+  text-align: center;
+  color: #5e6c84;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-card {
+  background-color: white;
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.task-title {
+  font-weight: 500;
+}
+
+.task-priority {
+  font-size: 0.75rem;
+  color: #6b778c;
+}
+
+.task-controls {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.task-controls button {
+  background: none;
+  border: 1px solid #dfe1e6;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  color: #42526e;
+}
+
+.task-controls button:hover {
+  background-color: #f4f5f7;
+}
+
+.task-controls button:last-child {
+  margin-left: auto;
+  color: #bf2600;
+}
+===END FILE===
+
+===FILE: package.json===
+{
+  "name": "taskboard",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {}
+}
+===END FILE===

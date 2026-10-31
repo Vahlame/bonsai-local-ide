@@ -35,6 +35,7 @@ param (
     [switch]$Vision,
     [switch]$MmprojCPU,
     [switch]$Precargar,
+    [int]$GpuExtra = 0,
     [switch]$DryRun,
     [switch]$ManagedByIDE,
     [string]$EnginePreset = "",
@@ -307,6 +308,14 @@ if ($IsMoe) {
         $NCpuMoe = $CapasMoe - $CapasGpu
     } else {
         $NCpuMoe = [int]$GpuProfile.moe.nCpuMoe
+    }
+    if ($GpuExtra -gt 0 -and $NCpuMoe -ge $GpuExtra) {
+        $NCpuMoe -= $GpuExtra
+        $GpuExpertosMiB = 0
+        for ($i = $NCpuMoe; $i -lt $CapasMoe; $i++) {
+            $GpuExpertosMiB += [math]::Ceiling([double]$PorCapa[$i] / 1MB)
+        }
+        Write-Host ("GpuExtra: {0} capas más en GPU (margen agresivo; puede OOM en otro modelo)." -f $GpuExtra) -ForegroundColor Yellow
     }
     # Decisión dinámica de carga: `none` solo si los expertos de CPU + proyector
     # + 1 GiB de holgura caben en la RAM disponible AHORA. Si el usuario tiene

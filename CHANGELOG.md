@@ -25,6 +25,12 @@ versionado semántico.
 - **Perfil `chat/coder-profile-moe.json`** opt-in (`BONSAI_CODER_CONFIG`) para el
   agente: sin snippets, cross-file 133,6 → 43,1 s y failing-test 66,6 → 28,9 s
   con GPT-OSS, manteniendo PASS.
+- **Benchmark de web app real** (`bench-webapp.mjs`): Taskboard full-stack con
+  API y UI Playwright. GPT-OSS-20B 100 % (8/8 + 3/3), Qwen3.6 91 %, Qwen3-30B
+  55 %; capturas y SVG.
+- **Tuning del motor** (`ENGINE-2026-10-31.md`): ngram, draft, batch, KV,
+  prioridad, afinidad y clocks medidos. Base: `none` + 12 hilos + 1024/512;
+  3 capas extra de expertos = +4,7 %.
 - **Descarga por rangos en paralelo** (`fast-download.mjs`).
 
 ### Corregido

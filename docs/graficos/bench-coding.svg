@@ -1,70 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="642" viewBox="0 0 1120 642" font-family="Segoe UI, system-ui, sans-serif">
-<rect width="1120" height="642" fill="#0d100b"/>
-<text x="26" y="36" fill="#e9eee0" font-size="19" font-weight="600">Coding real: proyecto multifichero + bugfix</text>
-<text x="26" y="57" fill="#8d9680" font-size="12">Tests ocultos ejecutados con node --test · global = 65% proyecto + 35% bugfix</text>
-<rect x="300" y="78" width="12" height="12" rx="2" fill="#cde86e"/><text x="318" y="89" fill="#b9c2ad" font-size="11">Proyecto</text>
-<rect x="400" y="78" width="12" height="12" rx="2" fill="#6ab7e8"/><text x="418" y="89" fill="#b9c2ad" font-size="11">Bugfix</text>
-<text x="26" y="143" fill="#e9eee0" font-size="12" font-weight="600">GPT-OSS 20B</text>
-<text x="26" y="160" fill="#8d9680" font-size="10">2 rep(s)</text>
-<rect x="300" y="124" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="124" width="620" height="16" rx="4" fill="#cde86e"/>
-<text x="306" y="136" fill="#0d100b" font-size="9" font-weight="700">18/18</text>
-<rect x="300" y="146" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="146" width="620" height="16" rx="4" fill="#6ab7e8"/>
-<text x="306" y="158" fill="#0d100b" font-size="9" font-weight="700">10/10</text>
-<text x="932" y="145" fill="#e9eee0" font-size="14" font-weight="700">100%</text>
-<text x="26" y="205" fill="#e9eee0" font-size="12" font-weight="600">Qwen3.6 35B-A3B</text>
-<text x="26" y="222" fill="#8d9680" font-size="10">2 rep(s)</text>
-<rect x="300" y="186" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="186" width="586" height="16" rx="4" fill="#cde86e"/>
-<text x="306" y="198" fill="#0d100b" font-size="9" font-weight="700">17/18</text>
-<rect x="300" y="208" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="208" width="620" height="16" rx="4" fill="#6ab7e8"/>
-<text x="306" y="220" fill="#0d100b" font-size="9" font-weight="700">10/10</text>
-<text x="932" y="207" fill="#e9eee0" font-size="14" font-weight="700">96%</text>
-<text x="26" y="267" fill="#e9eee0" font-size="12" font-weight="600">Qwen3 30B-A3B 2507</text>
-<text x="26" y="284" fill="#8d9680" font-size="10">2 rep(s)</text>
-<rect x="300" y="248" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="248" width="482" height="16" rx="4" fill="#cde86e"/>
-<text x="306" y="260" fill="#0d100b" font-size="9" font-weight="700">14/18</text>
-<rect x="300" y="270" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="270" width="620" height="16" rx="4" fill="#6ab7e8"/>
-<text x="306" y="282" fill="#0d100b" font-size="9" font-weight="700">10/10</text>
-<text x="932" y="269" fill="#e9eee0" font-size="14" font-weight="700">86%</text>
-<text x="26" y="329" fill="#e9eee0" font-size="12" font-weight="600">Qwen3 4B Instruct 2507</text>
-<text x="26" y="346" fill="#8d9680" font-size="10">1 rep(s)</text>
-<rect x="300" y="310" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="310" width="276" height="16" rx="4" fill="#cde86e"/>
-<text x="306" y="322" fill="#0d100b" font-size="9" font-weight="700">4/9</text>
-<rect x="300" y="332" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="332" width="620" height="16" rx="4" fill="#6ab7e8"/>
-<text x="306" y="344" fill="#0d100b" font-size="9" font-weight="700">5/5</text>
-<text x="932" y="331" fill="#e9eee0" font-size="14" font-weight="700">64%</text>
-<text x="26" y="391" fill="#e9eee0" font-size="12" font-weight="600">Qwen3.5 9B</text>
-<text x="26" y="408" fill="#8d9680" font-size="10">1 rep(s)</text>
-<rect x="300" y="372" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="372" width="207" height="16" rx="4" fill="#cde86e"/>
-<text x="306" y="384" fill="#0d100b" font-size="9" font-weight="700">3/9</text>
-<rect x="300" y="394" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="394" width="620" height="16" rx="4" fill="#6ab7e8"/>
-<text x="306" y="406" fill="#0d100b" font-size="9" font-weight="700">5/5</text>
-<text x="932" y="393" fill="#e9eee0" font-size="14" font-weight="700">57%</text>
-<text x="26" y="453" fill="#e9eee0" font-size="12" font-weight="600">Qwen2.5 Coder 7B Instruct</text>
-<text x="26" y="470" fill="#8d9680" font-size="10">1 rep(s)</text>
-<rect x="300" y="434" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="434" width="138" height="16" rx="4" fill="#cde86e"/>
-<text x="306" y="446" fill="#0d100b" font-size="9" font-weight="700">2/9</text>
-<rect x="300" y="456" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="456" width="620" height="16" rx="4" fill="#6ab7e8"/>
-<text x="306" y="468" fill="#0d100b" font-size="9" font-weight="700">5/5</text>
-<text x="932" y="455" fill="#e9eee0" font-size="14" font-weight="700">49%</text>
-<text x="26" y="515" fill="#e9eee0" font-size="12" font-weight="600">Ornith 1.5 9B</text>
-<text x="26" y="532" fill="#8d9680" font-size="10">1 rep(s)</text>
-<rect x="300" y="496" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="496" width="0" height="16" rx="4" fill="#cde86e"/>
-<text x="306" y="508" fill="#0d100b" font-size="9" font-weight="700">0/9</text>
-<rect x="300" y="518" width="620" height="16" rx="4" fill="#1a2014"/>
-<rect x="300" y="518" width="620" height="16" rx="4" fill="#6ab7e8"/>
-<text x="306" y="530" fill="#0d100b" font-size="9" font-weight="700">5/5</text>
-<text x="932" y="517" fill="#e9eee0" font-size="14" font-weight="700">35%</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="208" viewBox="0 0 1000 208" font-family="Segoe UI, system-ui, sans-serif">
+<rect width="1000" height="208" fill="#0d100b"/>
+<text x="24" y="34" fill="#e9eee0" font-size="18" font-weight="600">Coding real: proyecto multifichero + bugfix</text>
+<text x="24" y="54" fill="#8d9680" font-size="12">Tests ocultos ejecutados con node --test · global = 65% proyecto + 35% bugfix</text>
+<text x="24" y="120" fill="#e9eee0" font-size="11">Qwen3 30B-A3B 2507</text>
+<rect x="320" y="106" width="520" height="20" rx="4" fill="#1a2014"/>
+<rect x="320" y="106" width="445" height="20" rx="4" fill="#e8c06a"/>
+<text x="850" y="121" fill="#e9eee0" font-size="12" font-weight="700">86%</text>
+<text x="326" y="121" fill="#0d100b" font-size="10" font-weight="600">12/14 tests</text>
 </svg>

@@ -39,6 +39,7 @@ const flag = (n) => args.includes(`--${n}`);
 const PORT = Number(arg("port", "8096"));
 const REPS = Math.max(1, Math.min(3, Number(arg("reps", "1")) || 1));
 const PIPELINE = arg("pipeline", "single");
+const SPEC = arg("spec", "none");
 const REPAIR = Math.max(0, Math.min(2, Number(arg("repair", "0")) || 0));
 const TASKS = arg("task", "project,bugfix").split(",").map((s) => s.trim()).filter(Boolean);
 const MODELOS = (arg("models", "") || "ornith9b,qwen25-coder-7b,qwen3-30b-a3b-2507,qwen36-35b-a3b,gpt-oss-20b,qwen35-9b,qwen3-4b-2507")
@@ -210,7 +211,7 @@ function argumentos(entrada, plan, think) {
     "-b", String(entrada.servidor?.batch || 512), "-ub", String(entrada.servidor?.ubatch || 256),
     "-t", String(entrada.servidor?.threads || 4), "--host", "127.0.0.1", "--port", String(PORT),
     "--jinja", "--metrics", "-lv", "2", "--cache-ram", "0", "--no-context-shift",
-    "--ctx-checkpoints", "0", "--spec-type", "none",
+    "--ctx-checkpoints", "0", "--spec-type", SPEC,
     "--temp", "0.2", "--top-p", "0.9", "--top-k", "20", "--min-p", "0.05",
     "--presence-penalty", "0", "--repeat-penalty", "1"];
   if (entrada.chat_template) {
@@ -226,7 +227,7 @@ function argumentos(entrada, plan, think) {
   }
   if (think > 0) a.push("--reasoning-budget", String(think), "--reasoning-format", "deepseek");
   const draft = entrada.servidor?.draftModel;
-  if (draft && fs.existsSync(path.join(PROJECT, "models", draft))) {
+  if (draft && SPEC.startsWith("draft") && fs.existsSync(path.join(PROJECT, "models", draft))) {
     a.push("--spec-type", "draft-simple", "--spec-draft-model", path.join(PROJECT, "models", draft));
     a.push("--spec-draft-n-max", String(entrada.servidor?.draftTokens || 4));
   }

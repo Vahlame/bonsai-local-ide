@@ -1,0 +1,81 @@
+{
+  "clave": "qwen36-35b-a3b",
+  "nombre": "Qwen3.6 35B-A3B",
+  "rep": 1,
+  "ok": true,
+  "files": [
+    "server.mjs",
+    "public/index.html",
+    "public/app.js",
+    "public/styles.css",
+    "package.json"
+  ],
+  "api": [
+    {
+      "id": "lista-inicial",
+      "ok": true,
+      "detalle": "HTTP 200 []"
+    },
+    {
+      "id": "crear",
+      "ok": true,
+      "detalle": "HTTP 201 {\"id\":\"c319b580-2c08-418f-8c5e-1c3a311daa00\",\"title\":\"Comprar leche\",\"status\":\"todo\",\"priority\":2,\"c"
+    },
+    {
+      "id": "listar-creada",
+      "ok": true,
+      "detalle": "HTTP 200"
+    },
+    {
+      "id": "cambiar-estado",
+      "ok": true,
+      "detalle": "HTTP 200 {\"id\":\"c319b580-2c08-418f-8c5e-1c3a311daa00\",\"title\":\"Comprar leche\",\"status\":\"doing\",\"priority\":2,\""
+    },
+    {
+      "id": "stats",
+      "ok": true,
+      "detalle": "HTTP 200 {\"todo\":0,\"doing\":1,\"done\":0,\"total\":1}"
+    },
+    {
+      "id": "html",
+      "ok": true,
+      "detalle": "HTTP 200 1221 bytes"
+    },
+    {
+      "id": "estaticos",
+      "ok": false,
+      "detalle": "app.js=404 styles.css=404"
+    },
+    {
+      "id": "borrar",
+      "ok": true,
+      "detalle": "HTTP 204"
+    }
+  ],
+  "ui": [
+    {
+      "id": "input",
+      "ok": true,
+      "detalle": "input encontrado"
+    },
+    {
+      "id": "añadir",
+      "ok": true,
+      "detalle": "botón encontrado"
+    },
+    {
+      "id": "tarea-visible",
+      "ok": true,
+      "detalle": "1 coincidencias"
+    }
+  ],
+  "screenshot": "reports\\webapp-bench-2026-10-31T14-35-37\\qwen36-35b-a3b\\run1\\screenshot.png",
+  "apiPass": 7,
+  "uiPass": 3,
+  "score": 91.25,
+  "ms": 140361,
+  "tps": 44.17353297075299,
+  "genTokens": 6033,
+  "finish": "stop",
+  "retryLength": false
+}
