@@ -37,8 +37,8 @@ function Get-OptBinary {
 
 function Show-Banner {
     Write-Host "================================================================" -ForegroundColor Cyan
-    Write-Host "  Bonsai IDE - RTX 4060 8GB Optimized (llama.cpp v0.8.0+)    " -ForegroundColor Cyan
-    Write-Host "  End-to-end optimized pipeline for maximum performance       " -ForegroundColor Cyan
+    Write-Host "  Bonsai IDE 2.3 - RTX 4060 8 GB (llama.cpp + CodeMirror)" -ForegroundColor Cyan
+    Write-Host "  Perfiles medidos, editor moderno y API OpenAI local       " -ForegroundColor Cyan
     Write-Host "================================================================" -ForegroundColor Cyan
 }
 
@@ -48,13 +48,6 @@ function Check-Prerequisites {
     if (-not $OptBinDir) {
         Write-Warning "Binario optimizado no encontrado. Ejecuta: .\scripts\build-rtx4060-optimized.ps1"
         return $false
-    }
-    
-    # Check draft model for speculative decoding
-    $DraftModel = Join-Path $RootDir "models\Ornith-1.5-1B-Q4_K_M.gguf"
-    if (-not (Test-Path -LiteralPath $DraftModel)) {
-        Write-Warning "Modelo draft para Speculative Decoding no encontrado."
-        Write-Host "  Ejecuta: .\scripts\setup-speculative-draft.ps1" -ForegroundColor Gray
     }
     
     return $true
@@ -81,9 +74,9 @@ switch ($Action) {
         if (-not $OptBinDir) { throw "Binario optimizado no encontrado" }
         $OptBin = Join-Path $OptBinDir "llama-bench.exe"
         
-        $Model = Join-Path $RootDir "models\Ornith-1.5-9B-Q4_K_M.gguf"
+        $Model = Join-Path $RootDir "models\Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
         Write-Host "Ejecutando benchmark RTX 4060 optimizado..." -ForegroundColor Cyan
-        & $OptBin -m $Model -ngl 99 -b 512 -ub 128 -n 1 -r 5 -p 512 -n 128 -o md
+        & $OptBin -m $Model -ngl 99 -fa on -b 1024 -ub 512 -p 2048 -n 128 -r 3 -o md
     }
     "status" {
         Show-Banner
@@ -95,10 +88,6 @@ switch ($Action) {
         $StdBin = Join-Path $RootDir "bin\llama-server.exe"
         Write-Host "  Binario optimizado: $(if ($OptBin -and (Test-Path $OptBin)) { '[OK] ' + $OptBin } else { '[FAIL] No encontrado' })" -ForegroundColor $(if ($OptBin -and (Test-Path $OptBin)) { 'Green' } else { 'Red' })
         Write-Host "  Binario estándar:   $(if (Test-Path $StdBin) { '[OK] ' + $StdBin } else { '[FAIL] No encontrado' })" -ForegroundColor $(if (Test-Path $StdBin) { 'Green' } else { 'Red' })
-        
-        # Draft model
-        $Draft = Join-Path $RootDir "models\Ornith-1.5-1B-Q4_K_M.gguf"
-        Write-Host "  Modelo draft:       $(if (Test-Path $Draft) { '[OK] ' + (Get-Item $Draft).Length/1MB.ToString('F1') + ' MB' } else { '[FAIL] No encontrado' })" -ForegroundColor $(if (Test-Path $Draft) { 'Green' } else { 'Yellow' })
         
         # Presets
         $PresetsPath = Join-Path $RootDir "config\local-engine-presets-rtx4060-optimized.json"

@@ -56,11 +56,12 @@ if (Test-Path -LiteralPath $SettingsPath) {
     try { $SavedSettings = Get-Content -LiteralPath $SettingsPath -Raw | ConvertFrom-Json } catch { $SavedSettings = $null }
 }
 
-# Preset por defecto: MAXIMO contexto + precision f16 + vision (43k, medido estable).
-# El usuario puede cambiarlo en la UI.
+# 2.3: AUTO deja que el plan medido por modelo elija contexto, KV y reparto MoE.
+# Los presets antiguos de 110k se conservan en el desplegable, pero no son el
+# default de una instalacion nueva ni de una migracion.
 if (-not $EnginePreset) {
-    if ($SavedSettings -and $SavedSettings.enginePreset) { $EnginePreset = [string]$SavedSettings.enginePreset }
-    if (-not $EnginePreset) { $EnginePreset = '8GB-VISION-MAX-Q8-100K' }
+    $SavedPreset = if ($SavedSettings -and $SavedSettings.enginePreset) { [string]$SavedSettings.enginePreset } else { '' }
+    $EnginePreset = if ($SavedPreset -in @('AUTO','CUSTOM')) { $SavedPreset } else { 'AUTO' }
 }
 
 # Argumentos para node
