@@ -338,6 +338,11 @@ aside, #editor, #chat { background: var(--panel); }
    Las dos capas comparten fuente, tamaño, interlineado y relleno, así que el
    cursor cae exactamente sobre el carácter que se ve. */
 .editor-wrap { position: relative; flex: 1; display: flex; min-height: 0; overflow: hidden; }
+/* CodeMirror 6: contenedor propio, oculto hasta que el usuario lo activa. */
+.editor-cm { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+.editor-cm[hidden] { display: none !important; }
+.editor-cm .cm-editor { flex: 1; min-height: 0; height: 100%; }
+.editor-cm .cm-scroller { overflow: auto; }
 /* El atributo `hidden` NO basta cuando una regla de autor fija `display`:
    #code { display:flex } gana a la hoja del navegador y el visor seguía viéndose
    encima del editor. Hay que apagarlo a mano. */

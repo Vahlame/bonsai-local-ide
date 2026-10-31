@@ -1,6 +1,6 @@
 {
   "name": "bonsai-local-ide",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Bonsai Local IDE: agente de desarrollo local con llama-server para Windows 10 y 11",
   "license": "MIT",
@@ -36,6 +36,8 @@
     "hub:fast": "node scripts/fast-download.mjs",
     "probe:context": "powershell -ExecutionPolicy Bypass -File scripts/probe-rtx4060-context.ps1",
     "build:rtx4060": "powershell -ExecutionPolicy Bypass -File scripts/build-rtx4060-optimized.ps1",
+    "build:llguidance": "powershell -ExecutionPolicy Bypass -File scripts/build-inference-runtime.ps1 -Llguidance -Jobs 4",
+    "build:ui-vendor": "npx --prefix chat esbuild chat/ui/vendor/editor-entry.js --bundle --format=iife --target=chrome120 --minify --legal-comments=none --outfile=chat/ui/vendor/editor.js && npx --prefix chat esbuild chat/ui/vendor/terminal-entry.js --bundle --format=iife --target=chrome120 --minify --legal-comments=none --outfile=chat/ui/vendor/terminal.js && copy chat\\node_modules\\@xterm\\xterm\\css\\xterm.css chat\\ui\\vendor\\xterm.css",
     "test": "node scripts/run-tests.mjs",
     "test:gpu": "node scripts/run-tests.mjs gpu",
     "test:gpu-exclusiva": "node scripts/run-tests.mjs gpu-exclusiva",

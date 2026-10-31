@@ -98,9 +98,12 @@
 import { TextDecoder } from "node:util";
 import { EventEmitter } from "node:events";
 import { execFileSync, spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
 import { shellPredeterminada } from "./entorno.mjs";
+
+const require = createRequire(import.meta.url);
 
 /** Tope de salida por defecto de cada sesión, en caracteres. */
 export const MAX_BUFFER_POR_DEFECTO = 200_000;
@@ -319,12 +322,12 @@ class GestorProcesos extends EventEmitter {
     hijo.stdout?.on("data", (buf) => this._volcar(registro, registro.decOut, buf));
     hijo.stderr?.on("data", (buf) => this._volcar(registro, registro.decErr, buf));
     // EPIPE es normal cuando el proceso ya no lee (p. ej. lo matamos); no debe romper.
-    hijo.stdin?.on("error", () => {});
-    hijo.on("error", (error) => {
+    hijo.stdin?.on?.("error", () => {});
+    hijo.on?.("error", (error) => {
       this._volcarTexto(registro, `\n[error] ${error instanceof Error ? error.message : String(error)}\n`);
       this._finalizar(registro, 1);
     });
-    hijo.on("close", (codigo) => this._finalizar(registro, codigo));
+    hijo.on?.("close", (codigo) => this._finalizar(registro, codigo));
     return registro;
   }
 
@@ -371,6 +374,7 @@ class GestorProcesos extends EventEmitter {
     registro.codigo = Number.isInteger(codigo) ? Number(codigo) : 1;
     const hijo = registro.hijo;
     registro.hijo = null;
+    registro.ptyProc = null;
     if (hijo) {
       try {
         hijo.stdin?.destroy();
@@ -400,7 +404,13 @@ class GestorProcesos extends EventEmitter {
     const registro = this.sesiones.get(String(id));
     if (!registro) return false;
     if (registro.vivo) {
-      if (registro.hijo) matarArbol(registro.hijo);
+      if (registro.ptyProc) {
+        // ConPTY mata el árbol y libera handles con su propio kill(); usar
+        // taskkill antes provoca que su agente auxiliar falle con AttachConsole.
+        try { registro.ptyProc.kill(); } catch { /* ya murió */ }
+      } else if (registro.hijo) {
+        matarArbol(registro.hijo);
+      }
       this._finalizar(registro, null);
     }
     return true;
@@ -443,21 +453,61 @@ class GestorProcesos extends EventEmitter {
  */
 export class Terminales extends GestorProcesos {
   /**
-   * @param {{ root?: string, maxBuffer?: number }} [opciones]
+   * @param {{ root?: string, maxBuffer?: number, env?: NodeJS.ProcessEnv, pty?: boolean }} [opciones]
    */
   constructor(opciones = {}) {
     super({ root: opciones.root, maxBuffer: opciones.maxBuffer, prefijo: "t", etiqueta: "terminal" });
     this.env = opciones.env || process.env;
+    this.pty = Boolean(opciones.pty);
+    /** @type {any | null} */
+    this.ptyModule = null;
+    if (this.pty) {
+      try {
+        this.ptyModule = require("node-pty");
+      } catch {
+        this.pty = false;
+      }
+    }
   }
 
   /**
-   * Abre una shell persistente con stdin, stdout y stderr por tuberías.
+   * Abre una shell persistente. Con `pty: true` y `node-pty` disponible usa
+   * ConPTY (colores, resize, TUI); si no, cae a tuberías como siempre.
    * @param {{ cwd?: string }} [opciones] `cwd` relativo a la raíz del proyecto
-   * @returns {{ id: string, cwd: string, shell: string }}
+   * @returns {{ id: string, cwd: string, shell: string, pty: boolean }}
    */
   abrir(opciones = {}) {
     const cwd = resolverCwd(this.root, opciones.cwd);
     const shell = definirShell();
+    if (this.pty && this.ptyModule) {
+      try {
+        const proceso = this.ptyModule.spawn(shell.archivo, shell.args, {
+          name: "xterm-256color",
+          cols: 100,
+          rows: 30,
+          cwd,
+          env: { ...this.env },
+          useConpty: ES_WINDOWS,
+        });
+        /** @type {any} */
+        const pseudo = {
+          pid: proceso.pid,
+          stdin: { write: (datos) => proceso.write(String(datos)), destroy: () => {} },
+          stdout: null,
+          stderr: null,
+          on: () => {},
+          kill: () => { try { proceso.kill(); } catch { /* ya murió */ } },
+        };
+        const registro = this._crear(cwd, shell.descripcion, pseudo);
+        registro.pty = true;
+        registro.ptyProc = proceso;
+        proceso.onData((datos) => this._volcarTexto(registro, datos));
+        proceso.onExit(({ exitCode }) => this._finalizar(registro, exitCode));
+        return { id: registro.id, cwd, shell: shell.descripcion, pty: true };
+      } catch {
+        // Si ConPTY falla en esta máquina, se intenta el modo tuberías.
+      }
+    }
     /** @type {import("node:child_process").ChildProcess} */
     let hijo;
     try {
@@ -473,7 +523,25 @@ export class Terminales extends GestorProcesos {
       throw new Error(`no se pudo abrir la shell (${shell.descripcion}): ${error instanceof Error ? error.message : String(error)}`);
     }
     const registro = this._crear(cwd, shell.descripcion, hijo);
-    return { id: registro.id, cwd, shell: shell.descripcion };
+    return { id: registro.id, cwd, shell: shell.descripcion, pty: false };
+  }
+
+  /**
+   * Ajusta el tamaño del PTY (solo si la sesión usa ConPTY).
+   * @param {string} id
+   * @param {number} cols
+   * @param {number} rows
+   * @returns {boolean}
+   */
+  resize(id, cols, rows) {
+    const registro = this.sesiones.get(String(id));
+    if (!registro?.vivo || !registro.ptyProc) return false;
+    try {
+      registro.ptyProc.resize(Math.max(20, Math.min(400, Number(cols) || 100)), Math.max(5, Math.min(200, Number(rows) || 30)));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**

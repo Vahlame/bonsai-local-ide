@@ -48,12 +48,84 @@
   let termDesde = 0;
   let termVivo = false;
   let generacion = 0;
+  let termPty = false;
+  let lineaXterm = "";
+  /** @type {any | null} */
+  let xterm = null;
+
+  function limpiarTerminal() {
+    lineaXterm = "";
+    if (xterm) xterm.reset();
+    else out.textContent = "";
+  }
 
   function pintarSalida(texto) {
     if (!texto) return;
-    // El servidor puede devolver la salida con \r\n; el <pre> ya conserva los saltos.
+    if (xterm) {
+      xterm.write(texto);
+      return;
+    }
+    // Fallback sin xterm: <pre> con scroll al final.
     out.textContent += texto;
     out.scrollTop = out.scrollHeight;
+  }
+
+  async function enviarDatos(datos) {
+    if (!termId || !termVivo) await abrirTerminal();
+    if (!termId) return;
+    try {
+      await api("/api/terminal", { cuerpo: { accion: "escribir", id: termId, datos } });
+    } catch (err) {
+      pintarSalida(`\n[no se pudo escribir en el terminal: ${err.message}]\n`);
+    }
+  }
+
+  try {
+    if (typeof window.BonsaiTerminal === "function") {
+      let resizeTimer = 0;
+      xterm = new window.BonsaiTerminal({
+        parent: out,
+        onResize: (cols, rows) => {
+          clearTimeout(resizeTimer);
+          resizeTimer = window.setTimeout(() => {
+            if (termId && termPty) {
+              void api("/api/terminal", { cuerpo: { accion: "resize", id: termId, cols, rows } }).catch(() => {});
+            }
+          }, 180);
+        },
+        onData: (datos) => {
+          if (termPty) {
+            void enviarDatos(datos);
+            return;
+          }
+          // Fallback sin PTY: xterm hace eco local y Enter manda una línea al
+          // shell por tuberías. Así sigue siendo usable aunque no haya ConPTY.
+          for (const ch of String(datos)) {
+            if (ch === "\r") {
+              const linea = lineaXterm;
+              lineaXterm = "";
+              if (linea.trim()) void enviarLinea(linea);
+            } else if (ch === "\u007f") {
+              if (lineaXterm) {
+                lineaXterm = lineaXterm.slice(0, -1);
+                xterm?.write("\b \b");
+              }
+            } else if (ch === "\u0003") {
+              void reiniciarTerminal();
+            } else if (ch >= " " && ch !== "\u001b") {
+              lineaXterm += ch;
+              xterm?.write(ch);
+            }
+          }
+        },
+      });
+      out.classList.add("xterm-host");
+    } else {
+      out.classList.add("term-fallback");
+    }
+  } catch {
+    xterm = null;
+    out.classList.add("term-fallback");
   }
 
   function pintarEstado() {
@@ -63,6 +135,15 @@
     drawerMeta.textContent = trozos.join(" · ");
   }
 
+  function enfocarTerminal() {
+    if (xterm) {
+      xterm.fit();
+      xterm.focus();
+    } else {
+      termIn.focus();
+    }
+  }
+
   async function abrirTerminal() {
     if (termId && termVivo) return;
     try {
@@ -70,8 +151,9 @@
       termId = String(r.id || "");
       termDesde = 0;
       termVivo = Boolean(r.vivo);
-      out.textContent = "";
-      pintarSalida(`Bonsai terminal · ${r.shell || "shell"} · ${r.cwd || "carpeta del proyecto"}\n`);
+      termPty = Boolean(r.pty);
+      limpiarTerminal();
+      pintarSalida(`Bonsai terminal · ${r.shell || "shell"} · ${r.cwd || "carpeta del proyecto"}${termPty ? " · PTY" : ""}\n`);
       pintarEstado();
     } catch (err) {
       pintarSalida(`\n[no se pudo abrir el terminal: ${err.message}]\n`);
@@ -87,7 +169,8 @@
     termId = "";
     termVivo = false;
     termDesde = 0;
-    out.textContent = "";
+    termPty = false;
+    limpiarTerminal();
     await abrirTerminal();
   }
 
@@ -296,6 +379,7 @@
       void analizar(cual === "problemas");
     } else {
       pintarEstado();
+      window.setTimeout(() => xterm?.fit(), 0);
     }
   }
 
@@ -308,7 +392,7 @@
     mostrarPanel(cual);
     if (panelActivo === "terminal") void abrirTerminal();
     else void analizar(true);
-    termIn.focus();
+    enfocarTerminal();
   }
 
   function cerrarCajon() {
@@ -327,7 +411,7 @@
       mostrarPanel(boton.dataset.drawer || "terminal");
       if (panelActivo === "terminal") {
         void abrirTerminal();
-        termIn.focus();
+        enfocarTerminal();
       } else {
         void analizar(true);
       }

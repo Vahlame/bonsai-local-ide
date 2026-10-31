@@ -21,6 +21,7 @@ import { ejecutarComando, lanzarEnFondo, matarArbol, recortarCentro } from "./pr
 import { NavegadorLocal } from "./navegador.mjs";
 import { McpPlaywright } from "./mcp-playwright.mjs";
 import { buscarWeb, leerWeb } from "./investigacion.mjs";
+import { buscarEstructural, buscarTexto } from "./code-search.mjs";
 import { cambiarConRecuperacion } from "./cambio-modelo.mjs";
 import { ocrLocal } from "./ocr.mjs";
 import { imagenesParaModelo } from "./imagenes.mjs";
@@ -104,7 +105,7 @@ let indiceCacheTs = 0;
 function sesionesTerminal() {
   if (!terminales || terminales.root !== workspaceRoot) {
     try { terminales?.cerrarTodo(); } catch { /* sin sesiones */ }
-    terminales = new Terminales({ root: workspaceRoot, env: shellEnv });
+    terminales = new Terminales({ root: workspaceRoot, env: shellEnv, pty: process.env.BONSAI_PTY !== "0" });
   }
   return terminales;
 }
@@ -1779,7 +1780,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy", memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480, engineEffort: "default", preguntarModelo: true };
+  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy", memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480, engineEffort: "default", preguntarModelo: true, editorModerno: false };
   // Los ajustes guardados en la interfaz (perfil de muestreo, tope de historial, pensar)
   // mandan sobre los valores por defecto de la línea de comandos. Va AQUÍ y no al principio
   // de main(): `AJUSTES_DEFECTO` es un `const` y llamarlo antes revienta el arranque con
@@ -2440,8 +2441,26 @@ async function main(args) {
           res.end(JSON.stringify({ error: "hacen falta 2 caracteres", resultados: [] }));
           return;
         }
+        const busqueda = await buscarTexto(workspaceRoot, q, { max: limite });
+        const resultados = busqueda.ok
+          ? busqueda.resultados.map(({ archivo, linea, texto }) => ({ rel: archivo, linea, texto }))
+          : buscarEnProyecto(q, limite);
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
-        res.end(JSON.stringify({ q, resultados: buscarEnProyecto(q, limite) }));
+        res.end(JSON.stringify({ q, motor: busqueda.ok ? busqueda.motor : "node-fallback", resultados }));
+        return;
+      }
+      // Búsqueda estructural (ast-grep) para JS/TS/TSX/HTML/CSS.
+      if (req.method === "GET" && url.pathname === "/api/search/estructural") {
+        const q = (url.searchParams.get("q") || "").trim();
+        const lang = (url.searchParams.get("lang") || "ts").trim();
+        if (q.length < 2) {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ error: "hacen falta 2 caracteres", resultados: [] }));
+          return;
+        }
+        const datos = await buscarEstructural(workspaceRoot, q, lang, { max: 80 });
+        res.writeHead(datos.ok ? 200 : 400, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(datos));
         return;
       }
       // ------------------------------------------------------------------ git
@@ -2912,12 +2931,13 @@ async function main(args) {
           res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("cuerpo no valido");
           return;
         }
-        const permitidas = ["tema", "perfil", "pensar", "verPensamiento", "reglas", "historial", "continuarAuto", "saltosTope", "comandoSegundos", "agentePerfil", "coderContextTokens", "modoRespuesta", "enginePreset", "engineKv", "engineVision", "memoriaGlobal", "memoriaGlobalAuto", "memoriaGlobalTokens"];
+        const permitidas = ["tema", "perfil", "pensar", "verPensamiento", "reglas", "historial", "continuarAuto", "saltosTope", "comandoSegundos", "agentePerfil", "coderContextTokens", "modoRespuesta", "enginePreset", "engineKv", "engineVision", "memoriaGlobal", "memoriaGlobalAuto", "memoriaGlobalTokens", "editorModerno"];
         /** @type {Record<string, unknown>} */
         const limpio = {};
         for (const k of permitidas) if (k in raw) limpio[k] = raw[k];
         if ("tema" in limpio && !["dark","light","slate","ocean","forest","sand"].includes(limpio.tema)) {res.writeHead(400).end("Tema inválido");return;}
         if ("verPensamiento" in limpio && typeof limpio.verPensamiento!=="boolean") {res.writeHead(400).end("Preferencia de pensamiento inválida");return;}
+        if ("editorModerno" in limpio && typeof limpio.editorModerno !== "boolean") {res.writeHead(400).end("Preferencia de editor inválida");return;}
         if ("engineVision" in limpio && typeof limpio.engineVision!=="boolean") {res.writeHead(400).end("Visión inválida");return;}
         if ("engineKv" in limpio && !["f16","q8_0","q4_0"].includes(limpio.engineKv)) {res.writeHead(400).end("KV inválida");return;}
         if ("memoriaGlobal" in limpio && typeof limpio.memoriaGlobal !== "boolean") {res.writeHead(400).end("Preferencia de memoria global inválida");return;}
@@ -3176,6 +3196,12 @@ async function main(args) {
             const leido = t.leer(id, desde);
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
             res.end(JSON.stringify(leido));
+            return;
+          }
+          if (accion === "resize") {
+            const ok = t.resize(id, Number(raw && raw.cols) || 100, Number(raw && raw.rows) || 30);
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok }));
             return;
           }
           if (accion === "cerrar") {
@@ -3520,7 +3546,7 @@ async function main(args) {
             // herramientas ni cambios no demuestra que el pedido esté resuelto.
             let finalVerificationOk = false;
             const checked = coder ? coder.accept(usadas) : {valid:usadas,errors:[]};
-            const specialized = (coder ? checked.valid : usadas).filter(c=>["escribir_partes","consultar_salida","mcp_playwright"].includes(c.name) || (coder && ["leer","indice","buscar_codigo","simbolo","git_diff"].includes(c.name)));
+            const specialized = (coder ? checked.valid : usadas).filter(c=>["escribir_partes","consultar_salida","mcp_playwright"].includes(c.name) || (coder && ["leer","indice","buscar_codigo","buscar_estructural","simbolo","git_diff"].includes(c.name)));
             const normal = (coder ? checked.valid : usadas).filter(c=>!specialized.includes(c));
             const effects = normal.length ? nativeToolEffects(normal) : null;
             // Llamadas NATIVAS: cada resultado vuelve a su llamada (mismo id que le pone

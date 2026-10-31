@@ -577,7 +577,10 @@
     .drawer-bar .sep { flex: 1; }
     .drawer-body { flex: 1; min-height: 0; display: flex; }
     #term-panel, #prob-panel, #outline-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-    #term-out { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 8px; white-space: pre-wrap; font: 12px/1.45 ui-monospace, Consolas, monospace; }
+    #term-out { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 0; white-space: normal; }
+    #term-out.term-fallback { padding: 8px; white-space: pre-wrap; font: 12px/1.45 ui-monospace, Consolas, monospace; }
+    #term-out .xterm { height: 100%; padding: 4px 6px; }
+    #term-out .xterm-viewport { background: #0d100b !important; }
     #term-form { display: flex; gap: 6px; padding: 5px 8px; flex: none; }
     #term-in { flex: 1; font: 12px/1.4 ui-monospace, Consolas, monospace; }
     #term-meta { padding: 0 8px 5px; font-size: 11px; opacity: .75; }
@@ -594,6 +597,7 @@
   <link rel="stylesheet" href="/ui/fuentes/fuentes.css">
   <!-- Sistema de diseno: se carga el ultimo para pulir lo anterior -->
   <link rel="stylesheet" href="/ui/tema.css">
+  <link rel="stylesheet" href="/ui/vendor/xterm.css">
   <script src="/ui/markdown.js"></script>
   <script src="/ui/iconos.js"></script>
 </head>
@@ -727,7 +731,7 @@
     </div>
     <div class="drawer-body">
       <div id="term-panel">
-        <pre id="term-out" aria-live="polite"></pre>
+        <div id="term-out" class="term-host" aria-live="polite"></div>
         <form id="term-form" autocomplete="off">
           <input id="term-in" placeholder="Comando y Enter · cd no cambia la carpeta del proyecto · Ctrl+C para detener">
           <button class="ghost" type="button" id="term-reiniciar">Reiniciar</button>
@@ -777,6 +781,9 @@
   <script src="/ui/ide.js"></script>
   <!-- Model Hub: catálogo, descargas reanudables y pruebas por modelo -->
   <script src="/ui/hub.js"></script>
+  <!-- Bundles locales opcionales: CodeMirror y xterm.js (sin CDN) -->
+  <script src="/ui/vendor/editor.js"></script>
+  <script src="/ui/vendor/terminal.js"></script>
   <!-- Editor con pestanas, paleta de comandos, busqueda, git y ajustes -->
   <script src="/ui/app.js"></script>
   <script src="/ui/paneles.js"></script>

@@ -5,19 +5,19 @@ Chat con agente, editor con pestañas, diffs, git, terminal integrado, navegador
 controlado y visión — todo en tu GPU, sin nube.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.0.0-cde86e">
+  <img alt="version" src="https://img.shields.io/badge/version-2.1.0-cde86e">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.0.0 — precisión local.** La misma filosofía, ahora con visión optimizada
-> (`sharp`, ≤1600 px), investigación web limpia (Readability + Turndown),
-> Model Hub con identidad de proveedor y avisos nativos opt-in. Se mantiene el
-> motor de 1.9: Qwen3.6-35B-A3B a **42,5 tok/s** en 8 GB y GPT-OSS-20B con
-> **18/18 tests** de proyecto real. **34 GGUF**, 7 modelos medidos y **0 nube**.
-> Notas: [RELEASE-2.0.0](docs/RELEASE-2.0.0.md).
+> **v2.1.0 — segunda capa.** Editor **CodeMirror 6** opt-in, terminal **xterm +
+> ConPTY**, búsqueda **ripgrep + ast-grep**, contratos **Zod** y build opcional
+> con **llguidance**. Se mantiene el motor de 2.0: Qwen3.6-35B-A3B a **42,5
+> tok/s** en 8 GB y GPT-OSS-20B con **18/18 tests** de proyecto real.
+> **34 GGUF**, 7 modelos medidos y **0 nube**. Notas:
+> [RELEASE-2.1.0](docs/RELEASE-2.1.0.md).
 
 ---
 
@@ -26,12 +26,13 @@ controlado y visión — todo en tu GPU, sin nube.
 | Área | Capacidad |
 |---|---|
 | **Agente** | Edita archivos, ejecuta comandos, corre tests, lee/crea archivos, plan persistente, hasta 192 pasos por turno |
-| **Editor** | Pestañas, Ctrl+S, Ctrl+K (edición con diff y guardado atómico), paleta (Ctrl+P), búsqueda (Ctrl+Shift+F) |
+| **Editor** | Pestañas, Ctrl+S, Ctrl+K (edición con diff y guardado atómico), paleta (Ctrl+P) y **CodeMirror 6 opt-in** con undo, multi-cursor, búsqueda y plegado |
 | **Contexto** | Tokenizer real del servidor, historial adaptativo y presupuesto honesto (ventana / solicitado / efectivo / reserva de salida) |
 | **Visión** | Imágenes pegadas o arrastradas, OCR local opcional, proyector en GPU y normalización `sharp` a ≤1600 px |
 | **Investigación** | Búsqueda web y lectura con Readability + Turndown; el texto llega como Markdown limpio, no como HTML con menús |
 | **Razonamiento** | Panel desplegable del *thinking*; presupuesto configurable (por defecto 4096 tokens) |
-| **Herramientas** | Terminal persistente, problemas/diagnósticos, esquema, ir a definición (F12), procesos en segundo plano |
+| **Herramientas** | Terminal persistente con **xterm + ConPTY** (fallback por tuberías), problemas/diagnósticos, esquema, ir a definición (F12), procesos en segundo plano |
+| **Búsqueda** | **ripgrep** con `.gitignore` y límite de tamaño; **ast-grep** para patrones AST en JS/TS/TSX/HTML/CSS |
 | **Navegador** | Playwright MCP aislado, `evaluar` para diagnósticos JS, WebGL/workers/HMR |
 | **Model Hub** | 34 GGUF, logos de proveedor, plan por modelo, descarga reanudable y SHA-256 |
 | **Avisos** | Notificación nativa opt-in al terminar un turno largo con la ventana oculta |
@@ -63,6 +64,32 @@ controlado y visión — todo en tu GPU, sin nube.
 
 ---
 
+## ⚡ Novedades 2.1
+
+![Novedades 2.1: editor, terminal, búsqueda y contratos](docs/graficos/novedades-2.1.svg)
+
+- **Editor CodeMirror 6 (opt-in).** Se activa en **Ajustes → Editor moderno**.
+  Trae undo/redo real, multi-cursor, búsqueda, plegado y autocompletado, con el
+  bundle servido en local. El editor clásico sigue disponible y es el
+  *fallback* si el bundle no está. La vista de diff/merge de CodeMirror queda
+  como siguiente paso, no se promete en esta release.
+- **Terminal xterm + ConPTY.** El panel inferior usa **xterm.js 6** y
+  `node-pty` para colores, resize y programas TUI. Si el módulo nativo no está,
+  cae al modo tuberías y a un `<pre>` sin romper nada. `BONSAI_PTY=0` fuerza el
+  modo clásico.
+- **Búsqueda de código de verdad.** `Ctrl+Shift+F` usa **ripgrep** (respeta
+  `.gitignore`, límite de 800 KB por archivo) y el agente gana
+  `buscar_estructural` con **ast-grep** (`console.log($$$ARGS)`, etc.) en
+  JS/TS/TSX/HTML/CSS.
+- **Contratos de herramientas.** **Zod 4** define y valida los argumentos de las
+  tools nuevas y genera JSON Schema reproducible. La build opcional con
+  **llguidance** fuerza ese schema durante la decodificación.
+- **Release verificada.** **45/45** suites aisladas, **7/7** en navegador y
+  `npm audit` limpio. Los bundles de CodeMirror y xterm viajan en el repo; no
+  hay CDN.
+
+---
+
 ## 🧬 Evolución
 
 ![Evolución de Bonsai hasta 2.0](docs/graficos/evolucion-2.0.svg)
@@ -76,6 +103,7 @@ controlado y visión — todo en tu GPU, sin nube.
 | **1.8** | Catálogo | 25 modelos, descubrimiento en Hugging Face y visión |
 | **1.9** | MoE híbrido | 35B en 8 GB, `--load-mode none` y **42,5 tok/s** |
 | **2.0** | Precisión | Visión 1600 px, research limpio, logos y release reproducible |
+| **2.1** | Segunda capa | CodeMirror, xterm/PTY, ripgrep/ast-grep, Zod y llguidance opcional |
 
 ---
 
@@ -490,10 +518,22 @@ la UI**. Estas son las que entraron en 2.0 y por qué:
 | `turndown` 7.2.4 + GFM | Comunidad / MIT | Convertir el artículo a Markdown limpio y tablas |
 | `linkedom` 0.18.14 | Comunidad / ISC | DOM en Node sin lanzar un navegador |
 | `@lobehub/icons-static-svg` 1.101.0 | LobeHub / MIT | Logos de proveedores de modelos, servidos en local |
+| `codemirror` + lenguajes 6.x | Comunidad / MIT | Editor moderno opt-in, empaquetado localmente |
+| `@xterm/xterm` 6.0 + addons | Comunidad / MIT | Terminal real en el panel inferior |
+| `node-pty` 1.1.0 (opcional) | Microsoft / MIT | ConPTY para colores, resize y TUI |
+| `@vscode/ripgrep` 1.18.0 | Microsoft / MIT | Búsqueda textual rápida y respetuosa con `.gitignore` |
+| `@ast-grep/napi` 0.51.0 | Comunidad / MIT | Búsqueda y reescritura estructural en JS/TS/HTML/CSS |
+| `zod` 4.6.7 | Comunidad / MIT | Contratos de herramientas y JSON Schema |
+| `esbuild` 0.28.2 (dev) | Comunidad / MIT | Bundles locales de CodeMirror y xterm |
 
 Las dependencias históricas siguen siendo deliberadamente pocas: Playwright,
 MCP, TypeScript, tree-sitter y el language server de TypeScript. El resto del
 IDE —agente, contexto, diffs, terminal, Markdown, seguridad— es propio.
+
+`llguidance` no es una dependencia npm: es una opción de compilación de
+llama.cpp (`npm run build:llguidance`, requiere Rust). Si no se compila, todo
+funciona igual con GBNF/JSON Schema normal. Ver
+[LLGUIDANCE](docs/LLGUIDANCE.md).
 
 La auditoría completa, la lista de *no adoptadas* y las que sí valdría la pena
 probar después están en [DEPENDENCIAS-2.0](docs/DEPENDENCIAS-2.0.md).
@@ -524,21 +564,25 @@ probar después están en [DEPENDENCIAS-2.0](docs/DEPENDENCIAS-2.0.md).
 Configura llama.cpp para **sm89** (Ada): FlashAttention v2, CUDA graphs,
 `FATTN_TILE_SIZE=128`, 4 warps, `GGML_CUDA_FA_ALL_QUANTS=ON`. La comparativa y
 flags están en [RTX4060_OPTIMIZATION_GUIDE](docs/RTX4060_OPTIMIZATION_GUIDE.md).
+Para structured outputs estrictos: `npm run build:llguidance` (requiere Rust;
+ver [LLGUIDANCE](docs/LLGUIDANCE.md)).
+
+Los bundles de la UI se regeneran con `npm run build:ui-vendor`; no hay CDN.
 
 ---
 
 ## 🧪 Pruebas
 
 ```powershell
-npm test                    # 43 suites aisladas (sin GPU) ~2 min
+npm test                    # 45 suites aisladas (sin GPU) ~2 min
 npm run test:navegador      # Edge/Chrome headless (UI, Ctrl+K, primer arranque)
 npm run test:gpu            # requiere el modelo real cargado
 npm run test:gpu-exclusiva  # calidad KV; exige GPU libre
 node scripts/run-tests.mjs --listar   # ver suites por grupo
 ```
 
-Verificación de la **2.0.0**: `npm test` → **43/43**, `npm run test:navegador` →
-**6/6**, `npm audit` → **0 vulnerabilidades**, primer arranque sin modelos
+Verificación de la **2.1.0**: `npm test` → **45/45**, `npm run test:navegador` →
+**7/7**, `npm audit` → **0 vulnerabilidades**, primer arranque sin modelos
 verificado, IDE en ventana propia con **0 MiB de VRAM** y capturas revisadas a
 1920×1080, 1600×900, 1366×768 y 1024×768.
 
@@ -582,8 +626,10 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 | Documento | Contenido |
 |---|---|
 | [PRIMER-ARRANQUE](docs/PRIMER-ARRANQUE.md) | Clon limpio: dependencias, runtime, modelos y primer modelo |
+| [RELEASE-2.1.0](docs/RELEASE-2.1.0.md) | CodeMirror, xterm/PTY, ripgrep/ast-grep, Zod y llguidance |
 | [RELEASE-2.0.0](docs/RELEASE-2.0.0.md) | Precisión local: visión, research, Hub y release |
 | [DEPENDENCIAS-2.0](docs/DEPENDENCIAS-2.0.md) | Auditoría de dependencias, licencias y siguiente capa |
+| [LLGUIDANCE](docs/LLGUIDANCE.md) | Build opcional para structured outputs y tool calls |
 | [RELEASE-1.9.0](docs/RELEASE-1.9.0.md) | MoE híbrido: 30–35B en 8 GB VRAM |
 | [RELEASE-1.8.0](docs/RELEASE-1.8.0.md) | Catálogo de 25 modelos y descubrimiento online |
 | [RELEASE-1.7.0](docs/RELEASE-1.7.0.md) | Model Hub, plan por modelo y Model Lab |
@@ -606,6 +652,7 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 | [CONTEXTO-Y-DIAGNOSTICO](docs/CONTEXTO-Y-DIAGNOSTICO.md) | Métricas, límites y diagnóstico |
 | [SMALL-LOCAL-CODER](docs/SMALL-LOCAL-CODER.md) | Perfil de coding con contexto selectivo |
 | [ARQUITECTURA-Y-PLAN-MAESTRO](docs/archive/ARQUITECTURA-Y-PLAN-MAESTRO.md) | Decisiones de diseño (histórico) |
+| [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES.md) | Licencias de dependencias y binarios |
 | [CHANGELOG](CHANGELOG.md) | Historial de versiones |
 
 ---

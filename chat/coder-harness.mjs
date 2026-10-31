@@ -4,6 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { execFileSync, spawn } from "node:child_process";
 import { CodeContext, parseCode, projectFiles } from "./code-context.mjs";
+import { buscarEstructural } from "./code-search.mjs";
 import { rutaProyecto } from "./archivos-seguros.mjs";
 import { diagnosticarArchivo } from "./diagnosticos.mjs";
 import { SYSTEM_RULES, AGENT_WORKFLOW, TOOL_WORKFLOW, CODER_TOOL_WORKFLOW, estimateTokens, takeHeadByTokens } from "./context.mjs";
@@ -107,6 +108,16 @@ export const CODER_TOOLS = [
     "Búsqueda textual local literal; devuelve rutas y líneas.",
     { consulta: str },
     ["consulta"],
+  ),
+  tool(
+    "buscar_estructural",
+    "Búsqueda AST con metavariables ($X, $$$ARGS) en JS/TS/TSX/HTML/CSS. Úsala para 'todas las llamadas a X' o patrones de forma.",
+    {
+      patron: str,
+      lenguaje: { type: "string", enum: ["ts", "tsx", "js", "jsx", "html", "css"] },
+      max: { type: "integer", minimum: 1, maximum: 120 },
+    },
+    ["patron", "lenguaje"],
   ),
   tool(
     "simbolo",
@@ -464,6 +475,7 @@ export class CoderTask {
             "leer",
             "indice",
             "buscar_codigo",
+            "buscar_estructural",
             "simbolo",
             "git_diff",
           ].includes(call.name)
@@ -518,6 +530,14 @@ export class CoderTask {
     await this.context.refresh();
     let result;
     if (call.name === "buscar_codigo") result = this.context.search(a.consulta);
+    else if (call.name === "buscar_estructural") {
+      const busqueda = await buscarEstructural(this.root, a.patron, a.lenguaje, { max: a.max });
+      result = busqueda.ok
+        ? busqueda.resultados.length
+          ? busqueda.resultados.map((r) => `${r.archivo}:${r.linea}:${r.columna}: ${r.texto}`).join("\n")
+          : "Sin coincidencias estructurales."
+        : `Error de ast-grep: ${busqueda.error}`;
+    }
     else if (call.name === "simbolo") {
       result = this.context.search(a.nombre, {
         symbol: true,

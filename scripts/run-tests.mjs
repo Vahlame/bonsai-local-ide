@@ -41,6 +41,8 @@ const AISLADAS = [
   { archivo: "chat/prueba-entorno-local.mjs" },
   { archivo: "chat/prueba-investigacion.mjs" },
   { archivo: "chat/prueba-imagenes.mjs", timeout: 120_000 },
+  { archivo: "chat/prueba-code-search.mjs", timeout: 120_000 },
+  { archivo: "chat/prueba-tool-schemas.mjs" },
   { archivo: "chat/prueba-terminal.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-diagnosticos.mjs", timeout: 180_000 },
   { archivo: "chat/editar.mjs" },
@@ -104,6 +106,7 @@ const NAVEGADOR = [
   { archivo: "chat/prueba-navegador.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-navegador-aislamiento.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-ui-humo.mjs", timeout: 180_000 },
+  { archivo: "chat/prueba-editor-moderno.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-inicio-modelo.mjs", timeout: 180_000 },
 ];
 

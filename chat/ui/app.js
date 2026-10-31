@@ -348,7 +348,7 @@
 
   // ================================================================== ajustes
   /** @type {{tema: string, perfil: string, pensar: number, reglas: boolean, historial: number}} */
-  let ajustes = { tema: "slate", perfil: "codigo", pensar: 0, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, preguntarModelo: true };
+  let ajustes = { tema: "slate", perfil: "codigo", pensar: 0, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, preguntarModelo: true, editorModerno: false };
 
   const TEMAS = [["slate","Grafito"],["ocean","Niebla azul"],["forest","Bosque"],["sand","Arena"],["light","Marfil"],["dark","Medianoche"]];
   function siguienteTema() { const i=TEMAS.findIndex(([v])=>v===ajustes.tema); return TEMAS[(i+1)%TEMAS.length][0]; }
@@ -411,6 +411,69 @@
 
   const editor = $("#editor");
   const code = $("#code");
+
+  // CodeMirror es opt-in: si el bundle no está o el ajuste está apagado, el
+  // editor textarea/pre de siempre sigue siendo el camino principal.
+  const cmWrap = el("div", "editor-cm");
+  cmWrap.hidden = true;
+  editor?.append(cmWrap);
+  // CodeMirror captura sus propios atajos: Ctrl+K/Ctrl+S se enrutan aquí para
+  // que el comportamiento sea idéntico al editor clásico.
+  cmWrap.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+    const k = String(e.key || "").toLowerCase();
+    if (k === "k") {
+      e.preventDefault();
+      e.stopPropagation();
+      void editarSeleccion();
+    } else if (k === "s") {
+      e.preventDefault();
+      e.stopPropagation();
+      void guardarActiva();
+    }
+  }, true);
+  /** @type {any | null} */
+  let cm = null;
+  let cmListo = false;
+  const editorModerno = () => ajustes.editorModerno === true && typeof window.BonsaiCodeEditor === "function";
+
+  function asegurarCM() {
+    if (cm || !editorModerno()) return cm;
+    cm = new window.BonsaiCodeEditor({
+      parent: cmWrap,
+      doc: "",
+      rel: "",
+      onChange: (doc) => {
+        const p = pestanas[activa];
+        if (!p || !cm) return;
+        p.texto = doc;
+        openedText = doc;
+        p.cursor = cm.getCursor().offset;
+        clearTimeout(temporizadorResaltado);
+        temporizadorResaltado = window.setTimeout(() => {
+          if (pestanas[activa] !== p) return;
+          pintarNota(p);
+          pintarPestanas();
+        }, 70);
+      },
+      onCursor: () => {
+        const p = pestanas[activa];
+        if (p && cm) p.cursor = cm.getCursor().offset;
+      },
+    });
+    cmListo = true;
+    return cm;
+  }
+
+  function apagarCM() {
+    if (cm) {
+      try { cm.destroy(); } catch { /* ya estaba cerrado */ }
+      cm = null;
+    }
+    cmListo = false;
+    cmWrap.hidden = true;
+    cmWrap.replaceChildren();
+  }
 
   // Barra de pestañas (se inserta antes del título antiguo, que queda oculto).
   const tabs = el("div", "tabs");
@@ -501,6 +564,7 @@
   /** Estado "sin archivo abierto". */
   function pintarVacio() {
     wrap.hidden = true;
+    if (cmWrap) cmWrap.hidden = true;
     nota.hidden = true;
     if (code) {
       code.hidden = false;
@@ -518,21 +582,36 @@
     if (i < 0 || i >= pestanas.length) return;
     clearTimeout(temporizadorResaltado);
     // Guarda dónde estaba el cursor en la pestaña que se deja.
-    if (activa >= 0 && pestanas[activa]) pestanas[activa].cursor = area.selectionStart;
+    if (activa >= 0 && pestanas[activa]) {
+      pestanas[activa].cursor = cm && !cmWrap.hidden ? cm.getCursor().offset : area.selectionStart;
+    }
     activa = i;
     const p = pestanas[i];
     opened = p.rel;
     openedText = p.texto;
     if (tituloViejo) tituloViejo.textContent = p.rel;
     if (code) code.hidden = true;
-    wrap.hidden = false;
-    area.value = p.texto;
-    area.readOnly = p.truncado;
-    area.classList.toggle("plain", !esEditable(p.rel));
-    pintarResaltado(p);
+    if (editorModerno()) {
+      const c = asegurarCM();
+      wrap.hidden = true;
+      cmWrap.hidden = false;
+      if (c) {
+        c.setDoc(p.texto, p.rel, p.cursor);
+        c.setReadOnly(p.truncado);
+        c.requestMeasure();
+        if (enfocar) c.focus();
+      }
+    } else {
+      if (cmWrap) cmWrap.hidden = true;
+      wrap.hidden = false;
+      area.value = p.texto;
+      area.readOnly = p.truncado;
+      area.classList.toggle("plain", !esEditable(p.rel));
+      pintarResaltado(p);
+      if (enfocar) area.focus({ preventScroll: true });
+      area.setSelectionRange(Math.min(p.cursor, p.texto.length), Math.min(p.cursor, p.texto.length));
+    }
     pintarNota(p);
-    if (enfocar) area.focus({ preventScroll: true });
-    area.setSelectionRange(Math.min(p.cursor, p.texto.length), Math.min(p.cursor, p.texto.length));
     pintarPestanas();
     if (typeof paintAttached === "function") paintAttached();
     if (typeof paintTree === "function") paintTree();
@@ -565,6 +644,7 @@
 
   /** @param {typeof pestanas[number]} p */
   function pintarResaltado(p) {
+    if (editorModerno()) return;
     const texto = area.value;
     hl.innerHTML = esEditable(p.rel) && texto.length <= 120_000 ? BonsaiMd.highlight(texto, extension(p.rel)) : BonsaiMd.esc(texto);
     const lineas = texto.split("\n").length;
@@ -733,6 +813,10 @@
   window.bonsaiEditor = () => {
     const p = pestanas[activa];
     if (!p) return null;
+    if (cm && !cmWrap.hidden) {
+      const cursor = cm.getCursor();
+      return { rel: p.rel, texto: p.texto, linea: cursor.line, columna: cursor.col, cursor: cursor.offset };
+    }
     const antes = area.value.slice(0, area.selectionStart);
     return { rel: p.rel, texto: area.value, linea: antes.split(/\r?\n/).length, columna: antes.length - antes.lastIndexOf("\n"), cursor: area.selectionStart };
   };
@@ -747,6 +831,12 @@
     let off = 0;
     for (let i = 0; i < l - 1; i += 1) off += (lineas[i] || "").length + 1;
     mostrarPestana(pestanas.indexOf(p));
+    if (cm && !cmWrap.hidden) {
+      cm.setSelection(off, Math.min(p.texto.length, off + 1));
+      cm.scrollToLine(l);
+      cm.focus();
+      return;
+    }
     area.value = p.texto;
     area.focus();
     area.setSelectionRange(off, Math.min(area.value.length, off + 1));
@@ -756,7 +846,14 @@
   window.bonsaiAvisar = avisar;
   window.selectionInsideEditor = function selectionInsideEditor() {
     const p = pestanas[activa];
-    if (!p || area.selectionStart === area.selectionEnd) return null;
+    if (!p) return null;
+    if (cm && !cmWrap.hidden) {
+      const seleccion = cm.getSelection();
+      if (!seleccion.text.trim()) return null;
+      const inicio = p.texto.slice(0, seleccion.from).split("\n").length;
+      return { start: inicio, end: inicio + seleccion.text.split("\n").length - 1, text: seleccion.text };
+    }
+    if (area.selectionStart === area.selectionEnd) return null;
     const texto = area.value.slice(area.selectionStart, area.selectionEnd);
     if (!texto.trim()) return null;
     const inicio = area.value.slice(0, area.selectionStart).split("\n").length;
@@ -1789,6 +1886,23 @@
       try { localStorage.setItem("bonsai-notificar", notificar.checked ? "1" : "0"); } catch { /* modo privado */ }
     });
 
+    // Editor CodeMirror 6: opt-in. Si el bundle no está, el checkbox queda
+    // deshabilitado y la UI sigue usando el editor clásico.
+    const editorCm = el("input");
+    editorCm.type = "checkbox";
+    editorCm.checked = ajustes.editorModerno === true;
+    editorCm.disabled = typeof window.BonsaiCodeEditor !== "function";
+    editorCm.title = editorCm.disabled
+      ? "El bundle de CodeMirror no está disponible en esta instalación"
+      : "Editor con resaltado, autocompletado, búsqueda y plegado";
+    editorCm.setAttribute("aria-label", "Editor moderno CodeMirror");
+    editorCm.addEventListener("change", async () => {
+      await guardarAjustes({ editorModerno: editorCm.checked });
+      if (!editorCm.checked) apagarCM();
+      if (activa >= 0) mostrarPestana(activa, false);
+      if (editorCm.checked) avisar("Editor moderno activado. Se aplica al abrir la próxima pestaña.", "ok", 4000);
+    });
+
     const perfil = el("select");
     for (const [v, t] of [["codigo", "Código (ajustes del modelo)"], ["chat", "Chat (temp 0.7)"]]) {
       const o = el("option", "", t);
@@ -1984,6 +2098,7 @@
     caja.append(
       el("h4","settings-section","Apariencia"),
       fila("Tema", tema),
+      fila("Editor moderno (CodeMirror)", editorCm),
       fila("Mostrar pensamiento expandido", verPensamiento),
       fila("Avisar al terminar (ventana oculta)", notificar),
       el("h4","settings-section","Modelo y respuesta"),

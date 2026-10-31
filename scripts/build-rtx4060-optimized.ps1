@@ -18,7 +18,8 @@ param(
     [ValidateSet('RTX4060-Opt', 'RTX4060-Opt-MMQ', 'RTX4060-Opt-NoGraphs')][string]$Variant = 'RTX4060-Opt',
     [ValidateRange(1,8)][int]$Jobs = 4,
     [switch]$LTO,
-    [switch]$Clean
+    [switch]$Clean,
+    [switch]$Llguidance
 )
 
 $ErrorActionPreference = 'Stop'
@@ -155,6 +156,7 @@ $Config = @(
     '-DLLAMA_BUILD_TOOLS=ON',
     '-DLLAMA_BUILD_SERVER=ON',
     '-DLLAMA_BUILD_NUMBER=10743',
+    "-DLLAMA_LLGUIDANCE=$(if($Llguidance){'ON'}else{'OFF'})",
     "-DGGML_LTO=$(if($LTO){'ON'}else{'OFF'})"
 ) + $ExtraDefs
 
@@ -185,6 +187,7 @@ $Info = [ordered]@{
     commit = $ActualCommit;
     architecture = $Architecture; 
     jobs = $Jobs; 
+    llguidance = [bool]$Llguidance;
     source = $Source; 
     build = $Build;
     binary = (Join-Path $Bin 'llama-server.exe'); 

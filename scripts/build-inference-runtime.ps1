@@ -1,7 +1,8 @@
 param(
     [ValidateSet('Auto','MMQ','CUBLAS','NoGraphs')][string]$Variant = 'Auto',
     [ValidateRange(1,8)][int]$Jobs = 2,
-    [switch]$LTO
+    [switch]$LTO,
+    [switch]$Llguidance
 )
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
@@ -50,6 +51,7 @@ $Config = @('-S',$Source,'-B',$Build,'-G','Ninja',
     "-DGGML_CUDA_FORCE_MMQ=$(if($Variant -eq 'MMQ'){'ON'}else{'OFF'})",
     "-DGGML_CUDA_FORCE_CUBLAS=$(if($Variant -eq 'CUBLAS'){'ON'}else{'OFF'})",
     "-DGGML_CUDA_GRAPHS=$(if($Variant -eq 'NoGraphs'){'OFF'}else{'ON'})",
+    "-DLLAMA_LLGUIDANCE=$(if($Llguidance){'ON'}else{'OFF'})",
     "-DGGML_LTO=$(if($LTO){'ON'}else{'OFF'})")
 & $Tools.cmake @Config
 if ($LASTEXITCODE -ne 0) { throw 'CMake configuration failed' }
@@ -64,7 +66,7 @@ $ReportDir = Join-Path $ProjectRoot 'reports\coder-phase2'
 New-Item -ItemType Directory -Path $ReportDir -Force | Out-Null
 $Info = [ordered]@{
     createdAt = (Get-Date).ToUniversalTime().ToString('o'); variant = $Variant; commit = $ActualCommit;
-    architecture = $Architecture; jobs = $Jobs; source = $Source; build = $Build;
+    architecture = $Architecture; jobs = $Jobs; llguidance = [bool]$Llguidance; source = $Source; build = $Build;
     binary = (Join-Path $Bin 'llama-server.exe'); configuration = $Config;
     files = @(Get-ChildItem -LiteralPath $Bin -File | Where-Object { $_.Extension -in @('.exe','.dll') } | ForEach-Object {
         [ordered]@{name=$_.Name;bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower()}

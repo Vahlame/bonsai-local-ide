@@ -15,6 +15,24 @@ motor llama.cpp.
 4. **Reversible:** si falla, debe existir un *fallback* o una bandera.
 5. **Versión exacta + lockfile:** nada de rangos flotantes en producción.
 
+## Actualización 2.1
+
+En 2.1 se adoptaron las dependencias que estaban en la lista de “siguiente
+capa”. Todas son locales, con versión exacta y licencia permisiva:
+
+| Paquete | Versión | Origen | Licencia | Función |
+|---|---:|---|---|---|
+| `codemirror` + lenguajes | 6.x | Comunidad | MIT | Editor opt-in |
+| `@xterm/xterm` + addons | 6.0 / 0.11-0.12 | Comunidad | MIT | Terminal web |
+| `node-pty` | 1.1.0 | Microsoft | MIT | ConPTY (opcional) |
+| `@vscode/ripgrep` | 1.18.0 | Microsoft | MIT | Búsqueda textual |
+| `@ast-grep/napi` | 0.51.0 | Comunidad | MIT | Búsqueda estructural |
+| `zod` | 4.6.7 | Comunidad | MIT | Schemas de herramientas |
+| `esbuild` | 0.28.2 | Comunidad | MIT | Bundles de UI (dev) |
+
+`llguidance` no es npm: es una opción de build (`-DLLAMA_LLGUIDANCE=ON`) que
+requiere Rust. Ver [LLGUIDANCE](LLGUIDANCE.md).
+
 ## Dependencias directas después de 2.0
 
 | Paquete | Versión | Origen | Licencia | Función |
@@ -68,16 +86,16 @@ fijadas sin `^` y el lockfile se versiona.
 - **Marcas:** los logos son marcas de sus titulares; se usan de forma nominativa
   para identificar el modelo. No implican afiliación.
 
-## Evaluadas y no adoptadas todavía
+## Adoptadas en 2.1
+
+CodeMirror 6, xterm.js + node-pty, `@ast-grep/napi`, `@vscode/ripgrep`, Zod 4 y
+la build opcional de llguidance dejaron de ser candidatas: están integradas con
+*fallback* y pruebas. Ver la sección “Actualización 2.1” al principio.
+
+## Pendientes de evaluar
 
 | Candidata | Por qué no entra aún | Cuándo sí |
 |---|---|---|
-| **CodeMirror 6** | Cambia el editor completo; exige migración y pruebas de regresión | Próxima release de UI, detrás de bandera |
-| **xterm.js + node-pty** | `node-pty` es nativo y complica la distribución | Cuando se empaquete el binario precompilado |
-| **@ast-grep/napi** | Muy potente, pero duplica parte de tree-sitter hasta rediseñar las herramientas | Cuando el agente necesite reescritura estructural masiva |
-| **@vscode/ripgrep + ignore** | `projectFiles` ya usa `git ls-files --exclude-standard` en repos Git | Workspaces sin Git o búsquedas fuera del índice |
-| **Zod 4** | El SDK de MCP ya lo trae como transitiva; falta unificar schemas de herramientas | Cuando se generen JSON Schemas para llama.cpp |
-| **llguidance** | Requiere Rust/cargo y actualizar el pin de llama.cpp | Build experimental para tool-calling estricto |
 | **sccache** | No cambia el runtime; es velocidad de desarrollo | Cuando se compilen variantes con frecuencia |
 | **sqlite-vec** | La recuperación léxica + tree-sitter funciona; añadir embeddings crea índice y modelo extra | Si se mide que falla la recuperación semántica |
 | **@playwright/test + axe-core** | La suite actual ya cubre UI; migrar requiere tiempo | Cuando se quiera reporte HTML, traces y auditoría a11y continua |
@@ -102,10 +120,11 @@ fijadas sin `^` y el lockfile se versiona.
 - **Versiones exactas** en `chat/package.json`; lockfile versionado; `npm ci` en
   instalaciones limpias.
 - **`npm audit`** en cada release; hoy 0 vulnerabilidades.
-- **Módulos nativos** (`sharp`, y en el futuro `node-pty`, `better-sqlite3`,
-  `@ast-grep/napi`) deben probarse en una VM Windows limpia con Node 22/24.
+- **Módulos nativos** (`sharp`, `node-pty`, `@ast-grep/napi`; en el futuro
+  `better-sqlite3`) deben probarse en una VM Windows limpia con Node 22/24.
 - **`postinstall`:** evitar paquetes que descarguen binarios sin verificación.
-  Si se adopta `@vscode/ripgrep`, vendorizar `rg.exe`.
+  `@vscode/ripgrep` ya está adoptado; vendorizar `rg.exe` para instalaciones
+  offline.
 - **Licencias:** `sharp` incluye libvips (LGPL-3.0); `jszip` es dual
   MIT/GPL-3.0; `7zip-bin` es LGPL; `dugite` y `aria2` arrastran GPLv2. No
   distribuir binarios GPL sin cumplir sus términos.
@@ -116,10 +135,10 @@ fijadas sin `^` y el lockfile se versiona.
 
 1. **`tsc --checkJs` + JSDoc** en los módulos críticos: cero runtime, muchos
    errores menos.
-2. **`@vscode/ripgrep` + `ignore`** para workspaces sin Git.
-3. **`@ast-grep/napi`** para edición estructural.
-4. **CodeMirror 6** para el editor.
-5. **xterm.js + node-pty** para el terminal.
-6. **`llguidance`** como build experimental de tool-calling.
+2. **`sccache`** para acelerar rebuilds de llama.cpp.
+3. **`sqlite-vec`** solo si la recuperación léxica se queda corta.
+4. **`@playwright/test` + axe-core** para traces y auditoría a11y continua.
+5. **`promptfoo`/`lm-eval`** como capa externa de evaluación y model cards.
+6. **Puente LSP ↔ CodeMirror** para diagnósticos y autocompletado en vivo.
 
 Cada una debe pasar `npm test`, `npm run test:navegador` y no subir la VRAM.

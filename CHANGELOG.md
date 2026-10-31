@@ -4,6 +4,45 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.1.0] - 2026-10-31
+
+### Añadido
+
+- **Editor CodeMirror 6 opt-in**: bundle local de ~907 KB, lenguajes JS/TS/TSX,
+  Python, JSON, HTML, CSS, Markdown, Rust, Go, Java y C/C++; undo/redo,
+  multi-cursor, búsqueda, plegado, autocompletado y Ctrl+K/Ctrl+S integrados.
+  Se activa en Ajustes → Editor moderno y el editor clásico queda como fallback.
+- **Terminal xterm + ConPTY**: `@xterm/xterm` 6, `@xterm/addon-fit`,
+  `@xterm/addon-web-links` y `node-pty` 1.1 opcional. Colores, resize y TUI;
+  fallback automático a tuberías y `<pre>` si el módulo nativo no está.
+  `BONSAI_PTY=0` fuerza el modo clásico.
+- **Búsqueda con ripgrep**: `/api/search` usa `@vscode/ripgrep` (MIT), respeta
+  `.gitignore`, limita a 800 KB por archivo y conserva el fallback Node.
+- **Búsqueda estructural**: `@ast-grep/napi` y la herramienta
+  `buscar_estructural` para patrones AST con metavariables en JS/TS/TSX/HTML/CSS.
+- **Contratos Zod 4**: schemas de las tools nuevas, validación y generación de
+  JSON Schema reproducible (`chat/tool-schemas.mjs`).
+- **llguidance opcional**: flags `-Llguidance` en los builds CUDA, script
+  `npm run build:llguidance` y guía `docs/LLGUIDANCE.md`.
+- Bundles locales `chat/ui/vendor/editor.js`, `terminal.js` y `xterm.css`, más
+  script `npm run build:ui-vendor`.
+
+### Cambiado
+
+- `/api/search` devuelve `motor` y usa ripgrep cuando está disponible.
+- El terminal informa `pty: true/false` y acepta `accion: "resize"`.
+- Ajustes persiste `editorModerno: false` por defecto.
+- `npm test` sube a **45 suites aisladas**; navegador a **7 suites**.
+- Versión **2.1.0**.
+
+### Seguridad
+
+- ripgrep no lee archivos de más de 800 KB y respeta `.gitignore`; ast-grep usa
+  la lista de archivos del proyecto, que omite `node_modules`, `.git`, modelos y
+  artefactos.
+- `npm audit`: **0 vulnerabilidades**.
+- Sin CDN: CodeMirror y xterm se sirven desde `chat/ui/vendor/`.
+
 ## [2.0.0] - 2026-10-31
 
 ### Añadido
