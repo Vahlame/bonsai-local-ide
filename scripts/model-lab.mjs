@@ -80,10 +80,15 @@ async function vramUsada() {
 }
 
 async function esperarGpuLibre(umbral = 7000) {
-  for (let i = 0; i < 30; i += 1) {
-    const libre = (await vramInfo()).libreMiB;
-    if (libre >= umbral) return true;
-    await sleep(1000);
+  let estables = 0;
+  for (let i = 0; i < 60; i += 1) {
+    const libre = (await vramInfo(true)).libreMiB;
+    if (libre >= umbral) estables += 1;
+    else estables = 0;
+    // Dos medidas seguidas: evita arrancar mientras el servidor anterior aún
+    // está soltando el contexto CUDA.
+    if (estables >= 2) return true;
+    await sleep(700);
   }
   return false;
 }

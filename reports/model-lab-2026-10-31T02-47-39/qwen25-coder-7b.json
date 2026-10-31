@@ -1,0 +1,88 @@
+{
+  "clave": "qwen25-coder-7b",
+  "nombre": "Qwen2.5 Coder 7B Instruct",
+  "archivo": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+  "fecha": "2026-10-31T02:57:00.810Z",
+  "plan": {
+    "ok": true,
+    "contexto": 32768,
+    "kv": "f16",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 4467,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 469,
+    "kvMiB": 1792,
+    "kvFijoMiB": 0,
+    "totalMiB": 7878,
+    "libreMiB": 7956,
+    "disponibleMiB": 1870,
+    "ctxNativo": 32768,
+    "alternativas": {
+      "f16": {
+        "contexto": 32768,
+        "totalMiB": 7878
+      },
+      "q8_0": {
+        "contexto": 32768,
+        "totalMiB": 7038
+      },
+      "q4_0": {
+        "contexto": 32768,
+        "totalMiB": 6590
+      }
+    },
+    "motivo": "f16 a 32.768 tokens; quedan 78 MiB de margen real",
+    "nombre": "Qwen2.5 Coder 7B Instruct"
+  },
+  "arranqueMs": 7435,
+  "nCtx": 32768,
+  "vramPicoMiB": 7065,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 252,
+      "ttftMs": 141,
+      "tps": 19.84
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 147,
+      "ttftMs": 49,
+      "tps": 61.22
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0);\n}",
+      "ms": 431,
+      "ttftMs": 57,
+      "tps": 93.02
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "function-call: sumar({\"a\":17,\"b\":25})",
+      "ms": 530,
+      "ttftMs": 169,
+      "tps": 60.49
+    },
+    {
+      "id": "contexto8k",
+      "ok": true,
+      "detalle": "CLAVE-7391",
+      "ms": 3851,
+      "ttftMs": 3723,
+      "tps": 1.82
+    }
+  ],
+  "resumen": "5/5 pruebas",
+  "medido": true
+}

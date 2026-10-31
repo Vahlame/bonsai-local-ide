@@ -67,9 +67,9 @@ a esta máquina.
 - `node chat/model-plan.mjs` — parser, planes y nombres seguros.
 - `node chat/prueba-model-hub.mjs` — descarga reanudable local, SHA-256,
   registro y endpoints.
-- `node scripts/model-lab.mjs probe --model ornith9b --skip-long` — 5/5 pruebas
-  (saludo, JSON, código, tool-calling y visión) con 110.592 tokens, q8_0,
-  7.431 MiB de VRAM pico y 7,6 s de arranque.
+- `node scripts/model-lab.mjs probe --model ornith9b` — 6/6 pruebas
+  (saludo, JSON, código, tool-calling, retrieval y visión) con 110.592 tokens,
+  q8_0, 7.475 MiB de VRAM pico y 6,1 s de arranque.
 - `npm test` — 42/42 suites aisladas.
 - `npm run test:navegador` — 5/5, incluida la apertura del Model Hub.
 
@@ -79,12 +79,12 @@ Evidencia completa: [reports/MODEL-HUB-2026-10-31.md](../reports/MODEL-HUB-2026-
 
 | Modelo | Plan | VRAM pico | Sondas | Calidad* |
 |---|---:|---:|---:|---:|
-| Qwen3 4B Instruct 2507 | 57.344 / q8_0 | 7.085 MiB | 5/5 | 4/5 |
-| Qwen2.5 Coder 7B | 32.768 / f16 + draft | 6.945 MiB | 5/5 | 3/5 |
-| Gemma 3 4B IT | 131.072 / f16 | 5.635 MiB | 5/6 | 3/5 |
-| Llama 3.2 3B | 83.968 / q8_0 | 7.289 MiB | 5/5 | 2/5 |
-| DeepSeek R1 Distill 7B | 79.872 / q8_0 | 6.809 MiB | 4/5 | 3/5 |
-| K2-Horizon 7B (×2) | 16–18k / q8_0 | ~6.370 MiB | 2/4 | — |
+| Qwen3 4B Instruct 2507 | 57.344 / q8_0 | 7.215 MiB | 5/5 | 4/5 |
+| Qwen2.5 Coder 7B | 32.768 / f16 + draft | 7.065 MiB | 5/5 | 3/5 |
+| Gemma 3 4B IT | 131.072 / f16 | 5.769 MiB | 5/6 | 3/5 |
+| Llama 3.2 3B | 83.968 / q8_0 | 7.345 MiB | 5/5 | 2/5 |
+| DeepSeek R1 Distill 7B | 79.872 / q8_0 | 6.865 MiB | 4/5 | 3/5 |
+| K2-Horizon 7B (×2) | 16–18k / q8_0 | ~6.370 MiB | 3/5 | — |
 
 \* 5 de las 18 tareas (código, SQL, JSON anidado, tool-calling, retrieval), una
 pasada. Gemma cabe a 131k porque su atención es de ventana deslizante; el plan

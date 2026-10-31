@@ -1,0 +1,88 @@
+{
+  "clave": "k2-horizon-7b-q4-k-m",
+  "nombre": "Checkpoint_0002500",
+  "archivo": "K2-Horizon-7B-Q4_K_M.gguf",
+  "fecha": "2026-10-31T02:49:26.251Z",
+  "plan": {
+    "ok": true,
+    "contexto": 18432,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 5334,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 1377,
+    "kvFijoMiB": 0,
+    "totalMiB": 7861,
+    "libreMiB": 7956,
+    "disponibleMiB": 1472,
+    "ctxNativo": 524288,
+    "alternativas": {
+      "f16": {
+        "contexto": 10240,
+        "totalMiB": 7924
+      },
+      "q8_0": {
+        "contexto": 18432,
+        "totalMiB": 7861
+      },
+      "q4_0": {
+        "contexto": 36864,
+        "totalMiB": 7942
+      }
+    },
+    "motivo": "q8_0 a 18.432 tokens; quedan 95 MiB de margen real",
+    "nombre": "Checkpoint_0002500"
+  },
+  "arranqueMs": 7559,
+  "nCtx": 18432,
+  "vramPicoMiB": 6363,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": false,
+      "detalle": "",
+      "ms": 1188,
+      "ttftMs": 93,
+      "tps": 40.4
+    },
+    {
+      "id": "json",
+      "ok": false,
+      "detalle": "",
+      "ms": 2779,
+      "ttftMs": 46,
+      "tps": 43.18
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.reduce((sum, num) => sum + (num % 2 === 0 ? num : 0), 0);\n}",
+      "ms": 4774,
+      "ttftMs": 56,
+      "tps": 42.75
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\":17,\"b\":25})",
+      "ms": 1244,
+      "ttftMs": 135,
+      "tps": 17.68
+    },
+    {
+      "id": "contexto8k",
+      "ok": true,
+      "detalle": "CLAVE-7391",
+      "ms": 5173,
+      "ttftMs": 3067,
+      "tps": 15.27
+    }
+  ],
+  "resumen": "3/5 pruebas",
+  "medido": true
+}

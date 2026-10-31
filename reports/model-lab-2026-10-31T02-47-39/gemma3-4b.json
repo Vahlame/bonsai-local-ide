@@ -1,0 +1,96 @@
+{
+  "clave": "gemma3-4b",
+  "nombre": "Gemma 3 4B IT",
+  "archivo": "gemma-3-4b-it-Q4_K_M.gguf",
+  "fecha": "2026-10-31T02:51:47.998Z",
+  "plan": {
+    "ok": true,
+    "contexto": 131072,
+    "kv": "f16",
+    "vision": true,
+    "mmprojCPU": true,
+    "visionEnGpu": false,
+    "pesosMiB": 2375,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 2676,
+    "kvFijoMiB": 116,
+    "totalMiB": 6201,
+    "libreMiB": 7956,
+    "disponibleMiB": 4315,
+    "ctxNativo": 131072,
+    "alternativas": {
+      "f16": {
+        "contexto": 131072,
+        "totalMiB": 6201
+      },
+      "q8_0": {
+        "contexto": 131072,
+        "totalMiB": 4947
+      },
+      "q4_0": {
+        "contexto": 131072,
+        "totalMiB": 4278
+      }
+    },
+    "motivo": "f16 a 131.072 tokens; quedan 1755 MiB de margen real",
+    "nombre": "Gemma 3 4B IT"
+  },
+  "arranqueMs": 7616,
+  "nCtx": 131072,
+  "vramPicoMiB": 5769,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK\n",
+      "ms": 171,
+      "ttftMs": 77,
+      "tps": 35.09
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "```json\n{\"ok\":true,\"n\":7}\n```\n",
+      "ms": 231,
+      "ttftMs": 31,
+      "tps": 64.94
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  let suma = 0;\n  for (let i = 0; i < nums.length; i++) {\n    if (nums[i] % 2 === 0) {\n      suma += nums[i];\n    }\n  }\n  return suma;\n}",
+      "ms": 1019,
+      "ttftMs": 31,
+      "tps": 75.64
+    },
+    {
+      "id": "herramienta",
+      "ok": false,
+      "detalle": "```python\ndef sumar(a, b):\n  \"\"\"Calcula la suma de dos números.\n\n  Args:\n    a: El primer número.\n    b: El segundo número.\n\n  Returns:\n    La suma de a y b.\n  ",
+      "ms": 1307,
+      "ttftMs": 35,
+      "tps": 75.75
+    },
+    {
+      "id": "contexto8k",
+      "ok": true,
+      "detalle": "CLAVE-7391\n",
+      "ms": 1556,
+      "ttftMs": 1426,
+      "tps": 5.14
+    },
+    {
+      "id": "vision",
+      "ok": true,
+      "detalle": "La imagen muestra una ventana de terminal de Linux con una lista de archivos y directorios, probablemente un entorno de desarrollo o un sistema de archivos.",
+      "ms": 28072,
+      "ttftMs": 27683,
+      "tps": 1.03
+    }
+  ],
+  "resumen": "5/6 pruebas",
+  "medido": true
+}

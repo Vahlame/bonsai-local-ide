@@ -67,7 +67,7 @@
         "cabezasKV": 4,
         "dimCabeza": 256,
         "reservaMiB": 620,
-        "ubatch": 512,
+        "ubatch": 256,
         "margenObjetivoMiB": 200,
         "nota": "Medido 2026-10-30 (GPU exclusiva para el modelo): q8_0+vision 71680 estable (7543 MiB, 56306 tok reales), q4_0+vision 110592 estable (7497 MiB, 87433 tok reales), f16 43008 (45k OOM). 73728/114688 fallan al arrancar. El techo depende del KV; el presupuesto de VRAM es una estimacion."
       },

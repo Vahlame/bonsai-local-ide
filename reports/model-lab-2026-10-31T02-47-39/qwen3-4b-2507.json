@@ -1,0 +1,88 @@
+{
+  "clave": "qwen3-4b-2507",
+  "nombre": "Qwen3 4B Instruct 2507",
+  "archivo": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+  "fecha": "2026-10-31T02:58:29.520Z",
+  "plan": {
+    "ok": true,
+    "contexto": 57344,
+    "kv": "q8_0",
+    "vision": false,
+    "mmprojCPU": false,
+    "visionEnGpu": false,
+    "pesosMiB": 2382,
+    "reservaMiB": 850,
+    "margenMiB": 300,
+    "visionMiB": 0,
+    "draftMiB": 0,
+    "kvMiB": 4284,
+    "kvFijoMiB": 0,
+    "totalMiB": 7816,
+    "libreMiB": 7956,
+    "disponibleMiB": 4424,
+    "ctxNativo": 262144,
+    "alternativas": {
+      "f16": {
+        "contexto": 30720,
+        "totalMiB": 7852
+      },
+      "q8_0": {
+        "contexto": 57344,
+        "totalMiB": 7816
+      },
+      "q4_0": {
+        "contexto": 110592,
+        "totalMiB": 7906
+      }
+    },
+    "motivo": "q8_0 a 57.344 tokens; quedan 140 MiB de margen real",
+    "nombre": "Qwen3 4B Instruct 2507"
+  },
+  "arranqueMs": 5424,
+  "nCtx": 57344,
+  "vramPicoMiB": 7215,
+  "pruebas": [
+    {
+      "id": "saludo",
+      "ok": true,
+      "detalle": "BONSAI_OK",
+      "ms": 157,
+      "ttftMs": 78,
+      "tps": 31.85
+    },
+    {
+      "id": "json",
+      "ok": true,
+      "detalle": "{\"ok\":true,\"n\":7}",
+      "ms": 150,
+      "ttftMs": 28,
+      "tps": 60
+    },
+    {
+      "id": "codigo",
+      "ok": true,
+      "detalle": "function sumaPares(nums) {\n  return nums.filter(num => num % 2 === 0).reduce((acc, num) => acc + num, 0);\n}",
+      "ms": 572,
+      "ttftMs": 32,
+      "tps": 70.05
+    },
+    {
+      "id": "herramienta",
+      "ok": true,
+      "detalle": "nativo: sumar({\"a\": 17, \"b\": 25})",
+      "ms": 419,
+      "ttftMs": 170,
+      "tps": 0
+    },
+    {
+      "id": "contexto8k",
+      "ok": true,
+      "detalle": "CLAVE-7391",
+      "ms": 2853,
+      "ttftMs": 2717,
+      "tps": 2.45
+    }
+  ],
+  "resumen": "5/5 pruebas",
+  "medido": true
+}

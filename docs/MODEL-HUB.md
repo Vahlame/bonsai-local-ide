@@ -185,13 +185,13 @@ que cada modelo arranca, cabe y hace lo que promete.
 
 | Modelo | Plan (contexto/KV) | VRAM pico | Sondas | Calidad 5 tareas | Notas |
 |---|---:|---:|---:|---:|---|
-| Ornith 1.5 9B | 110.592 / q8_0 | 7.431 MiB | 5/5 | — | visión CPU ~12 s; tool calls nativas |
-| Qwen3 4B Instruct 2507 | 57.344 / q8_0 | 7.085 MiB | 5/5 | 4/5 | el mejor equilibrio; razona y tools nativas |
-| Qwen2.5 Coder 7B | 32.768 / f16 + draft | 6.945 MiB | 5/5 | 3/5 | tool calls en texto (`function-call`/`xml`/`tools`), ya parseadas; **draft Qwen2.5 0.5B = 1,5× generación** |
-| Gemma 3 4B IT | **131.072 / f16** | 5.635 MiB | 5/6 | 3/5 | **ventana deslizante**: el KV real es mucho menor; visión CPU ~28 s; tools débiles |
-| Llama 3.2 3B | 83.968 / q8_0 | 7.289 MiB | 5/5 | 2/5 | muy rápido (~100 t/s), tool nativa, flojo en matemáticas |
-| DeepSeek R1 Distill 7B | 79.872 / q8_0 | 6.809 MiB | 4/5 | 3/5 | razona antes de contestar; tool calls no, SQL/JSON/retrieval bien |
-| K2-Horizon 7B (×2) | 16–18k / q8_0 | ~6.370 MiB | 2/4 | — | respuestas vacías intermitentes; no recomendado para el agente |
+| Ornith 1.5 9B | 110.592 / q8_0 | 7.475 MiB | 6/6 | — | visión CPU ~12 s; tool calls nativas |
+| Qwen3 4B Instruct 2507 | 57.344 / q8_0 | 7.215 MiB | 5/5 | 4/5 | el mejor equilibrio; razona y tools nativas |
+| Qwen2.5 Coder 7B | 32.768 / f16 + draft | 7.065 MiB | 5/5 | 3/5 | tool calls en texto (`function-call`/`xml`/`tools`), ya parseadas; **draft Qwen2.5 0.5B = 1,5× generación** |
+| Gemma 3 4B IT | **131.072 / f16** | 5.769 MiB | 5/6 | 3/5 | **ventana deslizante**: el KV real es mucho menor; visión CPU ~28 s; tools débiles |
+| Llama 3.2 3B | 83.968 / q8_0 | 7.345 MiB | 5/5 | 2/5 | muy rápido (~100 t/s), tool nativa, flojo en matemáticas |
+| DeepSeek R1 Distill 7B | 79.872 / q8_0 | 6.865 MiB | 4/5 | 3/5 | razona antes de contestar; tool calls no, SQL/JSON/retrieval bien |
+| K2-Horizon 7B (×2) | 16–18k / q8_0 | ~6.370 MiB | 3/5 | — | respuestas vacías intermitentes; no recomendado para el agente |
 
 La lectura honesta: **más contexto no es mejor si el modelo falla**. Gemma cabe a
 131k gracias a su atención local, pero su tool-calling no sirve para el agente;

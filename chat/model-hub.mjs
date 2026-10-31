@@ -133,8 +133,8 @@ fusionarCatalogo();
 let vramCache = { ts: 0, valor: null };
 
 /** @returns {Promise<{totalMiB: number, libreMiB: number, usadaMiB: number, fuente: string}>} */
-export function vramInfo() {
-  if (vramCache.valor && Date.now() - vramCache.ts < 2000) return Promise.resolve(vramCache.valor);
+export function vramInfo(forzar = false) {
+  if (!forzar && vramCache.valor && Date.now() - vramCache.ts < 2000) return Promise.resolve(vramCache.valor);
   return new Promise((resolve) => {
     execFile("nvidia-smi", ["--query-gpu=memory.total,memory.free,memory.used", "--format=csv,noheader,nounits"], { windowsHide: true, timeout: 8000 }, (err, stdout) => {
       if (err) {
