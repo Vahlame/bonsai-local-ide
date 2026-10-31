@@ -1,0 +1,707 @@
+# 🌳 Bonsai Local IDE
+
+**Entorno de desarrollo con IA 100 % local para Windows 10/11.**
+Chat con agente, editor con pestañas, diffs, git, terminal integrado, navegador
+controlado y visión — todo en tu GPU, sin nube.
+
+<p>
+  <img alt="version" src="https://img.shields.io/badge/version-2.2.0-cde86e">
+  <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
+  <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
+  <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
+  <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
+</p>
+
+> **v2.2.0 — laboratorio de rendimiento.** Medición A/B y perfilado real en
+> la RTX 4060: GPT-OSS-20B a **36,8 tok/s** (+22,7 %), Qwen3.6-35B-A3B a
+> **44,8 tok/s**, Qwen3-30B-A3B a **46,6 tok/s** y Qwen3-4B a **77 tok/s**
+> con el build `lab-mvq2` (MMVQ de 2 warps). Incluye 2.490/2.490 tests
+> MUL_MAT, auditoría de fuente y perfiles medidos. **0 nube**. Notas:
+> [RELEASE-2.2.0](docs/RELEASE-2.2.0.md).
+
+---
+
+## Performance Lab 2.2 (RTX 4060 8 GB)
+
+![Rendimiento medido por modelo](docs/graficos/rtx4060-throughput.svg)
+
+| Cambio medido | Antes | Después | Ganancia |
+|---|---:|---:|---:|
+| GPT-OSS-20B 64k (MoE) | 30,0 tok/s | **36,8 tok/s** | **+22,7 %** |
+| GPT-OSS-20B prefill 2k | 762 tok/s | **908 tok/s** | **+19,2 %** |
+| GPT-OSS prompt cache | 3.814 ms | **72 ms** | **52,8×** |
+| Qwen3.6-35B-A3B 32k | 42,5 tok/s | **44,8 tok/s** | +5,3 % |
+| Qwen3-30B-A3B 32k | 44,3 tok/s | **46,6 tok/s** | +5,2 % |
+| Qwen3-4B servidor | 73,8 tok/s | **77,0 tok/s** | +4,3 % |
+
+El detalle está en [BENCHMARKS.md](BENCHMARKS.md) y el registro A/B en
+[OPTIMIZATIONS.md](OPTIMIZATIONS.md). La causa principal no fue un kernel:
+fue **usar la VRAM que el plan anterior dejaba libre** (GPT-OSS 64k pasó de
+16 a 12 capas de expertos en CPU) y **8 hilos físicos** en vez de 12.
+El único cambio de kernel que sobrevivió es MMVQ a 2 warps para K-quants
+en sm_89: +4,6 % en el 4B, neutro en 9B y −0,4 % en el 7B (declarado).
+
+> **Nota de coding:** Ornith 9B no se recomienda para coding; su calidad
+> medida está por debajo de GPT-OSS-20B, Qwen3.6-35B-A3B y Qwen3-30B-A3B.
+
+---
+
+## ✨ Lo que hace
+
+| Área | Capacidad |
+|---|---|
+| **Agente** | Edita archivos, ejecuta comandos, corre tests, lee/crea archivos, plan persistente, hasta 192 pasos por turno |
+| **Editor** | Pestañas, Ctrl+S, Ctrl+K (edición con diff y guardado atómico), paleta (Ctrl+P) y **CodeMirror 6 opt-in** con undo, multi-cursor, búsqueda y plegado |
+| **Contexto** | Tokenizer real del servidor, historial adaptativo y presupuesto honesto (ventana / solicitado / efectivo / reserva de salida) |
+| **Visión** | Imágenes pegadas o arrastradas, OCR local opcional, proyector en GPU y normalización `sharp` a ≤1600 px |
+| **Investigación** | Búsqueda web y lectura con Readability + Turndown; el texto llega como Markdown limpio, no como HTML con menús |
+| **Razonamiento** | Panel desplegable del *thinking*; presupuesto configurable (por defecto 4096 tokens) |
+| **Herramientas** | Terminal persistente con **xterm + ConPTY** (fallback por tuberías), problemas/diagnósticos, esquema, ir a definición (F12), procesos en segundo plano |
+| **Búsqueda** | **ripgrep** con `.gitignore` y límite de tamaño; **ast-grep** para patrones AST en JS/TS/TSX/HTML/CSS |
+| **Navegador** | Playwright MCP aislado, `evaluar` para diagnósticos JS, WebGL/workers/HMR |
+| **Model Hub** | 34 GGUF, logos de proveedor, plan por modelo, descarga reanudable y SHA-256 |
+| **Avisos** | Notificación nativa opt-in al terminar un turno largo con la ventana oculta |
+| **Git** | Estado por archivo, selección explícita, sin `add -A` |
+| **Seguridad** | Guardados atómicos, punto de deshacer por escritura, rutas confinadas, git seguro |
+
+---
+
+## ✨ Novedades 2.0
+
+![Novedades 2.0: visión, research, Hub y avisos](docs/graficos/novedades-2.0.svg)
+
+- **Visión que no desperdicia píxeles.** `sharp` corrige la orientación EXIF,
+  limita el lado mayor a **1600 px**, aplana la transparencia y convierte a
+  **JPEG 4:4:4** antes de base64. Si la imagen no se puede procesar, se conserva
+  el original: la visión nunca tumba el turno.
+- **Investigación con menos ruido.** `@mozilla/readability` aísla el artículo,
+  `turndown` lo pasa a **Markdown GFM** y `linkedom` evita un navegador. El
+  extractor regex histórico queda como *fallback* y la guardia SSRF no cambia.
+- **Hub con identidad.** Logos locales de Qwen, Llama, Mistral, GPT-OSS,
+  Nemotron, Granite, Gemma, DeepSeek, Kimi y más. Sin CDN, sin telemetría y sin
+  depender de una web externa para pintar una tarjeta.
+- **Avisos de verdad.** Notificación nativa **opt-in** al terminar un turno
+  largo, solo si la ventana está oculta. El permiso se pide únicamente cuando
+  activas la opción en Ajustes.
+- **Release reproducible.** Versiones exactas en `chat/package.json`,
+  `npm audit` limpio y notas completas en
+  [RELEASE-2.0.0](docs/RELEASE-2.0.0.md).
+
+---
+
+## ⚡ Novedades 2.1
+
+![Novedades 2.1: editor, terminal, búsqueda y contratos](docs/graficos/novedades-2.1.svg)
+
+- **Editor CodeMirror 6 (opt-in).** Se activa en **Ajustes → Editor moderno**.
+  Trae undo/redo real, multi-cursor, búsqueda, plegado y autocompletado, con el
+  bundle servido en local. El editor clásico sigue disponible y es el
+  *fallback* si el bundle no está. La vista de diff/merge de CodeMirror queda
+  como siguiente paso, no se promete en esta release.
+- **Terminal xterm + ConPTY.** El panel inferior usa **xterm.js 6** y
+  `node-pty` para colores, resize y programas TUI. Si el módulo nativo no está,
+  cae al modo tuberías y a un `<pre>` sin romper nada. `BONSAI_PTY=0` fuerza el
+  modo clásico.
+- **Búsqueda de código de verdad.** `Ctrl+Shift+F` usa **ripgrep** (respeta
+  `.gitignore`, límite de 800 KB por archivo) y el agente gana
+  `buscar_estructural` con **ast-grep** (`console.log($$$ARGS)`, etc.) en
+  JS/TS/TSX/HTML/CSS.
+- **Contratos de herramientas.** **Zod 4** define y valida los argumentos de las
+  tools nuevas y genera JSON Schema reproducible. La build opcional con
+  **llguidance** fuerza ese schema durante la decodificación.
+- **Release verificada.** **45/45** suites aisladas, **7/7** en navegador y
+  `npm audit` limpio. Los bundles de CodeMirror y xterm viajan en el repo; no
+  hay CDN.
+
+---
+
+## 🧬 Evolución
+
+![Evolución de Bonsai hasta 2.0](docs/graficos/evolucion-2.0.svg)
+
+| Versión | Hito | Qué aportó |
+|---|---|---|
+| **1.2** | Base local | Chat, editor, diffs y guardado atómico |
+| **1.5** | IDE completo | Git, terminal, navegador y pestañas |
+| **1.6** | Contexto real | Tokenizer del servidor, KV, visión y *thinking* |
+| **1.7** | Model Hub | Catálogo, plan por modelo y Model Lab |
+| **1.8** | Catálogo | 25 modelos, descubrimiento en Hugging Face y visión |
+| **1.9** | MoE híbrido | 35B en 8 GB, `--load-mode none` y **42,5 tok/s** |
+| **2.0** | Precisión | Visión 1600 px, research limpio, logos y release reproducible |
+| **2.1** | Segunda capa | CodeMirror, xterm/PTY, ripgrep/ast-grep, Zod y llguidance opcional |
+| **2.2** | Performance Lab | MoE 16→12 capas CPU, 8 hilos, MMVQ 2 warps, 2.490 tests y perfiles medidos |
+
+---
+
+## 🏁 Modelos 2.0
+
+![Modelos 2.0: coding, web app y velocidad](docs/graficos/modelos-2.0.svg)
+
+| Modelo | Coding real | Web app | Generación | Contexto | Uso recomendado |
+|---|---:|---:|---:|---:|---|
+| **GPT-OSS-20B** | **100 %** | **100 %** | **36,8 tok/s** | 64k / 128k | Proyecto complejo desde cero |
+| **Qwen3.6-35B-A3B** | **96 %** | 91 % | **44,8 tok/s** | 32k | Código guiado, bugfix y visión |
+| **Qwen3-30B-A3B 2507** | 86 % | 55 % | **46,6 tok/s** | 32k | Velocidad con calidad |
+| Qwen3 4B Instruct 2507 | 64 % | - | **77 tok/s** | 32k | Ediciones rápidas |
+| Qwen3.5 9B | 57 % | - | 50 tok/s | 32k | Chat técnico general |
+| Qwen2.5 Coder 7B | 49 % | - | 52 tok/s | 32k | Cambios pequeños |
+| Ornith 1.5 9B | 35 % | - | 43 tok/s | 32k | **No recomendado para coding** |
+
+**Cómo leerlo:** *Coding real* = 65 % proyecto multifichero con tests ocultos +
+
+> Generación = decode medido con 2k de prompt y 128–256 tokens, no el tok/s de una sesión de agente con razonamiento. La fila de GPT-OSS usa 12 capas CPU / 8 hilos; Qwen3.6 usa 19 capas CPU; Qwen3-30B usa 26.
+35 % bugfix; *Web app* = API + UI con Playwright. Los tres grandes se midieron
+con 2 repeticiones y los densos con 1; no es un ranking estadístico, es una
+guía de elección en **una RTX 4060 de 8 GB**. Detalle:
+[CODING-2026-10-31](reports/CODING-2026-10-31.md) y
+[MOE-2026-10-31](reports/MOE-2026-10-31.md).
+
+---
+
+## 🧭 Arquitectura
+
+```mermaid
+flowchart LR
+    subgraph UI["Interfaz (navegador)"]
+        WEB["index.html<br/>chat-core · app · ide · paneles"]
+    end
+
+    subgraph NODE["Servidor Node · chat/ui-server.mjs"]
+        API["API /api/*"]
+        AGENT["Agente + herramientas"]
+        CTX["Contexto / tokenizer"]
+    end
+
+    subgraph LLAMA["llama-server (llama.cpp sm89)"]
+        MODEL["GPT-OSS 20B · Harmony<br/>o MoE híbrido"]
+        MMPROJ["mmproj opcional (visión)"]
+    end
+
+    GPU["🎮 RTX 4060 8 GB"]
+
+    WEB <-->|HTTP| API
+    API --> AGENT
+    AGENT --> CTX
+    AGENT <-->|OpenAI /v1| MODEL
+    MODEL --- MMPROJ
+    MODEL --> GPU
+    MMPROJ --> GPU
+```
+
+---
+
+## 🚀 Arranque rápido
+
+### Desde un clon
+
+```powershell
+git clone https://github.com/Vahlame/bonsai-local-ide.git
+cd bonsai-local-ide
+
+# Comprueba Node, instala chat/node_modules y busca el runtime.
+.\scripts\setup-clone.ps1 -NoLaunch
+```
+
+Si todavía no tienes `llama-server.exe`, el mismo script puede instalar la
+toolchain CUDA y compilar el build sm89 (unos 20 minutos):
+
+```powershell
+.\scripts\setup-clone.ps1 -BuildRuntime -NoLaunch
+```
+
+Después abre el IDE:
+
+```powershell
+.\scripts\bonsai-rtx4060.ps1 launch
+```
+
+También puedes copiar un build CUDA compatible en `bin\`
+(`llama-server.exe` + sus DLL). Los pesos y el runtime **no viajan en Git**:
+el repositorio es el IDE, no un disco de 15 GB.
+
+Al abrir la UI:
+
+1. si la IA está apagada, aparece **¿Qué modelo quieres cargar?** con los
+   modelos instalados y el recomendado primero;
+2. si `models/` está vacío, el diálogo explica cómo empezar y abre el
+   **Model Hub** para descargar un GGUF o importar uno local;
+3. el modelo elegido arranca con su plantilla, muestreo y contexto automáticos
+   (GPT-OSS-20B usa **64k** por defecto).
+
+La pregunta se puede desactivar en **Ajustes → Preguntar modelo al iniciar**.
+Guía paso a paso: [PRIMER-ARRANQUE](docs/PRIMER-ARRANQUE.md).
+
+![Primer arranque: clon, runtime, modelo](docs/graficos/primer-arranque.svg)
+
+El IDE se abre en una **ventana de aplicación** (sin barra de direcciones) y **sin
+GPU**: `scripts/open-ide.ps1` usa Edge/Chrome con `--disable-gpu` y un perfil aislado,
+así que la NVIDIA queda entera para el modelo. Comprobado con la ventana abierta:
+**0 MiB de VRAM**. La barra de estado muestra «UI · CPU». ¿Prefieres una pestaña
+normal? `.\scripts\open-ide.ps1 -Tab`.
+
+> **Si el acceso directo no abre nada:** no debe llevar `-NoBrowser` (arranca la
+> interfaz pero no abre ventana). Regenéralo con
+> `.\scripts\crear-acceso-directo.ps1`.
+
+```mermaid
+flowchart TD
+    A["Acceso directo o<br/>setup-clone.ps1"] --> B["start-ui-rtx4060-optimized.ps1<br/>(solo UI Node)"]
+    B --> C["http://127.0.0.1:8787"]
+    C --> D{"¿Modelo cargado?"}
+    D -->|Sí| H["Chat, agente y editor"]
+    D -->|No| E["¿Qué modelo quieres cargar?"]
+    E -->|Hay GGUF| F["POST /api/modelos<br/>plan automático"]
+    E -->|Sin GGUF| G["Model Hub<br/>descargar o importar"]
+    G --> F
+    F --> I["start-gpu-model-rtx4060-optimized.ps1"]
+    I --> J["llama-server<br/>GPU + RAM"]
+    J --> H
+```
+
+> **Por qué así:** en Windows el hijo muere si el padre termina. El wrapper de
+> PowerShell **no sale** (`WaitForExit()`), y Node lo lanza con `windowsHide` +
+> `unref()` **sin `detached`**. Resultado: el modelo sigue vivo aunque cierres el
+> navegador. [Detalle](docs/RTX4060_OPTIMIZATION_GUIDE.md#how-the-server-lifecycle-works-important).
+
+---
+
+## 🎛️ Presets (RTX 4060 8 GB)
+
+![Presets: contexto vs VRAM](docs/graficos/presets-vram.svg)
+
+| Preset | Contexto | KV | Visión | Uso |
+|---|---:|:--:|:--:|---|
+| **`8GB-VISION-MAX-Q8-100K`** | **110.592** | **q8_0** | ✅ CPU | **Por defecto** · contexto máximo con KV casi sin pérdida |
+| `8GB-VISION-MAX-Q8` | 71.680 | q8_0 | ✅ GPU | Visión rápida (~2 s/imagen) |
+| `8GB-VISION-MAX-Q4` | 110.592 | q4_0 | ✅ GPU | Contexto máximo con visión rápida |
+| `8GB-VISION-MAX-F16` | 43.008 | f16 | ✅ GPU | Precisión máxima de KV |
+| `8GB-VISION-DEFAULT-F16` | 16.384 | f16 | ✅ | Seguro, mucho margen |
+| `8GB-VISION-ULTRA-F16` | 32.768 | f16 | ✅ | Precisión alta, contexto medio |
+| `8GB-VISION-ULTRA` | 36.864 | q4_0 | ✅ | Contexto alto y barato |
+| `8GB-VISION-HIGH` | 32.768 | q8_0 | ✅ | Equilibrio (calidad 8/8) |
+| `8GB-VISION-BALANCED` | 28.672 | q4_0 | ✅ | Conservador |
+| `8GB-VISION-SAFE` | 24.576 | q4_0 | ✅ | Mucho margen |
+| `8GB-CODE-MAX` | 49.152 | q4_0 | — | Código largo |
+| `8GB-CODE-BALANCED` | 32.768 | q8_0 | — | Casi sin pérdida |
+| `8GB-CODE-FAST` | 16.384 | f16 | — | Máximo throughput |
+| `8GB-RESEARCH` | 65.536 | q4_0 | — | Experimental |
+
+---
+
+## 🗂️ Model Hub: trae tus propios modelos
+
+El botón **Modelos** de la barra superior abre el catálogo. Desde ahí puedes:
+
+- **Descubrir** en vivo los GGUF con más tracción en Hugging Face, sin listas
+  que envejezcan;
+- buscar en **Hugging Face** y ver los GGUF de cada repo con su tamaño y
+  cuantización;
+- descargar del catálogo curado (Qwen3 4B, Qwen2.5 Coder 7B, Gemma 3 4B con
+  visión, Llama 3.2 3B, DeepSeek R1 Distill 7B…), por **URL directa** o
+  importando un `.gguf` que ya tengas;
+- seguir el progreso, cancelar y **reanudar** una descarga cortada;
+- verificar el **SHA-256** y registrar el modelo sin reiniciar el IDE;
+- correr **MoE grandes** repartiendo expertos entre VRAM y RAM: Qwen3.6-35B-A3B
+  a **42 tok/s** con 8 GB de VRAM (`--n-cpu-moe` + `--load-mode none`);
+- **benchmark de coding real** con proyecto multifichero y tests ocultos:
+  GPT-OSS-20B **18/18** en el proyecto, Qwen3.6-35B-A3B **17/18 + 10/10** en
+  bugfix;
+- **benchmark de web app real**: Taskboard full-stack con API y UI probada en
+  navegador; GPT-OSS-20B **8/8 API + 3/3 UI**.
+
+Cada modelo recibe su propio **plan automático**: el IDE lee la cabecera del
+GGUF (capas, cabeceras KV, contexto nativo, `full_attention_interval`) y decide
+contexto, KV f16/q8_0/q4_0 y si el proyector de visión va en GPU o CPU. También
+se puede lanzar desde la línea de comandos:
+
+```powershell
+node scripts/hub.mjs list
+node scripts/hub.mjs search "qwen2.5 coder"
+node scripts/hub.mjs download qwen3-4b-2507
+node scripts/model-lab.mjs probe --all
+```
+
+El **Model Lab** arranca cada modelo con su plan y mide arranque, VRAM pico,
+TTFT, tok/s, JSON, código ejecutado, tool-calling, retrieval y visión. Los
+resultados quedan en `reports/model-lab-<fecha>/` y en el registro local.
+
+👉 [Guía del Model Hub](docs/MODEL-HUB.md) ·
+[Strata y la memoria: cómo meter más en menos RAM](docs/STRATA-Y-MEMORIA.md)
+
+**Estado de este equipo:** **34 GGUF en catálogo** (15 con visión) y **30 modelos
+utilizables** en total, incluidos 4 MoE de 20–35B. El catálogo, los
+planes medidos y el ranking de coding están en
+[MODEL-CATALOG-2026-10-31](reports/MODEL-CATALOG-2026-10-31.md),
+[MOE-2026-10-31](reports/MOE-2026-10-31.md) y
+[CODING-2026-10-31](reports/CODING-2026-10-31.md).
+**Para un proyecto complicado desde cero: GPT-OSS-20B. Para bugfix rápido:
+Qwen3.6-35B-A3B o Qwen3-30B-A3B.**
+
+---
+
+## 📊 Rendimiento medido (RTX 4060 Laptop 8 GB)
+
+> Los rankings de coding, web app y velocidad de los modelos actuales están en
+> la sección **Modelos 2.0** de arriba. Esta sección conserva las mediciones
+> profundas de motor, KV y contexto que siguen vigentes.
+
+### Techo de contexto con f16 (histórico, 28-oct-2026)
+
+![Techo de contexto f16](docs/graficos/context-ceiling.svg)
+
+| Contexto | Resultado | VRAM pico |
+|---:|:--:|---:|
+| 32.768 | PASS | 7.157 MiB |
+| 36.864 | PASS | 7.287 MiB |
+| 39.936 | PASS | 7.383 MiB |
+| **43.008** | **PASS** | **7.481 MiB** |
+| 45.056 | **OOM** | — |
+
+**43.008 es el techo con KV f16** (45k falla con `CUDA error: out of memory` en
+prefill largo). Por eso f16 ya no es el preset por defecto: con q8_0/q4_0 la ventana
+sube a 71k/110k. El antiguo fallo en reposo a contexto alto era por *context
+checkpoints*; el lanzador usa `--ctx-checkpoints 0` para todos los KV.
+
+### Ajuste de parámetros (llama-bench, f16)
+
+| Configuración | pp t/s | tg t/s | Veredicto |
+|---|---:|---:|---|
+| base b512 ub256 t4 mmap | 2.199,9 | 43,34 | referencia |
+| ub512 | **2.218,5** | 43,44 | +0,85 % prefill |
+| ub128 | 2.036,6 | 43,38 | peor |
+| threads 8 | 2.181,7 | 43,43 | sin mejora |
+| no-mmap / mlock | 2.178 / 2.174 | 43,4 | peor |
+| **q8_0 KV** | 2.159,3 | 43,15 | más lento y menos preciso |
+
+- **f16 es más rápido que q8_0 aquí**, además de más preciso → se queda f16.
+- Prefill ~2.200 t/s, generación ~43 t/s.
+- Speculative decoding (~2× generación) necesita ~0,7 GB y **no cabe a 43k f16 + visión**; solo a ≤16k.
+
+### Calidad de KV (A/B/C)
+
+![Calidad KV](docs/graficos/kv-quality.svg)
+
+### Calidad por preset — benchmark de tareas complejas
+
+![Calidad por preset](docs/graficos/bench-quality.svg)
+
+Benchmark determinista (sin jurado humano) sobre **18 tareas** en 8 campos:
+implementación y depuración de código (ejecutadas en un sandbox con timeout),
+predicción de salida, **parser de expresiones**, **caché LRU**, matemáticas,
+lógica, **problemas de tasas**, SQL, instrucciones JSON (**incluido JSON anidado**),
+transformación de texto, retrieval de contexto largo (**1 y 2 agujas**), extracción
+en español y *tool-calling*. Se ejecuta con pensamiento (1024) y temperatura 0.2
+para comparar la precisión real de cada nivel de KV.
+
+```powershell
+node scripts/bench-model-quality.mjs                 # 5 presets
+node scripts/bench-model-quality.mjs --presets 8GB-VISION-MAX-F16,8GB-RESEARCH
+node scripts/bench-model-quality.mjs --tasks coding_hard_calc,data_sql_result
+```
+
+Resultados crudos en `reports/bench-quality-<fecha>/`. La gráfica se regenera en
+`docs/graficos/bench-quality.svg`.
+
+**Resultado (30-oct-2026, una pasada por preset):**
+
+| Preset | KV | Ctx | Puntos | % | Gen t/s |
+|---|---|---:|---:|---:|---:|
+| `8GB-VISION-HIGH` | q8_0 | 32.768 | 17/18 | 94,4% | 42,1 |
+| `8GB-VISION-MAX-F16` | f16 | 43.008 | 16/18 | 88,9% | 42,3 |
+| `8GB-CODE-BALANCED` | q8_0 | 32.768 | 16/18 | 88,9% | 42,1 |
+| `8GB-RESEARCH` | q4_0 | 65.536 | 16/18 | 88,9% | 42,1 |
+| `8GB-VISION-BALANCED` | q4_0 | 28.672 | 15/18 | 83,3% | 42,1 |
+
+Lectura honesta: con **n=18 y una sola pasada**, las diferencias de 1–2 tareas
+**no son significativas**; no hay evidencia de que q8_0/f16/q4_0 cambien la calidad
+aquí. Elige por **VRAM y contexto**, no por miedo a la cuantización del KV.
+
+Debilidad común detectada (falla en **todos** los presets): la caché **LRU** — el
+modelo hace `delete(key)` y *después* `get(key)`, devolviendo `undefined`. El parser
+de expresiones es intermitente (`2+3*4`). Son límites del modelo de 9B, no del KV.
+
+**Prueba de varianza (5 repeticiones, q8_0 vs f16):** ambos **6/10**. La tarea
+`coding_hard_calc` alterna OK/FAIL en **los dos** (q8_0: OK,FAIL,FAIL,FAIL,OK;
+f16: FAIL,FAIL,OK,FAIL,FAIL). Es la prueba de que el 94,4 % de q8_0 fue **una
+muestra con suerte**, no precisión del KV.
+
+### Techo de contexto por tipo de KV (GPU dedicada)
+
+![Context ceiling by KV](docs/graficos/context-kv.svg)
+
+En una RTX 4060 dedicada al modelo (pantalla en la APU). **Visión siempre activada**;
+cada valor pasó una prueba de 3 agujas al 10/50/90 % con ese número real de tokens:
+
+| KV | Proyector de visión | Contexto máximo | Retrieval real | VRAM pico | Siguiente paso |
+|---|---|---:|---:|---:|---:|
+| f16 | GPU | 43.008 | PASS 33.373 tok | 7.481 MiB | 45.056 OOM |
+| q8_0 | GPU | 71.680 | PASS 56.306 tok | 7.543 MiB | 73.728 OOM |
+| q4_0 | GPU | 110.592 | PASS 87.433 tok | 7.497 MiB | 114.688 OOM |
+| **q8_0** | **CPU (`--no-mmproj-offload`)** | **110.592** | **PASS 87.433 tok** | **7.650 MiB** | 114.688 OOM |
+| q8_0 | sin visión | 110.592 | — | 7.481 MiB | 114.688 OOM |
+
+**La clave para los ~100k con q8_0 + visión**: el proyector de visión (879 MiB) se
+saca de la VRAM (`mmprojCPU`). La ventana sube de **71.680 → 110.592** sin tocar el
+KV (sigue q8_0, casi sin pérdida). Coste honesto: cada imagen se codifica en CPU y
+tarda **~15 s** (captura 1200×528 + respuesta de 120 tokens), frente a ~2 s con el
+proyector en GPU. Si usas capturas constantemente, el preset de 71k con visión en
+GPU es más cómodo; si quieres contexto máximo, el de 110k.
+
+![Proyector de visión: GPU vs CPU](docs/graficos/vision-projector.svg)
+
+Por eso el preset por defecto es **`8GB-VISION-MAX-Q8-100K`** (110.592 · q8_0 ·
+visión · 4096 de pensamiento). Alternativas: `8GB-VISION-MAX-Q8` (71k, visión
+rápida), `8GB-VISION-MAX-Q4` (110k, visión en GPU), `8GB-VISION-MAX-F16` (43k, f16).
+Reproducir: `scripts/probe-rtx4060-context.ps1` y `scripts/probe-longctx.ps1 -Image`.
+
+### Reparto del contexto (estilo modelos frontera)
+
+La ventana no se reparte a mano: **historial = ventana − reserva de salida − margen**.
+La reserva incluye el pensamiento, así que el razonamiento no se come la respuesta.
+Con el preset por defecto (110.592):
+
+![Context split](docs/graficos/context-split.svg)
+
+| Parte | Tokens | Qué es |
+|---|---:|---|
+| Historial | ~98.176 | Conversación, archivos, resultados de herramientas y resumen compactado |
+| Pensamiento | 4.096 | Presupuesto de razonamiento (se gasta antes de responder) |
+| Respuesta / edición | ~7.936 | Texto final o escritura de archivo |
+| Margen | 128 | Red de seguridad del servidor |
+
+En `8GB-VISION-MAX-Q8` (71.680) queda en ~59.264 de historial + 12.288 de salida.
+`historial = 0` en Ajustes significa **automático** (lo anterior); un número fijo
+pone un techo manual. Los turnos viejos no se tiran: se **compactan** con el modelo
+en notas estructuradas (`OBJETIVO`, `DECISIONES`, `ARCHIVOS`, `COMANDOS Y PRUEBAS`,
+`ERRORES ABIERTOS`, `PENDIENTE`) de hasta ~6 % de la ventana (1k–8k tokens), y el
+historial original sigue guardado en la sesión.
+
+### Muestreo: la mejor configuración medida
+
+![Sampling benchmark](docs/graficos/bench-sampling.svg)
+
+Matriz de 10 configuraciones (temp / top_p / top_k / min_p / penalizaciones) sobre
+12 tareas difíciles, 2 repeticiones; los 3 primeros se revalidaron a 5 repeticiones:
+
+| Config | Puntuación |
+|---|---:|
+| **T0.6 · p0.90 · k20 · min_p0.05** | **73,3 %** (22/30) |
+| T0.6 · p0.95 · k20 (tarjeta code) | 70,0 % (21/30) |
+| T0.2 · p0.95 · k20 | 63,3 % (19/30) |
+| T0.6 · p0.90 · k20 · m0.05 (1.ª pasada, 24 muestras) | 87,5 % (21/24) |
+| T0.7 · p0.80 · k20 (tarjeta chat) | 83,3 % (20/24) |
+| T1.0 · p0.95 · k20 · m0.05 (tarjeta razón) | 83,3 % (20/24) |
+| T0.6 · p0.95 · k20 · presence1.5 | 83,3 % (20/24) |
+| T0.8 · p0.95 · k20 · m0.05 | 83,3 % (20/24) |
+| T0.6 · p0.95 · k20 · repeat1.1 | 79,2 % (19/24) |
+| greedy (T0) | 75,0 % (18/24) |
+
+Honesto: 22 vs 21 es **una** tarea; la ventaja no es enorme. Pero el ganador se
+mantuvo en las dos pasadas y **greedy fue el peor** (repite el mismo error siempre)
+mientras `repeat_penalty 1.1` **rompió la puntuación**. Es el default actual en
+`chat/modelo.json` y en el lanzador.
+
+```powershell
+# media con repeticiones
+node scripts/bench-model-quality.mjs --presets 8GB-VISION-HIGH,8GB-VISION-MAX-F16 `
+  --tasks coding_hard_calc,text_transform_reverse --repeat 5
+# reconstruir solo la grafica desde un results.json
+node scripts/bench-model-quality.mjs --chart-from reports/bench-quality-<fecha>/results.json
+```
+
+### Proyecto complejo real (honesto: el 9B sufre)
+
+![Complex project benchmark](docs/graficos/bench-project.svg)
+
+`scripts/bench-project.mjs` pide un proyecto Node ESM multi-archivo (`taskforge`:
+cola de prioridad con FIFO + scheduler con concurrencia y reintentos + tests
+`node:test`), escribe los archivos y **ejecuta `node --test`**. La nota es el
+porcentaje de tests que pasan de verdad, no "parece correcto". 2 repeticiones por
+preset, pensamiento 2048, visión activada:
+
+| Preset | Tests | Pasan | % | Todo OK | Visión |
+|---|---:|---:|---:|:--:|:--:|
+| `8GB-VISION-MAX-F16` | 14 | 8 | **57 %** | no | no |
+| `8GB-VISION-MAX-Q8` | 18 | 6 | **33 %** | no | no |
+| `8GB-VISION-MAX-Q4` | 9 | 2 | **22 %** | no | no |
+
+Lectura honesta: ninguna pasada deja la suite entera en verde; el modelo genera los
+5 archivos y una parte de los tests, pero falla en la cola de prioridad y en los
+reintentos del scheduler. La comprobación de visión sobre una captura del IDE
+**falló en los tres** (respuestas que no nombraban los paneles esperados). No es un
+problema de KV ni de contexto: es el límite del modelo de 9B en tareas multi-archivo.
+Sirve para comparar presets, no para prometer que el proyecto saldrá perfecto.
+
+---
+
+## 🧩 Dependencias con criterio
+
+La regla es simple: **nada que exija nube, telemetría o un framework que reescriba
+la UI**. Estas son las que entraron en 2.0 y por qué:
+
+| Dependencia | Origen / licencia | Para qué |
+|---|---|---|
+| `sharp` 0.35.5 | Apache-2.0 (libvips LGPL-3.0) | Redimensionar, orientar y comprimir imágenes antes de visión |
+| `@mozilla/readability` 0.6.0 | Mozilla / Apache-2.0 | Aislar el artículo real de una página web |
+| `turndown` 7.2.4 + GFM | Comunidad / MIT | Convertir el artículo a Markdown limpio y tablas |
+| `linkedom` 0.18.14 | Comunidad / ISC | DOM en Node sin lanzar un navegador |
+| `@lobehub/icons-static-svg` 1.101.0 | LobeHub / MIT | Logos de proveedores de modelos, servidos en local |
+| `codemirror` + lenguajes 6.x | Comunidad / MIT | Editor moderno opt-in, empaquetado localmente |
+| `@xterm/xterm` 6.0 + addons | Comunidad / MIT | Terminal real en el panel inferior |
+| `node-pty` 1.1.0 (opcional) | Microsoft / MIT | ConPTY para colores, resize y TUI |
+| `@vscode/ripgrep` 1.18.0 | Microsoft / MIT | Búsqueda textual rápida y respetuosa con `.gitignore` |
+| `@ast-grep/napi` 0.51.0 | Comunidad / MIT | Búsqueda y reescritura estructural en JS/TS/HTML/CSS |
+| `zod` 4.6.7 | Comunidad / MIT | Contratos de herramientas y JSON Schema |
+| `esbuild` 0.28.2 (dev) | Comunidad / MIT | Bundles locales de CodeMirror y xterm |
+
+Las dependencias históricas siguen siendo deliberadamente pocas: Playwright,
+MCP, TypeScript, tree-sitter y el language server de TypeScript. El resto del
+IDE —agente, contexto, diffs, terminal, Markdown, seguridad— es propio.
+
+`llguidance` no es una dependencia npm: es una opción de compilación de
+llama.cpp (`npm run build:llguidance`, requiere Rust). Si no se compila, todo
+funciona igual con GBNF/JSON Schema normal. Ver
+[LLGUIDANCE](docs/LLGUIDANCE.md).
+
+La auditoría completa, la lista de *no adoptadas* y las que sí valdría la pena
+probar después están en [DEPENDENCIAS-2.0](docs/DEPENDENCIAS-2.0.md).
+
+---
+
+## 🧱 Requisitos
+
+- **Windows 10/11** con Windows PowerShell 5.1.
+- **Node.js ≥ 22**.
+- **GPU NVIDIA**. Los modelos densos caben enteros en VRAM; los MoE híbridos
+  reparten expertos entre VRAM y RAM (probado en RTX 4060 8 GB + 16 GB RAM).
+- `bin/` con `llama-server.exe` (CUDA) o el build optimizado en
+  `.local/opt/bonsai-inference/build-RTX4060-Opt-sm89/bin/`.
+  `.\scripts\setup-clone.ps1` comprueba la ruta y `-BuildRuntime` compila.
+- `models/` con los GGUF. Si está vacío, la UI arranca igual y ofrece el
+  **Model Hub** para descargar el catálogo curado o importar un `.gguf`.
+- **Edge/Chrome** para la herramienta `navegador` y las pruebas de navegador.
+
+---
+
+## Build optimizada (opcional, ~20 min)
+
+El build estable se compila con opciones CMake reales (el script anterior
+pasaba algunos `-D` a `CMAKE_CUDA_FLAGS`, donde no hacían nada):
+
+```powershell
+.\scripts\build-rtx4060-optimized.ps1
+```
+
+Para el laboratorio y el parche MMVQ de 2 warps (solo Q4_K/Q5_K/Q6_K en
+sm_89) hay un build separado, con test de correctitud:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File forks\apply-4060-patches.ps1 -Nwarps 2
+powershell -ExecutionPolicy Bypass -File scripts\build-llama-lab.ps1 -Variant lab-base -Server -Jobs 8
+```
+
+El launcher prefiere `bin\builds\lab-server-mvq2\bin\llama-server.exe` si
+existe; si no, usa el build estable externo y, por último, `bin\`.
+La auditoría de flags y kernels está en [SOURCE-AUDIT](docs/SOURCE-AUDIT.md).
+
+---
+
+## 🧪 Pruebas
+
+```powershell
+npm test                    # 45 suites aisladas (sin GPU) ~2 min
+npm run test:navegador      # Edge/Chrome headless (UI, Ctrl+K, primer arranque)
+npm run test:gpu            # requiere el modelo real cargado
+npm run test:gpu-exclusiva  # calidad KV; exige GPU libre
+node scripts/run-tests.mjs --listar   # ver suites por grupo
+```
+
+Verificación de la **2.1.0**: `npm test` → **45/45**, `npm run test:navegador` →
+**7/7**, `npm audit` → **0 vulnerabilidades**, primer arranque sin modelos
+verificado, IDE en ventana propia con **0 MiB de VRAM** y capturas revisadas a
+1920×1080, 1600×900, 1366×768 y 1024×768.
+
+Herramientas reproducibles añadidas:
+
+```powershell
+.\scripts\benchmark-rtx4060-matrix.ps1          # matriz batch/ubatch/threads/mmap/KV
+.\scripts\probe-rtx4060-context.ps1 -ContextList "32768,43008,45056" -Vision
+```
+
+---
+
+## 📁 Estructura
+
+```text
+chat/            servidor de UI, agente, contexto, herramientas y suites de prueba
+chat/ui/         index.html, chat-core.js, app.js, ide.js, paneles.js, tema.css, fuentes
+scripts/         arranque (start-*.ps1), build, calibración, bench y run-tests.mjs
+config/          presets de motor (clásicos + optimizados RTX 4060)
+bin/             llama.cpp con CUDA (llama-server y DLL)
+models/          GGUF del modelo y proyector de visión (no versionados)
+docs/            guía RTX 4060, releases, evidencia y gráficos SVG
+reports/         mediciones reproducibles (bench, sonda de contexto, investigación)
+salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
+```
+
+---
+
+## 🔒 Seguridad y fiabilidad
+
+- Rutas confinadas al proyecto; guardados **atómicos** con copia de recuperación.
+- Un **punto de deshacer** por escritura del agente; reversión por turno.
+- Git por archivo, con selección explícita (nunca `add -A`).
+- Navegador con perfil efímero; puertos del IDE/modelo protegidos.
+- La inferencia es local; buscar/descargar dependencias/CDN requiere internet.
+
+---
+
+## 📚 Documentación
+
+| Documento | Contenido |
+|---|---|
+| [BENCHMARKS](BENCHMARKS.md) | Metodología, matriz, TTFT, cache y resultados medidos |
+| [OPTIMIZATIONS](OPTIMIZATIONS.md) | Registro A/B: antes, después, VRAM y calidad |
+| [QUANTIZATION](QUANTIZATION.md) | Q8/Q6/Q5/Q4/Q3, KV y cuantización mixta |
+| [TUNING](TUNING.md) | Perfiles por modelo, contexto, hilos y reparto MoE |
+| [SOURCE-AUDIT](docs/SOURCE-AUDIT.md) | Código, kernels, hot paths y flags auditados |
+| [HARDWARE](HARDWARE.md) | Inventario y límites físicos de esta máquina |
+| [ARCHITECTURE](ARCHITECTURE.md) | Capas, request path y presupuesto de memoria |
+| [PRIMER-ARRANQUE](docs/PRIMER-ARRANQUE.md) | Clon limpio: dependencias, runtime, modelos y primer modelo |
+| [RELEASE-2.1.0](docs/RELEASE-2.1.0.md) | CodeMirror, xterm/PTY, ripgrep/ast-grep, Zod y llguidance |
+| [RELEASE-2.2.0](docs/RELEASE-2.2.0.md) | Performance Lab: MoE, MMVQ, 2.490 tests y perfiles medidos |
+| [RELEASE-2.0.0](docs/RELEASE-2.0.0.md) | Precisión local: visión, research, Hub y release |
+| [DEPENDENCIAS-2.0](docs/DEPENDENCIAS-2.0.md) | Auditoría de dependencias, licencias y siguiente capa |
+| [LLGUIDANCE](docs/LLGUIDANCE.md) | Build opcional para structured outputs y tool calls |
+| [RELEASE-1.9.0](docs/RELEASE-1.9.0.md) | MoE híbrido: 30–35B en 8 GB VRAM |
+| [RELEASE-1.8.0](docs/RELEASE-1.8.0.md) | Catálogo de 25 modelos y descubrimiento online |
+| [RELEASE-1.7.0](docs/RELEASE-1.7.0.md) | Model Hub, plan por modelo y Model Lab |
+| [MODEL-HUB](docs/MODEL-HUB.md) | Catálogo, descargas, API y plan automático |
+| [INFERENCE-TOOLCHAIN](docs/INFERENCE-TOOLCHAIN.md) | CUDA, compilación y profiling reproducible |
+| [STRATA-Y-MEMORIA](docs/STRATA-Y-MEMORIA.md) | Qué es Strata y qué ideas de memoria aplican aquí |
+| [MODEL-HUB-2026-10-31](reports/MODEL-HUB-2026-10-31.md) | Evidencia: planes, VRAM, calidad y tuning por modelo |
+| [MODEL-CATALOG-2026-10-31](reports/MODEL-CATALOG-2026-10-31.md) | Catálogo completo: 30 modelos usables, visión y planes |
+| [MOE-2026-10-31](reports/MOE-2026-10-31.md) | MoE de 30-35B en 8 GB VRAM: reparto VRAM/RAM/SSD y tok/s |
+| [CODING-2026-10-31](reports/CODING-2026-10-31.md) | Proyecto real con tests ocultos: ranking de coding y pipeline |
+| [GPTOSS-2026-10-31](reports/GPTOSS-2026-10-31.md) | Perfil GPT-OSS: Harmony, 64k/128k, muestreo y Hub |
+| [CODER-PIPELINE-2026-10-31](reports/CODER-PIPELINE-2026-10-31.md) | Agente con herramientas: ablaciones y perfil `moe-fast` |
+| [WEBAPP-2026-10-31](reports/WEBAPP-2026-10-31.md) | Taskboard full-stack: API + UI real en navegador |
+| [ENGINE-2026-10-31](reports/ENGINE-2026-10-31.md) | Tuning de tok/s, ngram, draft, batch, VRAM y clocks |
+| [RELEASE-1.6.2](docs/RELEASE-1.6.2.md) | Acceso directo: abre el IDE de verdad (sin `-NoBrowser`) |
+| [RELEASE-1.6.1](docs/RELEASE-1.6.1.md) | IDE sin GPU, ventana propia y pulido de interfaz |
+| [RELEASE-1.6.0](docs/RELEASE-1.6.0.md) | 110k con visión, reparto de contexto automático y compactación |
+| [RELEASE-1.5.1](docs/RELEASE-1.5.1.md) | KV preset fix y benchmark de calidad |
+| [RTX4060_OPTIMIZATION_GUIDE](docs/RTX4060_OPTIMIZATION_GUIDE.md) | Ciclo de vida, presets, tuning, troubleshooting |
+| [CONTEXTO-Y-DIAGNOSTICO](docs/CONTEXTO-Y-DIAGNOSTICO.md) | Métricas, límites y diagnóstico |
+| [SMALL-LOCAL-CODER](docs/SMALL-LOCAL-CODER.md) | Perfil de coding con contexto selectivo |
+| [ARQUITECTURA-Y-PLAN-MAESTRO](docs/archive/ARQUITECTURA-Y-PLAN-MAESTRO.md) | Decisiones de diseño (histórico) |
+| [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES.md) | Licencias de dependencias y binarios |
+| [CHANGELOG](CHANGELOG.md) | Historial de versiones |
+
+---
+
+## 📄 Licencia
+
+El código se publica bajo **MIT** ([LICENSE](LICENSE)). Los pesos del modelo, los
+binarios de `llama.cpp` y las dependencias de `chat/package.json` conservan sus
+propios términos. El repositorio no incluye modelos, binarios ni datos locales.

@@ -4,6 +4,54 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.3.0] - 2026-10-31
+
+### Añadido
+
+- **Diff/merge moderno** con `@codemirror/merge` (`unifiedMergeView`) en Ctrl+K:
+  líneas añadidas/borradas, gutter y números reales. Selector nuevo
+  `.diff-cm`; el `<pre>` queda solo como fallback.
+- **Paleta de sintaxis propia** para CodeMirror, pensada para fondo oscuro, y
+  ajuste de línea para que los documentos largos se lean sin scroll horizontal.
+- **API de automatización** `window.bonsaiEditorCommand` con `getText`,
+  `replaceAll`, `select` y `focus`, además de `window.bonsaiEditor()`.
+- **Capa visual 2.3**: barra de dos filas, tema `slate` por defecto, estado vacío
+  con atajos, explorador más alto, ajustes con cabecera fija y pie pegajoso.
+- **Capturas de referencia** en `docs/graficos/ui-2.3-*.png` (1280, 1440, 1600,
+  ajustes, diff y estado vacío).
+- Documentos [RELEASE-2.3.0](docs/RELEASE-2.3.0.md) y
+  [TOOL-CALLING](docs/TOOL-CALLING.md).
+
+### Cambiado
+
+- **CodeMirror 6 es el único editor.** Se retiró el editor clásico
+  (`textarea` transparente + `pre` resaltado), sus listeners y el ajuste
+  opt-in. El bundle local sigue siendo obligatorio y se reconstruye con
+  `npm run build:ui-vendor`.
+- **Migración de ajustes** a `uiVersion: "2.3.0"`: tema `slate` y
+  `editorModerno: true` una sola vez; el resto de preferencias se conserva.
+- **Lanzador con `AUTO` por defecto.** El plan por modelo elige contexto, KV y
+  reparto MoE. Un preset guardado distinto de `AUTO`/`CUSTOM` ya no se impone.
+- El banner del lanzador y las comprobaciones previas se limpian: sin draft de
+  Ornith y sin pasos obsoletos.
+- El acceso directo del escritorio abre la UI 2.3 en Edge/Chrome app mode, sin
+  GPU para el navegador.
+
+### Eliminado
+
+- Editor clásico y su camino paralelo de resaltado/guardado.
+- Checkbox **Editor moderno** de Ajustes y la lógica de fallback asociada.
+- Chequeo del modelo draft de Ornith en `scripts/bonsai-rtx4060.ps1`.
+
+### Corregido
+
+- `chat/prueba-copia-evaluacion.mjs` fallaba porque la copia aislada no incluía
+  `chat/legacy-tool-parser.mjs`; ahora el módulo se copia y el test lo verifica.
+- Contraste de Markdown/HTML en el editor oscuro y alineación de los atajos del
+  estado vacío.
+- Cabecera a 1280 px: se ocultan chips secundarios y el permiso de comandos para
+  que la fila del servidor no se parta en dos líneas.
+
 ## [2.2.0] - 2026-10-31
 
 ### Añadido

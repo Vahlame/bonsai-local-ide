@@ -18,7 +18,7 @@ de `chat/node_modules/` y en los repositorios enlazados.
 | `turndown` + `turndown-plugin-gfm` | MIT | HTML a Markdown |
 | `linkedom` | ISC | DOM en Node |
 | `@lobehub/icons-static-svg` | MIT | Logos de proveedores (marcas de sus titulares) |
-| CodeMirror 6 y lenguajes | MIT | Editor opt-in |
+| CodeMirror 6 y lenguajes | MIT | Editor y diff/merge (único editor) |
 | `@xterm/xterm` + addons | MIT | Terminal web |
 | `node-pty` | MIT | ConPTY (opcional) |
 | `@vscode/ripgrep` / ripgrep | MIT | Búsqueda textual |
