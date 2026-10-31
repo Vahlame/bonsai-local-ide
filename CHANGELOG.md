@@ -33,6 +33,9 @@ versionado semántico.
   32/64/96/128k en el Hub y esfuerzo en Ajustes.
 - **Hub rediseñado**: resumen recomendado, KPIs de coding/web app, chips de
   capacidades, tarjetas coherentes y orden por relevancia.
+- **Primer arranque guiado**: si la IA está apagada, la UI pregunta qué modelo
+  cargar; sin GGUF explica el camino y abre el Model Hub. Se puede desactivar en
+  Ajustes. Incluye `scripts/setup-clone.ps1` y la guía `docs/PRIMER-ARRANQUE.md`.
 - **Tuning del motor** (`ENGINE-2026-10-31.md`): ngram, draft, batch, KV,
   prioridad, afinidad y clocks medidos. Base: `none` + 12 hilos + 1024/512;
   3 capas extra de expertos = +4,7 %.

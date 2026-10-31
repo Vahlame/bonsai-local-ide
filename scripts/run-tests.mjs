@@ -103,6 +103,7 @@ const NAVEGADOR = [
   { archivo: "chat/prueba-navegador.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-navegador-aislamiento.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-ui-humo.mjs", timeout: 180_000 },
+  { archivo: "chat/prueba-inicio-modelo.mjs", timeout: 180_000 },
 ];
 
 /** @type {Record<string, Suite[]>} */

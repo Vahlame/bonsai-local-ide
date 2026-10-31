@@ -155,11 +155,26 @@ GPT-OSS-20B queda como modelo principal para coding/web app:
 
 Detalle: [reports/GPTOSS-2026-10-31.md](../reports/GPTOSS-2026-10-31.md).
 
+### Primer arranque y clones limpios
+
+- **La UI pregunta qué modelo cargar** cuando la IA está apagada. El recomendado
+  aparece primero, con sus benchmarks y contexto; se carga con el plan automático.
+- **Sin modelos**, el diálogo explica que el IDE funciona sin IA y abre el
+  **Model Hub** para descargar o importar un GGUF.
+- **«Ahora no»** deja el IDE usable; **Ajustes → Preguntar modelo al iniciar**
+  permite desactivar la pregunta.
+- **`scripts/setup-clone.ps1`**: valida Node, instala `chat/node_modules`, busca
+  el runtime y, con `-BuildRuntime`, instala la toolchain y compila llama.cpp.
+- **`docs/PRIMER-ARRANQUE.md`** y el SVG `docs/graficos/primer-arranque.svg`
+  documentan el camino desde `git clone` hasta el primer chat.
+- Los pesos, `bin/`, `.local/` y `node_modules/` siguen fuera de Git: el
+  repositorio es el IDE, no un disco de modelos.
+
 ## Verificación
 
 - `npm test`: **42/42** (una pasada; `prueba-code-intelligence` puede fallar por
   un EPERM transitorio de Windows al borrar su temporal, pasa al repetirla).
-- `npm run test:navegador`: **5/5**.
+- `npm run test:navegador`: **6/6** (incluye primer arranque sin modelos).
 - `node scripts/model-plan.mjs`: incluye pruebas del reparto MoE y de
   `load-mode`.
 - `node scripts/chat-template-check.mjs`: **34/34**.

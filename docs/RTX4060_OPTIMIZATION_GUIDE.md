@@ -132,20 +132,22 @@ The projector is ~879 MiB. Keeping it in RAM is what allows 110,592 with q8_0;
 ## Quick Start
 
 ```powershell
-# 1. Build optimized binary (one-time, ~20 min)
-.\scripts\build-rtx4060-optimized.ps1
+# 0. Fresh clone: UI dependencies
+npm ci --prefix chat
 
-# 2. Setup speculative decoding draft model (optional)
-.\scripts\setup-speculative-draft.ps1
+# 1. Runtime de llama.cpp (una vez, ~20 min)
+.\scripts\setup-clone.ps1 -BuildRuntime
+#    o copia un build CUDA compatible en bin\ (llama-server.exe + DLLs)
 
-# 3. Open the IDE (desktop shortcut does the same)
+# 2. Open the IDE (desktop shortcut does the same)
 .\scripts\bonsai-rtx4060.ps1 launch
 #    -> abre http://127.0.0.1:8787
 
-# 4. Inside the IDE, choose a preset in the top bar and click "Iniciar"
-#    (or click "Terminal" to copy the exact PowerShell command for that preset)
+# 3. La UI pregunta "¿Qué modelo quieres cargar?" y aplica su plan automático.
+#    Sin GGUF, abre el Model Hub. "Ahora no" deja el IDE usable sin IA.
+#    El preset de la barra sigue disponible para ajustes manuales.
 
-# 5. Check status / stop
+# 4. Check status / stop
 .\scripts\bonsai-rtx4060.ps1 status
 ```
 
@@ -179,8 +181,11 @@ Desktop shortcut
           └─> scripts/start-ui-rtx4060-optimized.ps1   (SOLO abre la UI Node)
                  └─> node chat/ui-server.mjs  en http://127.0.0.1:8787
 
-UI top bar  [Iniciar ▼ preset]
-   └─> POST /api/server/start
+UI first run  [¿Qué modelo quieres cargar?]
+   ├─> "Ahora no"                    (el IDE sigue sin IA)
+   ├─> "Abrir Model Hub"             (descargar o importar GGUF)
+   └─> modelo instalado
+          └─> POST /api/modelos  (plan automático)
           └─> chat/ui-server.mjs  lanzarServidorLlama()
                  └─> spawn("powershell.exe", start-gpu-model-rtx4060-optimized.ps1,
                            { windowsHide: true }) + unref()

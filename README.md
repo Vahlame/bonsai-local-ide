@@ -17,7 +17,8 @@ controlado y visión — todo en tu GPU, sin nube.
 > Qwen3.6-35B-A3B corre a **42,5 tok/s** con `--load-mode none`; **GPT-OSS-20B
 > gana el benchmark de proyecto real (18/18 tests)** y trabaja a **64k por
 > defecto / 128k máximo** con Harmony y muestreo oficial. Catálogo de 34 GGUF
-> con plantilla auditada. Notas: [RELEASE-1.9.0](docs/RELEASE-1.9.0.md).
+> con plantilla auditada. Al abrir, la UI pregunta qué modelo cargar; si no hay
+> ninguno, te lleva al Model Hub. Notas: [RELEASE-1.9.0](docs/RELEASE-1.9.0.md).
 
 ---
 
@@ -51,9 +52,9 @@ flowchart LR
         CTX["Contexto / tokenizer"]
     end
 
-    subgraph LLAMA["llama-server (llama.cpp v0.8.0 sm89)"]
-        MODEL["Ornith 1.5 9B Q4_K_M"]
-        MMPROJ["mmproj (visión)"]
+    subgraph LLAMA["llama-server (llama.cpp sm89)"]
+        MODEL["GPT-OSS 20B · Harmony<br/>o MoE híbrido"]
+        MMPROJ["mmproj opcional (visión)"]
     end
 
     GPU["🎮 RTX 4060 8 GB"]
@@ -71,13 +72,46 @@ flowchart LR
 
 ## 🚀 Arranque rápido
 
-```powershell
-# 1) Abre el IDE (esto también lo hace el acceso directo del escritorio)
-.\scripts\bonsai-rtx4060.ps1 launch
+### Desde un clon
 
-# 2) En la barra superior del IDE elige el preset y pulsa "Iniciar"
-#    (o pulsa "Terminal" para copiar el comando exacto de PowerShell)
+```powershell
+git clone https://github.com/Vahlame/bonsai-local-ide.git
+cd bonsai-local-ide
+
+# Comprueba Node, instala chat/node_modules y busca el runtime.
+.\scripts\setup-clone.ps1 -NoLaunch
 ```
+
+Si todavía no tienes `llama-server.exe`, el mismo script puede instalar la
+toolchain CUDA y compilar el build sm89 (unos 20 minutos):
+
+```powershell
+.\scripts\setup-clone.ps1 -BuildRuntime -NoLaunch
+```
+
+Después abre el IDE:
+
+```powershell
+.\scripts\bonsai-rtx4060.ps1 launch
+```
+
+También puedes copiar un build CUDA compatible en `bin\`
+(`llama-server.exe` + sus DLL). Los pesos y el runtime **no viajan en Git**:
+el repositorio es el IDE, no un disco de 15 GB.
+
+Al abrir la UI:
+
+1. si la IA está apagada, aparece **¿Qué modelo quieres cargar?** con los
+   modelos instalados y el recomendado primero;
+2. si `models/` está vacío, el diálogo explica cómo empezar y abre el
+   **Model Hub** para descargar un GGUF o importar uno local;
+3. el modelo elegido arranca con su plantilla, muestreo y contexto automáticos
+   (GPT-OSS-20B usa **64k** por defecto).
+
+La pregunta se puede desactivar en **Ajustes → Preguntar modelo al iniciar**.
+Guía paso a paso: [PRIMER-ARRANQUE](docs/PRIMER-ARRANQUE.md).
+
+![Primer arranque: clon, runtime, modelo](docs/graficos/primer-arranque.svg)
 
 El IDE se abre en una **ventana de aplicación** (sin barra de direcciones) y **sin
 GPU**: `scripts/open-ide.ps1` usa Edge/Chrome con `--disable-gpu` y un perfil aislado,
@@ -91,17 +125,17 @@ normal? `.\scripts\open-ide.ps1 -Tab`.
 
 ```mermaid
 flowchart TD
-    A["Acceso directo<br/>Bonsai IDE"] --> B["start-ui-rtx4060-optimized.ps1<br/>(solo UI Node)"]
+    A["Acceso directo o<br/>setup-clone.ps1"] --> B["start-ui-rtx4060-optimized.ps1<br/>(solo UI Node)"]
     B --> C["http://127.0.0.1:8787"]
-    C --> D{"Barra superior"}
-    D -->|Iniciar| E["POST /api/server/start"]
-    D -->|Terminal| F["GET /api/server/command<br/>(comando absoluto al portapapeles)"]
-    E --> G["spawn + unref (Node)"]
-    G --> H["start-gpu-model-rtx4060-optimized.ps1"]
-    H --> I["Start-Process llama-server<br/>+ WaitForExit"]
-    I --> J["🎮 GPU · servidor vivo"]
-    F --> K["Pega en PowerShell"]
-    K --> J
+    C --> D{"¿Modelo cargado?"}
+    D -->|Sí| H["Chat, agente y editor"]
+    D -->|No| E["¿Qué modelo quieres cargar?"]
+    E -->|Hay GGUF| F["POST /api/modelos<br/>plan automático"]
+    E -->|Sin GGUF| G["Model Hub<br/>descargar o importar"]
+    G --> F
+    F --> I["start-gpu-model-rtx4060-optimized.ps1"]
+    I --> J["llama-server<br/>GPU + RAM"]
+    J --> H
 ```
 
 > **Por qué así:** en Windows el hijo muere si el padre termina. El wrapper de
@@ -380,11 +414,13 @@ Sirve para comparar presets, no para prometer que el proyecto saldrá perfecto.
 
 - **Windows 10/11** con Windows PowerShell 5.1.
 - **Node.js ≥ 22**.
-- **GPU NVIDIA** que quepa el modelo entero en VRAM (probado en RTX 4060 8 GB).
-  No hay capas en CPU.
+- **GPU NVIDIA**. Los modelos densos caben enteros en VRAM; los MoE híbridos
+  reparten expertos entre VRAM y RAM (probado en RTX 4060 8 GB + 16 GB RAM).
 - `bin/` con `llama-server.exe` (CUDA) o el build optimizado en
   `.local/opt/bonsai-inference/build-RTX4060-Opt-sm89/bin/`.
-- `models/` con el GGUF del catálogo y, para visión, su `mmproj`.
+  `.\scripts\setup-clone.ps1` comprueba la ruta y `-BuildRuntime` compila.
+- `models/` con los GGUF. Si está vacío, la UI arranca igual y ofrece el
+  **Model Hub** para descargar el catálogo curado o importar un `.gguf`.
 - **Edge/Chrome** para la herramienta `navegador` y las pruebas de navegador.
 
 ---
@@ -404,16 +440,17 @@ flags están en [RTX4060_OPTIMIZATION_GUIDE](docs/RTX4060_OPTIMIZATION_GUIDE.md)
 ## 🧪 Pruebas
 
 ```powershell
-npm test                    # 40 suites aisladas (sin GPU) ~2 min
-npm run test:navegador      # Edge/Chrome headless (UI, Ctrl+K, humo)
+npm test                    # 42 suites aisladas (sin GPU) ~2 min
+npm run test:navegador      # Edge/Chrome headless (UI, Ctrl+K, primer arranque)
 npm run test:gpu            # requiere el modelo real cargado
 npm run test:gpu-exclusiva  # calidad KV; exige GPU libre
 node scripts/run-tests.mjs --listar   # ver suites por grupo
 ```
 
-Verificación de la **1.6.1**: `npm test` → **40/40**, `npm run test:navegador` → **5/5**,
-IDE en ventana propia con **0 MiB de VRAM** y capturas revisadas a 1920×1080,
-1600×900, 1366×768 y 1024×768.
+Verificación de la **1.9.0**: `npm test` → **42/42**, `npm run test:navegador` →
+**6/6**, primer arranque sin modelos verificado, IDE en ventana propia con
+**0 MiB de VRAM** y capturas revisadas a 1920×1080, 1600×900, 1366×768 y
+1024×768.
 
 Herramientas reproducibles añadidas:
 
@@ -454,10 +491,12 @@ salida/          adjuntos y artefactos del agente (no es tu carpeta de trabajo)
 
 | Documento | Contenido |
 |---|---|
+| [PRIMER-ARRANQUE](docs/PRIMER-ARRANQUE.md) | Clon limpio: dependencias, runtime, modelos y primer modelo |
 | [RELEASE-1.9.0](docs/RELEASE-1.9.0.md) | MoE híbrido: 30–35B en 8 GB VRAM |
 | [RELEASE-1.8.0](docs/RELEASE-1.8.0.md) | Catálogo de 25 modelos y descubrimiento online |
 | [RELEASE-1.7.0](docs/RELEASE-1.7.0.md) | Model Hub, plan por modelo y Model Lab |
 | [MODEL-HUB](docs/MODEL-HUB.md) | Catálogo, descargas, API y plan automático |
+| [INFERENCE-TOOLCHAIN](docs/INFERENCE-TOOLCHAIN.md) | CUDA, compilación y profiling reproducible |
 | [STRATA-Y-MEMORIA](docs/STRATA-Y-MEMORIA.md) | Qué es Strata y qué ideas de memoria aplican aquí |
 | [MODEL-HUB-2026-10-31](reports/MODEL-HUB-2026-10-31.md) | Evidencia: planes, VRAM, calidad y tuning por modelo |
 | [MODEL-CATALOG-2026-10-31](reports/MODEL-CATALOG-2026-10-31.md) | Catálogo completo: 30 modelos usables, visión y planes |

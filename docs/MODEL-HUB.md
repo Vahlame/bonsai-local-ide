@@ -7,6 +7,11 @@ VRAM. No hay dependencias nuevas: usa `fetch`, `crypto` y streams de Node.
 
 ## 1. Abrir el Hub
 
+Si el IDE arranca con la IA apagada, muestra **¿Qué modelo quieres cargar?** con
+los modelos instalados (el recomendado primero). Si todavía no hay ninguno,
+ofrece **Abrir Model Hub**; el IDE sigue usable con **Ahora no**. La pregunta se
+desactiva en **Ajustes → Preguntar modelo al iniciar**.
+
 - Botón **Modelos** de la barra superior.
 - Menú del chip de modelo → **Catálogo de modelos…**
 - Ajustes → perfil de motor → *Catálogo de modelos* (próximamente).

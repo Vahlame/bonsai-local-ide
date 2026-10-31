@@ -348,7 +348,7 @@
 
   // ================================================================== ajustes
   /** @type {{tema: string, perfil: string, pensar: number, reglas: boolean, historial: number}} */
-  let ajustes = { tema: "slate", perfil: "codigo", pensar: 0, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180 };
+  let ajustes = { tema: "slate", perfil: "codigo", pensar: 0, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, preguntarModelo: true };
 
   const TEMAS = [["slate","Grafito"],["ocean","Niebla azul"],["forest","Bosque"],["sand","Arena"],["light","Marfil"],["dark","Medianoche"]];
   function siguienteTema() { const i=TEMAS.findIndex(([v])=>v===ajustes.tema); return TEMAS[(i+1)%TEMAS.length][0]; }
@@ -1894,6 +1894,11 @@
       void actualizarChipPresupuesto();
     });
 
+    const preguntarInicio = el("input");
+    preguntarInicio.type = "checkbox";
+    preguntarInicio.checked = ajustes.preguntarModelo !== false;
+    preguntarInicio.addEventListener("change", () => guardarAjustes({ preguntarModelo: preguntarInicio.checked }));
+
     const reglas = el("input");
     reglas.type = "checkbox";
     reglas.checked = Boolean(ajustes.reglas);
@@ -1955,6 +1960,7 @@
       fila("Tema", tema),
       fila("Mostrar pensamiento expandido", verPensamiento),
       el("h4","settings-section","Modelo y respuesta"),
+      fila("Preguntar modelo al iniciar", preguntarInicio),
       fila("Perfil de muestreo", perfil),
       fila("Agente", agentePerfil),
       fila("Modo de respuesta", modo),
@@ -2364,6 +2370,142 @@
     }
   }
 
+  // ================================================================== inicio
+  let dialogoModeloInicioAbierto = false;
+
+  function modeloInicioYaResuelto() {
+    try { return sessionStorage.getItem("bonsai-modelo-inicio") === "1"; } catch { return false; }
+  }
+
+  function marcarModeloInicio() {
+    try { sessionStorage.setItem("bonsai-modelo-inicio", "1"); } catch { /* sin almacenamiento: se vuelve a preguntar */ }
+  }
+
+  /** ¿Qué modelo cargar? Al abrir el IDE con la IA apagada, o al clonar sin modelos. */
+  async function preguntarModeloInicio() {
+    if (dialogoModeloInicioAbierto || ajustes.preguntarModelo === false || modeloInicioYaResuelto()) return;
+    let servidor;
+    let lista;
+    try {
+      [servidor, lista] = await Promise.all([api("/api/servidor"), api("/api/modelos")]);
+    } catch {
+      return;
+    }
+    if (servidor?.encendido) { marcarModeloInicio(); return; }
+    const candidatos = (lista?.modelos || [])
+      .filter((m) => m.existe && m.gpuCompleta && !m.oculto)
+      .sort((a, b) =>
+        (Number(b.pruebas?.coding?.global) || 0) - (Number(a.pruebas?.coding?.global) || 0) ||
+        (Number(b.pruebas?.webapp?.global) || 0) - (Number(a.pruebas?.webapp?.global) || 0) ||
+        (b.predeterminado ? 1 : 0) - (a.predeterminado ? 1 : 0) ||
+        String(a.nombre).localeCompare(String(b.nombre), "es"));
+    dialogoModeloInicioAbierto = true;
+    abrirDialogoInicioModelo(candidatos, lista?.guardado || "");
+  }
+
+  /**
+   * Diálogo de primer arranque. Sin modelos enseña el camino al Hub; con modelos,
+   * carga el elegido con su plan automático y cierra el diálogo solo si responde.
+   * @param {any[]} candidatos
+   * @param {string} guardado
+   */
+  function abrirDialogoInicioModelo(candidatos, guardado) {
+    const fondo = el("div", "dialogo-fondo");
+    const caja = el("div", "dialogo inicio-modelo");
+    caja.style.width = "min(720px, calc(100vw - 32px))";
+    const h = el("h3", "", "¿Qué modelo quieres cargar?");
+    caja.append(
+      h,
+      el("p", "", candidatos.length
+        ? "Elige el modelo para esta sesión. Se carga con su plantilla, su muestreo y el contexto recomendado para este equipo."
+        : "El IDE ya funciona. Para hablar con la IA, descarga un GGUF del catálogo o importa uno que ya tengas: el plan de motor se calcula solo."),
+    );
+
+    const cerrar = () => {
+      marcarModeloInicio();
+      fondo.remove();
+      dialogoModeloInicioAbierto = false;
+    };
+
+    /** @type {HTMLElement | null} */
+    let lista = null;
+    if (candidatos.length) {
+      lista = el("div", "inicio-modelo-lista");
+      const estado = el("p", "inicio-modelo-estado", "");
+      let cargando = false;
+
+      candidatos.slice(0, 8).forEach((m, indice) => {
+        const boton = el("button", "inicio-modelo-opcion");
+        boton.type = "button";
+        const texto = el("span", "inicio-modelo-texto");
+        const titulo = el("span", "inicio-modelo-titulo");
+        titulo.append(el("strong", "", m.nombre || m.clave));
+        if (indice === 0) titulo.append(el("span", "inicio-modelo-badge recom", "Recomendado"));
+        if (m.clave === guardado) titulo.append(el("span", "inicio-modelo-badge", "Último usado"));
+        texto.append(titulo);
+        const datos = [];
+        if (Number(m.pruebas?.coding?.global)) datos.push(`${m.pruebas.coding.global}% coding`);
+        if (Number(m.pruebas?.webapp?.global)) datos.push(`${m.pruebas.webapp.global}% web app`);
+        const ctx = Number(m.plan?.contexto || m.contextoPorDefecto);
+        if (ctx) datos.push(`${Math.round(ctx / 1024)}k de contexto`);
+        if (m.vision) datos.push("visión");
+        texto.append(el("span", "inicio-modelo-meta", datos.join(" · ") || (m.uso || m.rol || "modelo local")));
+        boton.append(texto, el("span", "inicio-modelo-accion", "Cargar"));
+
+        boton.addEventListener("click", async () => {
+          if (cargando) return;
+          cargando = true;
+          for (const otro of lista?.querySelectorAll("button") || []) otro.disabled = true;
+          estado.className = "inicio-modelo-estado activo";
+          estado.textContent = `Cargando ${m.nombre || m.clave}…`;
+          try {
+            const r = await api("/api/modelos", { cuerpo: { clave: m.clave, auto: true }, timeout: 600000 });
+            marcarModeloInicio();
+            fondo.remove();
+            dialogoModeloInicioAbierto = false;
+            avisar(`${r.nombre || m.nombre || m.clave} listo · ventana ${r.nCtx} tok${r.pensar ? ` · razona ${r.pensar}` : ""}`, "ok", 7000);
+            window.dispatchEvent(new CustomEvent("bonsai:modelos-cambiados"));
+            await cargarAjustes();
+            await refrescarModelos();
+            void actualizarChipPresupuesto();
+            void pintarChipVision();
+          } catch (err) {
+            cargando = false;
+            for (const otro of lista?.querySelectorAll("button") || []) otro.disabled = false;
+            estado.className = "inicio-modelo-estado error";
+            estado.textContent = `No se pudo cargar ${m.nombre || m.clave}: ${err.message}`;
+          }
+        });
+        lista.append(boton);
+      });
+      caja.append(lista, estado);
+    } else {
+      const vacio = el("div", "inicio-modelo-vacio");
+      vacio.append(
+        el("strong", "", "Todavía no hay modelos instalados"),
+        el("span", "", "El Hub trae un catálogo curado, busca en Hugging Face y también importa archivos .gguf locales. Los pesos y el runtime no viajan en Git."),
+      );
+      caja.append(vacio);
+    }
+
+    const botones = el("div", "d-botones");
+    const ahoraNo = el("button", "ghost", "Ahora no");
+    ahoraNo.type = "button";
+    ahoraNo.addEventListener("click", cerrar);
+    const hub = el("button", candidatos.length ? "ghost" : "primary", "Abrir Model Hub");
+    hub.type = "button";
+    hub.addEventListener("click", () => {
+      cerrar();
+      window.bonsaiHub?.abrir();
+    });
+    botones.append(ahoraNo, hub);
+    caja.append(botones);
+    fondo.append(caja);
+    document.body.append(fondo);
+    accesibilizarDialogo(fondo, caja, h, { onEscape: cerrar });
+    fondo.addEventListener("click", (e) => { if (e.target === fondo) cerrar(); });
+  }
+
   /**
    * @param {Element | null} [ancla] elemento bajo el que se abre el menú
    */
@@ -2639,8 +2781,9 @@
     aplicarTema(ajustes.tema);
     pintarChipReglas();
     void pintarChipVision();
-    void refrescarModelos();
+    await refrescarModelos();
     void actualizarChipPresupuesto();
+    void preguntarModeloInicio();
     refrescarGit();
     setInterval(refrescarGit, 15000);
     // El modelo también puede cambiar por fuera de la app (start-server.ps1 -Modelo, otra

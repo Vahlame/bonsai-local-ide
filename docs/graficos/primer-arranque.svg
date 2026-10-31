@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="520" viewBox="0 0 1120 520" font-family="Segoe UI, system-ui, sans-serif">
+  <defs>
+    <marker id="flecha" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#8d9680"/>
+    </marker>
+    <linearGradient id="acento" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#cde86e"/>
+      <stop offset="1" stop-color="#8fae42"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1120" height="520" fill="#0d100b"/>
+  <text x="40" y="42" fill="#e9eee0" font-size="22" font-weight="650">Bonsai IDE · primer arranque desde un clon</text>
+  <text x="40" y="66" fill="#8d9680" font-size="12.5">Sin pesos ni binarios en Git: el IDE se instala, pregunta qué modelo cargar y calcula su plan.</text>
+
+  <!-- Paso 1 -->
+  <rect x="40" y="100" width="280" height="104" rx="12" fill="#161c12" stroke="#2b3423"/>
+  <text x="58" y="126" fill="#cde86e" font-size="11" font-weight="700" letter-spacing="1.2">1 · CLONAR</text>
+  <text x="58" y="150" fill="#e9eee0" font-size="13">git clone …</text>
+  <text x="58" y="170" fill="#aeb8a0" font-size="12">npm ci --prefix chat</text>
+  <text x="58" y="189" fill="#77826b" font-size="10.5">solo dependencias de la UI</text>
+
+  <!-- Paso 2 -->
+  <rect x="370" y="100" width="330" height="104" rx="12" fill="#161c12" stroke="#2b3423"/>
+  <text x="388" y="126" fill="#cde86e" font-size="11" font-weight="700" letter-spacing="1.2">2 · RUNTIME</text>
+  <text x="388" y="150" fill="#e9eee0" font-size="13">setup-clone.ps1 -BuildRuntime</text>
+  <text x="388" y="170" fill="#aeb8a0" font-size="12">o copia un build CUDA en bin\</text>
+  <text x="388" y="189" fill="#77826b" font-size="10.5">llama-server.exe + DLLs</text>
+
+  <!-- Paso 3 -->
+  <rect x="750" y="100" width="330" height="104" rx="12" fill="#161c12" stroke="#2b3423"/>
+  <text x="768" y="126" fill="#cde86e" font-size="11" font-weight="700" letter-spacing="1.2">3 · ABRIR EL IDE</text>
+  <text x="768" y="150" fill="#e9eee0" font-size="13">bonsai-rtx4060.ps1 launch</text>
+  <text x="768" y="170" fill="#aeb8a0" font-size="12">UI en http://127.0.0.1:8787</text>
+  <text x="768" y="189" fill="#77826b" font-size="10.5">ventana sin GPU · 0 MiB VRAM</text>
+
+  <line x1="320" y1="152" x2="362" y2="152" stroke="#8d9680" stroke-width="1.5" marker-end="url(#flecha)"/>
+  <line x1="700" y1="152" x2="742" y2="152" stroke="#8d9680" stroke-width="1.5" marker-end="url(#flecha)"/>
+
+  <!-- Decisión -->
+  <rect x="40" y="270" width="300" height="120" rx="12" fill="#1a2114" stroke="#cde86e" stroke-opacity=".55"/>
+  <text x="58" y="298" fill="#cde86e" font-size="11" font-weight="700" letter-spacing="1.2">AL ARRANCAR</text>
+  <text x="58" y="324" fill="#e9eee0" font-size="15" font-weight="600">¿Qué modelo quieres cargar?</text>
+  <text x="58" y="347" fill="#aeb8a0" font-size="11.5">Solo si la IA está apagada.</text>
+  <text x="58" y="365" fill="#77826b" font-size="10.5">Se desactiva en Ajustes.</text>
+
+  <!-- Rama instalado -->
+  <rect x="410" y="238" width="320" height="92" rx="10" fill="#161c12" stroke="#2b3423"/>
+  <text x="428" y="263" fill="#cde86e" font-size="11" font-weight="700">HAY GGUF INSTALADO</text>
+  <text x="428" y="285" fill="#e9eee0" font-size="12.5">Cargar con su plan automático</text>
+  <text x="428" y="305" fill="#8d9680" font-size="10.5">Harmony · herramientas · 64k · q8_0</text>
+  <path d="M340 310 L400 310 L400 284" fill="none" stroke="#8d9680" stroke-width="1.5" marker-end="url(#flecha)"/>
+
+  <!-- Rama sin modelos -->
+  <rect x="410" y="360" width="320" height="92" rx="10" fill="#161c12" stroke="#2b3423"/>
+  <text x="428" y="385" fill="#cde86e" font-size="11" font-weight="700">SIN MODELOS</text>
+  <text x="428" y="407" fill="#e9eee0" font-size="12.5">Abrir Model Hub</text>
+  <text x="428" y="427" fill="#8d9680" font-size="10.5">catálogo · Hugging Face · URL · importar</text>
+  <path d="M340 350 L400 350 L400 406" fill="none" stroke="#8d9680" stroke-width="1.5" marker-end="url(#flecha)"/>
+
+  <!-- Resultado -->
+  <rect x="800" y="266" width="280" height="128" rx="12" fill="#1a2114" stroke="#cde86e" stroke-opacity=".55"/>
+  <circle cx="830" cy="296" r="5" fill="#cde86e"/>
+  <text x="846" y="301" fill="#e9eee0" font-size="14" font-weight="600">Chat y agente locales</text>
+  <text x="822" y="327" fill="#aeb8a0" font-size="11.5">El modelo ya responde en :8080</text>
+  <text x="822" y="347" fill="#77826b" font-size="10.5">Editor · terminal · git · navegador</text>
+  <text x="822" y="367" fill="#77826b" font-size="10.5">Contexto y muestreo por modelo</text>
+  <path d="M730 284 L790 284 L790 310" fill="none" stroke="#8d9680" stroke-width="1.5" marker-end="url(#flecha)"/>
+  <path d="M730 406 L770 406 L770 350" fill="none" stroke="#8d9680" stroke-width="1.5" marker-end="url(#flecha)"/>
+
+  <line x1="40" y1="480" x2="1080" y2="480" stroke="#2b3423"/>
+  <text x="40" y="503" fill="#8d9680" font-size="11">La pregunta no bloquea: «Ahora no» deja el IDE usable sin IA.</text>
+  <text x="1080" y="503" fill="#8d9680" font-size="11" text-anchor="end">El plan se recalcula con la VRAM y la RAM reales.</text>
+</svg>

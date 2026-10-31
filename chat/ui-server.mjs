@@ -1814,7 +1814,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy", memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480, engineEffort: "default" };
+  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy", memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480, engineEffort: "default", preguntarModelo: true };
   // Los ajustes guardados en la interfaz (perfil de muestreo, tope de historial, pensar)
   // mandan sobre los valores por defecto de la línea de comandos. Va AQUÍ y no al principio
   // de main(): `AJUSTES_DEFECTO` es un `const` y llamarlo antes revienta el arranque con
