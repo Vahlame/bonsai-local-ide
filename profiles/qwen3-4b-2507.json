@@ -1,0 +1,105 @@
+{
+  "model": "qwen3-4b-2507",
+  "display": "Qwen3 4B Instruct 2507 (Q4_K_M, dense)",
+  "file": "models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+  "quality": {
+    "perplexity": "12.2553 on bench/corpus/quality.txt at 512 ctx (Q8_0 11.9276, +2.75%)",
+    "source": "reports/bench-quality-20261031-v2/quality_report.md"
+  },
+  "recommended": "balanced",
+  "profiles": {
+    "balanced": {
+      "context": 16384,
+      "kv": "f16",
+      "n_cpu_moe": 0,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 77.0,
+        "prefill_tok_s": 3996,
+        "ttft_ms": 432,
+        "vram_mib": 4885
+      },
+      "source": "reports/bench-server-4b-mvq2-scoped"
+    },
+    "max_speed": {
+      "context": 8192,
+      "kv": "f16",
+      "n_cpu_moe": 0,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 80.5,
+        "prefill_tok_s": 3920,
+        "ttft_ms": 123,
+        "vram_mib": 4500
+      },
+      "note": "Short-prompt decode with the mvq2 GEMV build; decode falls to ~63 tok/s once the KV cache contains ~6k tokens.",
+      "source": "reports/bench-ab-mvq2-scoped-4b"
+    },
+    "max_quality": {
+      "context": 16384,
+      "kv": "f16",
+      "n_cpu_moe": 0,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 77.0,
+        "prefill_tok_s": 3996,
+        "ttft_ms": 432,
+        "vram_mib": 4885
+      },
+      "source": "reports/bench-server-4b-mvq2-scoped"
+    },
+    "long_context": {
+      "context": 16384,
+      "kv": "f16",
+      "n_cpu_moe": 0,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 63.0,
+        "prefill_tok_s": 3508,
+        "ttft_ms": 1848,
+        "vram_mib": 4885
+      },
+      "note": "Measured with a 6115-token prompt at 16k context; the mvq2 build adds ~3.5% at depth 4096.",
+      "source": "reports/bench-server-qwen3-4b"
+    },
+    "max_model": {
+      "context": 16384,
+      "kv": "f16",
+      "n_cpu_moe": 0,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 77.0,
+        "prefill_tok_s": 3996,
+        "ttft_ms": 432,
+        "vram_mib": 4885
+      },
+      "note": "For larger models use GPT-OSS-20B or Qwen3.6-35B-A3B; 4B is the fast-edit profile.",
+      "source": "reports/bench-server-4b-mvq2-scoped"
+    }
+  }
+}

@@ -1,0 +1,2 @@
+suite,run_id,model_key,model,quant,context,kv,prompt_target,prompt_tokens,n_predict,predicted_n,ttft_ms,prefill_tok_s,decode_tok_s,itl_median_ms,itl_p95_ms,cache_prompt,cache_n,load_ms,vram_idle_mib,vram_model_mib,vram_peak_mib,ram_peak_mib,cpu_util_avg,power_avg_w,power_max_w,temp_max_c,wall_ms,run,note,response_chars
+server,moe32k-ncmoe-12,gpt-oss-20b,GPT-OSS,MXFP4,32768,q8_0,2048,1529,128,128,1714.93,898.48,34.62,28.631,29.816,False,0,7387.5,0,6849,6869,6272,43.19,29.91,48.62,57.0,5383.8,1,,779

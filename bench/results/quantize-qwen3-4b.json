@@ -1,0 +1,43 @@
+﻿{
+    "createdAt":  "2026-10-31T20:21:22.9779811Z",
+    "source":  "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Qwen3-4B-Instruct-2507-Q8_0.gguf",
+    "sourceSha256":  "391c1e410fd9f4cf2de2b510273b56a84c19ce18f4fa3bfb3774031dac4ef068",
+    "quantize":  "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89\\bin\\llama-quantize.exe",
+    "quantizeSha256":  "02d59abebbf13d52e549b32e41169dfc6ab42e68b2363f7403862a355f555443",
+    "threads":  8,
+    "runs":  [
+                 {
+                     "type":  "Q6_K",
+                     "output":  "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Qwen3-4B-Instruct-2507-Q6_K.gguf",
+                     "skipped":  true,
+                     "bytes":  3306261600,
+                     "sha256":  "77d53d8a96fb1f97c27cb09ff7b830a909be1033b574bdaffefa9869e2d11120"
+                 },
+                 {
+                     "type":  "Q5_K_M",
+                     "output":  "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Qwen3-4B-Instruct-2507-Q5_K_M.gguf",
+                     "bytes":  2889514080,
+                     "gib":  2.691,
+                     "sha256":  "331d47e52e22a1808ba42f86ea36f0b1f47523c556efedc5c38fb79900b111db",
+                     "seconds":  43.7,
+                     "log":  "C:\\Users\\user\\Documents\\prject_local_AI\\bench\\results\\quantize-Q5_K_M.log"
+                 },
+                 {
+                     "type":  "Q4_K_M",
+                     "output":  "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+                     "skipped":  true,
+                     "bytes":  2497281120,
+                     "sha256":  "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597"
+                 },
+                 {
+                     "type":  "Q3_K_M",
+                     "output":  "C:\\Users\\user\\Documents\\prject_local_AI\\models\\Qwen3-4B-Instruct-2507-Q3_K_M.gguf",
+                     "bytes":  2075618400,
+                     "gib":  1.933,
+                     "sha256":  "b38674ff76038c6534fcc23ae08fab7771a9f1ff6ce621ac994aec077ccb87ea",
+                     "seconds":  30,
+                     "log":  "C:\\Users\\user\\Documents\\prject_local_AI\\bench\\results\\quantize-Q3_K_M.log"
+                 }
+             ],
+    "finishedAt":  "2026-10-31T20:22:43.8577187Z"
+}

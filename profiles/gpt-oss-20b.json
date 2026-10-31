@@ -1,0 +1,106 @@
+{
+  "model": "gpt-oss-20b",
+  "display": "GPT-OSS 20B (MXFP4, MoE)",
+  "file": "models/gpt-oss-20b-gpt-oss-20b-MXFP4.gguf",
+  "quality": {
+    "coding": "100% (18/18 project + 10/10 bugfix, 2 reps)",
+    "webapp": "100% (8/8 API + 3/3 UI)",
+    "quality_tasks": "5/5",
+    "source": "reports/GPTOSS-2026-10-31.md"
+  },
+  "recommended": "balanced",
+  "profiles": {
+    "balanced": {
+      "context": 65536,
+      "kv": "q8_0",
+      "n_cpu_moe": 12,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 36.8,
+        "prefill_tok_s": 908,
+        "ttft_ms": 1707,
+        "vram_mib": 7309
+      },
+      "source": "reports/bench-moe64k-n12-t8-r3"
+    },
+    "max_speed": {
+      "context": 32768,
+      "kv": "q8_0",
+      "n_cpu_moe": 11,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 38.65,
+        "prefill_tok_s": 960,
+        "ttft_ms": 1611,
+        "vram_mib": 7275
+      },
+      "source": "reports/bench-moe32k-n11-t8"
+    },
+    "max_quality": {
+      "context": 65536,
+      "kv": "q8_0",
+      "n_cpu_moe": 12,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 36.8,
+        "prefill_tok_s": 908,
+        "ttft_ms": 1707,
+        "vram_mib": 7309
+      },
+      "note": "MXFP4 is the native weight format; q8_0 KV measured -0.35% PPL vs f16 at 1k context (within noise). No higher-precision GGUF exists on this machine.",
+      "source": "reports/bench-moe64k-n12-t8-r3"
+    },
+    "long_context": {
+      "context": 131072,
+      "kv": "q8_0",
+      "n_cpu_moe": 14,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 33.65,
+        "prefill_tok_s": 823,
+        "ttft_ms": 1874,
+        "vram_mib": 7473
+      },
+      "source": "reports/bench-moe128k-n14-t8"
+    },
+    "max_model": {
+      "context": 65536,
+      "kv": "q8_0",
+      "n_cpu_moe": 12,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 36.8,
+        "prefill_tok_s": 908,
+        "ttft_ms": 1707,
+        "vram_mib": 7309
+      },
+      "note": "To run a larger model, use the Qwen3.6-35B-A3B profile; this entry documents the largest safe configuration for GPT-OSS itself.",
+      "source": "reports/bench-moe64k-n12-t8-r3"
+    }
+  }
+}

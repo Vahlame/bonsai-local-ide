@@ -1,0 +1,105 @@
+{
+  "model": "qwen3-30b-a3b-2507",
+  "display": "Qwen3 30B-A3B 2507 (UD-Q2_K_XL, MoE)",
+  "file": "models/qwen3-30b-a3b-2507-Qwen3-30B-A3B-Instruct-2507-UD-Q2_K_XL.gguf",
+  "quality": {
+    "coding": "86% (existing coding suite)",
+    "webapp": "55%",
+    "source": "README.md; reports/coding-bench-*"
+  },
+  "recommended": "balanced",
+  "profiles": {
+    "balanced": {
+      "context": 32768,
+      "kv": "q8_0",
+      "n_cpu_moe": 26,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 46.61,
+        "prefill_tok_s": 848,
+        "ttft_ms": 1829,
+        "vram_mib": 7535
+      },
+      "source": "reports/bench-qwen3-30b-32k-n26-t8"
+    },
+    "max_speed": {
+      "context": 32768,
+      "kv": "q8_0",
+      "n_cpu_moe": 26,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 46.61,
+        "prefill_tok_s": 848,
+        "ttft_ms": 1829,
+        "vram_mib": 7535
+      },
+      "note": "n-cpu-moe 25 OOMs at this context; 26 is the maximum safe split measured.",
+      "source": "reports/bench-qwen3-30b-32k-n26-t8"
+    },
+    "max_quality": {
+      "context": 32768,
+      "kv": "q8_0",
+      "n_cpu_moe": 26,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 46.61,
+        "prefill_tok_s": 848,
+        "ttft_ms": 1829,
+        "vram_mib": 7535
+      },
+      "source": "reports/bench-qwen3-30b-32k-n26-t8"
+    },
+    "long_context": {
+      "context": 32768,
+      "kv": "q8_0",
+      "n_cpu_moe": 26,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 46.61,
+        "prefill_tok_s": 848,
+        "ttft_ms": 1829,
+        "vram_mib": 7535
+      },
+      "note": "Not validated above 32k; run the memory budgeter before increasing context.",
+      "source": "reports/bench-qwen3-30b-32k-n26-t8"
+    },
+    "max_model": {
+      "context": 32768,
+      "kv": "q8_0",
+      "n_cpu_moe": 26,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 46.61,
+        "prefill_tok_s": 848,
+        "ttft_ms": 1829,
+        "vram_mib": 7535
+      },
+      "source": "reports/bench-qwen3-30b-32k-n26-t8"
+    }
+  }
+}

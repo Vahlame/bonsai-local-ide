@@ -1,0 +1,31 @@
+0.00.028.468 I srv  llama_server: initializing ...
+0.00.028.480 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.028.810 W srv  server_setup: security: no API key is set and CORS allows all origins (see https://github.com/ggml-org/llama.cpp/pull/25655)
+0.00.033.440 I srv    load_model: loading model 'C:\Users\user\Documents\prject_local_AI\models\gpt-oss-20b-gpt-oss-20b-MXFP4.gguf'
+0.01.193.106 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 99, abort
+0.01.678.416 W load: setting token '<|constrain|>' (200003) attribute to USER_DEFINED (16), old attributes: 8
+0.01.678.946 W load: setting token '<|message|>' (200008) attribute to USER_DEFINED (16), old attributes: 8
+0.01.682.710 W load: setting token '<|channel|>' (200005) attribute to USER_DEFINED (16), old attributes: 8
+0.01.682.713 W load: setting token '<|start|>' (200006) attribute to USER_DEFINED (16), old attributes: 8
+0.01.682.739 W load: special_eog_ids contains both '<|return|>' and '<|call|>', or '<|calls|>' and '<|flush|>' tokens, removing '<|end|>' token from EOG list
+0.07.636.036 I cmn          init: llama threadpool init, n_threads = 12
+0.08.005.407 I srv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+0.08.019.064 I srv  server_run_i: model loaded
+0.08.019.168 I srv  server_on_li: listening on http://127.0.0.1:63210
+0.09.191.585 I slot get_availabl: id  0 | task -1 | selected slot by LRU, n_tokens = 0, t_last = -1
+0.09.191.791 I slot launch_slot_: id  0 | task 0 | processing task, is_child = 0
+0.10.084.261 I slot print_timing: id  0 | task 0 | prompt eval time =     687.08 ms /    62 tokens (   11.08 ms per token,    90.24 tokens per second)
+0.10.084.265 I slot print_timing: id  0 | task 0 |        eval time =     205.36 ms /     8 tokens (   29.34 ms per token,    34.09 tokens per second)
+0.10.084.266 I slot print_timing: id  0 | task 0 |       total time =     892.43 ms /    70 tokens
+0.10.084.267 I slot print_timing: id  0 | task 0 |    graphs reused =          7
+0.10.084.268 I slot print_timing: id  0 | task 0 |   graph reallocs =          0    /     0        (same size) / (changed size)
+0.10.100.471 I slot      release: id  0 | task 0 | stop processing: n_tokens = 69, truncated = 0
+0.11.124.841 I slot get_availabl: id  0 | task -1 | selected slot by LRU, n_tokens = 69, t_last = 10074677
+0.11.126.467 I slot launch_slot_: id  0 | task 10 | processing task, is_child = 0
+0.15.756.606 I slot print_timing: id  0 | task 10 | n_gen =    110, tg =  36.14 t/s, tg_3s =  36.47 t/s
+0.16.268.834 I slot print_timing: id  0 | task 10 | prompt eval time =    1614.12 ms /  1529 tokens (    1.06 ms per token,   947.26 tokens per second)
+0.16.268.841 I slot print_timing: id  0 | task 10 |        eval time =    3528.19 ms /   128 tokens (   27.78 ms per token,    36.00 tokens per second)
+0.16.268.842 I slot print_timing: id  0 | task 10 |       total time =    5142.32 ms /  1657 tokens
+0.16.268.844 I slot print_timing: id  0 | task 10 |    graphs reused =        132
+0.16.268.845 I slot print_timing: id  0 | task 10 |   graph reallocs =          2    /     0        (same size) / (changed size)
+0.16.268.946 I slot      release: id  0 | task 10 | stop processing: n_tokens = 1656, truncated = 0

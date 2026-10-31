@@ -1,0 +1,9 @@
+purpose,model,quant,kv,ctx,chunks,ppl,delta_ppl_pct,wall_ms,vram_peak_mib,power_avg_w,temp_max_c,exit,note
+quant,Qwen3-4B-Instruct-2507-Q8_0.gguf,Q8_0,f16,512,12,11.9276,0.0,6487.5,4577,47.91,65.0,0,
+quant,Qwen3-4B-Instruct-2507-Q6_K.gguf,Q6_K,f16,512,12,11.9654,0.317,5774.1,3647,55.0,63.0,0,
+quant,Qwen3-4B-Instruct-2507-Q5_K_M.gguf,Q5_K_M,f16,512,12,12.1321,1.715,5490.4,3249,57.75,67.0,0,
+quant,Qwen3-4B-Instruct-2507-Q4_K_M.gguf,Q4_K_M,f16,512,12,12.2553,2.747,5510.2,2875,58.24,66.0,0,
+quant,Qwen3-4B-Instruct-2507-Q3_K_M.gguf,Q3_K_M,f16,512,12,13.7688,15.436,4757.6,2475,67.02,67.0,0,
+kv,Qwen3-4B-Instruct-2507-Q4_K_M.gguf,Q4_K_M,f16,1024,12,9.032,0.0,6434.8,2957,62.72,69.0,0,
+kv,Qwen3-4B-Instruct-2507-Q4_K_M.gguf,Q4_K_M,q8_0,1024,12,9.0004,-0.35,6544.0,2897,68.78,70.0,0,
+kv,Qwen3-4B-Instruct-2507-Q4_K_M.gguf,Q4_K_M,q4_0,1024,12,9.2128,2.002,6423.0,2861,68.14,71.0,0,

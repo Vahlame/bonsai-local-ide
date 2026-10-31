@@ -1,0 +1,57 @@
+{
+  "run_id": "ab-mvq2-q6",
+  "suite": "core",
+  "suite_config": {
+    "models": [
+      "qwen3-4b-q6"
+    ],
+    "prefill": [
+      512
+    ],
+    "decode": [
+      128
+    ],
+    "contexts": [
+      0
+    ],
+    "reps": 4,
+    "runs": 1,
+    "description": "Phase 2 baseline: four representative models, 128–8K prefill, 32–256 decode."
+  },
+  "binary": "C:\\Users\\user\\Documents\\prject_local_AI\\bin\\builds\\lab-mvq2\\bin\\llama-bench.exe",
+  "binary_sha256": "2fa5ef32172dd455f7843feb0783ef90cdc2b97a7ced7e621eb4155b7a339597",
+  "build_name": "lab-mvq2",
+  "arch": "?",
+  "compiler_flags": "{}",
+  "commit": "8642541",
+  "started_at": "2026-10-31T21:12:24+00:00",
+  "finished_at": "2026-10-31T21:12:51+00:00",
+  "argv": [
+    "bench\\bench_suite.py",
+    "--suite",
+    "core",
+    "--model",
+    "qwen3-4b-q6",
+    "--prefill",
+    "512",
+    "--decode",
+    "128",
+    "--runs",
+    "2",
+    "--reps",
+    "4",
+    "--binary",
+    "bin\\builds\\lab-mvq2\\bin\\llama-bench.exe",
+    "--label",
+    "ab-mvq2-q6",
+    "--out",
+    "reports\\bench-ab-mvq2-q6"
+  ],
+  "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "driver": 617.14,
+  "measured_read_gbs": 244.206,
+  "reps": 4,
+  "runs": 2,
+  "warmup_policy": "llama-bench warmup + drop first measured sample",
+  "row_count": 4
+}

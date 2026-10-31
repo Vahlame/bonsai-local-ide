@@ -1,0 +1,19 @@
+{
+  "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "compute_capability": "8.9",
+  "sm_count": 24,
+  "global_mem_bytes": 8585216000,
+  "memory_bus_width": 128,
+  "memory_clock_khz": 7851000,
+  "driver_version": 13040,
+  "runtime_version": 12090,
+  "size_mb": 512,
+  "device_read_gbs": 245.005,
+  "device_write_gbs": 243.880,
+  "device_copy_gbs": 226.328,
+  "d2d_memcpy_gbs": 111.054,
+  "h2d_pageable_gbs": 12.966,
+  "d2h_pageable_gbs": 12.263,
+  "h2d_pinned_gbs": 13.388,
+  "d2h_pinned_gbs": 13.104
+}

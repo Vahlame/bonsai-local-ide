@@ -1,0 +1,57 @@
+{
+  "run_id": "mixed-q4-clean",
+  "suite": "quant",
+  "suite_config": {
+    "models": [
+      "qwen3-4b-q4-mixed"
+    ],
+    "prefill": [
+      512,
+      2048
+    ],
+    "decode": [
+      128,
+      256
+    ],
+    "contexts": [
+      0
+    ],
+    "reps": 4,
+    "runs": 1,
+    "description": "Same model, five weight formats, fixed inputs."
+  },
+  "binary": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89\\bin\\llama-bench.exe",
+  "binary_sha256": "79a8340d93f50e7f34c504c4e9510893553278c46ee0827366d20f5dd9ea94b6",
+  "build_name": "build-RTX4060-Opt-sm89",
+  "arch": "89-real",
+  "compiler_flags": "{\"CMAKE_BUILD_TYPE\": \"Release\", \"CMAKE_CUDA_ARCHITECTURES\": \"89-real\", \"CMAKE_CUDA_FLAGS\": \"-lineinfo -Xptxas=-v -Xcompiler=-O3 -use_fast_math -DGGML_CUDA_FA_ALL_QUANTS=ON -DGGML_CUDA_GRAPHS=ON -DGGML_CUDA_MMQ=OFF\", \"CMAKE_CXX_FLAGS_RELEASE\": \"/O2 /Ob2 /DNDEBUG\", \"GGML_CUDA_COMPRESSION_MODE\": \"size\", \"GGML_CUDA_FA_ALL_QUANTS\": \"OFF\", \"GGML_CUDA_FORCE_CUBLAS\": \"OFF\", \"GGML_CUDA_FORCE_MMQ\": \"OFF\", \"GGML_CUDA_GRAPHS\": \"ON\", \"GGML_LTO\": \"OFF\", \"GGML_NATIVE\": \"ON\"}",
+  "commit": "8642541",
+  "started_at": "2026-10-31T21:36:12+00:00",
+  "finished_at": "2026-10-31T21:37:05+00:00",
+  "argv": [
+    "bench\\bench_suite.py",
+    "--suite",
+    "quant",
+    "--model",
+    "qwen3-4b-q4-mixed",
+    "--prefill",
+    "512,2048",
+    "--decode",
+    "128,256",
+    "--runs",
+    "2",
+    "--reps",
+    "4",
+    "--label",
+    "mixed-q4-clean",
+    "--out",
+    "reports\\bench-mixed-quant\\throughput-clean"
+  ],
+  "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU",
+  "driver": 617.14,
+  "measured_read_gbs": 244.206,
+  "reps": 4,
+  "runs": 2,
+  "warmup_policy": "llama-bench warmup + drop first measured sample",
+  "row_count": 8
+}

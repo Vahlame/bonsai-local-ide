@@ -1,0 +1,106 @@
+{
+  "model": "qwen36-35b-a3b",
+  "display": "Qwen3.6 35B-A3B (UD-Q2_K_XL, MoE)",
+  "file": "models/qwen36-35b-a3b-Qwen3.6-35B-A3B-UD-Q2_K_XL.gguf",
+  "quality": {
+    "coding": "96% (existing coding suite; see reports/README)",
+    "webapp": "91%",
+    "source": "README.md; reports/coding-bench-*"
+  },
+  "recommended": "balanced",
+  "profiles": {
+    "balanced": {
+      "context": 32768,
+      "kv": "q8_0",
+      "n_cpu_moe": 19,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 44.79,
+        "prefill_tok_s": 856,
+        "ttft_ms": 1838,
+        "vram_mib": 7409
+      },
+      "source": "reports/bench-qwen36-32k-n19-t8"
+    },
+    "max_speed": {
+      "context": 32768,
+      "kv": "q8_0",
+      "n_cpu_moe": 19,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 44.79,
+        "prefill_tok_s": 856,
+        "ttft_ms": 1838,
+        "vram_mib": 7409
+      },
+      "source": "reports/bench-qwen36-32k-n19-t8"
+    },
+    "max_quality": {
+      "context": 65536,
+      "kv": "q8_0",
+      "n_cpu_moe": 21,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 43.92,
+        "prefill_tok_s": 814,
+        "ttft_ms": 1929,
+        "vram_mib": 7327
+      },
+      "note": "The weight quant is fixed by the available GGUF; q8_0 KV is near-lossless. This profile spends VRAM on context instead of a larger weight quant.",
+      "source": "reports/bench-qwen36-64k-n21-t8"
+    },
+    "long_context": {
+      "context": 65536,
+      "kv": "q8_0",
+      "n_cpu_moe": 21,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 43.92,
+        "prefill_tok_s": 814,
+        "ttft_ms": 1929,
+        "vram_mib": 7327
+      },
+      "note": "64k is the largest context measured for this model; 128k was not validated and is not recommended without a new memory test.",
+      "source": "reports/bench-qwen36-64k-n21-t8"
+    },
+    "max_model": {
+      "context": 32768,
+      "kv": "q8_0",
+      "n_cpu_moe": 19,
+      "threads": 8,
+      "batch": 1024,
+      "ubatch": 512,
+      "flash_attn": true,
+      "cuda_graphs": true,
+      "prompt_cache": true,
+      "expected": {
+        "decode_tok_s": 44.79,
+        "prefill_tok_s": 856,
+        "ttft_ms": 1838,
+        "vram_mib": 7409
+      },
+      "note": "Largest coder measured: 35B total / 3B active. The 35B weights live in RAM + VRAM; 16 GiB system RAM is the real limit.",
+      "source": "reports/bench-qwen36-32k-n19-t8"
+    }
+  }
+}

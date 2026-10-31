@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-31T21:40:44+00:00",
+  "host": {
+    "manufacturer": "Acer",
+    "model": "Nitro AN16-41",
+    "baseboard": "PHX Sierra_PEH V1.26",
+    "bios": "INSYDE Corp. V1.26 /Date(1780531200000)/"
+  },
+  "cpu": {
+    "name": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics",
+    "description": "AMD64 Family 25 Model 116 Stepping 1",
+    "cores": 8,
+    "threads": 16,
+    "max_clock_mhz": 3801,
+    "current_clock_mhz": 3801,
+    "l2_kb": 8192,
+    "l3_kb": 16384,
+    "virtualization": true,
+    "simd": [
+      "SSE4.2",
+      "AVX2",
+      "FMA",
+      "AVX-512F",
+      "AVX-512BW",
+      "AVX-512CD",
+      "AVX-512DQ",
+      "AVX-512VL"
+    ],
+    "simd_source": "Zen 4 architecture + /arch:AVX512 and -DGGML_AVX512 in the build"
+  },
+  "memory": {
+    "total_gib": 15.31,
+    "free_gib": 10.69,
+    "module_count": 2,
+    "module_gib": 8.0,
+    "configured_mts": 5600,
+    "rated_mts": 5600,
+    "channels": 2,
+    "modules": [
+      {
+        "bank": "P0 CHANNEL A",
+        "locator": "DIMM 0",
+        "manufacturer": "Hynix",
+        "part": "HMCG66AGBSA095N",
+        "capacity_gib": 8.0,
+        "configured_mts": 5600,
+        "data_width": 64,
+        "total_width": 64
+      },
+      {
+        "bank": "P0 CHANNEL B",
+        "locator": "DIMM 0",
+        "manufacturer": "Hynix",
+        "part": "HMCG66AGBSA095N",
+        "capacity_gib": 8.0,
+        "configured_mts": 5600,
+        "data_width": 64,
+        "total_width": 64
+      }
+    ]
+  },
+  "storage": [
+    {
+      "model": "HFS001TEJ9X125N",
+      "bus": "NVMe",
+      "media": "SSD",
+      "size_gib": 953.9,
+      "health": "Healthy",
+      "free_gib": 241.9
+    }
+  ],
+  "gpu": {
+    "nvidia_smi_query": "NVIDIA GeForce RTX 4060 Laptop GPU, 8188, 0, 7956, 617.14, 8.9, 4, 4, 8, 8, 2235, 3105, 7851, 7851, 46, 0, 0",
+    "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "memory_total_mib": 8188,
+    "memory_used_mib": 0,
+    "memory_free_mib": 7956,
+    "driver_version": 617.14,
+    "compute_capability": 8.9,
+    "link_gen_max": 4,
+    "link_gen_current": 4,
+    "link_width_max": 8,
+    "link_width_current": 8,
+    "clock_graphics_mhz": 2235,
+    "clock_graphics_max_mhz": 3105,
+    "clock_memory_mhz": 7851,
+    "clock_memory_max_mhz": 7851,
+    "temperature_gpu": 46,
+    "utilization_gpu": 0,
+    "utilization_memory": 0,
+    "architecture": "Ada",
+    "vbios": "95.07.2d.00.16",
+    "serial": "N/A",
+    "bar1_mib": 8192,
+    "bar1_used_mib": 8164,
+    "power_limit_w": 80,
+    "power_default_w": 80,
+    "power_min_w": 5,
+    "power_max_w": 140,
+    "power_draw_w": 13.98,
+    "temp_tlimit_c": null,
+    "pstate": "P0",
+    "resizable_bar": true
+  },
+  "os": {
+    "caption": "Microsoft Windows 10 Enterprise LTSC",
+    "version": "10.0.19044",
+    "build": "19044",
+    "arch": "64-bit",
+    "install_date": "/Date(1790636747000)/",
+    "last_boot": "/Date(1793314748318)/",
+    "pagefile_allocated_mib": 22630,
+    "pagefile_current_mib": 2174,
+    "pagefile_peak_mib": 12004,
+    "power_plan": "Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)",
+    "total_visible_mib": 15676
+  },
+  "software": {
+    "python": "3.14.7",
+    "python_executable": "C:\\Users\\user\\Documents\\prject_local_AI\\.venv\\Scripts\\python.exe",
+    "node": "v26.0.0",
+    "npm": "",
+    "git": "git version 2.56.0.windows.1",
+    "cmake": "cmake version 3.31.6-msvc6",
+    "ninja": "1.12.1",
+    "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Tue_May_27_02:24:01_Pacific_Daylight_Time_2025\nCuda compilation tools, release 12.9, V12.9.86\nBuild cuda_12.9.r12.9/compiler.36037853_0",
+    "msvc": null,
+    "profiling": {
+      "nsys": "NVIDIA Nsight Systems version 2026.3.2.313-263238521929v0",
+      "ncu": "NVIDIA (R) Nsight Compute Command Line Profiler\nCopyright (c) 2018-2026 NVIDIA Corporation\nVersion 2026.3.0.0 (build 38525999) (public-release)"
+    },
+    "cuda_runtime_libraries": {
+      "cudart64_12.dll": "6,14,11,12090",
+      "cublas64_12.dll": "6,14,11,1291",
+      "cublasLt64_12.dll": "6,14,11,1291"
+    },
+    "llama_cpp": {
+      "install_root": "C:\\Users\\user\\.local\\opt\\bonsai-inference",
+      "source": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\llama.cpp-rtx4060-opt",
+      "git": {
+        "head": "8642541b255bfb5dc39cd351a178be09013a55d6",
+        "describe": "8642541",
+        "branch": "HEAD",
+        "remote": "https://github.com/ggml-org/llama.cpp.git"
+      },
+      "builds": [
+        {
+          "name": "build-Auto-sm89",
+          "path": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-Auto-sm89",
+          "binary": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-Auto-sm89\\bin\\llama-bench.exe",
+          "cmake": {
+            "CMAKE_BUILD_TYPE": "Release",
+            "CMAKE_CUDA_ARCHITECTURES": "89-real",
+            "CMAKE_CUDA_FLAGS": "-lineinfo",
+            "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob2 /DNDEBUG",
+            "GGML_NATIVE": "ON",
+            "GGML_LTO": "OFF",
+            "GGML_CUDA": "ON",
+            "GGML_CUDA_FORCE_MMQ": "OFF",
+            "GGML_CUDA_FORCE_CUBLAS": "OFF",
+            "GGML_CUDA_FA_ALL_QUANTS": "OFF",
+            "GGML_CUDA_GRAPHS": "ON",
+            "GGML_CUDA_COMPRESSION_MODE": "size",
+            "LLAMA_BUILD_NUMBER": "10743"
+          },
+          "binary_version": [
+            "ggml_cuda_init: found 1 CUDA devices (Total VRAM: 8187 MiB):",
+            "  Device 0: NVIDIA GeForce RTX 4060 Laptop GPU, compute capability 8.9, VMM: yes, VRAM: 8187 MiB",
+            "version: 0.8.0-dev (build 10743, commit 8642541)",
+            "built with MSVC 19.44.35229.0 for Windows AMD64"
+          ]
+        },
+        {
+          "name": "build-RTX4060-Opt-sm89",
+          "path": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89",
+          "binary": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89\\bin\\llama-bench.exe",
+          "cmake": {
+            "CMAKE_BUILD_TYPE": "Release",
+            "CMAKE_CUDA_ARCHITECTURES": "89-real",
+            "CMAKE_CUDA_FLAGS": "-lineinfo -Xptxas=-v -Xcompiler=-O3 -use_fast_math -DGGML_CUDA_FA_ALL_QUANTS=ON -DGGML_CUDA_GRAPHS=ON -DGGML_CUDA_MMQ=OFF",
+            "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob2 /DNDEBUG",
+            "GGML_NATIVE": "ON",
+            "GGML_LTO": "OFF",
+            "GGML_CUDA": "ON",
+            "GGML_CUDA_FORCE_MMQ": "OFF",
+            "GGML_CUDA_FORCE_CUBLAS": "OFF",
+            "GGML_CUDA_FA_ALL_QUANTS": "OFF",
+            "GGML_CUDA_GRAPHS": "ON",
+            "GGML_CUDA_COMPRESSION_MODE": "size",
+            "LLAMA_BUILD_NUMBER": "10743"
+          },
+          "binary_version": [
+            "ggml_cuda_init: found 1 CUDA devices (Total VRAM: 8187 MiB):",
+            "  Device 0: NVIDIA GeForce RTX 4060 Laptop GPU, compute capability 8.9, VMM: yes, VRAM: 8187 MiB",
+            "version: 0.8.0-dev (build 10743, commit 8642541)",
+            "built with MSVC 19.44.35229.0 for Windows AMD64"
+          ]
+        },
+        {
+          "name": "lab-base",
+          "path": "C:\\Users\\user\\Documents\\prject_local_AI\\bin\\builds\\lab-base",
+          "binary": "C:\\Users\\user\\Documents\\prject_local_AI\\bin\\builds\\lab-base\\bin\\llama-bench.exe",
+          "cmake": {
+            "CMAKE_BUILD_TYPE": "Release",
+            "CMAKE_CUDA_ARCHITECTURES": "89-real",
+            "CMAKE_CUDA_FLAGS": "-lineinfo",
+            "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob2 /DNDEBUG",
+            "GGML_NATIVE": "ON",
+            "GGML_LTO": "OFF",
+            "GGML_CUDA": "ON",
+            "GGML_CUDA_FORCE_MMQ": "OFF",
+            "GGML_CUDA_FORCE_CUBLAS": "OFF",
+            "GGML_CUDA_FA_ALL_QUANTS": "OFF",
+            "GGML_CUDA_GRAPHS": "ON",
+            "GGML_CUDA_COMPRESSION_MODE": "size"
+          },
+          "binary_version": [
+            "ggml_cuda_init: found 1 CUDA devices (Total VRAM: 8187 MiB):",
+            "  Device 0: NVIDIA GeForce RTX 4060 Laptop GPU, compute capability 8.9, VMM: yes, VRAM: 8187 MiB",
+            "version: 0.8.0-dev (build 1, commit 8642541)",
+            "built with MSVC 19.44.35229.0 for Windows AMD64"
+          ]
+        }
+      ]
+    },
+    "ollama": {
+      "path": "C:\\Users\\user\\AppData\\Local\\Programs\\Ollama\\ollama.EXE",
+      "version": null
+    },
+    "python_packages": {
+      "torch": null,
+      "triton": null,
+      "transformers": null,
+      "accelerate": null,
+      "llama-cpp-python": null,
+      "vllm": null,
+      "exllamav2": null,
+      "bitsandbytes": null,
+      "numpy": null,
+      "psutil": "7.2.2",
+      "safetensors": null,
+      "sentencepiece": null,
+      "pynvml": null,
+      "nvidia-ml-py": null
+    }
+  },
+  "measured": {
+    "cuda_bandwidth": {
+      "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+      "compute_capability": "8.9",
+      "sm_count": 24,
+      "global_mem_bytes": 8585216000,
+      "memory_bus_width": 128,
+      "memory_clock_khz": 7851000,
+      "driver_version": 13040,
+      "runtime_version": 12090,
+      "size_mb": 512,
+      "device_read_gbs": 245.005,
+      "device_write_gbs": 243.88,
+      "device_copy_gbs": 226.328,
+      "d2d_memcpy_gbs": 111.054,
+      "h2d_pageable_gbs": 12.966,
+      "d2h_pageable_gbs": 12.263,
+      "h2d_pinned_gbs": 13.388,
+      "d2h_pinned_gbs": 13.104
+    },
+    "ram_bandwidth_mbs_winsat": 53576.05,
+    "disk_seq_read_mbs_winsat": 3965.37
+  },
+  "constraints": {
+    "vram_mib": 8188,
+    "vram_safe_budget_mib": 7600,
+    "ram_gib": 15.31,
+    "power_limit_w": 80,
+    "pcie_gen": 4,
+    "pcie_width": 8
+  }
+}

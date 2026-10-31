@@ -1,0 +1,37 @@
+{
+  "model": "qwen3-4b",
+  "generated_at": "2026-10-31T21:37:24+00:00",
+  "objective": "balanced",
+  "context": 16384,
+  "best": {
+    "model": "qwen3-4b",
+    "ctx": 16384,
+    "n_cpu_moe": 0,
+    "threads": 8,
+    "kv": "f16",
+    "ubatch": 512,
+    "decode_tok_s": 74.25,
+    "prefill_tok_s": 3870.53,
+    "ttft_ms": 406.18,
+    "vram_peak_mib": 4885,
+    "source": "reports\\autotune-qwen3-4b-balanced-20261031-153717-0",
+    "score": 57.963
+  },
+  "candidates": [
+    {
+      "model": "qwen3-4b",
+      "ctx": 16384,
+      "n_cpu_moe": 0,
+      "threads": 8,
+      "kv": "f16",
+      "ubatch": 512,
+      "decode_tok_s": 74.25,
+      "prefill_tok_s": 3870.53,
+      "ttft_ms": 406.18,
+      "vram_peak_mib": 4885,
+      "source": "reports\\autotune-qwen3-4b-balanced-20261031-153717-0",
+      "score": 57.963
+    }
+  ],
+  "method": "measured-table seed + neighbour search (GPU layers, threads, KV, ubatch); one llama-server run per candidate"
+}
