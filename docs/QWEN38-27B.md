@@ -134,7 +134,7 @@ sigue siendo la reserva de contexto del IDE. El perfil original
 
 | Métrica | Valor medido |
 |---|---:|
-| Lectura del GGUF en carga | ~13 s (ETW, 3.9-12.9 s); arranque administrado < 90 s |
+| Lectura del GGUF en carga | ~13 s (ETW, 3.9-12.9 s); arranque administrado validado dentro del timeout de 180 s |
 | VRAM | plan 7.505 MiB; ~8,08 GiB usados en GPU con el escritorio |
 | RAM | working set ~9,6 GB; privado ~10,86 GB; física disponible ~2,26 GB |
 | Decode código | 8,9-9,3 tok/s (varía con el estado térmico) |
