@@ -179,7 +179,8 @@ no una promesa para cualquier turno con herramientas.
   salto rutinario en minutos de espera; el tope total de salida del turno
   sigue aplicándose. El ajuste **Sin límite (Qwen3.8)** está en Ajustes →
   Modo razonamiento. `high` no es un nivel válido para esta plantilla
-  (xhigh/medium/low).
+  (xhigh/medium/low). En una prueba, un plan de migración usó 9.523 tokens de
+  una slice libre y tardó 25 minutos; para turnos rápidos elige 512/1024/2048.
 - **Caché.** Los checkpoints son residentes, no persistentes tras reiniciar;
   el prefijo debe seguir siendo válido en el slot. Con `--cache-ram 512` caben
   3 checkpoints de 149,626 MiB; con 64 MiB el servidor avisa, no asigna
