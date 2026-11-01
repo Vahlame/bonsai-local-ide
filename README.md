@@ -8,19 +8,19 @@ navegador controlado y visión, todo contra tu propia GPU. Sin nube, sin
 telemetría y sin claves de API.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.3.4-8fb8ff">
+  <img alt="version" src="https://img.shields.io/badge/version-2.3.5-8fb8ff">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.3.4 — presupuesto automático y GPT-OSS menos atado.** El contexto vuelve
-> a repartirse como un modelo frontera: 53.120 de historial y 12.288 de salida
-> en una ventana de 64k, en vez del viejo 50/50. También se retiró la regla de
-> una sola tool call: el parser Harmony ya soporta varias. Flujo multi-paso de
-> GPT-OSS verificado en 19,4 s.
-> Notas: [RELEASE-2.3.4](docs/RELEASE-2.3.4.md).
+> **v2.3.5 — GPT-OSS con herramientas claras y contexto automático.** La guía de
+> herramientas entra en el system prompt, `buscar_codigo` acepta `ruta`, los
+> campos extra no tumban el turno y las llamadas con JSON truncado no se
+> guardan. El contexto vuelve a 53.120/12.288 en 64k. La app de prueba pasó
+> **12/12** comprobaciones de navegador.
+> Notas: [RELEASE-2.3.5](docs/RELEASE-2.3.5.md).
 
 ![Bonsai IDE 2.3 con CodeMirror, explorador, chat y panel de conversación](docs/graficos/ui-2.3-main.png)
 
@@ -218,6 +218,7 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 
 | Documento | Contenido |
 |---|---|
+| [RELEASE-2.3.5](docs/RELEASE-2.3.5.md) | Guía de tools, `buscar_codigo.ruta`, historial saneado y app GPT-OSS |
 | [RELEASE-2.3.4](docs/RELEASE-2.3.4.md) | Contexto automático y menos restricciones para GPT-OSS |
 | [RELEASE-2.3.3](docs/RELEASE-2.3.3.md) | Parser Harmony propio y GPT-OSS sin `--skip-chat-parsing` |
 | [RELEASE-2.3.2](docs/RELEASE-2.3.2.md) | Reintento `peg-native` y recuperación JSON |
@@ -244,7 +245,7 @@ npm run docs:links        # enlaces relativos de la documentación
 npm run build:ui-vendor   # reconstruye editor.js, terminal.js y xterm.css
 ```
 
-Cobertura de esta release: 48/48 aisladas, 7/7 navegador, `docs:links` sin
+Cobertura de esta release: 48/48 aisladas, 7/7 navegador, app GPT-OSS 12/12, `docs:links` sin
 enlaces rotos y el acceso directo verificado abriendo la UI moderna.
 
 ---

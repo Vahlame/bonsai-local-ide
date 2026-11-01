@@ -118,6 +118,19 @@ no pueda tumbar el turno. El servidor devuelve Harmony crudo en `content` y
 No se muestran los marcadores `<|channel|>`. Si el texto no trae marcadores, se
 deja intacto para el fallback `gpt-oss-json`.
 
+### Guía de herramientas en el prompt
+
+Para GPT-OSS, `BonsaiChat` añade una guía compacta con el nombre, los argumentos
+obligatorios y un ejemplo de cada tool. No sustituye a los JSON Schema de la
+plantilla: es una referencia práctica para que el modelo no tenga que adivinar
+la forma de `archivo`, `leer`, `reemplazar` o `buscar_codigo`.
+
+Los campos extra que no están en el schema se ignoran; un `ruta` de más en una
+búsqueda no tumba el turno. Los campos obligatorios y los tipos sí se validan.
+Si una llamada llega con el JSON truncado, no se guarda en el historial y el
+modelo recibe una nota para repetirla; así el siguiente turno no falla al
+serializar argumentos inválidos.
+
 ### Fallback JSON de GPT-OSS
 
 El parser PEG nativo de llama.cpp puede dejar una llamada en `content` en vez

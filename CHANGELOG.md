@@ -4,6 +4,33 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.3.5] - 2026-11-01
+
+### Añadido
+
+- **Guía de herramientas para GPT-OSS** en el system prompt: nombre,
+  argumentos obligatorios y ejemplo de cada tool.
+- `buscar_codigo` acepta `ruta` opcional y filtra los resultados.
+- `BonsaiChat` descarta las llamadas con `arguments` JSON truncados antes de
+  guardarlas y `packCoderHistory` limpia las sesiones antiguas (llamada inválida
+  y resultados huérfanos).
+- Prueba end-to-end de la app `todo.html` con navegador real: 12/12.
+
+### Cambiado
+
+- Los campos extra que no están en el schema se ignoran en vez de bloquear la
+  llamada; los obligatorios y los tipos siguen validándose.
+- El cierre del turno usa el último `assistant` y cae al resumen de acciones si
+  quedó vacío. Nunca deja la respuesta final en blanco.
+- `uiVersion 2.3.5` migra cualquier `historial >= 32768` a automático.
+
+### Corregido
+
+- El error `Failed to parse tool call arguments as JSON` ya no envenena el
+  siguiente turno.
+- El layout de la app de prueba: sol fuera de la tarjeta, río animado, rosas y
+  overflow cero a 390 px.
+
 ## [2.3.4] - 2026-11-01
 
 ### Cambiado
