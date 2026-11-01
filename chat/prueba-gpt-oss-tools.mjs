@@ -41,7 +41,7 @@ const server = http.createServer(async (req, res) => {
     const mode = process.env.MOCK_MODE || "native";
     requests += 1;
     lastBody = rawBody ? JSON.parse(rawBody) : null;
-    if (mode === "peg-then-json" && requests === 1) {
+    if (mode === "peg-then-json" && requests <= 2) {
       return json({ error: { code: 500, message: "The model produced output that does not match the expected peg-native format", type: "server_error" } }, 500);
     }
     if (mode === "peg-error") {
@@ -130,6 +130,7 @@ try {
   const retry = await chat.streamSlice([{ role: "user", content: "dos llamadas" }], 512, false, new AbortController().signal);
   assert.equal(retry.toolCalls.length, 0);
   const retryCalls = llamadasCrudas(retry.chunk, "nativo gpt-oss-json");
+  assert.equal(requests, 3, "primer intento + reintento nativo + reintento JSON");
   assert.equal(retryCalls.length, 2);
   assert.equal(lastBody.tools, undefined, "el reintento no debe enviar tools nativas");
   assert.match(String(lastBody.messages[0].content), /REINTENTO SIN PARSER NATIVO/);

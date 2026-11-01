@@ -1344,6 +1344,9 @@ async function main(args) {
       }
     } catch { /* se intentara igualmente */ }
     a.push("--chat-template-file", templatePath);
+    if (modeloItem.clave === "gpt-oss-20b" || (Array.isArray(modeloItem.capacidades) && modeloItem.capacidades.includes("Harmony"))) {
+      a.push("--skip-chat-parsing");
+    }
     if (vision && projPath) {
       a.push("--mmproj", projPath);
       if (p.mmprojCPU) a.push("--no-mmproj-offload");

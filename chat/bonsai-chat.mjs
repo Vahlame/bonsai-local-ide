@@ -35,6 +35,7 @@ import { leerSSE } from "./sse.mjs";
 import { MODELO, muestreo } from "./modelo.mjs";
 import { CODER_CONFIG, CODER_SYSTEM, CODER_TOOLS } from "./coder-harness.mjs";
 import { contextoEntorno } from "./entorno.mjs";
+import { parseHarmony } from "./harmony.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SESSION_PATH = path.join(ROOT, "session.json");
@@ -698,7 +699,25 @@ export class BonsaiChat {
       description: t.function?.description,
       parameters: t.function?.parameters,
     }));
-    const instruccion = `\n\nREINTENTO SIN PARSER NATIVO (llama.cpp peg-native).\nNo hay herramientas nativas en esta petición. Si necesitas una herramienta, responde SOLO con un objeto JSON con esta forma: {"name":"<herramienta>","arguments":{...}}. No uses markdown, no expliques y no escribas texto antes ni después. Para varias acciones, haz una sola llamada y espera el resultado.\nHerramientas disponibles:\n${JSON.stringify(catalogo)}`;
+    const instruccion = `\n\nREINTENTO SIN PARSER NATIVO (llama.cpp peg-native).\nNo hay herramientas nativas en esta petición. Si necesitas una herramienta, responde SOLO con un objeto JSON con esta forma: {"name":"<herramienta>","arguments":{...}}. El objeto debe tener SIEMPRE las claves "name" y "arguments"; nunca devuelvas solo los argumentos. No uses markdown, no expliques y no escribas texto antes ni después. Para varias acciones, haz una sola llamada y espera el resultado. Ejemplo exacto: {"name":"archivo","arguments":{"ruta":"a.txt","contenido":"uno"}}\nHerramientas disponibles:\n${JSON.stringify(catalogo)}`;
+    const copia = messages.map((m) => ({ ...m }));
+    if (!copia.length || !["system", "developer"].includes(copia[0].role)) {
+      copia.unshift({ role: "system", content: instruccion.trim() });
+      return copia;
+    }
+    copia[0] = { ...copia[0], content: `${copia[0].content || ""}${instruccion}` };
+    return copia;
+  }
+
+  /**
+   * Primer reintento tras peg-native: conserva las tools nativas pero exige una
+   * sola llamada y nada de texto. Si el modelo vuelve a romper el parser, se
+   * pasa al reintento JSON sin tools.
+   * @param {Array<Record<string, any>>} messages
+   * @returns {Array<Record<string, any>>}
+   */
+  mensajesReintentoNativo(messages) {
+    const instruccion = "\n\nREINTENTO OBLIGATORIO: la petición anterior fue rechazada por el parser nativo de llama.cpp. Haz EXACTAMENTE UNA tool call y nada más. No escribas texto antes ni después y no emitas varias tool calls en el mismo mensaje.";
     const copia = messages.map((m) => ({ ...m }));
     if (!copia.length || !["system", "developer"].includes(copia[0].role)) {
       copia.unshift({ role: "system", content: instruccion.trim() });
@@ -1261,7 +1280,11 @@ export class BonsaiChat {
       // GPT-OSS devuelve JSON puro y `llamadasCrudas` lo ejecuta igual.
       if (!sinParser && !continueFinal && !signal.aborted && this.puedeFallbackTexto() &&
           /peg-native|does not match the expected .*format/i.test(message)) {
-        this.note("[parser nativo rechazó la salida; reintento en modo JSON]");
+        if (!opciones.reintentoNativo) {
+          this.note("[parser nativo rechazó la salida; reintento con una sola tool call]");
+          return this.streamSlice(this.mensajesReintentoNativo(messages), maxTokens, false, signal, { reintentoNativo: true });
+        }
+        this.note("[parser nativo rechazó la salida otra vez; reintento en modo JSON]");
         return this.streamSlice(this.mensajesSinParser(messages), maxTokens, false, signal, { sinParserNativo: true });
       }
       throw new ApiError(message, res.status, data.error?.type || "");
@@ -1269,6 +1292,7 @@ export class BonsaiChat {
     if (!res.body) throw new Error("El servidor no devolvió un stream");
 
     let chunk = "";
+    const harmonyCandidate = this.puedeFallbackTexto();
     let reason = "stop";
     let thinking = false;
     /** @type {Record<string, number> | null} */
@@ -1306,7 +1330,9 @@ export class BonsaiChat {
           const token = delta.content ?? "";
           if (token) {
             chunk += token;
-            this.emitToken(token);
+            // GPT-OSS puede venir en Harmony crudo (--skip-chat-parsing). No se
+            // pinta el marcador <|channel|> en la UI; se parsea al final.
+            if (!harmonyCandidate) this.emitToken(token);
           }
           if (typeof delta.reasoning_content === "string" && delta.reasoning_content) {
             const visible = delta.reasoning_content.slice(0, Math.max(0, 65536 - (this.currentReasoning || "").length));
@@ -1367,6 +1393,25 @@ export class BonsaiChat {
     }
     // Un trozo de continuación puede venir SIN `name` (solo `arguments`): si se tirara aquí,
     // la llamada se quedaría cortada para siempre. Vale con que traiga nombre o argumentos.
+    // GPT-OSS con --skip-chat-parsing entrega Harmony crudo. Se separa el
+    // análisis de la respuesta final y se convierten sus canales `to=functions.*`
+    // en tool calls nativas para el mismo camino de siempre.
+    if (harmonyCandidate && chunk.includes("<|channel|>")) {
+      const parsed = parseHarmony(chunk);
+      if (parsed.reasoning) {
+        this.currentReasoning = [this.currentReasoning, parsed.reasoning].filter(Boolean).join("\n");
+        this.emit({ type: "reasoning", text: parsed.reasoning });
+      }
+      let indice = calls.size;
+      for (const call of parsed.calls) {
+        const args = typeof call.arguments === "string" ? call.arguments : JSON.stringify(call.arguments ?? {});
+        calls.set(indice, { index: indice, id: `harmony_${indice}`, name: call.name, arguments: args });
+        const ruta = args.match(/"(?:ruta|path)"\s*:\s*"([^"]{1,200})"/)?.[1] || "";
+        this.emit({ type: "tool_progress", name: call.name, ruta, chars: args.length });
+        indice += 1;
+      }
+      chunk = parsed.final;
+    }
     const latencyMs = performance.now() - requestStarted, ttftMs = firstUsefulDelta === null ? null : firstUsefulDelta - requestStarted;
     if (this.contextDiagnostics) Object.assign(this.contextDiagnostics, { latencyMs, ttftMs });
     this.coderTask?.trace("llm_result", {latencyMs,ttftMs,promptTokens:usage?.prompt_tokens,generatedTokens:usage?.completion_tokens,timings});

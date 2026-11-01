@@ -6,7 +6,7 @@ import path from "node:path";
 // el directorio de la app puede contener archivos personales de cualquier tipo o nombre.
 const ARCHIVOS = [
   "actions.mjs", "adaptadores.mjs", "almacen-json.mjs", "archivos-seguros.mjs", "bonsai-chat.mjs",
-  "cambio-modelo.mjs", "context.mjs", "diagnosticos.mjs", "editar.mjs", "entorno.mjs", "escritura-incremental.mjs", "git-seguro.mjs", "guardia.mjs", "historial.mjs", "lecturas.mjs", "legacy-tool-parser.mjs",
+  "cambio-modelo.mjs", "context.mjs", "diagnosticos.mjs", "editar.mjs", "entorno.mjs", "escritura-incremental.mjs", "git-seguro.mjs", "guardia.mjs", "historial.mjs", "lecturas.mjs", "legacy-tool-parser.mjs", "harmony.mjs",
   "code-context.mjs", "coder-harness.mjs", "coder-profile.json", "project-verification.mjs", "code-intelligence.mjs", "engine-profiles.mjs",
   "model-plan.mjs", "model-hub.mjs", "imagenes.mjs", "code-search.mjs",
   "investigacion.mjs", "mcp-playwright.mjs", "memoria-global.mjs", "registros.mjs", "modelo.mjs", "modelo.json", "navegador.mjs", "ocr.mjs", "procesos.mjs", "sse.mjs", "terminal.mjs", "ui-server.mjs",

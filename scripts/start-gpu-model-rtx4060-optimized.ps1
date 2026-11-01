@@ -477,6 +477,11 @@ if ($Item.chat_template) {
     $Item.chat_template | Set-Content -LiteralPath $ChatTemplatePath -Encoding UTF8 -NoNewline
     $ServerArgs += "--chat-template-file", $ChatTemplatePath
 }
+# GPT-OSS/Harmony: el parser peg-native de llama.cpp falla con varias llamadas.
+# Se pide la salida Harmony cruda y Bonsai la parsea en chat/harmony.mjs.
+if ($Item.clave -eq "gpt-oss-20b" -or ($Item.capacidades -contains "Harmony")) {
+    $ServerArgs += "--skip-chat-parsing"
+}
 
 if ($Vision) {
     $ServerArgs += "--mmproj", $ProjectorPath

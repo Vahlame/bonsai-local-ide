@@ -229,6 +229,10 @@ $ServerArgs = @(
 if ($Item.chat_template) {
     $ServerArgs += @("--chat-template", $Item.chat_template)
 }
+# GPT-OSS/Harmony: parser propio; evita el fallo peg-native de llama.cpp.
+if ($Item.clave -eq "gpt-oss-20b" -or ($Item.capacidades -contains "Harmony")) {
+    $ServerArgs += "--skip-chat-parsing"
+}
 # Perfiles nombrados y CUSTOM comparten la colocacion estandar de llama.cpp (mmap,
 # sin forzar tensores a CUDA0): es la que deja caber 36k con KV f16 en 8 GB.
 if ($EngineOptions -or $EnginePreset -eq 'CUSTOM') {
