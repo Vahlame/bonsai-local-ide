@@ -1,0 +1,5 @@
+body {font-family: Arial, sans-serif; margin: 20px;}
+#task-list {list-style: none; padding: 0;}
+#task-list li {margin: 5px 0;}
+.completed {text-decoration: line-through; color: gray;}
+button {margin-left: 5px;}
