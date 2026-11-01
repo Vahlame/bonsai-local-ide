@@ -607,9 +607,12 @@ export class CodeContext {
     }
     return [...impacted].filter(
       (f) =>
-        /(?:^|\/)(?:test[^/]*|__tests__)(?:\/|\.)|\.(?:test|spec)\.[cm]?js$|(?:^|\/)(?:test[^/]*\.py|[^/]+_test\.py)$/.test(
-          f,
-        ) && /(?:\.[cm]?js|\.py)$/.test(f),
+        // A conventional test path, not any root script whose name starts with
+        // "test" (e.g. testRoot.js or testServer.js used as ad-hoc probes).
+        (/(?:^|\/)(?:tests?|__tests__)\//.test(f) ||
+          /\.(?:test|spec)\.[cm]?js$/.test(f) ||
+          /(?:^|\/)(?:test_[^/]+|[^/]+_test)\.py$/.test(f)) &&
+        /(?:\.[cm]?js|\.py)$/.test(f),
     );
   }
 }

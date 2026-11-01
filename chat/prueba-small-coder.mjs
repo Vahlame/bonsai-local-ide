@@ -47,6 +47,7 @@ try {
     "import assert from 'node:assert/strict';\nimport {wrapped} from '../src/b.mjs';\nassert.equal(wrapped(1),2);\n",
   );
   write("node_modules/hidden.mjs", "export function secret() {}");
+  write("testRoot.js", "console.log('sonda de diagnóstico, no es una suite');\n");
   const ast = await parseCode(
     "src/a.mjs",
     fs.readFileSync(path.join(root, "src/a.mjs"), "utf8"),
@@ -76,6 +77,7 @@ try {
   assert.ok(!c.entries.has("node_modules/hidden.mjs"));
   assert.deepEqual(c.entries.get("src/b.mjs").dependencies, ["src/a.mjs"]);
   assert.deepEqual(c.affectedTests(["src/a.mjs"]), ["test/b.test.mjs"]);
+  assert.deepEqual(c.affectedTests(["testRoot.js"]), [], "una sonda suelta llamada testRoot.js no es una suite");
   assert.ok(c.map("real", {}, 100).length <= 300);
   assert.match(
     c.read({ ruta: "src/a.mjs", simbolo: "real" }),
@@ -328,6 +330,32 @@ try {
   fs.writeFileSync(htmlPath, "<!DOCTYPE html>\n<html><body>\n<script>function sumar(a, b) { return a + b; }</script>\n</body></html>\n");
   const htmlBueno = await htmlTask.verify();
   assert.equal(htmlBueno.ok, true);
+  // API-only success cannot approve a requested web UI; exercise the actual
+  // isolated HTTP verifier, including a missing referenced JavaScript file.
+  const webRoot = path.join(temp, "native-web-project");
+  fs.mkdirSync(webRoot);
+  const webSource = (rootStatus, assetStatus) => `import http from 'node:http';
+export async function startServer(port = 0) {
+  const server = http.createServer((req, res) => {
+    res.statusCode = req.url === '/app.js' ? ${assetStatus} : ${rootStatus};
+    res.setHeader('Content-Type', req.url === '/app.js' ? 'text/javascript' : 'text/html');
+    res.end(req.url === '/app.js' ? 'console.log("ready")' : '<html><body><form></form><script src="/app.js"></script></body></html>');
+  });
+  await new Promise(resolve => server.listen(port, '127.0.0.1', resolve)); return server;
+}\n`;
+  const webPath = path.join(webRoot, "server.mjs");
+  fs.writeFileSync(webPath, webSource(404, 404));
+  const webTask = await new CoderTask({ root: webRoot, goal: "Termina la app Node.js con interfaz HTML/CSS/JS" }).start();
+  fs.appendFileSync(webPath, "// Review the complete delivery.\n");
+  assert.equal((await webTask.verify()).ok, true, "la sintaxis sola no verifica HTTP");
+  assert.equal((await webTask.verify({ final: true })).ok, false, "GET / 404 debe impedir finalizar");
+  assert.match(webTask.verificationSummary, /GET \/ devolvió 404/);
+  fs.writeFileSync(webPath, webSource(200, 404));
+  assert.equal((await webTask.verify()).ok, false, "los recursos también deben responder");
+  assert.match(webTask.verificationSummary, /falta un recurso/);
+  fs.writeFileSync(webPath, webSource(200, 200));
+  assert.equal((await webTask.verify({ final: true })).ok, true);
+  assert.ok(webTask.state.tests.some(check => check.command.includes("verify-node-webapp")));
   fs.appendFileSync(
     path.join(fixture, "test/price.test.mjs"),
     "\nassert.equal(discounted(20,50),10);\n",

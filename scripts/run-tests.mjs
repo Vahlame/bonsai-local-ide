@@ -46,6 +46,7 @@ const AISLADAS = [
   { archivo: "chat/prueba-code-search.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-tool-schemas.mjs" },
   { archivo: "chat/prueba-gpt-oss-tools.mjs" },
+  { archivo: "chat/prueba-gpt-oss-agente.mjs" },
   { archivo: "chat/harmony.mjs" },
   { archivo: "chat/prueba-coder-archivos.mjs" },
   { archivo: "chat/prueba-terminal.mjs", timeout: 120_000 },
@@ -106,6 +107,7 @@ const GPU_EXCLUSIVA = [
 /** Suites que abren un navegador real (Edge/Chrome headless). No forman parte de `npm test`. */
 /** @type {Suite[]} */
 const NAVEGADOR = [
+  { archivo: "chat/prueba-apariencia.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-lifecycle-navegador.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-mcp-playwright.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-navegador-desarrollo.mjs", timeout: 120_000 },

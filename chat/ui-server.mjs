@@ -36,6 +36,8 @@ import { candidatosDeMemoria, crearMemoriaGlobal } from "./memoria-global.mjs";
 import { Terminales } from "./terminal.mjs";
 import { buscarDefinicion, diagnosticarArchivo, diagnosticarTexto, indiceSimbolos, simbolos } from "./diagnosticos.mjs";
 import { CoderTask, CODER_CONFIG, coderOptions, runCheck } from "./coder-harness.mjs";
+import { replacementFailureFacts } from "./runtime-facts.mjs";
+const UI_THEME_IDS = new Set(JSON.parse(fs.readFileSync(new URL("./ui/themes.json", import.meta.url), "utf8")).map(t => t.id));
 import { ENGINE_PROFILES, engineProfile, isNamedEnginePreset, configMotor, CUSTOM_ENGINE, validarTechoModelo } from "./engine-profiles.mjs";
 import { EscrituraIncremental } from "./escritura-incremental.mjs";
 import { consultarRegistro } from "./registros.mjs";
@@ -2754,7 +2756,7 @@ async function main(args) {
         /** @type {Record<string, unknown>} */
         const limpio = {};
         for (const k of permitidas) if (k in raw) limpio[k] = raw[k];
-        if ("tema" in limpio && !["dark","light","slate","ocean","forest","sand"].includes(limpio.tema)) {res.writeHead(400).end("Tema inválido");return;}
+        if ("tema" in limpio && !UI_THEME_IDS.has(limpio.tema)) {res.writeHead(400).end("Tema inválido");return;}
         if ("verPensamiento" in limpio && typeof limpio.verPensamiento!=="boolean") {res.writeHead(400).end("Preferencia de pensamiento inválida");return;}
         if ("editorModerno" in limpio && typeof limpio.editorModerno !== "boolean") {res.writeHead(400).end("Preferencia de editor inválida");return;}
         if ("engineVision" in limpio && typeof limpio.engineVision!=="boolean") {res.writeHead(400).end("Visión inválida");return;}
@@ -3306,6 +3308,20 @@ async function main(args) {
             if (row.captura) { event.captura = row.captura; event.vision = row.vision; }
             send(event);
           };
+          // The regular finish and the bounded VERIFY shortcut use exactly the
+          // same command permission, action display and verification runner.
+          const verifyCoder = async (coder, final, actions) => coder.verify({ final, run: async (file, argv, options) => {
+            const title = [file, ...argv].join(" ");
+            const row = { id: `${idTurno}-a${++step}`, kind: "cmd", title, state: permitMode === "ask" ? "permit" : "run", detail: "" };
+            actions.push(row); emitAction(row);
+            if (permitMode === "ask" && !await waitPermit(row.id, ac.signal)) {
+              row.state = "denied"; row.detail = "Verificación no autorizada"; emitAction(row);
+              return { command: title, code: -1, output: row.detail };
+            }
+            const result = await runCheck(file, argv, options);
+            row.state = "done"; row.detail = clipText(result.output); row.code = result.code; emitAction(row);
+            return result;
+          }});
           /**
            * Ejecuta lo que pidió el modelo en `current` y prepara lo que se le devuelve.
            * @param {{role: string, content: string, shown?: string, actions?: ActionRow[], toolCalls?: Array<{id?: string}>, cortadas?: string[]}} current
@@ -3519,7 +3535,8 @@ async function main(args) {
               if (!r.ok) {
                 if (r.veces === 0) {
                   const pista = trozoParecido(antes, edit.buscar);
-                  const ayuda = pista
+                  const exacto = replacementFailureFacts(antes, edit.buscar);
+                  const ayuda = exacto ? `\n${exacto}` : pista
                     ? `\n${pista}\nCopia ese texto tal cual en \`buscar\`.`
                     : " Lee antes ese trozo con leer desde/hasta y cópialo exacto.";
                   return fallar(`No encontré ese texto en ${rel}: no coincide letra a letra.${ayuda}`);
@@ -4127,17 +4144,8 @@ async function main(args) {
             if (coder) {
               if (effects?.plan) { coder.state.plan = effects.plan; coder.state.phase = "EDIT"; }
               const mutations = actions.some(a=>a.state === "done" && (a.kind === "write" || (a.kind === "cmd" && a.code !== undefined)));
-              if (mutations || !usadas.length) {
-                const verification = await coder.verify({ final: !usadas.length, run: async (file, argv, options) => {
-                  const title = [file,...argv].join(" ");
-                  const row = showAction("cmd",title,permitMode === "ask" ? "permit" : "run");
-                  if (permitMode === "ask" && !await waitPermit(row.id,ac.signal)) {
-                    finishAction(row,"denied","Verificación no autorizada");
-                    return {command:title,code:-1,output:"Verificación no autorizada"};
-                  }
-                  const result = await runCheck(file,argv,options);
-                  finishAction(row,"done",clipText(result.output),result.code); return result;
-                }});
+              if (mutations || (!usadas.length && !current.cortadas?.length)) {
+                const verification = await verifyCoder(coder, !usadas.length, actions);
                 if (verification.changed) {
                   ponerEn(ultimaId, `Verificación automática:\n${verification.summary}`);
                   wrote = true; progresoPaso = true;
@@ -4200,8 +4208,6 @@ async function main(args) {
             }
             return null;
           };
-          /** @type {{texto: string, resultados: Array<{toolCallId: string, content: string}> | null} | null} */
-          let pending = null;
           /** @type {{texto: string, resultados: Array<{toolCallId: string, content: string}> | null}} */
           let siguiente = { texto: prompt, resultados: null };
           /**
@@ -4292,13 +4298,27 @@ async function main(args) {
                 const verificadoSinCambios = Boolean(coderAhora
                   && coderAhora.state.phase === "VERIFY"
                   && !coderAhora.state.errors.length
+                  && !ultimoFallo && !current.cortadas?.length
                   && coderAhora.lastVerified
                   && coderAhora.lastVerified === coderAhora.revision());
                 pasosTrasVerificacion = verificadoSinCambios && accionPaso !== "write" ? pasosTrasVerificacion + 1 : 0;
                 if (pasosTrasVerificacion > PASOS_MAX_TRAS_VERIFICAR) {
-                  motivoParada = "verified";
-                  pendienteCierre = null;
-                  break;
+                  const verification = await verifyCoder(coderAhora, true, current.actions ||= []);
+                  coderAhora.state.actions = current.actions.map(a => ({ kind: a.kind, title: a.title, state: a.state, code: a.code }));
+                  chat.session.taskState = coderAhora.state;
+                  chat.saveSession();
+                  if (verification.ok) {
+                    coderAhora.state.phase = "DONE";
+                    coderAhora.trace("done", { tests: coderAhora.state.tests });
+                    motivoParada = "verified";
+                    pendienteCierre = null;
+                    break;
+                  }
+                  if (coderAhora.stopped) { motivoParada = coderAhora.stopped; pendienteCierre = null; break; }
+                  siguiente = { ...next, texto: `Sigue con lo que pedí. La verificación final falló; corrige el fallo antes de terminar:\n${verification.summary}` };
+                  pendienteCierre = siguiente;
+                  ultimoFallo = true;
+                  pasosTrasVerificacion = 0;
                 }
                 if (pasosSinEvidencia >= 8) { motivoParada = "stalled"; break; }
               }
@@ -4314,15 +4334,8 @@ async function main(args) {
               }
               // Quedan acciones pendientes y la tanda avanzó: seguir con otra tanda.
             }
-            pending = pendienteCierre;
-            if (pending) {
-              // Última generación: responder con lo hecho (sin ejecutar más herramientas).
-              chat.faseSalto = "final";
-              chat.pensarEsteSalto = ultimoFallo;
-              await enviar(pending);
-              const current = chat.session.turns[chat.session.turns.length - 1];
-              if (current?.role === "assistant") await present(current, false);
-            }
+            // Pending tool results go through the single final-summary path below.
+            // A step/stall limit must not run one more generation with tools enabled.
           } finally {
             chat.pensarEsteSalto = true;
           }
@@ -4351,6 +4364,7 @@ async function main(args) {
           // content vacío porque todo fue razonamiento), también hay que pedir el
           // resumen final. Antes solo se miraba el último turno y quedaba en blanco.
           if (!ac.signal.aborted && (!lastAssistant || !String(lastAssistant.content || "").trim() || motivoParada !== "completed")) {
+            chat.faseSalto = "final";
             chat.toolChoice = "none";
             // El cierre también razona si el modelo lo tiene activado. GPT-OSS, sin
             // canal de análisis, volcaba todo su monólogo interno en `content` y la

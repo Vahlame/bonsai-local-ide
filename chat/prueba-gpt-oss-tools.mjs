@@ -12,6 +12,8 @@ import path from "node:path";
 import { BonsaiChat } from "./bonsai-chat.mjs";
 import { llamadasCrudas } from "./adaptadores.mjs";
 import { nativeToolEffects } from "./actions.mjs";
+import { parseHarmony, createHarmonyProgress } from "./harmony.mjs";
+import { nodeRuntimeGuide, runtimeFailureFacts, replacementFailureFacts, webAppFailureFacts } from "./runtime-facts.mjs";
 
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "bonsai-gpt-oss-"));
 let requests = 0;
@@ -49,7 +51,11 @@ const server = http.createServer(async (req, res) => {
     }
     res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8" });
     const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
-    if (mode === "native") {
+    if (mode === "raw-slow") {
+      send({ choices: [{ delta: { content: '<|channel|>analysis<|message|>Revisando el proyecto.<|end|><|start|>assistant to=functions.archivo<|channel|>commentary<|message|>{"ruta":"progreso.txt","contenido":"' } }] });
+      await new Promise(r => setTimeout(r, 450));
+      send({ choices: [{ delta: { content: 'completo"}<|call|>' }, finish_reason: "stop" }] });
+    } else if (mode === "native") {
       send({
         choices: [{
           delta: {
@@ -89,6 +95,44 @@ try {
   });
   await chat.connect();
   chat.silent = true;
+
+  for (const header of ["assistant to=functions.leer<|channel|>analysis", "assistant<|channel|>commentary to=functions.leer"]) {
+    const parsed = parseHarmony(`<|start|>${header}<|message|>{"ruta":"a.txt"}<|call|>`);
+    assert.equal(parsed.calls[0]?.name, "leer");
+    assert.equal(parsed.calls[0]?.arguments.ruta, "a.txt");
+    assert.equal(parsed.reasoning, "");
+  }
+  const seen = { reasoning: "", final: "", tools: [] };
+  const progress = createHarmonyProgress({ reasoning: t => { seen.reasoning += t; }, final: t => { seen.final += t; }, tool: t => seen.tools.push(t) });
+  const text = '<|channel|>analysis<|message|>Pensando.<|end|><|start|>assistant<|channel|>final<|message|>Listo.<|return|>';
+  for (let i = 1; i <= text.length; i++) progress(text.slice(0, i));
+  assert.equal(seen.reasoning, "Pensando.");
+  assert.equal(seen.final, "Listo.");
+  assert.ok(nodeRuntimeGuide().includes("fileURLToPath"));
+  const indented = "\tif (ready) {\r\n\t  run();\r\n\t}";
+  const recovery = replacementFailureFacts(indented, "  if (ready) {\n    run();\n  }");
+  assert.ok(recovery.includes(JSON.stringify(indented)), "la recuperación conserva tabs y CRLF exactos");
+  assert.equal(replacementFailureFacts(indented + "\r\n" + indented, "if (ready) {\nrun();\n}"), "", "no se sugiere un bloque ambiguo");
+  assert.equal(replacementFailureFacts(indented, "if (different) {\nrun();\n}"), "", "no se reinterpretan cambios de código");
+  assert.match(await runtimeFailureFacts("The requested module 'node:test' does not provide an export named 'afterAll'"), /Exportaciones reales:.*after/);
+  const webSignal = webAppFailureFacts("const publicDir = new URL('./public', import.meta.url);\nconst fileUrl = new URL(pathname, publicDir);\n");
+  assert.match(webSignal, /barra final/);
+  assert.match(webSignal, /barra inicial/);
+  assert.equal(webAppFailureFacts("const files = new URL('./public/', import.meta.url);"), "");
+
+  const events = [];
+  chat.push = e => events.push(e);
+  process.env.MOCK_MODE = "raw-slow";
+  const streaming = chat.streamSlice([{ role: "user", content: "crea progreso.txt" }], 512, false, new AbortController().signal);
+  await new Promise(r => setTimeout(r, 150));
+  assert.ok(events.some(e => e.type === "reasoning" && e.text.includes("Revisando")), "razonamiento antes de terminar SSE");
+  assert.ok(events.some(e => e.type === "tool_progress" && e.name === "archivo"), "progreso de JSON parcial antes de ejecutar");
+  const completed = await streaming;
+  assert.deepEqual(JSON.parse(completed.toolCalls[0].arguments), { ruta: "progreso.txt", contenido: "completo" });
+  assert.equal(events.filter(e => e.type === "reasoning").map(e => e.text).join(""), "Revisando el proyecto.");
+  chat.faseSalto = "final"; chat.toolChoice = "none"; chat.actOnPc = true;
+  assert.equal(chat.toolFields().tools, undefined, "el cierre retira herramientas");
+  chat.faseSalto = "plan"; chat.toolChoice = "auto";
 
   // La plantilla GPT-OSS recibe reasoning_effort, no enable_thinking.
   const fields = chat.templateFields(true);

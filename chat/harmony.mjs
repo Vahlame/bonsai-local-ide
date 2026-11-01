@@ -13,22 +13,34 @@
 
 /**
  * @param {string} raw
- * @returns {{reasoning: string, final: string, calls: Array<{name: string, arguments: Record<string, unknown> | string}>}}
+ * @returns {{reasoning: string, final: string, commentary?: string, calls: Array<{name: string, arguments: Record<string, unknown> | string}>}}
  */
 export function parseHarmony(raw) {
   const texto = String(raw ?? "");
   if (!texto.includes("<|channel|>")) {
     return { reasoning: "", final: texto, calls: [] };
   }
-  const canal = /<\|channel\|>(analysis|final|commentary)([\s\S]*?)<\|message\|>([\s\S]*?)(?=<\|call\|>|<\|end\|>|<\|start\|>|<\|return\|>|$)/g;
   let reasoning = "";
   let final = "";
+  let commentary = "";
   /** @type {Array<{name: string, arguments: Record<string, unknown> | string}>} */
   const calls = [];
-  for (const match of texto.matchAll(canal)) {
-    const nombreCanal = match[1];
-    const meta = match[2] || "";
-    const cuerpo = match[3] || "";
+  for (const message of texto.split(/<\|(?:start|end|call|return)\|>/)) {
+    const separator = message.indexOf("<|message|>");
+    if (separator < 0) continue;
+    const meta = message.slice(0, separator);
+    const nombreCanal = meta.match(/<\|channel\|>(analysis|final|commentary)\b/)?.[1];
+    const cuerpo = message.slice(separator + "<|message|>".length);
+    // Harmony permits the recipient before OR after the channel, including analysis tools.
+    const recipient = meta.match(/\bto=([A-Za-z0-9_.-]+)/)?.[1];
+    if (recipient && recipient !== "all") {
+      const nombre = recipient.replace(/^functions\./, "");
+      const limpio = cuerpo.trim();
+      let args;
+      try { args = JSON.parse(limpio); } catch { args = limpio; }
+      calls.push({ name: nombre, arguments: args });
+      continue;
+    }
     if (nombreCanal === "analysis") {
       reasoning += cuerpo;
       continue;
@@ -37,20 +49,29 @@ export function parseHarmony(raw) {
       final += cuerpo;
       continue;
     }
-    const nombre = meta.match(/to=functions\.([A-Za-z0-9_.-]+)/)?.[1]
-      || meta.match(/\bto=([A-Za-z0-9_.-]+)/)?.[1]
-      || "";
-    if (!nombre) continue;
-    const limpio = cuerpo.replace(/<\|constrain\|>\w+/g, "").trim();
-    let args;
-    try {
-      args = JSON.parse(limpio);
-    } catch {
-      args = limpio;
-    }
-    calls.push({ name: nombre, arguments: args });
+    if (nombreCanal === "commentary") commentary += cuerpo;
   }
-  return { reasoning, final, calls };
+  return { reasoning, final, commentary, calls };
+}
+
+/** Progress only: partial arguments are never executable calls. Invoke at a bounded rate. */
+export function createHarmonyProgress({ reasoning = () => {}, final = () => {}, tool = () => {}, commentary = () => {} } = {}) {
+  let seenReasoning = "", seenFinal = "", seenCommentary = "";
+  const markers = ["<|start|>", "<|end|>", "<|call|>", "<|return|>", "<|channel|>", "<|message|>", "<|constrain|>"];
+  return (raw) => {
+    if (!raw.includes("<|channel|>")) return;
+    const last = raw.lastIndexOf("<");
+    const text = last >= 0 && markers.some((marker) => marker.startsWith(raw.slice(last))) ? raw.slice(0, last) : raw;
+    const parsed = parseHarmony(text);
+    for (const [value, seen, emit] of [[parsed.reasoning, seenReasoning, reasoning], [parsed.final, seenFinal, final], [parsed.commentary || "", seenCommentary, commentary]]) {
+      if (value.startsWith(seen) && value.length > seen.length) emit(value.slice(seen.length));
+    }
+    seenReasoning = parsed.reasoning; seenFinal = parsed.final; seenCommentary = parsed.commentary || "";
+    for (const call of parsed.calls.slice(-1)) {
+      const args = typeof call.arguments === "string" ? call.arguments : JSON.stringify(call.arguments);
+      tool({ name: call.name, chars: args.length, ruta: args.match(/"(?:ruta|path)"\s*:\s*"([^"\r\n]{1,200})"/)?.[1] || "" });
+    }
+  };
 }
 
 /**

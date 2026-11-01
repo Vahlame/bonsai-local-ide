@@ -12,6 +12,7 @@ import { PC_TOOLS, unifiedDiff } from "./actions.mjs";
 import { matarArbol } from "./procesos.mjs";
 import { verificationCommands } from "./project-verification.mjs";
 import { TypeScriptLsp, typeScriptProject } from "./code-intelligence.mjs";
+import { nodeRuntimeGuide, runtimeFailureFacts } from "./runtime-facts.mjs";
 
 /**
  * Identidad completa de un diagnóstico para no confundir dos errores con el mismo
@@ -188,7 +189,7 @@ export function validateCall(call, tools = CODER_TOOLS) {
   if (!schema)
     return {
       ok: false,
-      error: `función desconocida ${String(call.name).slice(0, 80)}`,
+      error: `función desconocida ${String(call.name).slice(0, 80)}. Disponibles: ${tools.map(t => t.function.name).join(", ")}`,
     };
   let args;
   try {
@@ -415,6 +416,7 @@ export class CoderTask {
           this.state.goal,
         ));
     this.state.phase = complex ? "PLAN" : "EDIT";
+    this.runtimeGuide = /\bnode(?:\.js)?\b|\bESM\b|node:test/i.test(this.state.goal + (this.projectMetadata || "")) ? nodeRuntimeGuide() : "";
     this.trace("start", {
       config: this.config,
       filesSelected: this.state.inspected,
@@ -839,12 +841,16 @@ export class CoderTask {
         if (cfg && fs.statSync(cfg).size < 16000)
           settings = JSON.parse(fs.readFileSync(cfg, "utf8"));
       } catch {}
-      const commands = verificationCommands(
-        this.root,
-        this.context,
-        files,
-        settings,
-      );
+      // A requested web UI cannot be approved from API tests alone. Limit this
+      // adapter to its detectable contract; other servers keep project checks.
+      const entry = rutaProyecto(this.root, "server.mjs");
+      if (final && /\bnode(?:\.js)?\b|HTTP nativo/i.test(this.state.goal) && /interfaz|HTML|web/i.test(this.state.goal) && entry && fs.existsSync(entry)) {
+        const source = fs.readFileSync(entry, "utf8");
+        if (/export\s+(?:async\s+)?function\s+startServer\b|export\s+(?:const|let)\s+startServer\b/.test(source)) this.webSmokeRequired = true;
+      }
+      const commands = verificationCommands(this.root, this.context,
+        this.webSmokeRequired ? [...new Set([...files, ...this.state.inspected])] : files, settings);
+      if (this.webSmokeRequired) commands.push({ file: process.execPath, args: [path.join(import.meta.dirname, "verify-node-webapp.mjs"), this.root] });
       for (const c of commands) {
         this.signal?.throwIfAborted();
         const logPath = this.traceDir
@@ -867,8 +873,9 @@ export class CoderTask {
           outputChars: result.output.length,
         });
         if (result.code !== 0) {
+          const facts = c.file === process.execPath ? await runtimeFailureFacts(result.output) : "";
           errors.push(
-            `${result.command} (exit ${result.code}):\n${compactFailure(result.output)}`,
+            `${facts ? facts + "\n" : ""}${result.command} (exit ${result.code}):\n${compactFailure(result.output)}`,
           );
           break;
         }
@@ -956,11 +963,11 @@ export class CoderTask {
     if (estimateTokens(render()) > budget) delete view.plan;
     return render();
   }
-  dynamic() {
+  dynamic({ final = false } = {}) {
     const summary = !this.state.errors.length && this.state.modified.length
       ? takeHeadByTokens(this.verificationSummary || "Cambios pendientes de verificar.", 90, estimateTokens)
       : "";
-    const phase = [PHASE_PROMPTS[this.state.phase], this.contextHint].filter(Boolean).join("\n");
+    const phase = final ? `${PHASE_PROMPTS.DONE} El trabajo ${this.state.errors.length || this.stopped ? "quedó incompleto" : "terminó su verificación"}. Resume en español; no repares ni solicites herramientas.` : [PHASE_PROMPTS[this.state.phase], this.contextHint].filter(Boolean).join("\n");
     return `ESTADO DE TAREA:\n${this.workingState()}\n${phase}\n${summary}`;
   }
   dispose() {

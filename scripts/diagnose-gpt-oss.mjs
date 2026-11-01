@@ -12,8 +12,12 @@ const state = path.join(directory, "state"), project = path.join(directory, "pro
 assert.equal(fs.existsSync(directory), false, "usa una carpeta nueva para conservar las evidencias anteriores");
 fs.mkdirSync(state, { recursive: true }); fs.mkdirSync(project);
 fs.writeFileSync(path.join(directory, ".gitignore"), "project/\n");
+fs.writeFileSync(path.join(directory, ".gitattributes"), "raw-stream.jsonl -text\nui-stream.sse binary\n");
 // Keep git_diff and any model-issued Git commands inside the disposable workspace.
 execFileSync("git", ["-C", project, "init", "--quiet"], { windowsHide: true });
+const resumeIndex = process.argv.indexOf("--resume-from");
+const resumeFrom = resumeIndex < 0 ? null : path.resolve(process.argv[resumeIndex + 1]);
+if (resumeFrom) fs.cpSync(resumeFrom, project, { recursive: true, filter: source => path.basename(source) !== ".git" });
 // Preserve the user's effective profile, context and thinking settings in an isolated state.
 const settings = JSON.parse(fs.readFileSync(path.join(root, "chat/ui-settings.json"), "utf8"));
 fs.writeFileSync(path.join(state, "ui-settings.json"), JSON.stringify(settings, null, 2));
@@ -32,6 +36,15 @@ assert.equal(await open(8080), false, "8080 debe estar libre");
 assert.equal(await open(8787), false, "8787 debe estar libre");
 const base = "http://127.0.0.1:8787", events = [];
 const evidence = { started: new Date().toISOString(), settings, prompt: "Crea y termina una aplicación de tareas en esta carpeta vacía. Usa Node.js con módulos ESM y HTTP nativo, sin dependencias nuevas, y una interfaz HTML/CSS/JS. Debe permitir añadir, listar, completar y borrar tareas mediante GET/POST/PATCH/DELETE /api/tasks, guardar los datos en un JSON local y funcionar al ejecutar node server.mjs. Incluye pruebas con node --test para crear, completar y borrar, ejecútalas y corrige los fallos. No inicies servidores persistentes ni uses procesos en segundo plano. Al terminar responde en español con los archivos creados y el resultado real de las pruebas." };
+if (resumeFrom) {
+  evidence.resumeFrom = resumeFrom;
+  evidence.prompt = evidence.prompt.replace("Crea y termina una aplicación de tareas en esta carpeta vacía", "Revisa y termina la aplicación de tareas existente en esta carpeta, conservando sus funciones");
+}
+const promptIndex = process.argv.indexOf("--prompt-file");
+if (promptIndex >= 0) {
+  evidence.promptFile = path.resolve(process.argv[promptIndex + 1]);
+  evidence.prompt = fs.readFileSync(evidence.promptFile, "utf8");
+}
 let ui, started = false, output = "";
 async function api(route, body, timeoutMs = 300000) {
   const res = await fetch(base + route, { method: body === undefined ? "GET" : "POST", headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeoutMs) });
@@ -44,6 +57,7 @@ try {
     env: { ...process.env, BONSAI_STATE: state, BONSAI_SALIDA: path.join(directory, "out"), BONSAI_PTY: "0", BONSAI_RAW_STREAM: path.join(directory, "raw-stream.jsonl") },
   });
   ui.stdout.on("data", (d) => { output += d; }); ui.stderr.on("data", (d) => { output += d; });
+  evidence.uiPid = ui.pid;
   for (let i = 0; i < 100 && !await open(8787); i++) { assert.equal(ui.exitCode, null, output); await wait(100); }
   evidence.launch = await (await api("/api/server/start", { model: "gpt-oss-20b", preset: "CUSTOM", contexto: settings.coderContextTokens, kv: settings.engineKv, vision: false, pensar: settings.pensar })).json();
   started = true;

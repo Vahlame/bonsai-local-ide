@@ -5,6 +5,7 @@
  */
 
 import fs from "node:fs";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -35,7 +36,7 @@ import { leerSSE } from "./sse.mjs";
 import { MODELO, muestreo } from "./modelo.mjs";
 import { CODER_CONFIG, CODER_SYSTEM, CODER_TOOLS } from "./coder-harness.mjs";
 import { contextoEntorno } from "./entorno.mjs";
-import { parseHarmony } from "./harmony.mjs";
+import { parseHarmony, createHarmonyProgress } from "./harmony.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SESSION_PATH = path.join(ROOT, "session.json");
@@ -664,7 +665,7 @@ export class BonsaiChat {
   }
 
   toolFields(choiceOverride, incluirTools = true) {
-    if (this.consultation) return { tool_choice: "none" };
+    if (this.consultation || (this.faseSalto === "final" && this.toolChoice === "none")) return { tool_choice: "none" };
     if (!this.actOnPc) return {};
     const tools = this.agentProfile === "small-local-coder" ? CODER_TOOLS : PC_TOOLS;
     const choice = choiceOverride !== undefined
@@ -1134,7 +1135,8 @@ export class BonsaiChat {
     let tokensBefore = null, memoryBudget = Math.max(600, Math.min(2500, Math.floor(this.historyCap() * 0.08))), memoryOmitted = false;
     task.stateBudget = Math.max(180, Math.min(1800, Math.floor(this.historyCap() * 0.12)));
     task.contextHint = "";
-    const system = [CODER_SYSTEM, this.puedeFallbackTexto() ? this.guiaHerramientas() : "", contextoEntorno({root:task.root,python:this.pythonCmd,...this.entornoAgente}), this.rules ? `PROJECT RULES:\n${this.rules}` : "", this.globalMemory, task.projectMetadata ? `PROJECT METADATA:\n${takeHeadByTokens(task.projectMetadata,250,estimateTokens)}` : ""].filter(Boolean).join("\n\n");
+    const finalPhase = this.faseSalto === "final" && this.toolChoice === "none";
+    const system = [finalPhase ? "Responde al usuario en español con un resumen final de las acciones y verificaciones reales. No llames herramientas ni propongas más acciones. Indica claramente cualquier fallo o trabajo incompleto." : CODER_SYSTEM, !finalPhase && this.puedeFallbackTexto() ? this.guiaHerramientas() : "", contextoEntorno({root:task.root,python:this.pythonCmd,...this.entornoAgente}), !finalPhase ? task.runtimeGuide : "", this.rules ? `PROJECT RULES:\n${this.rules}` : "", this.globalMemory, task.projectMetadata ? `PROJECT METADATA:\n${takeHeadByTokens(task.projectMetadata,250,estimateTokens)}` : ""].filter(Boolean).join("\n\n");
     const turns = this.session.turns.slice(task.startTurnIndex || 0);
     const argumentosValidos = (call) => {
       if (call?.arguments && typeof call.arguments === "object") return true;
@@ -1225,7 +1227,7 @@ export class BonsaiChat {
     const convert = (t) => ({role:t.role,content:typeof t.content === "string" ? t.content : "",...(t.role === "tool" ? {tool_call_id:t.toolCallId} : {}),...(t.toolCalls?.length ? {tool_calls:t.toolCalls.map((c,i)=>({id:c.id||`call_${i}`,type:"function",function:{name:c.name,arguments:typeof c.arguments === "string" ? c.arguments : JSON.stringify(c.arguments)}}))} : {})});
     for (let attempt = 0; attempt < groups.length + earlier.length + 12; attempt++) {
       const memory = memoryFor();
-      const messages = [{role:"system",content:system},{role:"user",content:[task.state.goal,map?`MAPA (solo metadatos):\n${map}`:"",snippets?`CONTEXTO SELECCIONADO:\n${snippets}`:"",memory].filter(Boolean).join("\n\n")},...previous,...recent.flat().map(convert),{role:"user",content:task.dynamic()}];
+      const messages = [{role:"system",content:system},{role:"user",content:[task.state.goal,map?`MAPA (solo metadatos):\n${map}`:"",snippets?`CONTEXTO SELECCIONADO:\n${snippets}`:"",memory].filter(Boolean).join("\n\n")},...previous,...recent.flat().map(convert),{role:"user",content:task.dynamic({ final: this.faseSalto === "final" })}];
       const count = await this.countPrompt(messages,false);
       if (tokensBefore === null) tokensBefore = count;
       if (count > this.historyCap() && (this.configuredCap <= 0 || count <= this.configuredCap) && !Number.isFinite(this.overrideOutputReservation)) {
@@ -1346,6 +1348,16 @@ export class BonsaiChat {
     /** @type {Map<number, {index: number, id: string, name: string, arguments: string}>} */
     const calls = new Map();
     let ultimoProgreso = 0;
+    let ultimoHarmony = 0;
+    const harmonyProgress = createHarmonyProgress({
+      reasoning: (text) => {
+        const visible = text.slice(0, Math.max(0, 65536 - (this.currentReasoning || "").length));
+        if (visible) { this.currentReasoning = (this.currentReasoning || "") + visible; this.emit({ type: "reasoning", text: visible }); }
+      },
+      final: (text) => this.emitToken(text),
+      commentary: (text) => this.emit({ type: "status", text: text.slice(-240) }),
+      tool: (progress) => this.emit({ type: "tool_progress", ...progress }),
+    });
     /** @type {{completo: boolean, motivo: string, finishReason: string}} */
     let cierre = { completo: false, motivo: "cierre_sin_fin", finishReason: "" };
     try {
@@ -1377,6 +1389,7 @@ export class BonsaiChat {
             // GPT-OSS puede venir en Harmony crudo (--skip-chat-parsing). No se
             // pinta el marcador <|channel|> en la UI; se parsea al final.
             if (!harmonyCandidate) this.emitToken(token);
+            else if (Date.now() - ultimoHarmony >= 300) { harmonyProgress(chunk); ultimoHarmony = Date.now(); }
           }
           if (typeof delta.reasoning_content === "string" && delta.reasoning_content) {
             const visible = delta.reasoning_content.slice(0, Math.max(0, 65536 - (this.currentReasoning || "").length));
@@ -1441,15 +1454,12 @@ export class BonsaiChat {
     // análisis de la respuesta final y se convierten sus canales `to=functions.*`
     // en tool calls nativas para el mismo camino de siempre.
     if (harmonyCandidate && chunk.includes("<|channel|>")) {
+      harmonyProgress(chunk);
       const parsed = parseHarmony(chunk);
-      if (parsed.reasoning) {
-        this.currentReasoning = [this.currentReasoning, parsed.reasoning].filter(Boolean).join("\n");
-        this.emit({ type: "reasoning", text: parsed.reasoning });
-      }
       let indice = calls.size;
       for (const call of parsed.calls) {
         const args = typeof call.arguments === "string" ? call.arguments : JSON.stringify(call.arguments ?? {});
-        calls.set(indice, { index: indice, id: `harmony_${indice}`, name: call.name, arguments: args });
+        calls.set(indice, { index: indice, id: `harmony_${randomUUID()}`, name: call.name, arguments: args });
         const ruta = args.match(/"(?:ruta|path)"\s*:\s*"([^"]{1,200})"/)?.[1] || "";
         this.emit({ type: "tool_progress", name: call.name, ruta, chars: args.length });
         indice += 1;
@@ -1459,7 +1469,12 @@ export class BonsaiChat {
     const latencyMs = performance.now() - requestStarted, ttftMs = firstUsefulDelta === null ? null : firstUsefulDelta - requestStarted;
     if (this.contextDiagnostics) Object.assign(this.contextDiagnostics, { latencyMs, ttftMs });
     this.coderTask?.trace("llm_result", {latencyMs,ttftMs,promptTokens:usage?.prompt_tokens,generatedTokens:usage?.completion_tokens,timings});
-    return { chunk, reason, toolCalls: [...calls.values()].filter((call) => call.name || call.arguments), timings, usage, completo: cierre.completo, motivo: cierre.motivo };
+    const registered = new Set((this.agentProfile === "small-local-coder" ? CODER_TOOLS : PC_TOOLS).map((t) => t.function.name));
+    const normalized = [...calls.values()].filter((call) => call.name || call.arguments).map((call) => {
+      const name = call.name.replace(/^functions\./, "");
+      return registered.has(name) ? { ...call, name } : call;
+    });
+    return { chunk, reason, toolCalls: normalized, timings, usage, completo: cierre.completo, motivo: cierre.motivo };
   }
 
   /**
@@ -1771,7 +1786,7 @@ export class BonsaiChat {
       toolCalls.splice(0, toolCalls.length, ...validas);
       this.note(`[${cortadas.length} llamada(s) con JSON incompleto: no se guardan; se piden de nuevo]`);
     }
-    if (spoken.trim() || toolCalls.length) {
+    if (spoken.trim() || toolCalls.length || cortadas.length || this.currentReasoning) {
       /** @type {{role: "assistant", content: string, toolCalls?: Array<{id: string, name: string, arguments: string}>, cortadas?: string[]}} */
       const turn = { role: "assistant", content: spoken };
       if (this.currentReasoning) turn.reasoning = this.currentReasoning;
