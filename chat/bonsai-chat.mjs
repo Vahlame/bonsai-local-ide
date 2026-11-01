@@ -662,11 +662,50 @@ export class BonsaiChat {
     return muestreo(think && this.thinkBudget > 0 ? "razonar" : this.perfil, clave);
   }
 
-  toolFields() {
+  toolFields(choiceOverride, incluirTools = true) {
     if (this.consultation) return { tool_choice: "none" };
     if (!this.actOnPc) return {};
-    if (this.agentProfile === "small-local-coder") return { tools: CODER_TOOLS, tool_choice: this.toolChoice === "auto" && this.coderTask?.state.phase === "PLAN" ? {type:"function",function:{name:"plan"}} : this.toolChoice, parallel_tool_calls: this.parallelTools };
-    return { tools: PC_TOOLS, tool_choice: this.toolChoice, parallel_tool_calls: this.parallelTools };
+    const tools = this.agentProfile === "small-local-coder" ? CODER_TOOLS : PC_TOOLS;
+    const choice = choiceOverride !== undefined
+      ? choiceOverride
+      : (this.toolChoice === "auto" && this.coderTask?.state.phase === "PLAN"
+        ? { type: "function", function: { name: "plan" } }
+        : this.toolChoice);
+    return {
+      ...(incluirTools ? { tools } : {}),
+      tool_choice: choice,
+      parallel_tool_calls: this.parallelTools,
+    };
+  }
+
+  /** ¿Este modelo puede devolver tool calls como JSON de texto si se las pide así? */
+  puedeFallbackTexto() {
+    return /gpt-oss/i.test(`${this.model || ""} ${this.props?.model_path || ""}`);
+  }
+
+  /**
+   * Si llama.cpp rechaza la salida nativa con `peg-native`, se reintenta SIN tools
+   * nativas: el modelo recibe el catálogo como texto y devuelve JSON puro, que
+   * `llamadasCrudas` convierte en las mismas llamadas. Evita que un parser roto
+   * tumbe el turno entero.
+   * @param {Array<Record<string, any>>} messages
+   * @returns {Array<Record<string, any>>}
+   */
+  mensajesSinParser(messages) {
+    const tools = this.toolFields().tools || [];
+    const catalogo = tools.map((t) => ({
+      name: t.function?.name,
+      description: t.function?.description,
+      parameters: t.function?.parameters,
+    }));
+    const instruccion = `\n\nREINTENTO SIN PARSER NATIVO (llama.cpp peg-native).\nNo hay herramientas nativas en esta petición. Si necesitas una herramienta, responde SOLO con un objeto JSON con esta forma: {"name":"<herramienta>","arguments":{...}}. No uses markdown, no expliques y no escribas texto antes ni después. Para varias acciones, haz una sola llamada y espera el resultado.\nHerramientas disponibles:\n${JSON.stringify(catalogo)}`;
+    const copia = messages.map((m) => ({ ...m }));
+    if (!copia.length || !["system", "developer"].includes(copia[0].role)) {
+      copia.unshift({ role: "system", content: instruccion.trim() });
+      return copia;
+    }
+    copia[0] = { ...copia[0], content: `${copia[0].content || ""}${instruccion}` };
+    return copia;
   }
 
   /**
@@ -1167,12 +1206,13 @@ export class BonsaiChat {
    * @param {AbortSignal} signal
    * @returns {Promise<{ chunk: string, reason: string, toolCalls: Array<{id: string, name: string, arguments: string}>, timings: Record<string, number> | null, usage: Record<string, number> | null, completo: boolean, motivo: string }>}
    */
-  async streamSlice(messages, maxTokens, continueFinal, signal) {
+  async streamSlice(messages, maxTokens, continueFinal, signal, opciones = {}) {
     const requestStarted = performance.now();
     let firstUsefulDelta = null;
     // El razonamiento (si está encendido) solo acompaña a una generación nueva: una
     // continuación ya viene con el bloque de pensamiento cerrado en la plantilla.
     const think = !continueFinal && this.thinkBudget > 0;
+    const sinParser = opciones.sinParserNativo === true;
     /** @type {Record<string, unknown>} */
     const body = {
       model: this.model,
@@ -1183,7 +1223,7 @@ export class BonsaiChat {
       max_tokens: this.agentProfile === "small-local-coder" ? Math.min(maxTokens,this.reservaSalida()) : maxTokens,
       ...this.samplingFields(think),
       ...this.templateFields(think),
-      ...this.toolFields(),
+      ...this.toolFields(sinParser ? "none" : undefined, !sinParser),
     };
     if (this.contextDiagnostics) {
       this.contextDiagnostics.maxOutput = body.max_tokens;
@@ -1214,6 +1254,15 @@ export class BonsaiChat {
       if (this.allowThinkingKw && /enable_thinking/i.test(message)) {
         this.allowThinkingKw = false;
         return this.streamSlice(messages, maxTokens, continueFinal, signal);
+      }
+      // llama.cpp puede rechazar el turno completo con el parser PEG nativo
+      // (varias tool calls o texto antes de la llamada). En vez de perder el
+      // turno, se reintenta sin tools nativas y con el catálogo como texto:
+      // GPT-OSS devuelve JSON puro y `llamadasCrudas` lo ejecuta igual.
+      if (!sinParser && !continueFinal && !signal.aborted && this.puedeFallbackTexto() &&
+          /peg-native|does not match the expected .*format/i.test(message)) {
+        this.note("[parser nativo rechazó la salida; reintento en modo JSON]");
+        return this.streamSlice(this.mensajesSinParser(messages), maxTokens, false, signal, { sinParserNativo: true });
       }
       throw new ApiError(message, res.status, data.error?.type || "");
     }

@@ -14,7 +14,11 @@ import { llamadasCrudas } from "./adaptadores.mjs";
 import { nativeToolEffects } from "./actions.mjs";
 
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "bonsai-gpt-oss-"));
-const server = http.createServer((req, res) => {
+let requests = 0;
+let lastBody = null;
+const server = http.createServer(async (req, res) => {
+  let rawBody = "";
+  for await (const chunk of req) rawBody += chunk;
   const json = (data, status = 200) => {
     res.writeHead(status, { "Content-Type": "application/json" });
     res.end(JSON.stringify(data));
@@ -35,6 +39,11 @@ const server = http.createServer((req, res) => {
   if (req.url === "/v1/chat/completions/input_tokens") return json({ input_tokens: 42 });
   if (req.url === "/v1/chat/completions") {
     const mode = process.env.MOCK_MODE || "native";
+    requests += 1;
+    lastBody = rawBody ? JSON.parse(rawBody) : null;
+    if (mode === "peg-then-json" && requests === 1) {
+      return json({ error: { code: 500, message: "The model produced output that does not match the expected peg-native format", type: "server_error" } }, 500);
+    }
     if (mode === "peg-error") {
       return json({ error: { code: 500, message: "The model produced output that does not match the expected peg-native format", type: "server_error" } }, 500);
     }
@@ -114,6 +123,18 @@ try {
   assert.ok(rawLines.length >= 2, "debe guardar cada evento SSE");
   assert.ok(rawLines.some((line) => line.includes("tool_calls")));
 
+  // peg-native: reintento sin tools nativas, catálogo como texto y JSON parseable.
+  requests = 0;
+  chat.actOnPc = true;
+  process.env.MOCK_MODE = "peg-then-json";
+  const retry = await chat.streamSlice([{ role: "user", content: "dos llamadas" }], 512, false, new AbortController().signal);
+  assert.equal(retry.toolCalls.length, 0);
+  const retryCalls = llamadasCrudas(retry.chunk, "nativo gpt-oss-json");
+  assert.equal(retryCalls.length, 2);
+  assert.equal(lastBody.tools, undefined, "el reintento no debe enviar tools nativas");
+  assert.match(String(lastBody.messages[0].content), /REINTENTO SIN PARSER NATIVO/);
+  assert.match(String(lastBody.messages[0].content), /"archivo"/);
+
   // El error peg-native se propaga como ApiError, no como respuesta vacía.
   process.env.MOCK_MODE = "peg-error";
   await assert.rejects(
@@ -121,7 +142,7 @@ try {
     /peg-native/,
   );
 
-  console.log("GPT-OSS tools: nativas, fallback JSON, plantilla Harmony, raw stream y error peg-native OK.");
+  console.log("GPT-OSS tools: nativas, fallback JSON, plantilla Harmony, raw stream, reintento peg-native y error final OK.");
 } finally {
   await new Promise((resolve) => server.close(resolve));
   fs.rmSync(temp, { recursive: true, force: true });

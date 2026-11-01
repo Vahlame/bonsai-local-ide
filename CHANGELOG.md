@@ -4,6 +4,19 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.3.2] - 2026-11-01
+
+### Corregido
+
+- **El turno ya no muere con `peg-native`.** Si llama.cpp rechaza la salida
+  nativa, `BonsaiChat` reintenta una vez sin `tools` nativas: inyecta el catálogo
+  en el system prompt y pide un objeto JSON puro. El fallback `gpt-oss-json` lo
+  convierte y el agente continúa con la misma tool call.
+- El reintento está limitado a GPT-OSS, no oculta errores de otros modelos y no
+  se ejecuta sobre continuaciones ya empezadas (`continue_final_message`).
+- El test `prueba-gpt-oss-tools` cubre el 500 de `peg-native`, comprueba que el
+  reintento no envía `tools` y que el JSON devuelto se ejecuta.
+
 ## [2.3.1] - 2026-11-01
 
 ### Añadido

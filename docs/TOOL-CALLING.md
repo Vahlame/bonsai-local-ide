@@ -129,8 +129,14 @@ The model produced output that does not match the expected peg-native format
 ```
 
 Ese error es una limitación conocida del parser PEG con varias llamadas o con
-texto antes de la llamada. Si aparece, el turno se corta con error; no se finge
-una respuesta completa. La salida cruda permite diagnosticarlo.
+texto antes de la llamada. Si aparece, el turno **no se pierde**: Bonsai
+reintenta una vez sin `tools` nativas, con el catálogo de herramientas como
+texto en el system prompt y la instrucción de responder solo con un objeto JSON
+`{"name":..., "arguments":...}`. GPT-OSS devuelve ese JSON en `content`, el
+dialecto `gpt-oss-json` lo convierte y el agente sigue con el resultado. Si el
+reintento también falla, el error se propaga; no se finge una respuesta.
+
+La salida cruda permite diagnosticarlo.
 
 ### Ver la salida cruda
 

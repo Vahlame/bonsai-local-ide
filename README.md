@@ -8,19 +8,19 @@ navegador controlado y visión, todo contra tu propia GPU. Sin nube, sin
 telemetría y sin claves de API.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.3.1-8fb8ff">
+  <img alt="version" src="https://img.shields.io/badge/version-2.3.2-8fb8ff">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.3.1 — GPT-OSS a fondo.** El agente principal de coding usa la plantilla
-> Harmony, tool calls nativas, `reasoning_effort` y un fallback JSON para cuando
-> llama.cpp deja la llamada en `content`. Se añadió captura de salida cruda,
-> una tool call por respuesta y verificación real de archivos nuevos. La app de
-> prueba de GPT-OSS pasó 10/10 tests y 11/11 comprobaciones de navegador.
-> Notas: [RELEASE-2.3.1](docs/RELEASE-2.3.1.md).
+> **v2.3.2 — el parser roto ya no tumba el turno.** GPT-OSS usa Harmony, tool
+> calls nativas, `reasoning_effort` y una tool call por respuesta. Si llama.cpp
+> devuelve `peg-native`, Bonsai reintenta sin tools nativas, recibe la llamada
+> como JSON y la ejecuta igual. La app de prueba pasó 10/10 tests y 11/11
+> comprobaciones de navegador.
+> Notas: [RELEASE-2.3.2](docs/RELEASE-2.3.2.md).
 
 ![Bonsai IDE 2.3 con CodeMirror, explorador, chat y panel de conversación](docs/graficos/ui-2.3-main.png)
 
@@ -219,6 +219,7 @@ fallback JSON estructurado para cuando el parser PEG deja la llamada en
 
 | Documento | Contenido |
 |---|---|
+| [RELEASE-2.3.2](docs/RELEASE-2.3.2.md) | Reintento `peg-native` y recuperación JSON |
 | [RELEASE-2.3.1](docs/RELEASE-2.3.1.md) | GPT-OSS, tool calls nativas, salida cruda y verificación |
 | [RELEASE-2.3.0](docs/RELEASE-2.3.0.md) | Alcance, migración, verificación y límites de esta release |
 | [TOOL-CALLING](docs/TOOL-CALLING.md) | Tools nativas, Zod/JSON Schema y flag legacy |
