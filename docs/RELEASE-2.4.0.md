@@ -18,9 +18,20 @@ en 8787. También comprueba un hijo real con wrapper muerto y paradas concurrent
 Las pruebas de fallo cargan el modelo real antes de provocar un error de verificación,
 comprueban limpieza y restauración de la configuración anterior.
 
-No se cambian Harmony, `--skip-chat-parsing`, las herramientas, el presupuesto de contexto,
-el perfil de Ornith ni los binarios o GGUF. La lista permitida de la copia de evaluación
-se amplía para empaquetar los nuevos módulos y el controlador de UI.
+El refactor del ciclo de vida conservó el protocolo del modelo. La revisión posterior
+del agente corrige el reconocimiento de destinatarios Harmony y la recuperación de
+llamadas truncadas, muestra progreso y separa las instrucciones del resumen final.
+El verificador HTTP informa de una base `new URL` sin barra final y no trata una sonda
+suelta como una suite. Mantiene `--skip-chat-parsing`, el catálogo de herramientas,
+los presupuestos de contexto, el perfil de Ornith y los binarios/GGUF. La copia de
+evaluación empaqueta los módulos nuevos.
+
+Explorador e Historial pasan a compartir una barra lateral con pestañas. El editor ocupa
+el centro, el chat queda a la derecha y pasa debajo en ventanas de hasta 1000 px. Los
+divisores permiten ajustar tamaños con ratón o teclado. Doce temas, iconos y animaciones
+con movimiento reducido completan la revisión visual.
 
 Contrato y comandos de prueba: [LIFECYCLE.md](LIFECYCLE.md).
 Resultados y límites de la validación: [informe](../reports/lifecycle-2026-11-01/VALIDATION.md).
+La [validación del agente y la distribución visual](../reports/agent-ui-2026-11-01/VALIDATION.md)
+recoge las pruebas posteriores y sus límites.

@@ -12,6 +12,10 @@ versionado semántico.
 - Ciclo de vida extraído a `chat/lifecycle/`: estado, mutex, start/stop/restart/close,
   limpieza de arranques fallidos y rollback. Alias HTTP anteriores conservados.
 - Un controlador de UI y un polling para Iniciar, Detener y Cerrar IDE e IA.
+- Explorador e Historial comparten una barra lateral con pestañas; editor central,
+  chat adaptable y divisores finos ajustables con ratón o teclado.
+- Doce temas con galería, iconos por acción/archivo y animaciones que respetan
+  la preferencia de movimiento reducido; editor y terminal siguen el tema.
 
 ### Corregido
 
@@ -19,6 +23,14 @@ versionado semántico.
 - El cierre rechazado conserva el IDE y muestra el error. El cierre HTTP tiene timeout y
   termina conexiones SSE/keep-alive después de enviar la respuesta.
 - Los scripts ofrecen JSON sin mensajes mezclados y validan `binId` y ejecutable real.
+- GPT-OSS reconoce el destinatario Harmony antes o después del canal, muestra progreso
+  durante la generación y recupera llamadas truncadas sin ejecutar JSON parcial.
+- Las herramientas desconocidas muestran los nombres válidos; el resumen final usa
+  instrucciones de cierre y omite los esquemas de herramientas.
+- La verificación aporta las API reales de Node al reparar imports y comprueba HTML
+  y recursos HTTP en apps nativas detectables con `startServer(port)`.
+- Un 404 estático devuelve al modelo la causa comprobada de una base `new URL`
+  sin barra final; las sondas sueltas como `testRoot.js` no se confunden con suites.
 
 ### Añadido
 

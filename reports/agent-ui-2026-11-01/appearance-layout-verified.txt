@@ -1,0 +1,16 @@
+node:internal/fs/promises:1281
+  return new FileHandle(await PromisePrototypeThen(
+                        ^
+
+Error: UNKNOWN: unknown error, open 'C:\Users\user\Documents\prject_local_AI\reports\agent-ui-2026-11-01\appearance-porcelain.png'
+    at async open (node:internal/fs/promises:1281:25)
+    at async Object.writeFile (node:internal/fs/promises:1899:14)
+    at async _Page.screenshot (C:\Users\user\Documents\prject_local_AI\chat\node_modules\playwright-core\lib\coreBundle.js:63324:11)
+    at async file:///C:/Users/user/Documents/prject_local_AI/chat/prueba-apariencia.mjs:91:3 {
+  errno: -4094,
+  code: 'UNKNOWN',
+  syscall: 'open',
+  path: 'C:\\Users\\user\\Documents\\prject_local_AI\\reports\\agent-ui-2026-11-01\\appearance-porcelain.png'
+}
+
+Node.js v26.0.0

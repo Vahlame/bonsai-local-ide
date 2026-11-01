@@ -1,0 +1,21 @@
+status 404
+body Not Found
+✔ testRoot.js (75.8614ms)
+(node:55952) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/user/Documents/prject_local_AI/reports/agent-ui-2026-11-01/gpt-oss-final/project/tests/api.tasks.test.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to C:\Users\user\Documents\prject_local_AI\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ Task API
+  ✔ should create a new task (30.6957ms)
+  ✔ should list tasks (3.459ms)
+  ✔ should complete a task (3.5504ms)
+  ✔ should delete a task (4.5286ms)
+✔ Task API (50.2935ms)
+ℹ tests 5
+ℹ suites 1
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 163.5765

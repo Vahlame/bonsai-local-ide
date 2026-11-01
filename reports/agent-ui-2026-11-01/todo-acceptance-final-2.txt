@@ -1,0 +1,55 @@
+{
+  "time": "2026-11-01T08:51:22.938Z",
+  "checks": [
+    {
+      "name": "API crear",
+      "ok": true,
+      "detail": "1793523082955"
+    },
+    {
+      "name": "API completar",
+      "ok": true
+    },
+    {
+      "name": "API listar",
+      "ok": true
+    },
+    {
+      "name": "Persistencia JSON",
+      "ok": true
+    },
+    {
+      "name": "API borrar",
+      "ok": true
+    },
+    {
+      "name": "UI a├▒adir",
+      "ok": true
+    },
+    {
+      "name": "UI recarga persistente",
+      "ok": true
+    },
+    {
+      "name": "UI completar",
+      "ok": true
+    },
+    {
+      "name": "UI borrar",
+      "ok": true
+    },
+    {
+      "name": "Navegador sin errores",
+      "ok": true
+    },
+    {
+      "name": "CLI node server.mjs",
+      "ok": true,
+      "detail": {
+        "pid": 58252,
+        "port": 3000
+      }
+    }
+  ],
+  "ok": true
+}

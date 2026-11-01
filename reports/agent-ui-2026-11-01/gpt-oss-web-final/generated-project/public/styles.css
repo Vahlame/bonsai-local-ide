@@ -1,0 +1,1 @@
+body{font-family:sans-serif;background:#f9f9f9;margin:0;padding:20px}.container{max-width:600px;margin:auto}.task{display:flex;align-items:center;margin-bottom:5px}.task.completed span{text-decoration:line-through;color:gray}.task button{margin-left:10px}

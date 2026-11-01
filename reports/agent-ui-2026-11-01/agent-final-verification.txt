@@ -1,0 +1,14 @@
+GPT-OSS agente truncated: recuperación/cierre y efectos en disco verificados (3 peticiones).
+GPT-OSS agente unknown: recuperación/cierre y efectos en disco verificados (3 peticiones).
+GPT-OSS agente indent: recuperación/cierre y efectos en disco verificados (4 peticiones).
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+DOMException [TimeoutError]: The operation was aborted due to timeout
+    at new DOMException (node:internal/per_context/domexception:79:18)
+    at Timeout._onTimeout (node:internal/abort_controller:154:9)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+
+Node.js v26.0.0

@@ -35,9 +35,9 @@ telemetría y sin claves de API.
 - **Diff/merge moderno.** Ctrl+K ya no enseña un `<pre>` con marcas: usa
   `unifiedMergeView` de `@codemirror/merge`, con líneas añadidas/borradas y
   números de línea reales. Ver [captura del diff](docs/graficos/ui-2.3-diff.png).
-- **Nueva capa visual.** Barra superior de dos filas, tema `slate` por defecto,
-  jerarquía tipográfica, estado vacío útil, ajustes con cabecera fija y pie
-  pegajoso, y diseño comprobado a 1280, 1440 y 1600 px.
+- **Nueva capa visual.** Navegación lateral con pestañas, editor central, chat
+  adaptable, doce temas, iconos por acción y animaciones que respetan el
+  movimiento reducido. El diseño se comprueba a 560, 720, 960, 1280 y 1600 px.
 - **Tool calling con una sola fuente de verdad.** Las tools nativas + Zod/JSON
   Schema son el camino canónico. El parser de llamadas escritas como texto vive
   en `chat/legacy-tool-parser.mjs` y se apaga con

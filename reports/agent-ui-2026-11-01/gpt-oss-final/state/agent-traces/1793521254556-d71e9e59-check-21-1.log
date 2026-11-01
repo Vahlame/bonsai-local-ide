@@ -1,0 +1,54 @@
+status 404
+body Not Found
+✔ testRoot.js (59.7927ms)
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at file:///C:/Users/user/Documents/prject_local_AI/reports/agent-ui-2026-11-01/gpt-oss-final/project/server.mjs:117:12
+    at new Promise (<anonymous>)
+    at startServer (file:///C:/Users/user/Documents/prject_local_AI/reports/agent-ui-2026-11-01/gpt-oss-final/project/server.mjs:116:10)
+    at C:\Users\user\Documents\prject_local_AI\reports\agent-ui-2026-11-01\gpt-oss-final\project\testServer.js:3:22
+    at Object.<anonymous> (C:\Users\user\Documents\prject_local_AI\reports\agent-ui-2026-11-01\gpt-oss-final\project\testServer.js:6:3)
+    at Module._compile (node:internal/modules/cjs/loader:1829:14)
+    at Object..js (node:internal/modules/cjs/loader:1969:10)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v26.0.0
+✖ testServer.js (63.8657ms)
+(node:70848) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/user/Documents/prject_local_AI/reports/agent-ui-2026-11-01/gpt-oss-final/project/tests/api.tasks.test.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to C:\Users\user\Documents\prject_local_AI\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ Task API
+  ✔ should create a new task (29.5644ms)
+  ✔ should list tasks (3.288ms)
+  ✔ should complete a task (3.2973ms)
+  ✔ should delete a task (4.2369ms)
+✔ Task API (48.4553ms)
+ℹ tests 6
+ℹ suites 1
+ℹ pass 5
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 152.7681
+
+✖ failing tests:
+
+test at testServer.js:1:1
+✖ testServer.js (63.8657ms)
+  'test failed'

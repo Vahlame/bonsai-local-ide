@@ -1,0 +1,6 @@
+AssertionError [ERR_ASSERTION]: /styles.css: HTTP 404; falta un recurso de la interfaz.
+
+404 !== 200
+
+    at file:///C:/Users/user/Documents/prject_local_AI/chat/verify-node-webapp.mjs:37:12
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)

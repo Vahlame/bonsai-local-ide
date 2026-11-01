@@ -2,7 +2,9 @@
 
 Fecha local: 1 de noviembre de 2026 (America/Costa_Rica). Los JSON conservan timestamps UTC.
 Repositorio en `main`, candidato local 2.4.0; `package.json` permanece en 2.3.6 y el
-CHANGELOG en Unreleased. No se publica release ni tag.
+CHANGELOG en Unreleased. No se publica release ni tag. La
+[validación posterior de agente y UI](../agent-ui-2026-11-01/VALIDATION.md) recoge
+la suite de 51/51, los 9/9 de navegador y la repetición final del E2E de ciclo de vida.
 
 ## Alcance y estado
 

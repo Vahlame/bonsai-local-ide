@@ -1,0 +1,31 @@
+ok    13: seis archivos distintos se leen sin bloqueo
+ok    13: ninguna lectura se rechaza por «ya leíste suficiente»
+ok    13: la tarea de 6 archivos termina y escribe el resultado
+ok    15: una tarea que necesita más de 24 pasos continúa por tandas
+ok    15: el cierre informa del motivo real
+ok    15: no deja una promesa de acción futura como respuesta
+ok    14a: releer tras plegar devuelve contenido en vez de bloquear
+ok    14a: la tarea termina tras recuperar la evidencia plegada
+ok    14b: tras un comando que cambia el archivo, la relectura ve lo nuevo
+ok    14b: la tarea termina tras invalidar por versión
+ok    20: la primera lectura avisa del recorte dentro de la línea
+ok    20: el rango de columnas recupera el sufijo oculto
+ok    20: el sufijo recuperado se puede usar en el resultado
+ok    15b: un bucle de lecturas idénticas se detecta como atasco
+ok    15b: el atasco se comunica como incompleto
+ok    15b: la respuesta final avisa de que puede faltar trabajo
+ok    15b: no se inventa el archivo pedido
+ok    15c: anunciar sin actuar no cuenta como tarea completada
+ok    15c: el cierre forzado dice que no quedó terminado
+ok    local: indice('.') lista la raíz
+ok    local: el contexto incluye la raíz seleccionada
+ok    local: ambas comprobaciones HTTP se ejecutan de verdad
+ok    local: el servidor sigue vivo después del cierre del turno
+ok    local: el resultado conserva id y duración correcta
+ok    local: proceso leer consulta el estado y salida actuales
+ok    local: repetir fuerza la ejecución nueva
+ok    local: listar la misma raíz no simula progreso
+ok    web: el texto real llega al modelo como resultado de su llamada
+ok    web: leer_web no accede al estado del IDE ni al modelo
+
+prueba-agente-limites: OK

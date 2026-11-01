@@ -1,0 +1,7 @@
+AssertionError [ERR_ASSERTION]: La interfaz solicitada no está disponible: GET / devolvió 404. Sirve también el HTML y sus recursos; pasar los tests de la API no comprueba la interfaz.
+DATO COMPROBADO EN EL SERVIDOR: `new URL('./public', import.meta.url)` omite la barra final: `new URL('index.html', publicDir)` resuelve al directorio padre, no a `public/index.html`. Usa `new URL('./public/', import.meta.url)`. Una ruta que empieza por `/` pasada a `new URL(ruta, publicDir)` se resuelve desde la raíz del disco, no dentro de `public/`. Quita la barra inicial antes de resolver el recurso.
+
+404 !== 200
+
+    at file:///C:/Users/user/Documents/prject_local_AI/chat/verify-node-webapp.mjs:23:10
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)

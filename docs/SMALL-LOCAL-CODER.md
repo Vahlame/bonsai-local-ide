@@ -205,7 +205,7 @@ petición con imágenes se vuelve a medir: se exigen 400 MiB más 64 MiB transit
 un error explícito. No se cambia F16 por Q8 automáticamente. La reserva no puede
 impedir que otra aplicación consuma memoria durante la inferencia.
 
-La UI tiene seis temas persistentes y un panel de pensamiento desplegable. El
+La UI tiene doce temas persistentes, galería visual y un panel de pensamiento desplegable. El
 lanzador registra fallos en `logs/ide-launcher.log`, comprueba que el puerto sea
 del IDE y reutiliza una instancia sana. El acceso directo del escritorio apunta
 a ese lanzador, sin consola permanente.

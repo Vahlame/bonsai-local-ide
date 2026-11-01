@@ -1,0 +1,37 @@
+(node:67200) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/user/Documents/prject_local_AI/reports/agent-ui-2026-11-01/gpt-oss-first/project/tests/api.tasks.test.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to C:\Users\user\Documents\prject_local_AI\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ Task API
+  ✖ should create a new task (41.2194ms)
+  ✔ should list tasks (6.1576ms)
+  ✔ should complete a task (4.7405ms)
+  ✔ should delete a task (6.2582ms)
+✖ Task API (67.7009ms)
+ℹ tests 4
+ℹ suites 1
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 180.0912
+
+✖ failing tests:
+
+test at tests\api.tasks.test.js:31:3
+✖ should create a new task (41.2194ms)
+  AssertionError [ERR_ASSERTION]: The "string" argument must be of type string. Received type object ({ id: '1793518829441', title: 'Test task', completed: false })
+      at TestContext.<anonymous> (file:///C:/Users/user/Documents/prject_local_AI/reports/agent-ui-2026-11-01/gpt-oss-first/project/tests/api.tasks.test.js:39:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Promise.all (index 0)
+      at async Suite.run (node:internal/test_runner/test:1619:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { id: '1793518829441', title: 'Test task', completed: false },
+    expected: /id/,
+    operator: 'match',
+    diff: 'simple'
+  }
