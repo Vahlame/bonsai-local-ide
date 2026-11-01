@@ -47,6 +47,76 @@ function llamadaJson(cuerpo) {
 }
 
 /**
+ * GPT-OSS (Harmony) a veces escribe la llamada como JSON suelto en `content` en vez de
+ * usar el canal nativo `to=functions...`. Es una limitación del parser PEG de llama.cpp
+ * con varias llamadas o con texto antes de la llamada, no un formato de otro modelo.
+ * Solo se acepta cuando TODO el texto es uno o varios objetos JSON separados por `;`,
+ * comas o saltos: así no se ejecuta un JSON que el modelo esté mostrando como ejemplo.
+ * @param {string} texto
+ * @returns {Array<{name: string, arguments: Record<string, unknown>}>}
+ */
+function llamadasJsonSueltas(texto) {
+  const limpio = String(texto || "").trim();
+  if (!limpio) return [];
+  let i = limpio.search(/[[{]/);
+  if (i < 0) return [];
+  // Si hay prosa antes del primer objeto, no es una llamada: es una explicación.
+  if (i > 0 && /[A-Za-z0-9]/.test(limpio.slice(0, i))) return [];
+  /** @type {Array<{name: string, arguments: Record<string, unknown>}>} */
+  const out = [];
+  while (i < limpio.length) {
+    while (i < limpio.length && /[\s;,]+/.test(limpio[i])) i += 1;
+    if (i >= limpio.length) break;
+    if (limpio[i] === "[") {
+      let depth = 0, inStr = false, esc = false, start = i;
+      for (; i < limpio.length; i += 1) {
+        const c = limpio[i];
+        if (inStr) {
+          if (esc) esc = false;
+          else if (c === "\\") esc = true;
+          else if (c === '"') inStr = false;
+        } else if (c === '"') inStr = true;
+        else if (c === "[") depth += 1;
+        else if (c === "]") {
+          depth -= 1;
+          if (depth === 0) { i += 1; break; }
+        }
+      }
+      if (depth !== 0) return [];
+      let arr;
+      try { arr = JSON.parse(limpio.slice(start, i)); } catch { return []; }
+      if (!Array.isArray(arr)) return [];
+      for (const item of arr) {
+        const call = llamadaJson(JSON.stringify(item));
+        if (!call) return [];
+        out.push(call);
+      }
+      continue;
+    }
+    if (limpio[i] !== "{") return [];
+    let depth = 0, inStr = false, esc = false, start = i;
+    for (; i < limpio.length; i += 1) {
+      const c = limpio[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (c === "\\") esc = true;
+        else if (c === '"') inStr = false;
+      } else if (c === '"') inStr = true;
+      else if (c === "{") depth += 1;
+      else if (c === "}") {
+        depth -= 1;
+        if (depth === 0) { i += 1; break; }
+      }
+    }
+    if (depth !== 0) return [];
+    const call = llamadaJson(limpio.slice(start, i));
+    if (!call) return [];
+    out.push(call);
+  }
+  return out.map((call) => ({ ...call, name: call.name.replace(/^functions\./i, "") }));
+}
+
+/**
  * Dialecto `xml-funcion` (plantilla Qwen, el que emiten los dos modelos del catálogo):
  *   <tool_call>
  *   <function=ejecutar>
@@ -126,6 +196,8 @@ const PARSERS = {
     }
     return out;
   },
+  /** GPT-OSS/Harmony cuando el parser nativo deja el JSON en `content`. */
+  "gpt-oss-json": llamadasJsonSueltas,
 };
 
 export const DIALECTOS = Object.keys(PARSERS);
@@ -211,6 +283,17 @@ export function selfTest() {
   check("lee el JSON envuelto en <xml> de Qwen2.5 Coder", xmlJson.length === 1 && xmlJson[0].name === "convertir_moneda" && xmlJson[0].arguments.monto === 250);
   const toolsJson = llamadasCrudas('<tools>\n{"name": "convertir_moneda", "arguments": {"monto": 250}}\n</tools>', "tools-json");
   check("lee el JSON envuelto en <tools> de Qwen2.5 Coder", toolsJson.length === 1 && toolsJson[0].name === "convertir_moneda");
+
+  // Salida CRUDA de GPT-OSS cuando el parser PEG deja la llamada en `content`.
+  const gptUno = llamadasCrudas('{"name":"functions.archivo","arguments":{"ruta":"uno.txt","contenido":"uno"}}', "gpt-oss-json");
+  check("GPT-OSS: lee una llamada JSON suelta y quita functions.", gptUno.length === 1 && gptUno[0].name === "archivo" && gptUno[0].arguments.ruta === "uno.txt");
+  const gptDos = llamadasCrudas('{"name":"functions.archivo","arguments":{"ruta":"uno.txt","contenido":"uno"}}; {"name":"functions.archivo","arguments":{"ruta":"dos.txt","contenido":"dos"}}', "gpt-oss-json");
+  check("GPT-OSS: lee dos llamadas separadas por ;", gptDos.length === 2 && gptDos[1].arguments.ruta === "dos.txt");
+  const gptArray = llamadasCrudas('[{"name":"leer","arguments":{"ruta":"a.py"}},{"name":"leer","arguments":{"ruta":"b.py"}}]', "gpt-oss-json");
+  check("GPT-OSS: lee un array de llamadas", gptArray.length === 2 && gptArray[1].arguments.ruta === "b.py");
+  check("GPT-OSS: no ejecuta un JSON explicado con prosa", llamadasCrudas('El formato es {"name":"archivo","arguments":{}}', "gpt-oss-json").length === 0);
+  check("GPT-OSS: no ejecuta JSON dentro de una cerca", llamadasCrudas('```json\n{"name":"archivo","arguments":{"ruta":"x"}}\n```', "gpt-oss-json").length === 0);
+  check("GPT-OSS: un JSON sin name no es una llamada", llamadasCrudas('{"foo":1}', "gpt-oss-json").length === 0);
 
   check("sin dialecto no toca el texto", llamadasCrudas(crudoReal, "").length === 0);
   check("un dialecto desconocido no rompe", llamadasCrudas(crudoReal, "inventado").length === 0);

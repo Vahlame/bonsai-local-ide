@@ -175,7 +175,7 @@ export const PHASE_PROMPTS = Object.freeze({
   PLAN: "Usa plan con cambios mínimos, archivos/símbolos y verificación. Solo decisiones operativas breves.",
   EDIT: "Edita los archivos con las herramientas. Si plan es null, elige el siguiente cambio concreto según el pedido y lo inspeccionado; no necesitas crear un plan. No repitas el análisis. El host ejecuta tests después de editar; utiliza su resultado.",
   VERIFY:
-    "La última versión pasó la verificación automática. Contrasta el diff con el pedido original: si todos sus requisitos están resueltos, resume y termina ahora. Si falta un requisito concreto, implementa solo ese paso. No inventes requisitos ni repitas comprobaciones sin nueva evidencia.",
+    "La comprobación automática solo valida sintaxis y tests configurados, no la tarea completa. Si el pedido original menciona archivos que aún no existen, tests que no se han ejecutado o requisitos sin implementar, créalos/ejecútalos ahora. Solo resume y termina cuando todos los requisitos estén implementados y `npm test` (o la verificación configurada) pase. No inventes requisitos ni repitas comprobaciones sin nueva evidencia.",
   REPAIR:
     "Corrige exclusivamente los fallos presentados; inspecciona sus líneas si hace falta.",
   DONE: "Da la respuesta final al usuario usando el estado disponible. Indica lo pendiente o no comprobado. No vuelvas a llamar herramientas en esta fase ni inventes resultados.",
@@ -511,6 +511,10 @@ export class CoderTask {
     const limpia = String(rel || "").replace(/\\/g, "/").replace(/^\.\//, "");
     if (!limpia) return;
     if (!this.state.inspected.includes(limpia)) this.state.inspected.push(limpia);
+    // También cuenta como cambio aunque el archivo no esté en el índice de código
+    // (por ejemplo .txt, .env o un asset): el índice solo guarda extensiones fuente.
+    this.touched.add(limpia);
+    if (!this.state.modified.includes(limpia)) this.state.modified.push(limpia);
   }
   revision() {
     return hash(
@@ -650,6 +654,15 @@ export class CoderTask {
       )
         continue;
       changed.push(rel);
+    }
+    // Un archivo escrito por el agente pero fuera del índice (p. ej. .txt o .env)
+    // sigue siendo un cambio de la tarea. Sin esto la verificación final decía
+    // «no se modificó ningún archivo» aunque el archivo existiera en disco.
+    for (const rel of this.touched) {
+      if (changed.includes(rel)) continue;
+      try {
+        if (fs.existsSync(rutaProyecto(this.context.root, rel))) changed.push(rel);
+      } catch { /* ruta inválida: no cuenta */ }
     }
     this.state.modified = changed;
     for (const rel of changed) this.touched.add(rel);

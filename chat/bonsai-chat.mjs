@@ -229,6 +229,13 @@ export class BonsaiChat {
     /** "none" deja las herramientas definidas (el prompt no cambia y la caché sirve) pero impide llamarlas. */
     this.toolChoice = "auto";
     this.timingsPath = opts.timingsPath === undefined ? TIMINGS_PATH : opts.timingsPath;
+    // Diagnóstico de GPT-OSS: BONSAI_RAW_STREAM=1 guarda cada evento SSE tal cual
+    // (content, reasoning_content, tool_calls) para ver el dialecto real del modelo.
+    // También acepta una ruta explícita.
+    const rawEnv = process.env.BONSAI_RAW_STREAM || "";
+    this.rawStreamPath = opts.rawStreamPath || (rawEnv === "1"
+      ? path.join(path.dirname(this.sessionPath), "raw-stream.jsonl")
+      : (rawEnv ? path.resolve(rawEnv) : ""));
     /** @type {{cache_n?: number, prompt_n?: number, prompt_per_second?: number, predicted_n?: number, predicted_per_second?: number} | null} */
     this.lastTimings = null;
     this.nCtx = 0;
@@ -610,13 +617,23 @@ export class BonsaiChat {
    */
   templateFields(think = false) {
     if (!this.allowThinkingKw) return {};
+    const caps = this.props?.chat_template_caps || {};
+    // GPT-OSS/Harmony no usa enable_thinking: su plantilla recibe reasoning_effort.
+    // Enviar enable_thinking a esta plantilla es ruido (y el servidor lo ignora).
+    // Se limita al modelo GPT-OSS para no cambiar la plantilla de otros modelos.
+    const esGptOss = /gpt-oss/i.test(`${this.model || ""} ${this.props?.model_path || ""}`);
+    const harmony = esGptOss && caps.supports_reasoning_effort === true && Array.isArray(caps.reasoning_effort_levels);
     if (think && this.thinkBudget > 0) {
       return {
-        chat_template_kwargs: { enable_thinking: true, reasoning_effort: MODELO.razonamiento.esfuerzo },
+        chat_template_kwargs: harmony
+          ? { reasoning_effort: MODELO.razonamiento.esfuerzo }
+          : { enable_thinking: true, reasoning_effort: MODELO.razonamiento.esfuerzo },
         thinking_budget_tokens: this.effectiveThinkingBudget(),
       };
     }
-    return { chat_template_kwargs: { enable_thinking: false } };
+    return harmony
+      ? { chat_template_kwargs: { reasoning_effort: "minimal" }, thinking_budget_tokens: 0 }
+      : { chat_template_kwargs: { enable_thinking: false } };
   }
 
   thinkingLimit() {
@@ -1222,6 +1239,11 @@ export class BonsaiChat {
       const fin = await leerSSE(res.body, {
         señal: signal,
         alEvento: (json) => {
+          if (this.rawStreamPath) {
+            try {
+              fs.appendFileSync(this.rawStreamPath, JSON.stringify({ t: new Date().toISOString(), ...json }) + "\n");
+            } catch { /* diagnóstico best-effort */ }
+          }
           if (json.error?.message) {
             const apiErr = new ApiError(json.error.message, 400, json.error.type || "");
             apiErr.partial = chunk;

@@ -1166,11 +1166,11 @@
       "rol": "MoE razonamiento",
       "uso": "MoE de OpenAI con 3.6B activos y cuantización MXFP4 nativa; razonamiento y herramientas con muy poca VRAM para los expertos.",
       "licencia": "Apache-2.0",
-      "toolcalls": "nativo",
+      "toolcalls": "nativo gpt-oss-json",
       "pensar": {
         "compatible": true,
         "presupuesto": 2048,
-        "nivel": "high"
+        "nivel": "medium"
       },
       "muestreo": {
         "codigo": {

@@ -1791,7 +1791,13 @@ async function main(args) {
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
   const UI_VERSION = "2.3.0";
-  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: process.env.BONSAI_AGENT_PROFILE || "legacy", memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480, engineEffort: "default", preguntarModelo: true, editorModerno: true, uiVersion: UI_VERSION };
+  // El lanzador de escritorio elige el perfil de agente. `optimized` era el
+  // nombre histórico del perfil de coding; hoy el único perfil con el harness
+  // nuevo es `small-local-coder`. Los ajustes guardados siguen mandando.
+  const PERFIL_INICIAL = ["legacy", "small-local-coder"].includes(args.agentProfile)
+    ? args.agentProfile
+    : (process.env.BONSAI_AGENT_PROFILE || "legacy");
+  const AJUSTES_DEFECTO = { tema: "slate", perfil: "codigo", pensar: args.think, verPensamiento:true, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, agentePerfil: PERFIL_INICIAL, memoriaGlobal: true, memoriaGlobalAuto: true, memoriaGlobalTokens: 480, engineEffort: "default", preguntarModelo: true, editorModerno: true, uiVersion: UI_VERSION };
   // Los ajustes guardados en la interfaz (perfil de muestreo, tope de historial, pensar)
   // mandan sobre los valores por defecto de la línea de comandos. Va AQUÍ y no al principio
   // de main(): `AJUSTES_DEFECTO` es un `const` y llamarlo antes revienta el arranque con
@@ -4548,9 +4554,16 @@ async function main(args) {
                 ? "La verificación automática pasó y no hubo cambios nuevos; no hace falta seguir consultando archivos."
                 : "";
           const lastTurn = chat.session.turns[chat.session.turns.length - 1];
-          if (!ac.signal.aborted && lastTurn?.role === "assistant" && (!String(lastTurn.content || "").trim() || motivoParada !== "completed")) {
+          const lastAssistant = [...chat.session.turns].reverse().find((t) => t.role === "assistant");
+          // Si el último mensaje es un resultado de tool (o el assistant cerró con
+          // content vacío porque todo fue razonamiento), también hay que pedir el
+          // resumen final. Antes solo se miraba el último turno y quedaba en blanco.
+          if (!ac.signal.aborted && (!lastAssistant || !String(lastAssistant.content || "").trim() || motivoParada !== "completed")) {
             chat.toolChoice = "none";
-            chat.pensarEsteSalto = false;
+            // El cierre también razona si el modelo lo tiene activado. GPT-OSS, sin
+            // canal de análisis, volcaba todo su monólogo interno en `content` y la
+            // respuesta final era un "We need to..." en inglés.
+            chat.pensarEsteSalto = chat.thinkBudget > 0;
             try {
               await enviar({
                 // El prefijo «Sigue con lo que pedí» es el que `turnoInterno` reconoce:

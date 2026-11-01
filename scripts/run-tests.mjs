@@ -43,6 +43,8 @@ const AISLADAS = [
   { archivo: "chat/prueba-imagenes.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-code-search.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-tool-schemas.mjs" },
+  { archivo: "chat/prueba-gpt-oss-tools.mjs" },
+  { archivo: "chat/prueba-coder-archivos.mjs" },
   { archivo: "chat/prueba-terminal.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-diagnosticos.mjs", timeout: 180_000 },
   { archivo: "chat/editar.mjs" },
