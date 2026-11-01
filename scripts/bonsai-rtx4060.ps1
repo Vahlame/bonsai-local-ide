@@ -15,7 +15,7 @@ param(
     [int]$UiPort = 8787,
     [int]$Port = 8080,
     [string]$EnginePreset = "",
-    [ValidateSet("", "optimized", "optimized-conservative", "optimized-speed")][string]$AgentProfile = "optimized",
+    [ValidateSet("", "small-local-coder", "legacy", "optimized", "optimized-conservative", "optimized-speed")][string]$AgentProfile = "small-local-coder",
     [int]$Pensar = -1,
     [switch]$SinVision,
     [switch]$NoBrowser,

@@ -22,7 +22,7 @@ param (
     [ValidateSet("", "8GB-VISION-MAX-Q8-100K", "8GB-VISION-MAX-Q8", "8GB-VISION-MAX-Q4", "8GB-VISION-MAX-F16", "8GB-VISION-DEFAULT-F16", "8GB-VISION-ULTRA-F16", "8GB-VISION-ULTRA", "8GB-VISION-HIGH", "8GB-VISION-BALANCED", "8GB-VISION-SAFE",
                  "8GB-CODE-MAX", "8GB-CODE-HIGH", "8GB-CODE-BALANCED", "8GB-CODE-FAST",
                  "8GB-RESEARCH", "8GB-VISION-QUALITY", "CUSTOM")][string]$EnginePreset = "",
-    [ValidateSet("", "legacy", "small-local-coder", "optimized")][string]$AgentProfile = "optimized",
+    [ValidateSet("", "legacy", "small-local-coder", "optimized", "optimized-conservative", "optimized-speed")][string]$AgentProfile = "small-local-coder",
     [int]$Pensar = -1,
     [switch]$SinVision,
     [switch]$NoBrowser
@@ -68,6 +68,8 @@ if (-not $EnginePreset) {
 [string[]]$NodeArgs = @("$RootDir\chat\ui-server.mjs", "--port", "$UiPort", "--llama-port", "$Port", "--prompt-cap", "$PromptCap")
 
 if ($EnginePreset) { $NodeArgs += @("--engine-preset", $EnginePreset) }
+# Los nombres "optimized*" son históricos; el perfil real del harness es small-local-coder.
+if ($AgentProfile -in @('optimized', 'optimized-conservative', 'optimized-speed')) { $AgentProfile = 'small-local-coder' }
 if ($AgentProfile) { $NodeArgs += @("--agent-profile", $AgentProfile) }
 
 $ThinkValue = $null
