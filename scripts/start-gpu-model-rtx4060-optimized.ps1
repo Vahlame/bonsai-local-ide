@@ -498,6 +498,10 @@ if ($EsParcial) {
     # Es un tope, no una reserva: el perfil decide cuántos MiB puede usar.
     $CacheRam = if ($null -ne $Item.servidor.cacheRamMiB) { [int]$Item.servidor.cacheRamMiB } else { 0 }
     $ServerArgs += "--cache-ram", "$CacheRam"
+    if ($CacheRam -gt 0 -and $Item.servidor.cacheRecurrentPrefix -eq $true) {
+        $ServerArgs += "--cache-recurrent-prefix"
+    }
+    if ($Item.servidor.mmapTrimGpu -eq $true) { $env:LLAMA_MMAP_TRIM_GPU = '1' }
 } elseif (-not $StableF16 -or $IsMoe) { $ServerArgs += "--cache-ram", "0" }
 $ServerArgs += "-lv", "4"
 $ServerArgs += "--cors-origins", "http://127.0.0.1:$Port,http://localhost:$Port,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788"
