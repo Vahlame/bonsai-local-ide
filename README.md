@@ -184,8 +184,16 @@ cuando quieras fijar un comportamiento.
 | `8GB-CODE-MAX` | 49.152 | q4_0 | — | Código largo |
 | `8GB-CODE-FAST` | 16.384 | f16 | — | Máximo throughput |
 
-Tabla completa y justificación: [TUNING.md](TUNING.md) ·
+Tabla completa y justificación: [TUNING.md](TUNING.md) · 
 [README 2.2 archivado](docs/archive/README-2.2.md).
+
+### Qwen3.8 27B (denso, 4 bits)
+
+Es el primer denso que no cabe entero en 8 GB. Se reparte con un `-ngl` medido
+(últimas capas + salida en GPU) y el resto vive en RAM con `mmap`; la cabeza
+MTP del propio GGUF acelera el decode con `--spec-type draft-mtp`. Usa un
+runtime aparte (llama.cpp master) porque necesita DeltaNet en CUDA y MTP.
+Detalle, comandos y números: [QWEN38-27B](docs/QWEN38-27B.md).
 
 ---
 
@@ -226,6 +234,7 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 | [RELEASE-2.3.2](docs/RELEASE-2.3.2.md) | Reintento `peg-native` y recuperación JSON |
 | [RELEASE-2.3.1](docs/RELEASE-2.3.1.md) | GPT-OSS, tool calls nativas, salida cruda y verificación |
 | [RELEASE-2.3.0](docs/RELEASE-2.3.0.md) | Alcance, migración, verificación y límites de esta release |
+| [QWEN38-27B](docs/QWEN38-27B.md) | 27B denso en 4 bits entre VRAM y RAM: reparto, MTP, build y límites |
 | [TOOL-CALLING](docs/TOOL-CALLING.md) | Tools nativas, Zod/JSON Schema y flag legacy |
 | [PRIMER-ARRANQUE](docs/PRIMER-ARRANQUE.md) | Clon, runtime, modelos y primer turno |
 | [ARCHITECTURE](ARCHITECTURE.md) | Capas del IDE y flujo de un turno |

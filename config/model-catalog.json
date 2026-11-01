@@ -1258,6 +1258,140 @@
       "vision": null,
       "capas": 52,
       "moe": true
+    },
+    {
+      "clave": "qwen38-27b",
+      "nombre": "Qwen3.8 27B",
+      "repo": "unsloth/Qwen3.8-27B-GGUF",
+      "archivo": "qwen38-27b-Qwen3.8-27B-UD-IQ4_XS.gguf",
+      "bytes": 14252845984,
+      "revision": "4ca720788d1e01f1bff70c033e0d0028fd02e502",
+      "kvF16BytesPorToken": 65536,
+      "ctxNativo": 262144,
+      "rol": "código + agente",
+      "uso": "Denso híbrido de 27B (DeltaNet + atención completa), visión y MTP. IQ4_XS dinámico de Unsloth: 4 bits reales en 13,3 GiB para repartir entre 8 GB de VRAM y 16 GB de RAM.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 4096,
+        "nivel": "medium"
+      },
+      "agente": {
+        "saltos": 48,
+        "avisos": 3
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.0,
+          "presence_penalty": 0.0,
+          "repeat_penalty": 1.0
+        },
+        "razonar": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0,
+          "presence_penalty": 0.0,
+          "repeat_penalty": 1.0
+        }
+      },
+      "etiquetas": [
+        "recomendado",
+        "27B",
+        "Qwen3.8",
+        "agente",
+        "MTP"
+      ],
+      "vision": null,
+      "servidor": {
+        "tipo": "gpu-parcial",
+        "contexto": 32768,
+        "capas": 65,
+        "ngl": 27,
+        "pesosGpuEstandarMiB": 6200,
+        "perLayerMiB": 190,
+        "kvF16BytesPorToken": 65536,
+        "capasAtencionCompleta": 16,
+        "cabezasKV": 4,
+        "dimCabeza": 256,
+        "kvFijoF16Bytes": 0,
+        "reservaMiB": 300,
+        "margenObjetivoMiB": 7600,
+        "threads": 16,
+        "batch": 512,
+        "ubatch": 256,
+        "mtp": true,
+        "specDraftNMax": 2,
+        "specDraftPMin": 0.0,
+        "noPreserveThinking": true,
+        "cacheRamMiB": 512,
+        "binario": "qwen38-sm89",
+        "loadMode": "mmap",
+        "nota": "Medido 2026-11-01: ngl=27, KV q8_0 32k, MTP n-max 2, 16 hilos, cache-ram 512; 7.505 MiB de VRAM y 4,3-5,0 tok/s."
+      },
+      "plan": {
+        "contexto": 32768,
+        "kv": "q8_0",
+        "vision": false,
+        "mmprojCPU": false,
+        "totalMiB": 7505,
+        "draftMiB": 0,
+        "libreMiB": 7956,
+        "reservaMiB": 300,
+        "margenMiB": 200,
+        "calculado": "2026-11-01T10:18:58.804651+00:00",
+        "medido": true
+      }
+    },
+    {
+      "clave": "qwen38-27b-q4ks",
+      "nombre": "Qwen3.8 27B · Q4_K_S (prueba)",
+      "repo": "unsloth/Qwen3.8-27B-GGUF",
+      "archivo": "Qwen3.8-27B-UD-Q4_K_S.gguf",
+      "bytes": 15358213024,
+      "revision": "4ca720788d1e01f1bff70c033e0d0028fd02e502",
+      "kvF16BytesPorToken": 65536,
+      "ctxNativo": 262144,
+      "rol": "prueba de kernels",
+      "uso": "Candidato K-quant para comparar el decode en CPU con IQ4_XS.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 4096,
+        "nivel": "medium"
+      },
+      "agente": {
+        "saltos": 48,
+        "avisos": 3
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.0,
+          "presence_penalty": 0.0,
+          "repeat_penalty": 1.0
+        },
+        "razonar": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0,
+          "presence_penalty": 0.0,
+          "repeat_penalty": 1.0
+        }
+      },
+      "etiquetas": [
+        "prueba"
+      ],
+      "oculto": true,
+      "vision": null
     }
   ]
 }

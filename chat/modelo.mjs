@@ -103,7 +103,15 @@ export function estimarVramMiB({ ctx, kv, ubatch = 256, clave = "", vision = fal
  * @returns {number} MiB de los pesos que van a la GPU (GGUF redondeado hacia arriba)
  */
 export function pesosCatalogoMiB(clave) {
-  const bytes = Number(MODELO.catalogo?.[clave]?.bytes);
+  const fila = MODELO.catalogo?.[clave];
+  // Un denso `gpu-parcial` no cabe entero: solo la parte declarada ocupa VRAM.
+  // El resto se lee del GGUF con mmap y no entra en la cuenta del techo.
+  if (fila?.servidor?.tipo === "gpu-parcial") {
+    const enGpu = Number(fila.servidor.pesosGpuEstandarMiB);
+    if (!Number.isFinite(enGpu) || enGpu <= 0) throw new Error(`modelo gpu-parcial sin pesosGpuEstandarMiB: ${clave}`);
+    return Math.ceil(enGpu);
+  }
+  const bytes = Number(fila?.bytes);
   if (!Number.isFinite(bytes) || bytes <= 0) throw new Error(`modelo sin bytes en el catálogo: ${clave}`);
   return Math.ceil(bytes / MIB);
 }
@@ -114,7 +122,7 @@ export function pesosCatalogoMiB(clave) {
  */
 export function reservaServidorMiB(clave) {
   const perfil = MODELO.catalogo?.[clave]?.servidor;
-  if (!perfil || perfil.tipo !== "gpu-completa") throw new Error(`modelo sin perfil de GPU completa: ${clave}`);
+  if (!perfil || (perfil.tipo !== "gpu-completa" && perfil.tipo !== "gpu-parcial")) throw new Error(`modelo sin perfil de GPU completa: ${clave}`);
   const reserva = Number(perfil.reservaMiB);
   if (!Number.isFinite(reserva) || reserva < 0) throw new Error(`modelo sin reservaMiB en el catálogo: ${clave}`);
   return reserva;

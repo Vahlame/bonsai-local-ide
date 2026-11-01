@@ -621,7 +621,7 @@ function catalogoModelos() {
       rol: typeof row.rol === "string" ? row.rol : "",
       uso: typeof row.uso === "string" ? row.uso : "",
       existe: bytes > 0 && (esperado === 0 || bytes === esperado),
-      gpuCompleta: row.servidor?.tipo === "gpu-completa" || row.servidor?.tipo === "moe-hibrido",
+      gpuCompleta: row.servidor?.tipo === "gpu-completa" || row.servidor?.tipo === "moe-hibrido" || row.servidor?.tipo === "gpu-parcial",
       margenObjetivoMiB: Number(row.servidor?.margenObjetivoMiB) || 0,
       predeterminado: clave === MODELO.modeloPredeterminado,
       fuente: typeof row.fuente === "string" ? row.fuente : "curado",
@@ -1314,11 +1314,15 @@ async function main(args) {
   });
   async function configuracionAnterior() {
     const state = await lifecycle.inspect();
-    if (state.state === "empty") return null;
-    if (state.state !== "ready") throw new LifecycleError("El servidor no está listo para cambiar de modelo", state, 409);
+    // `state.state` puede ser "error" por un fallo anterior aunque el servidor
+    // real esté vacío; `actualState` es el estado del adaptador. Sin esto, un
+    // solo fallo de arranque deja el cambio de modelo bloqueado hasta reiniciar.
+    const actual = state.actualState || state.state;
+    if (actual === "empty") return null;
+    if (actual !== "ready") throw new LifecycleError("El servidor no está listo para cambiar de modelo", state, 409);
     const previous = configurationFromMarker(state.marker);
     const perfil = MODELO.catalogo?.[previous?.model]?.servidor;
-    if (!previous || previous.model !== modeloActualClave() || !["gpu-completa", "moe-hibrido"].includes(perfil?.tipo) || previous.config.contexto > perfil.contexto) {
+    if (!previous || previous.model !== modeloActualClave() || !["gpu-completa", "moe-hibrido", "gpu-parcial"].includes(perfil?.tipo) || previous.config.contexto > perfil.contexto) {
       return { error: "no se guardó una configuración anterior recuperable" };
     }
     return { clave: previous.model, ...previous.config };
