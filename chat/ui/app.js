@@ -2327,18 +2327,21 @@
     }
     cambiandoServidor = true;
     const boton = $("#servidor-toggle"), cerrar = $("#cerrar-bonsai");
-    boton.disabled = true; cerrar.disabled = true;
-    boton.textContent = accion === "encender" ? "Encendiendo IA…" : "Apagando IA…";
+    if (boton) { boton.disabled = true; boton.textContent = accion === "encender" ? "Encendiendo IA." : "Apagando IA."; }
+    if (cerrar) cerrar.disabled = true;
     try {
       await api("/api/servidor", { cuerpo: { accion } });
       if (accion === "cerrar") {
         document.body.innerHTML = "<main style='padding:2rem;font-family:sans-serif'>IDE e IA cerrados. Puedes cerrar esta pestaña.</main>";
+        // En una ventana --app abierta por el lanzador, close() suele funcionar; si no,
+        // queda el aviso anterior en vez de una pestaña en blanco.
+        try { window.close(); } catch { /* el navegador decide */ }
         return;
       }
       avisar(accion === "encender" ? "Servidor de IA encendido" : "Servidor de IA apagado", "ok");
       await refrescarModelos();
     } catch (err) { avisar(`No se pudo completar la operación: ${err.message}`, "error", 10000); }
-    finally { cambiandoServidor = false; cerrar.disabled = false; void refrescarServidor(); }
+    finally { cambiandoServidor = false; if (cerrar) cerrar.disabled = false; void refrescarServidor(); }
   }
 
   $("#servidor-toggle")?.addEventListener("click", () => void controlarServidor(servidorEncendido ? "apagar" : "encender"));

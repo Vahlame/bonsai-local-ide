@@ -15,6 +15,10 @@ $Marker = Join-Path $RootDir "logs\servidor-administrado-$Port.json"
 # para sm89 (.local\opt\...\build-RTX4060-Opt-sm89\bin\). Ambos son validos.
 $ExpectedExes = @(
     [IO.Path]::GetFullPath((Join-Path $RootDir "bin\llama-server.exe")),
+    # El lanzador optimizado elige primero este build de laboratorio. Si falta aquí,
+    # el marcador es válido pero Test-ServidorEsperado rechaza el proceso real y el
+    # botón Detener contesta "puerto no administrado" sin cerrar nada.
+    [IO.Path]::GetFullPath((Join-Path $RootDir "bin\builds\lab-server-mvq2\bin\llama-server.exe")),
     [IO.Path]::GetFullPath((Join-Path $env:USERPROFILE ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe")),
     [IO.Path]::GetFullPath((Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"))
 )
@@ -162,10 +166,25 @@ if ($Servidores.Count -eq 0) {
     exit 0
 }
 foreach ($servidor in $Servidores) {
-    Stop-Process -Id $servidor -Force -ErrorAction Stop
+    # Si ya murió entre la inspección y el cierre, no es un error: el objetivo es que no quede vivo.
+    try { Stop-Process -Id $servidor -Force -ErrorAction Stop } catch { }
 }
-$limite = (Get-Date).AddSeconds(5)
-while ((Get-Date) -lt $limite -and @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue).Count -gt 0) {
+$limite = (Get-Date).AddSeconds(8)
+while ((Get-Date) -lt $limite) {
+    $vivos = @($Servidores | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue })
+    $escuchando = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+    if ($vivos.Count -eq 0 -and $escuchando.Count -eq 0) { break }
     Start-Sleep -Milliseconds 100
+}
+$vivos = @($Servidores | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue })
+$escuchando = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+if ($vivos.Count -gt 0 -or $escuchando.Count -gt 0) {
+    # No se borra el marcador: deja la puerta abierta a reintentar y a diagnosticar.
+    throw "El servidor del puerto $Port sigue vivo después de Stop-Process (PID(s): $($vivos -join ', ')). No se borró el marcador."
+}
+# El lanzador ya debería haber salido al morir su hijo. Si quedó atascado, es nuestro
+# (Test-Lanzador lo verificó) y se cierra para no dejar un proceso zombi.
+if ($Lanzador) {
+    try { Stop-Process -Id ([int]$Lanzador.ProcessId) -Force -ErrorAction SilentlyContinue } catch { }
 }
 Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue

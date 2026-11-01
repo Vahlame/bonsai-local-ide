@@ -1326,7 +1326,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   .top > .panes[aria-label="Permiso de comandos"] { display: none; }
   .top #contexto-chip,
   .top #reglas-chip,
-  .top #cerrar-bonsai,
   .top #ayuda { display: none; }
   .top #carpeta { max-width: 12ch; }
   .top .modelo-boton { max-width: 160px; }

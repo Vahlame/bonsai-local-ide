@@ -372,11 +372,14 @@
     stopBtn.querySelector("span").textContent = "Deteniendo...";
     updateStatus(false, "Deteniendo...");
     
+    let error = null;
     try {
       const res = await fetch("/api/server/stop", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to stop server");
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
     } catch (err) {
+      error = err;
       console.error("Stop server error:", err);
+      aviso("error", "No se pudo detener el servidor: " + (err.message || err));
     }
     
     await new Promise(r => setTimeout(r, 1000));
@@ -386,6 +389,11 @@
       presetSelect.disabled = false;
       startBtn.disabled = false;
       startBtn.querySelector("span").textContent = "Iniciar";
+      if (!error) aviso("ok", "Servidor detenido.");
+    } else {
+      // Si sigue vivo, no dejar el botón bloqueado en “Deteniendo...”.
+      stopBtn.disabled = false;
+      stopBtn.querySelector("span").textContent = "Detener";
     }
   }
   

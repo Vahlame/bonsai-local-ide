@@ -106,6 +106,20 @@ async function lanzadorFalso() {
   return { hijo, ticks };
 }
 
+// 0) El lanzador optimizado y el registro de parada deben aceptar exactamente los
+//    mismos binarios. Si el lanzador elige un build que stop-managed-server.ps1 no
+//    reconoce, el marcador es válido pero Detener responde "puerto no administrado".
+{
+  const startSrc = fs.readFileSync(path.join(root, "scripts", "start-gpu-model-rtx4060-optimized.ps1"), "utf8");
+  const stopSrc = fs.readFileSync(stop, "utf8");
+  const candidatos = [...startSrc.matchAll(/\(Join-Path \$RootDir "([^"]*llama-server\.exe)"\)/g)].map((m) => m[1]);
+  assert.ok(candidatos.length >= 2, `el lanzador no declara candidatos: ${JSON.stringify(candidatos)}`);
+  for (const rel of candidatos) {
+    assert.ok(stopSrc.includes(rel), `stop-managed-server.ps1 no reconoce el binario del lanzador: ${rel}`);
+  }
+  console.log(`OK: el registro de parada reconoce los ${candidatos.length} binarios del lanzador optimizado`);
+}
+
 // 1) Servidor ajeno sin marcador: ni se detiene ni se toca su puerto.
 {
   const testServer = http.createServer((_req, res) => res.end("servidor ajeno"));
