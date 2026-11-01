@@ -4444,7 +4444,8 @@ async function main(args) {
           }
           // El motivo real de la parada viaja a la interfaz: antes un `done` sin más no
           // distinguía una tarea terminada de una que se quedó sin pasos.
-          const completo = motivoParada === "completed" || motivoParada === "verified";
+          if (ac.signal.aborted) motivoParada = "cancelled";
+          const completo = !ac.signal.aborted && (motivoParada === "completed" || motivoParada === "verified");
           chat.session.lastStop = { motivo: motivoParada, saltos: saltosUsados, completo, ts: Date.now() };
           if (chat.coderTask) { chat.session.taskState = chat.coderTask.state; chat.saveSession(); }
           // Captura conservadora para la memoria global: solo frases del pedido con
