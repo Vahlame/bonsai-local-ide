@@ -1793,7 +1793,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const UI_VERSION = "2.3.5";
+  const UI_VERSION = "2.3.6";
   // El lanzador de escritorio elige el perfil de agente. `optimized` era el
   // nombre histórico del perfil de coding; hoy el único perfil con el harness
   // nuevo es `small-local-coder`. Los ajustes guardados siguen mandando.

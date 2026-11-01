@@ -4,6 +4,31 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.3.6] - 2026-11-01
+
+### Añadido
+
+- Prueba end-to-end real del ciclo de vida (`scripts/e2e-lifecycle.mjs`):
+  **Detener** cierra `llama-server` y deja viva la UI; **Cerrar IDE e IA**
+  cierra modelo y UI, sin marcador.
+- Prompt de refactor 2.4 en `docs/PROMPT-REFACTOR-2.4.md` para modularizar el
+  ciclo de vida y unificar el control del servidor.
+
+### Corregido
+
+- **Detener dejaba el modelo vivo**: el lanzador optimizado usa
+  `bin\builds\lab-server-mvq2\bin\llama-server.exe`, pero el script de parada no
+  lo reconocía y respondía “puerto no administrado”. Ahora el binario está en la
+  lista y el cierre espera a que mueran los PIDs, cierre el puerto, termine el
+  wrapper y borra el marcador. Si algo sigue vivo, falla en vez de mentir.
+- **Cerrar IDE e IA lanzaba `TypeError`**: `app.js` usaba `#servidor-toggle`,
+  que no existe en el HTML. El controlador es null-safe, cierra el servidor Node
+  e intenta cerrar la ventana.
+- El botón **Cerrar IDE e IA** sigue visible a 1280 px (antes se ocultaba por
+  una media query) y vuelve a estar disponible si el cierre falla.
+- Prueba de regresión que verifica que todos los binarios que puede elegir el
+  lanzador están aceptados por `stop-managed-server.ps1`.
+
 ## [2.3.5] - 2026-11-01
 
 ### Añadido
