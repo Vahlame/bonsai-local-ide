@@ -4,6 +4,47 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.3.1] - 2026-11-01
+
+### Añadido
+
+- **GPT-OSS como agente principal**: plantilla Harmony del GGUF, tool calls
+  nativas y `reasoning_effort` en vez de `enable_thinking`.
+- **Fallback `gpt-oss-json`** en `chat/adaptadores.mjs` para cuando el parser
+  PEG de llama.cpp deja la llamada como JSON en `content` (varias llamadas o
+  texto delante). Solo acepta JSON puro, quita `functions.` y pasa por
+  `nativeToolEffects`.
+- **Salida cruda opcional**: `BONSAI_RAW_STREAM=1` guarda cada evento SSE en
+  `<estado>/raw-stream.jsonl` (o en la ruta indicada) con `content`,
+  `reasoning_content`, `tool_calls`, `finish_reason` y errores.
+- Pruebas `chat/prueba-gpt-oss-tools.mjs` y `chat/prueba-coder-archivos.mjs`.
+
+### Cambiado
+
+- **Una tool call por respuesta** en `TOOL_WORKFLOW`, para evitar el fallo
+  `peg-native` de llama.cpp con varias llamadas.
+- **Verificación del coder**: `noteWritten` añade el archivo a `touched` y
+  `changed()` lo incluye aunque no esté en el índice de código (`.txt`, `.env`,
+  assets). Antes decía «no se modificó ningún archivo» y dejaba la tarea como
+  incompleta.
+- **Cierre del turno**: el resumen final conserva el razonamiento activo y se
+  pide también cuando el último mensaje es un resultado de tool o el assistant
+  cerró con `content` vacío. GPT-OSS sin canal de análisis volcaba su monólogo
+  interno en `content`; ahora el cierre es una respuesta limpia.
+- **Catálogo GPT-OSS**: `pensar.nivel` pasa de `high` a `medium`; `high` dispara
+  respuestas de 18k tokens y el propio autor documenta HTTP 500.
+- **Lanzador**: `--agent-profile` se usa de verdad; `optimized*` se mapea a
+  `small-local-coder` y el default del acceso directo es ese perfil.
+
+### Corregido
+
+- `Peg-native` ya no deja el turno como respuesta vacía: se propaga como error
+  y el fallback JSON recupera las llamadas que el servidor dejó en `content`.
+- El prompt de `VERIFY` ya no da por terminada la tarea tras comprobar solo
+  sintaxis: exige que existan los archivos pedidos y que pasen los tests.
+- El acceso directo y el lanzador dejan de arrancar con el perfil legacy cuando
+  no hay ajustes guardados.
+
 ## [2.3.0] - 2026-10-31
 
 ### Añadido

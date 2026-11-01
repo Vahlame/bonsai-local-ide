@@ -16,6 +16,8 @@ chat/modelo-activo.json
 chat/modelo-activo.json.tmp
 chat/.shims/
 chat/timings.jsonl
+chat/raw-stream.jsonl
+chat/raw-stream-*.jsonl
 chat/agent-traces/
 chat/escrituras-pendientes/
 chat/salidas-agente/

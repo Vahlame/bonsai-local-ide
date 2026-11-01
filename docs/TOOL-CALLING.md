@@ -76,6 +76,85 @@ El servidor recibe algo así:
 Si el JSON está cortado o falta un campo obligatorio, se devuelve una nota al
 modelo y **no se escribe nada**.
 
+## GPT-OSS 20B y Harmony
+
+GPT-OSS es el agente de coding principal de Bonsai. Su plantilla no es genérica:
+es **Harmony** y viaja en el GGUF. El lanzador la escribe en
+`logs/chat_template_<puerto>.jinja` y arranca `llama-server` con `--jinja` y
+`--chat-template-file`. El servidor expone en `/props`:
+
+- `chat_template_caps.supports_tools = true`
+- `chat_template_caps.supports_tool_calls = true`
+- `chat_template_caps.supports_reasoning_effort = true`
+- `supports_parallel_tool_calls = false`
+
+La petición usa `chat_template_kwargs.reasoning_effort` (por defecto `medium`),
+**no** `enable_thinking`: esa clave es de otras plantillas y en Harmony solo
+añade ruido. El presupuesto va en `thinking_budget_tokens`, en la raíz de la
+petición.
+
+### Cómo se ve una llamada nativa
+
+En el stream SSE, una llamada nativa llega en `delta.tool_calls`:
+
+```json
+{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"archivo","arguments":"{\"ruta\":\"a.txt\""}}]}}]}
+```
+
+Los fragmentos de `arguments` se funden por `index`; no se pierde un archivo
+grande porque llegue en varios trozos. El resultado se valida con
+`validateCall` y se ejecuta con `nativeToolEffects`.
+
+### Fallback JSON de GPT-OSS
+
+El parser PEG nativo de llama.cpp puede dejar una llamada en `content` en vez
+de `delta.tool_calls` cuando el modelo intenta varias llamadas o antepone texto.
+GPT-OSS suele escribir, en ese caso:
+
+```json
+{"name":"functions.archivo","arguments":{"ruta":"a.txt","contenido":"uno"}}
+```
+
+El dialecto `gpt-oss-json` de `chat/adaptadores.mjs` reconoce **solo** textos
+que son uno o varios objetos JSON separados por `;`, comas o saltos, quita el
+prefijo `functions.` y los pasa por el mismo `nativeToolEffects`. No ejecuta
+JSON explicado con prosa ni JSON dentro de una cerca de código. Está declarado
+en el catálogo como `"toolcalls": "nativo gpt-oss-json"`.
+
+Además, el prompt del agente exige **una sola tool call por respuesta**. Es la
+defensa principal contra el error de llama.cpp:
+
+```text
+The model produced output that does not match the expected peg-native format
+```
+
+Ese error es una limitación conocida del parser PEG con varias llamadas o con
+texto antes de la llamada. Si aparece, el turno se corta con error; no se finge
+una respuesta completa. La salida cruda permite diagnosticarlo.
+
+### Ver la salida cruda
+
+Con `BONSAI_RAW_STREAM=1`, cada evento SSE se guarda en
+`<estado>/raw-stream.jsonl` (por defecto `chat/raw-stream.jsonl`). También
+acepta una ruta explícita:
+
+```powershell
+$env:BONSAI_RAW_STREAM = "C:\ruta\raw-gpt-oss.jsonl"
+```
+
+El archivo conserva `content`, `reasoning_content`, `tool_calls`, `finish_reason`
+y errores, con la hora de cada evento. Es la forma de comprobar si GPT-OSS está
+usando el canal nativo o cayendo al JSON de `content`.
+
+### Razonamiento
+
+El catálogo de GPT-OSS declara `pensar.nivel: "medium"` y
+`presupuesto: 2048`. No se usa `high`: el autor del modelo documenta que puede
+devolver HTTP 500 y, en la práctica, dispara respuestas de 18k tokens de
+razonamiento que consumen todo el hueco de salida. El presupuesto por petición
+(`thinking_budget_tokens`) sigue mandando; `pensar=512` es un buen equilibrio
+para coding en 8 GB.
+
 ## Schemas y llguidance
 
 `chat/tool-schemas.mjs` valida las tools nuevas con Zod y puede emitir JSON
@@ -130,6 +209,8 @@ vacías. Las tools nativas no se ven afectadas.
 
 ```powershell
 node chat/prueba-tool-schemas.mjs
+node chat/prueba-gpt-oss-tools.mjs
+node chat/prueba-coder-archivos.mjs
 node chat/actions.mjs
 node chat/prueba-small-coder.mjs
 node chat/prueba-copia-evaluacion.mjs

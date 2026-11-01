@@ -8,19 +8,19 @@ navegador controlado y visión, todo contra tu propia GPU. Sin nube, sin
 telemetría y sin claves de API.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.3.0-8fb8ff">
+  <img alt="version" src="https://img.shields.io/badge/version-2.3.1-8fb8ff">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.3.0 — el IDE moderno es el único IDE.** CodeMirror 6 deja de ser opt-in:
-> reemplaza al editor clásico, estrena diff/merge real con `@codemirror/merge` y
-> una capa visual nueva. El parser legacy de tool calls queda aislado detrás de
-> un flag, el lanzador usa el preset medido `AUTO` y el acceso directo del
-> escritorio abre esta versión por defecto.
-> Notas completas: [RELEASE-2.3.0](docs/RELEASE-2.3.0.md).
+> **v2.3.1 — GPT-OSS a fondo.** El agente principal de coding usa la plantilla
+> Harmony, tool calls nativas, `reasoning_effort` y un fallback JSON para cuando
+> llama.cpp deja la llamada en `content`. Se añadió captura de salida cruda,
+> una tool call por respuesta y verificación real de archivos nuevos. La app de
+> prueba de GPT-OSS pasó 10/10 tests y 11/11 comprobaciones de navegador.
+> Notas: [RELEASE-2.3.1](docs/RELEASE-2.3.1.md).
 
 ![Bonsai IDE 2.3 con CodeMirror, explorador, chat y panel de conversación](docs/graficos/ui-2.3-main.png)
 
@@ -41,6 +41,10 @@ telemetría y sin claves de API.
   Schema son el camino canónico. El parser de llamadas escritas como texto vive
   en `chat/legacy-tool-parser.mjs` y se apaga con
   `BONSAI_LEGACY_TOOL_PARSER=0`. Detalle: [TOOL-CALLING](docs/TOOL-CALLING.md).
+- **GPT-OSS 20B como agente principal.** Plantilla Harmony del GGUF,
+  `reasoning_effort` en vez de `enable_thinking`, una tool call por respuesta,
+  fallback JSON si llama.cpp deja la llamada en `content` y salida cruda con
+  `BONSAI_RAW_STREAM=1`.
 - **Arranque medido.** El lanzador usa `AUTO` por defecto: el plan por modelo
   elige contexto, KV y reparto MoE. Los presets manuales siguen disponibles.
 - **Acceso directo listo.** `scripts/crear-acceso-directo.ps1` crea
@@ -187,6 +191,9 @@ Tabla completa y justificación: [TUNING.md](TUNING.md) ·
 
 ## Tool calling
 
+El agente principal de coding es **GPT-OSS 20B**. Usa la plantilla **Harmony**
+del GGUF, tool calls nativas y `reasoning_effort` (no `enable_thinking`).
+
 La fuente de verdad son las **tool calls nativas** del servidor OpenAI local,
 con argumentos validados por **Zod** y publicados como **JSON Schema**. La build
 opcional con **llguidance** fuerza ese schema durante la decodificación.
@@ -201,8 +208,10 @@ $env:BONSAI_LEGACY_TOOL_PARSER = "0"
 ```
 
 No se añaden regex nuevas para modelos concretos: si hace falta una tool, se
-añade su schema nativo y su handler. Contrato y ejemplos:
-[TOOL-CALLING](docs/TOOL-CALLING.md).
+añade su schema nativo y su handler. GPT-OSS/Harmony usa su plantilla nativa,
+`reasoning_effort` (no `enable_thinking`), una tool call por respuesta y un
+fallback JSON estructurado para cuando el parser PEG deja la llamada en
+`content`. Contrato y ejemplos: [TOOL-CALLING](docs/TOOL-CALLING.md).
 
 ---
 
@@ -210,6 +219,7 @@ añade su schema nativo y su handler. Contrato y ejemplos:
 
 | Documento | Contenido |
 |---|---|
+| [RELEASE-2.3.1](docs/RELEASE-2.3.1.md) | GPT-OSS, tool calls nativas, salida cruda y verificación |
 | [RELEASE-2.3.0](docs/RELEASE-2.3.0.md) | Alcance, migración, verificación y límites de esta release |
 | [TOOL-CALLING](docs/TOOL-CALLING.md) | Tools nativas, Zod/JSON Schema y flag legacy |
 | [PRIMER-ARRANQUE](docs/PRIMER-ARRANQUE.md) | Clon, runtime, modelos y primer turno |
@@ -226,13 +236,13 @@ añade su schema nativo y su handler. Contrato y ejemplos:
 ## Pruebas
 
 ```powershell
-npm test                  # 45 suites aisladas, sin GPU ni modelo real
+npm test                  # 47 suites aisladas, sin GPU ni modelo real
 npm run test:navegador    # 7 suites con Edge/Chrome headless
 npm run docs:links        # enlaces relativos de la documentación
 npm run build:ui-vendor   # reconstruye editor.js, terminal.js y xterm.css
 ```
 
-Cobertura de esta release: 45/45 aisladas, 7/7 navegador, `docs:links` sin
+Cobertura de esta release: 47/47 aisladas, 7/7 navegador, `docs:links` sin
 enlaces rotos y el acceso directo verificado abriendo la UI moderna.
 
 ---
