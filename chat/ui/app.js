@@ -351,15 +351,28 @@
   /** @type {{tema: string, perfil: string, pensar: number, reglas: boolean, historial: number}} */
   let ajustes = { tema: "slate", perfil: "codigo", pensar: 0, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, preguntarModelo: true, editorModerno: true };
 
-  const TEMAS = [["slate","Grafito"],["ocean","Niebla azul"],["forest","Bosque"],["sand","Arena"],["light","Marfil"],["dark","Medianoche"]];
+  let TEMAS = [["slate","Grafito"],["ocean","Niebla azul"],["forest","Bosque"],["sand","Arena"],["light","Marfil"],["dark","Medianoche"]];
   function siguienteTema() { const i=TEMAS.findIndex(([v])=>v===ajustes.tema); return TEMAS[(i+1)%TEMAS.length][0]; }
   function aplicarTema(tema) {
     const elegido=TEMAS.find(([v])=>v===tema)||TEMAS[0];
     document.documentElement.dataset.theme = elegido[0];
+    window.BonsaiAppearance?.applyTheme(elegido[0]);
     localStorage.setItem("bonsai-theme",elegido[0]);
     localStorage.setItem("bonsai-ver-pensamiento",ajustes.verPensamiento===false?"0":"1");
     const boton = $("#tema");
-    if (boton) {boton.innerHTML = ICO.sol({ tam: 15 });boton.title=`Tema: ${elegido[1]} · cambiar`;boton.setAttribute("aria-label",boton.title);}
+    if (boton) {boton.innerHTML = window.BonsaiAppearance?.themeIcon(elegido[0]) || ICO.sol({ tam: 15 });boton.title=`Tema: ${elegido[1]} · cambiar`;boton.setAttribute("aria-label",boton.title);}
+  }
+
+  function abrirTemas() {
+    const fondo = el("div", "dialogo-fondo"), caja = el("div", "dialogo theme-dialog");
+    const h = el("h3", "", "Hazlo tuyo"); h.tabIndex = -1;
+    caja.append(h, el("p", "", "Doce formas de ver tu espacio. Elige la que mejor acompañe tu trabajo."));
+    caja.append(window.BonsaiAppearance.gallery(ajustes.tema, id => void guardarAjustes({ tema: id })));
+    const cerrar = el("button", "primary", "Listo"); cerrar.type = "button";
+    const pie = el("div", "d-botones"); pie.append(cerrar); caja.append(pie);
+    const close = () => fondo.remove(); cerrar.addEventListener("click", close);
+    fondo.addEventListener("click", e => { if (e.target === fondo) close(); });
+    fondo.append(caja); document.body.append(fondo); accesibilizarDialogo(fondo, caja, h, { onEscape: close }); cerrar.focus();
   }
 
   async function cargarAjustes() {
@@ -811,8 +824,9 @@
       { tipo: "comando", texto: "Restablecer distribucion de paneles", ico: "panelIzq", hacer: () => window.bonsaiResetLayout?.() },
       { tipo: "comando", texto: "Cerrar todas las pestañas", ico: "cerrar", hacer: () => cerrarTodas() },
       { tipo: "comando", texto: "Nueva conversación", ico: "mas", hacer: () => $("#nuevo")?.click() },
-      { tipo: "comando", texto: "Mostrar / ocultar el explorador", ico: "carpeta", detalle: "Ctrl+B", hacer: () => $("#tog-files")?.click() },
-      { tipo: "comando", texto: "Mostrar / ocultar el historial", ico: "historial", hacer: () => $("#tog-history")?.click() },
+      { tipo: "comando", texto: "Mostrar / ocultar la navegación", ico: "carpeta", detalle: "Ctrl+B", hacer: () => $("#tog-sidebar")?.click() },
+      { tipo: "comando", texto: "Abrir el explorador", ico: "carpeta", hacer: () => $("#tog-files")?.click() },
+      { tipo: "comando", texto: "Abrir el historial", ico: "historial", hacer: () => $("#tog-history")?.click() },
       { tipo: "comando", texto: "Mostrar / ocultar el chat", ico: "mensaje", hacer: () => $("#tog-chat")?.click() },
       { tipo: "comando", texto: "Cambiar la carpeta de trabajo", ico: "carpetaProyecto", hacer: () => $("#carpeta")?.click() },
       { tipo: "comando", texto: "Ayuda", ico: "libro", hacer: () => $("#ayuda")?.click() },
@@ -1974,6 +1988,7 @@
     cuerpo.append(
       el("h4","settings-section","Apariencia"),
       fila("Tema", tema),
+      window.BonsaiAppearance.gallery(ajustes.tema, id => void guardarAjustes({ tema: id })),
       fila("Mostrar pensamiento expandido", verPensamiento),
       fila("Avisar al terminar (ventana oculta)", notificar),
       el("h4","settings-section","Modelo y respuesta"),
@@ -2611,7 +2626,7 @@
     }
     if (k === "b") {
       e.preventDefault();
-      $("#tog-files")?.click();
+      $("#tog-sidebar")?.click();
       return;
     }
     if (k === "w" && e.altKey) {
@@ -2711,7 +2726,7 @@
     tema.id = "tema";
     tema.type = "button";
     tema.title = "Cambiar de tema";
-    tema.addEventListener("click", () => guardarAjustes({ tema: siguienteTema() }));
+    tema.addEventListener("click", abrirTemas);
 
     const ajustesBoton = el("button", "icon-btn");
     ajustesBoton.type = "button";
@@ -2760,6 +2775,11 @@
 
   async function arrancar() {
     if (typeof ICO === "undefined") return;
+    try {
+      const registry = await api("/ui/themes.json");
+      TEMAS = registry.map(theme => [theme.id, theme.name]);
+      window.BonsaiAppearance.init(registry);
+    } catch (err) { console.error("No se cargaron los temas", err); window.BonsaiAppearance.init([]); }
     pintarIconos(document);
     montarBotonesBarra();
     montarChips();

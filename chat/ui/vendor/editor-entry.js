@@ -64,20 +64,20 @@ function lenguajePara(rel) {
 // Paleta de sintaxis propia: la de CodeMirror por defecto está pensada para
 // fondos claros y deja los tags de Markdown/HTML casi ilegibles en tema oscuro.
 const resaltado = HighlightStyle.define([
-  { tag: [tags.keyword, tags.operatorKeyword, tags.modifier], color: "#c4a7f7" },
-  { tag: [tags.string, tags.special(tags.string), tags.regexp], color: "#a8d49a" },
-  { tag: [tags.comment, tags.lineComment, tags.blockComment], color: "#6f7a8c", fontStyle: "italic" },
-  { tag: [tags.number, tags.integer, tags.float, tags.bool, tags.atom], color: "#f0c674" },
-  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: "#8fc7ff" },
-  { tag: [tags.typeName, tags.className, tags.namespace], color: "#7dd3fc" },
-  { tag: [tags.tagName], color: "#f0a6a6" },
-  { tag: [tags.attributeName, tags.propertyName], color: "#f0c674" },
-  { tag: [tags.heading], color: "#dbe6ff", fontWeight: "700" },
-  { tag: [tags.link, tags.url], color: "#8fb8ff", textDecoration: "underline" },
+  { tag: [tags.keyword, tags.operatorKeyword, tags.modifier], color: "var(--syntax-keyword)" },
+  { tag: [tags.string, tags.special(tags.string), tags.regexp], color: "var(--syntax-string)" },
+  { tag: [tags.comment, tags.lineComment, tags.blockComment], color: "var(--muted)", fontStyle: "italic" },
+  { tag: [tags.number, tags.integer, tags.float, tags.bool, tags.atom], color: "var(--syntax-number)" },
+  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName)], color: "var(--syntax-function)" },
+  { tag: [tags.typeName, tags.className, tags.namespace], color: "var(--syntax-type)" },
+  { tag: [tags.tagName], color: "var(--syntax-tag)" },
+  { tag: [tags.attributeName, tags.propertyName], color: "var(--syntax-number)" },
+  { tag: [tags.heading], color: "var(--text)", fontWeight: "700" },
+  { tag: [tags.link, tags.url], color: "var(--syntax-function)", textDecoration: "underline" },
   { tag: [tags.emphasis], fontStyle: "italic" },
-  { tag: [tags.strong], fontWeight: "700", color: "#eef3ff" },
-  { tag: [tags.meta, tags.processingInstruction], color: "#a2adbf" },
-  { tag: [tags.invalid], color: "#ff9a9a", textDecoration: "underline wavy" },
+  { tag: [tags.strong], fontWeight: "700", color: "var(--text)" },
+  { tag: [tags.meta, tags.processingInstruction], color: "var(--muted)" },
+  { tag: [tags.invalid], color: "var(--danger)", textDecoration: "underline wavy" },
 ]);
 
 const tema = EditorView.theme(

@@ -1396,7 +1396,8 @@
               }
               const que = event.ruta ? `${event.name === "reemplazar" ? "Cambiando" : "Escribiendo"} ${event.ruta}` : `Preparando ${event.name || "la acción"}`;
               phase = que;
-              progreso.textContent = `✍️ ${que}… ${Number(event.chars || 0).toLocaleString("es")} caracteres`;
+              progreso.innerHTML = window.ICO?.codigo?.({ tam: 14 }) || "";
+              progreso.append(document.createTextNode(`${que}… ${Number(event.chars || 0).toLocaleString("es")} caracteres`));
               log.scrollTop = log.scrollHeight;
             }
             else if (event.type === "usage") paintUsage(event);
@@ -1843,15 +1844,20 @@
     document.querySelector("#stop")?.addEventListener("click", () => {
       void cortarTurno();
     });
-    const paneKey = "bonsai-panes";
+    const paneKey = "bonsai-layout-v2";
     /** @type {Record<string, boolean>} */
-    let panes = { history: window.innerWidth >= 1450, files: true, editor: true, chat: true };
+    let panes = { sidebar: true, history: false, files: true, editor: true, chat: true };
     try {
       const saved = JSON.parse(localStorage.getItem(paneKey) || "");
-      if (saved && typeof saved === "object") panes = { ...panes, ...saved };
-    } catch { /* los paneles siguen abiertos */ }
+      if (saved && typeof saved === "object" && !Array.isArray(saved)) {
+        for (const name of Object.keys(panes)) if (typeof saved[name] === "boolean") panes[name] = saved[name];
+      }
+    } catch { /* distribución por defecto */ }
     function applyPanes() {
-      for (const name of ["history", "files", "editor", "chat"]) {
+      // History and files are views of one sidebar, never competing columns.
+      panes.files = !panes.history;
+      if (!panes.editor && !panes.chat) panes.editor = true;
+      for (const name of ["sidebar", "editor", "chat"]) {
         document.body.classList.toggle(`hide-${name}`, panes[name] === false);
         const button = document.querySelector(`#tog-${name}`);
         if (button instanceof HTMLElement) {
@@ -1859,59 +1865,114 @@
           button.setAttribute("aria-pressed", panes[name] === false ? "false" : "true");
         }
       }
+      for (const name of ["history", "files"]) {
+        const selected = panes[name];
+        document.querySelector(`#${name}`).hidden = !selected;
+        const tab = document.querySelector(`#tog-${name}`);
+        tab.classList.toggle("on", selected);
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      }
       try { localStorage.setItem(paneKey, JSON.stringify(panes)); } catch { /* almacenamiento deshabilitado */ }
+      document.dispatchEvent(new Event("bonsai-layout-changed"));
     }
-    const widthsKey = "bonsai-panel-widths";
+    const widthsKey = "bonsai-layout-widths-v2";
     try {
       const widths = JSON.parse(localStorage.getItem(widthsKey) || "{}");
-      for (const key of ["history", "side", "chat"]) {
+      for (const key of ["side", "chat", "chat-height"]) {
         if (Number.isFinite(widths[key])) document.documentElement.style.setProperty(`--${key}`, `${Math.max(160, Math.min(640, widths[key]))}px`);
       }
     } catch { /* medidas por defecto */ }
     window.bonsaiResetLayout = () => {
-      panes = { history: window.innerWidth >= 1450, files: true, editor: true, chat: true };
-      for (const key of ["history", "side", "chat"]) document.documentElement.style.removeProperty(`--${key}`);
+      panes = { sidebar: true, history: false, files: true, editor: true, chat: true };
+      for (const key of ["side", "chat", "chat-height"]) document.documentElement.style.removeProperty(`--${key}`);
       try { localStorage.removeItem(widthsKey); } catch { }
       applyPanes();
     };
     applyPanes();
-    for (const name of ["history", "files", "editor", "chat"]) {
+    for (const name of ["sidebar", "editor", "chat"]) {
       document.querySelector(`#tog-${name}`)?.addEventListener("click", () => {
         panes[name] = panes[name] === false;
-        if (innerWidth <= 980 && panes[name] && name === "history") panes.files = false;
-        if (innerWidth <= 980 && panes[name] && name === "files") panes.history = false;
+        if (!panes.editor && !panes.chat) panes[name === "editor" ? "chat" : "editor"] = true;
         applyPanes();
       });
     }
-    for (const gutter of document.querySelectorAll(".gutter")) {
-      gutter.addEventListener("mousedown", (event) => {
+    for (const name of ["history", "files"]) {
+      const tab = document.querySelector(`#tog-${name}`);
+      tab.addEventListener("click", () => {
+        panes.sidebar = true;
+        panes.history = name === "history";
+        applyPanes();
+      });
+      tab.addEventListener("keydown", event => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
         event.preventDefault();
-        const pane = gutter.getAttribute("data-pane");
-        const startX = event.clientX;
-        const start = pane === "history" ? historyWidth() : pane === "side" ? asideWidth() : chatWidth();
-        const move = (ev) => {
-          const dx = ev.clientX - startX;
-          if (pane === "history") document.documentElement.style.setProperty("--history", `${Math.max(180, Math.min(420, start + dx))}px`);
-          else if (pane === "side") document.documentElement.style.setProperty("--side", `${Math.max(200, Math.min(460, start + dx))}px`);
-          else document.documentElement.style.setProperty("--chat", `${Math.max(300, Math.min(640, start - dx))}px`);
-        };
-        const up = () => {
-          window.removeEventListener("mousemove", move);
-          window.removeEventListener("mouseup", up);
-          const widths = {};
-          for (const key of ["history", "side", "chat"]) {
-            const value = Number.parseInt(document.documentElement.style.getPropertyValue(`--${key}`), 10);
-            if (Number.isFinite(value)) widths[key] = value;
-          }
-          try { localStorage.setItem(widthsKey, JSON.stringify(widths)); } catch { }
-        };
-        window.addEventListener("mousemove", move);
-        window.addEventListener("mouseup", up);
+        const target = document.querySelector(`#tog-${event.key === "Home" ? "files" : event.key === "End" ? "history" : name === "files" ? "history" : "files"}`);
+        target.click(); target.focus();
       });
     }
-    function historyWidth() { return document.querySelector("#history").getBoundingClientRect().width; }
-    function asideWidth() { return document.querySelector("#files").getBoundingClientRect().width; }
-    function chatWidth() { return document.querySelector("#chat").getBoundingClientRect().width; }
+    const stacked = () => matchMedia("(max-width: 1000px)").matches;
+    const saveWidths = () => {
+      const widths = {};
+      for (const key of ["side", "chat", "chat-height"]) {
+        const value = Number.parseInt(document.documentElement.style.getPropertyValue(`--${key}`), 10);
+        if (Number.isFinite(value)) widths[key] = value;
+      }
+      try { localStorage.setItem(widthsKey, JSON.stringify(widths)); } catch { }
+    };
+    const resizePane = (pane, start, delta) => {
+      const vertical = pane === "chat" && stacked();
+      const key = vertical ? "chat-height" : pane;
+      const max = vertical ? document.querySelector(".work").clientHeight - 164 : pane === "side" ? Math.min(360, innerWidth * .28) : innerWidth * .5;
+      const min = vertical ? 180 : pane === "side" ? 170 : 300;
+      document.documentElement.style.setProperty(`--${key}`, `${Math.max(min, Math.min(max, start + (pane === "side" ? delta : -delta)))}px`);
+    };
+    for (const gutter of document.querySelectorAll(".gutter")) {
+      const pane = gutter.getAttribute("data-pane");
+      const size = () => document.querySelector(pane === "side" ? "#sidebar" : "#chat").getBoundingClientRect()[pane === "chat" && stacked() ? "height" : "width"];
+      const orientation = () => {
+        const vertical = pane === "chat" && stacked();
+        gutter.setAttribute("aria-orientation", vertical ? "horizontal" : "vertical");
+        gutter.setAttribute("aria-valuemin", String(vertical ? 180 : pane === "side" ? 170 : 300));
+        gutter.setAttribute("aria-valuemax", String(Math.round(vertical ? document.querySelector(".work").clientHeight * .65 : pane === "side" ? Math.min(360, innerWidth * .28) : Math.min(innerWidth * .5, innerWidth - (panes.sidebar ? document.querySelector("#sidebar").clientWidth + 296 : 0)))));
+        gutter.setAttribute("aria-valuenow", String(Math.round(size())));
+      };
+      orientation(); window.addEventListener("resize", orientation);
+      document.addEventListener("bonsai-layout-changed", orientation);
+      gutter.addEventListener("dblclick", () => {
+        document.documentElement.style.removeProperty(`--${pane === "chat" && stacked() ? "chat-height" : pane}`);
+        orientation(); saveWidths();
+      });
+      gutter.addEventListener("keydown", event => {
+        const negative = pane === "chat" && stacked() ? "ArrowUp" : "ArrowLeft";
+        const positive = pane === "chat" && stacked() ? "ArrowDown" : "ArrowRight";
+        if (![negative, positive].includes(event.key)) return;
+        event.preventDefault();
+        resizePane(pane, size(), event.key === positive ? 20 : -20); orientation(); saveWidths();
+      });
+      gutter.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        gutter.setPointerCapture(event.pointerId);
+        gutter.classList.add("drag");
+        const vertical = pane === "chat" && stacked();
+        const startPointer = vertical ? event.clientY : event.clientX;
+        const start = size();
+        const move = (ev) => {
+          resizePane(pane, start, (vertical ? ev.clientY : ev.clientX) - startPointer);
+        };
+        const up = () => {
+          gutter.classList.remove("drag");
+          gutter.removeEventListener("pointermove", move);
+          gutter.removeEventListener("pointerup", up);
+          gutter.removeEventListener("pointercancel", up);
+          orientation(); saveWidths();
+        };
+        gutter.addEventListener("pointermove", move);
+        gutter.addEventListener("pointerup", up);
+        gutter.addEventListener("pointercancel", up);
+      });
+    }
     document.querySelector("#permit-ask")?.addEventListener("click", () => {
       setPermitMode("ask").catch((err) => { errorBox.textContent = err instanceof Error ? err.message : String(err); });
     });

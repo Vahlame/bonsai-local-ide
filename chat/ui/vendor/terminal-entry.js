@@ -53,6 +53,14 @@ export class BonsaiTerminal {
     this.term.loadAddon(this.fitAddon);
     this.term.loadAddon(new WebLinksAddon());
     this.term.open(parent);
+    this.updateTheme = () => {
+      const style = getComputedStyle(document.documentElement);
+      const color = name => style.getPropertyValue(`--${name}`).trim();
+      this.term.options.theme = { ...TEMA, background: color("code-bg") || color("ink"), foreground: color("text"), cursor: color("accent"), cursorAccent: color("bg"), black: color("bg"), brightBlack: color("muted"), white: color("text") };
+      this.term.options.cursorBlink = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    };
+    this.updateTheme();
+    document.addEventListener("bonsai-theme-changed", this.updateTheme);
     this.resizeObserver = new ResizeObserver(() => {
       try { this.fitAddon.fit(); } catch { /* panel oculto */ }
     });
@@ -83,6 +91,7 @@ export class BonsaiTerminal {
   }
 
   dispose() {
+    document.removeEventListener("bonsai-theme-changed", this.updateTheme);
     try { this.resizeObserver.disconnect(); } catch { /* ya cerrado */ }
     this.term.dispose();
   }

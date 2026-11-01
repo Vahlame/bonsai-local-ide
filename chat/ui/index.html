@@ -598,6 +598,7 @@
   <!-- Sistema de diseno: se carga el ultimo para pulir lo anterior -->
   <link rel="stylesheet" href="/ui/tema.css">
   <link rel="stylesheet" href="/ui/vendor/xterm.css">
+  <link rel="stylesheet" href="/ui/refresh.css">
   <script src="/ui/markdown.js"></script>
   <script src="/ui/iconos.js"></script>
 </head>
@@ -607,8 +608,7 @@
     <div class="brand"><span class="mark"></span><div><strong>Bonsai</strong><small>tu espacio de desarrollo</small></div></div>
     <span class="muted" id="meta"></span>
     <div class="panes" role="toolbar" aria-label="Paneles">
-      <button class="ghost on" id="tog-history" type="button" aria-pressed="true">Historial</button>
-      <button class="ghost on" id="tog-files" type="button" aria-pressed="true">Explorador</button>
+      <button class="ghost on" id="tog-sidebar" type="button" aria-pressed="true" title="Barra lateral (Ctrl+B)">Navegación</button>
       <button class="ghost on" id="tog-editor" type="button" aria-pressed="true">Editor</button>
       <button class="ghost on" id="tog-chat" type="button" aria-pressed="true">Chat</button>
       <button class="ghost" id="tog-drawer" type="button" aria-pressed="false" title="Terminal, problemas y esquema (Ctrl+`)">Panel</button>
@@ -661,22 +661,27 @@
     <button class="ghost" id="ayuda" type="button" aria-controls="help" aria-expanded="false">Ayuda</button>
   </header>
   <div id="help" hidden>
-    <p>Historial guarda cada conversación. Los botones de arriba ocultan y vuelven a abrir los paneles. Adjuntar elige el archivo abierto, la selección, un archivo o una carpeta. @ busca en la carpeta. Ctrl+Enter envía y, si el modelo sigue, el mensaje queda en cola.</p>
+    <p>Explorador e Historial comparten la barra lateral: cambia de pestaña sin quitar espacio al editor. Arrastra los divisores para ajustar los tamaños y haz doble clic para restablecerlos. Los botones superiores muestran y ocultan Navegación, Editor y Chat. Ctrl+B alterna la barra lateral. Adjuntar y @ añaden archivos al mensaje.</p>
     <p><strong>2.0</strong> · Las imágenes se normalizan a 1600 px antes de visión y las páginas web se convierten a Markdown limpio. El Hub muestra el logo real de cada proveedor.</p>
   </div>
   <div class="work">
-    <aside id="history">
+    <section id="sidebar" aria-label="Navegación del proyecto">
+      <div class="sidebar-tabs" role="tablist" aria-label="Navegación">
+        <button id="tog-files" type="button" role="tab" aria-selected="true" aria-controls="files" tabindex="0">Explorador</button>
+        <button id="tog-history" type="button" role="tab" aria-selected="false" aria-controls="history" tabindex="-1">Historial</button>
+      </div>
+    <aside id="history" role="tabpanel" aria-labelledby="tog-history" hidden>
       <div class="pane-h">HISTORIAL <button class="ghost" id="nuevo" type="button">Nueva</button></div>
       <div id="chats"></div>
     </aside>
-    <div class="gutter" data-pane="history"></div>
-    <aside id="files">
+    <aside id="files" role="tabpanel" aria-labelledby="tog-files">
       <div class="pane-h">EXPLORADOR</div>
       <input id="filter" type="search" placeholder="Filtrar" autocomplete="off">
       <div id="tree"></div>
       <p class="hint">Clic abre. Adjuntar, arrastrar o @ meten solo lo que marques. Si el modelo necesita el índice del repo, lo pide y lo recibe.</p>
     </aside>
-    <div class="gutter" data-pane="side"></div>
+    </section>
+    <div class="gutter" data-pane="side" role="separator" aria-label="Ancho de navegación" aria-orientation="vertical" tabindex="0"></div>
     <section id="editor">
       <div class="tabbar">
         <strong id="tab">Sin archivo</strong>
@@ -685,7 +690,7 @@
       </div>
       <pre id="code" class="empty-code">Abre un archivo del explorador. La vista es local y no gasta contexto hasta que la incluyas o el modelo pida leerla.</pre>
     </section>
-    <div class="gutter" data-pane="chat"></div>
+    <div class="gutter" data-pane="chat" role="separator" aria-label="Tamaño de conversación" aria-orientation="vertical" tabindex="0"></div>
     <section id="chat">
       <div class="pane-h">CONVERSACIÓN</div>
       <div id="log">
@@ -787,6 +792,7 @@
   <script src="/ui/vendor/terminal.js"></script>
   <!-- Editor con pestanas, paleta de comandos, busqueda, git y ajustes -->
   <script src="/ui/server-controller.js"></script>
+  <script src="/ui/appearance.js"></script>
   <script src="/ui/app.js"></script>
   <script src="/ui/paneles.js"></script>
 </body>

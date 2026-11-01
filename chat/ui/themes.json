@@ -1,0 +1,194 @@
+[
+  {
+    "id": "slate",
+    "name": "Grafito",
+    "group": "Oscuro",
+    "icon": "capas",
+    "colors": [
+      "#0f141b",
+      "#171e28",
+      "#202a36",
+      "#e8eef7",
+      "#a4b3c6",
+      "#86e0be",
+      "#111923",
+      "#2c394b"
+    ]
+  },
+  {
+    "id": "dark",
+    "name": "Medianoche",
+    "group": "Oscuro",
+    "icon": "luna",
+    "colors": [
+      "#080d18",
+      "#10192a",
+      "#19243a",
+      "#e7eeff",
+      "#9caecc",
+      "#8db6ff",
+      "#0b1220",
+      "#2a3855"
+    ]
+  },
+  {
+    "id": "ocean",
+    "name": "Océano",
+    "group": "Oscuro",
+    "icon": "actividad",
+    "colors": [
+      "#0b2029",
+      "#112d38",
+      "#1b3b46",
+      "#e0f6f7",
+      "#9fc3ca",
+      "#65ddd3",
+      "#0c2630",
+      "#2b505d"
+    ]
+  },
+  {
+    "id": "forest",
+    "name": "Bosque",
+    "group": "Oscuro",
+    "icon": "carpetaProyecto",
+    "colors": [
+      "#13211b",
+      "#1c3026",
+      "#284135",
+      "#e4f1e5",
+      "#adbfad",
+      "#b4db8e",
+      "#17291f",
+      "#3b5744"
+    ]
+  },
+  {
+    "id": "nebula",
+    "name": "Nebulosa",
+    "group": "Oscuro",
+    "icon": "chispa",
+    "colors": [
+      "#191325",
+      "#241c35",
+      "#332647",
+      "#f1e9ff",
+      "#bdb0cf",
+      "#c4a0ff",
+      "#1e172b",
+      "#4b385f"
+    ]
+  },
+  {
+    "id": "ember",
+    "name": "Cobre",
+    "group": "Oscuro",
+    "icon": "rayo",
+    "colors": [
+      "#211611",
+      "#302019",
+      "#432d22",
+      "#f6e9df",
+      "#ccb4a4",
+      "#f6ae76",
+      "#281b14",
+      "#644431"
+    ]
+  },
+  {
+    "id": "rose",
+    "name": "Sakura",
+    "group": "Oscuro",
+    "icon": "mensaje",
+    "colors": [
+      "#22151e",
+      "#311f2b",
+      "#452c3d",
+      "#fae9f4",
+      "#cdb0c3",
+      "#f3a1ca",
+      "#281a24",
+      "#614354"
+    ]
+  },
+  {
+    "id": "coffee",
+    "name": "Moka",
+    "group": "Oscuro",
+    "icon": "reloj",
+    "colors": [
+      "#211d19",
+      "#2e2822",
+      "#3d342c",
+      "#f0e8dc",
+      "#c3b5a3",
+      "#dfc59b",
+      "#26211c",
+      "#544a3e"
+    ]
+  },
+  {
+    "id": "light",
+    "name": "Porcelana",
+    "group": "Claro",
+    "icon": "sol",
+    "colors": [
+      "#edf2f7",
+      "#ffffff",
+      "#f4f7fb",
+      "#203045",
+      "#52647a",
+      "#2369b5",
+      "#fbfcff",
+      "#cfdae7"
+    ]
+  },
+  {
+    "id": "sand",
+    "name": "Lino",
+    "group": "Claro",
+    "icon": "libro",
+    "colors": [
+      "#eae3d7",
+      "#f9f5ec",
+      "#eee6d7",
+      "#3b342a",
+      "#6d6254",
+      "#8d532e",
+      "#fbf7ef",
+      "#cfc2af"
+    ]
+  },
+  {
+    "id": "paper",
+    "name": "Papel",
+    "group": "Claro",
+    "icon": "archivo",
+    "colors": [
+      "#efefe9",
+      "#fffffa",
+      "#f4f5ed",
+      "#222c28",
+      "#57665c",
+      "#32674d",
+      "#fffffc",
+      "#c7d2c9"
+    ]
+  },
+  {
+    "id": "contrast",
+    "name": "Alto contraste",
+    "group": "Contraste",
+    "icon": "escudo",
+    "colors": [
+      "#000000",
+      "#080808",
+      "#171717",
+      "#ffffff",
+      "#d1d1d1",
+      "#ffeb3b",
+      "#000000",
+      "#8f8f8f"
+    ]
+  }
+]
