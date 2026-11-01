@@ -105,6 +105,19 @@ Los fragmentos de `arguments` se funden por `index`; no se pierde un archivo
 grande porque llegue en varios trozos. El resultado se valida con
 `validateCall` y se ejecuta con `nativeToolEffects`.
 
+### Sin parser nativo: Harmony propio
+
+GPT-OSS arranca con `--skip-chat-parsing` para que el parser PEG de llama.cpp
+no pueda tumbar el turno. El servidor devuelve Harmony crudo en `content` y
+`chat/harmony.mjs` lo separa:
+
+- `analysis` → panel de pensamiento.
+- `final` → respuesta visible.
+- `commentary to=functions.NOMBRE` → tool call nativa, con sus argumentos JSON.
+
+No se muestran los marcadores `<|channel|>`. Si el texto no trae marcadores, se
+deja intacto para el fallback `gpt-oss-json`.
+
 ### Fallback JSON de GPT-OSS
 
 El parser PEG nativo de llama.cpp puede dejar una llamada en `content` en vez
@@ -215,6 +228,7 @@ vacías. Las tools nativas no se ven afectadas.
 
 ```powershell
 node chat/prueba-tool-schemas.mjs
+node chat/harmony.mjs
 node chat/prueba-gpt-oss-tools.mjs
 node chat/prueba-coder-archivos.mjs
 node chat/actions.mjs

@@ -4,6 +4,30 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.3.3] - 2026-11-01
+
+### Añadido
+
+- **Parser Harmony propio** (`chat/harmony.mjs`): separa `analysis`, `final` y
+  `commentary to=functions.NOMBRE` del Harmony crudo, incluidas varias tool
+  calls. Self-test incluido.
+- GPT-OSS arranca con **`--skip-chat-parsing`** en los lanzadores y en el
+  comando que muestra la UI. El parser PEG de llama.cpp deja de intervenir.
+
+### Cambiado
+
+- `BonsaiChat` bufferiza la salida de GPT-OSS con skip, la parsea al final y
+  convierte los canales en tool calls nativas. No se muestran los marcadores
+  `<|channel|>` y el análisis no contamina la respuesta final.
+- `chat/evaluar/copia-app.mjs` incluye `harmony.mjs`.
+
+### Corregido
+
+- El 500 `peg-native` desaparece del camino normal de GPT-OSS. El reintento de
+  2.3.2 queda como red de seguridad si el servidor se arranca sin el flag.
+- La respuesta final tras una tool call ya no queda vacía ni muestra el
+  monólogo interno.
+
 ## [2.3.2] - 2026-11-01
 
 ### Corregido
