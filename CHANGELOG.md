@@ -4,6 +4,24 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.3.4] - 2026-11-01
+
+### Cambiado
+
+- **Presupuesto de contexto automático real.** `historial: 0` vuelve a ser el
+  default; la migración `uiVersion 2.3.4` convierte el viejo `32768` en `0`.
+  GPT-OSS 64k pasa de 32.768/32.768 a **53.120 de historial / 12.288 de salida**.
+- **Menos restricciones para GPT-OSS.** Se retira la regla «una tool call por
+  respuesta» del `TOOL_WORKFLOW`; el parser Harmony ya soporta varias llamadas.
+  Las independientes pueden ir juntas y las dependientes esperan el resultado.
+- La reserva automática de salida baja de 18k a 12k para dejar más contexto útil.
+
+### Corregido
+
+- El ajuste viejo `historial=32768` ya no fuerza una división 50/50 de la
+  ventana.
+- El prompt deja de estar condicionado por el parser PEG que ya no se usa.
+
 ## [2.3.3] - 2026-11-01
 
 ### Añadido

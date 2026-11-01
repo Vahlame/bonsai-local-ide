@@ -8,20 +8,19 @@ navegador controlado y visión, todo contra tu propia GPU. Sin nube, sin
 telemetría y sin claves de API.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.3.3-8fb8ff">
+  <img alt="version" src="https://img.shields.io/badge/version-2.3.4-8fb8ff">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.3.3 — GPT-OSS sin el parser roto de llama.cpp.** GPT-OSS arranca con
-> `--skip-chat-parsing`; Bonsai parsea el Harmony crudo (`analysis`, `final` y
-> `to=functions.*`) y ejecuta las tool calls por el camino nativo. El 500
-> `peg-native` desaparece del flujo normal y el reintento 2.3.2 queda como red
-> de seguridad. La app de prueba pasó 10/10 tests y 11/11 comprobaciones de
-> navegador.
-> Notas: [RELEASE-2.3.3](docs/RELEASE-2.3.3.md).
+> **v2.3.4 — presupuesto automático y GPT-OSS menos atado.** El contexto vuelve
+> a repartirse como un modelo frontera: 53.120 de historial y 12.288 de salida
+> en una ventana de 64k, en vez del viejo 50/50. También se retiró la regla de
+> una sola tool call: el parser Harmony ya soporta varias. Flujo multi-paso de
+> GPT-OSS verificado en 19,4 s.
+> Notas: [RELEASE-2.3.4](docs/RELEASE-2.3.4.md).
 
 ![Bonsai IDE 2.3 con CodeMirror, explorador, chat y panel de conversación](docs/graficos/ui-2.3-main.png)
 
@@ -43,9 +42,8 @@ telemetría y sin claves de API.
   en `chat/legacy-tool-parser.mjs` y se apaga con
   `BONSAI_LEGACY_TOOL_PARSER=0`. Detalle: [TOOL-CALLING](docs/TOOL-CALLING.md).
 - **GPT-OSS 20B como agente principal.** Plantilla Harmony del GGUF,
-  `reasoning_effort` en vez de `enable_thinking`, una tool call por respuesta,
-  fallback JSON si llama.cpp deja la llamada en `content` y salida cruda con
-  `BONSAI_RAW_STREAM=1`.
+  `reasoning_effort` en vez de `enable_thinking`, tool calls nativas (varias si
+  son independientes), fallback JSON y salida cruda con `BONSAI_RAW_STREAM=1`.
 - **Arranque medido.** El lanzador usa `AUTO` por defecto: el plan por modelo
   elige contexto, KV y reparto MoE. Los presets manuales siguen disponibles.
 - **Acceso directo listo.** `scripts/crear-acceso-directo.ps1` crea
@@ -210,9 +208,9 @@ $env:BONSAI_LEGACY_TOOL_PARSER = "0"
 
 No se añaden regex nuevas para modelos concretos: si hace falta una tool, se
 añade su schema nativo y su handler. GPT-OSS/Harmony usa su plantilla nativa,
-`reasoning_effort` (no `enable_thinking`), una tool call por respuesta y un
-fallback JSON estructurado para cuando el parser PEG deja la llamada en
-`content`. Contrato y ejemplos: [TOOL-CALLING](docs/TOOL-CALLING.md).
+`reasoning_effort` (no `enable_thinking`), tool calls nativas —varias si son
+independientes— y un fallback JSON estructurado. Contrato y ejemplos:
+[TOOL-CALLING](docs/TOOL-CALLING.md).
 
 ---
 
@@ -220,6 +218,7 @@ fallback JSON estructurado para cuando el parser PEG deja la llamada en
 
 | Documento | Contenido |
 |---|---|
+| [RELEASE-2.3.4](docs/RELEASE-2.3.4.md) | Contexto automático y menos restricciones para GPT-OSS |
 | [RELEASE-2.3.3](docs/RELEASE-2.3.3.md) | Parser Harmony propio y GPT-OSS sin `--skip-chat-parsing` |
 | [RELEASE-2.3.2](docs/RELEASE-2.3.2.md) | Reintento `peg-native` y recuperación JSON |
 | [RELEASE-2.3.1](docs/RELEASE-2.3.1.md) | GPT-OSS, tool calls nativas, salida cruda y verificación |

@@ -134,16 +134,18 @@ prefijo `functions.` y los pasa por el mismo `nativeToolEffects`. No ejecuta
 JSON explicado con prosa ni JSON dentro de una cerca de código. Está declarado
 en el catálogo como `"toolcalls": "nativo gpt-oss-json"`.
 
-Además, el prompt del agente exige **una sola tool call por respuesta**. Es la
-defensa principal contra el error de llama.cpp:
+Con el parser Harmony propio, el prompt **ya no limita a una sola tool call**:
+varias llamadas independientes pueden viajar en el mismo turno y el host
+devuelve un resultado por cada una. Las dependientes esperan el resultado
+anterior. El error de llama.cpp:
 
 ```text
 The model produced output that does not match the expected peg-native format
 ```
 
-Ese error es una limitación conocida del parser PEG con varias llamadas o con
-texto antes de la llamada. Si aparece, el turno **no se pierde**: Bonsai
-reintenta una vez sin `tools` nativas, con el catálogo de herramientas como
+solo puede aparecer si el servidor se arranca sin `--skip-chat-parsing`. En ese
+caso el turno **no se pierde**: Bonsai reintenta una vez sin `tools` nativas,
+con el catálogo de herramientas como
 texto en el system prompt y la instrucción de responder solo con un objeto JSON
 `{"name":..., "arguments":...}`. GPT-OSS devuelve ese JSON en `content`, el
 dialecto `gpt-oss-json` lo convierte y el agente sigue con el resultado. Si el

@@ -1793,7 +1793,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const UI_VERSION = "2.3.0";
+  const UI_VERSION = "2.3.4";
   // El lanzador de escritorio elige el perfil de agente. `optimized` era el
   // nombre histórico del perfil de coding; hoy el único perfil con el harness
   // nuevo es `small-local-coder`. Los ajustes guardados siguen mandando.
@@ -1833,6 +1833,9 @@ async function main(args) {
           datos.uiVersion = UI_VERSION;
           datos.tema = "slate";
           datos.editorModerno = true;
+          // El viejo default (32768) partía la ventana 50/50. En 2.3.4 el
+          // presupuesto vuelve a ser automático: ventana - salida - margen.
+          if (Number(datos.historial) === 32768) datos.historial = 0;
           try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(datos, null, 2), "utf8"); } catch { /* solo lectura */ }
         }
         return datos;
@@ -1868,7 +1871,12 @@ async function main(args) {
     const histAuto = !Number.isFinite(histPedido) || histPedido <= 0;
     const histTokens = histAuto ? ctxTokens : Math.min(histPedido, ctxTokens);
     const salidaTokens = histTokens >= ctxTokens ? Math.min(18000, Math.max(256, Math.floor(ctxTokens / 2) - 128)) : Math.max(256, ctxTokens - histTokens);
-    const outTokens = histAuto && engine ? (engine.coderOutputTokens || salidaTokens) : salidaTokens;
+    // Presupuesto automático estilo modelos frontera: reserva una salida amplia
+    // pero no la mitad de la ventana. 12k cubre una tool call de escritura y deja
+    // ~80 % del contexto para historial, herramientas y resultados.
+    const outTokens = histAuto
+      ? Math.min(engine?.coderOutputTokens || 12288, salidaTokens)
+      : salidaTokens;
     chat.coderConfig = { ...CODER_CONFIG, contextTokens: ctxTokens, outputTokens: outTokens, toolResultTokens: Math.max(1000, Math.min(6000, Math.floor(ctxTokens / 10))), thinkingTokens: Number(ajustes.pensar) > 0 ? Number(ajustes.pensar) : 2048, ...(engine?.thinkingTokens ? {thinkingTokens:engine.thinkingTokens} : {}), ...coderOptions(process.env.BONSAI_CODER_OPTIONS), ...(ajustes.coderContextTokens ? { contextTokens: ajustes.coderContextTokens } : {}) };
     chat.imageMaxTokens = Number(MODELO.catalogo?.[modeloActualClave()]?.vision?.imageMaxTokens) || 1024;
     const perfil = typeof ajustes.perfil === "string" ? ajustes.perfil : "";
