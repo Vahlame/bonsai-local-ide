@@ -1597,7 +1597,7 @@ export class BonsaiChat {
     const pensamientoLibre = this.thinkBudget < 0;
     let sliceCap = this.actOnPc && this.toolChoice !== "none"
       ? Math.max(AGENT_SLICE_TOKENS, this.reservaSalida())
-      : (pensamientoLibre ? Math.max(SLICE_TOKENS, Math.min(16384, this.nCtx - 128))
+      : (pensamientoLibre ? Math.max(SLICE_TOKENS, this.nCtx - 128)
         : (this.thinkBudget !== 0 ? Math.max(SLICE_TOKENS, this.reservaSalida()) : SLICE_TOKENS));
     let escalados = 0;
     /**

@@ -215,9 +215,10 @@ pensar para cerrar la respuesta. El agente sigue decidiendo **cuándo** pensar
 minutos de espera. El ajuste se elige en **Ajustes → Modo razonamiento →
 Sin límite (Qwen3.8)**.
 
-El coste es real: en una prueba, un plan de migración usó 9.523 tokens de una
-slice libre y tardó 25 minutos; con 512/1024/2048/4096 tokens la respuesta es
-más rápida. Sin límite está pensado para tareas difíciles, no para cada turno.
+Qwen3.8 se deja **sin límite**: el único tope es el contexto de 32K y la
+respuesta final. No se optimiza para turnos rápidos; una prueba real de un plan
+de migración usó 9.523 tokens de una slice libre y tardó 25 minutos. Los límites
+512/1024/2048/4096 quedan para otros modelos, no para este perfil.
 
 **Caché recurrente.** El servidor guarda checkpoints del estado recurrente en
 límites de mensaje de usuario y un ancla estable del primer mensaje. En un

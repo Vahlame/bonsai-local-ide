@@ -4287,7 +4287,7 @@ async function main(args) {
                 // de salida y NO desplaza la evidencia leída a la mitad, que era el fallo 16).
                 // Tras escribir/ejecutar lo normal es volver a leer: reserva de lectura.
                 chat.faseSalto = saltosUsados === 0 || accionPaso === "read" ? "plan" : "lectura";
-                chat.pensarEsteSalto = saltosUsados === 0 || ultimoFallo;
+                chat.pensarEsteSalto = chat.thinkBudget < 0 || saltosUsados === 0 || ultimoFallo;
                 // Las imágenes solo viajan en el primer salto del turno.
                 await enviar(siguiente, saltosUsados === 0 ? imagenesData : []);
                 saltosUsados += 1;

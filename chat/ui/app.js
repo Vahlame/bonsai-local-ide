@@ -1843,7 +1843,11 @@
     // reiniciarlo; apagarlo no (cada petición dice si razona).
     const infoPensar = ajustes.pensarInfo || { compatible: true, recomendado: 2048 };
     const pensar = el("select");
-    for (const [v, t] of [[-1, "Sin límite (Qwen3.8)"], [512, "512 tokens"], [1024, "1024 tokens"], [2048, `2048 tokens${infoPensar.recomendado === 2048 ? " (recomendado)" : ""}`], [4096, "4096 tokens"], [8192, "8192 tokens (lento)"]]) {
+    const esQwen38 = /^qwen38/i.test(String(infoPensar.modelo || ""));
+    const opcionesPensar = esQwen38
+      ? [[-1, "Sin límite (Qwen3.8)"]]
+      : [[-1, "Sin límite"], [512, "512 tokens"], [1024, "1024 tokens"], [2048, `2048 tokens${infoPensar.recomendado === 2048 ? " (recomendado)" : ""}`], [4096, "4096 tokens"], [8192, "8192 tokens (lento)"]];
+    for (const [v, t] of opcionesPensar) {
       const o = el("option", "", t);
       o.value = String(v);
       if (Number(ajustes.pensar || infoPensar.recomendado) === v) o.selected = true;
