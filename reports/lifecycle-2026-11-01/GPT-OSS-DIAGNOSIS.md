@@ -1,7 +1,15 @@
 # Diagnóstico adicional de GPT-OSS
 
-Prueba del 1 de noviembre de 2026. Este diagnóstico no cambia Harmony, herramientas,
-muestreo, presupuestos de contexto, perfil de Ornith, binarios ni GGUF.
+Prueba del 1 de noviembre de 2026. Este diagnóstico describe esa corrida y no cambió
+Harmony, herramientas, muestreo, presupuestos de contexto, perfil de Ornith, binarios
+ni GGUF.
+
+> Actualización posterior: se corrigieron el progreso Harmony, el cierre sin
+> herramientas y la verificación HTTP. Una repetición real desde una copia generada
+> por el modelo terminó la app, pasó 4/4 tests y la aceptación de API, navegador y
+> `node server.mjs` en el puerto 3000. Resultados y límites:
+> [VALIDATION.md](../agent-ui-2026-11-01/VALIDATION.md). Este documento conserva el
+> fallo anterior como evidencia; no se reescribe como si hubiera pasado.
 
 ## Método
 
