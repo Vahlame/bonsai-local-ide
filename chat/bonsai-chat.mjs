@@ -709,10 +709,33 @@ export class BonsaiChat {
     return copia;
   }
 
+  /** @returns {string} guía compacta con ejemplos para GPT-OSS. */
+  guiaHerramientas() {
+    const tools = this.agentProfile === "small-local-coder" ? CODER_TOOLS : PC_TOOLS;
+    const ejemplos = {
+      archivo: '{"ruta":"src/app.js","contenido":"..."}',
+      leer: '{"ruta":"src/app.js","desde":1,"hasta":80}',
+      reemplazar: '{"ruta":"src/app.js","buscar":"texto viejo","poner":"texto nuevo"}',
+      buscar_codigo: '{"consulta":"TODO","ruta":"src"}',
+      buscar_estructural: '{"patron":"console.log($$$ARGS)","lenguaje":"js"}',
+      ejecutar: '{"comando":"npm test"}',
+      escribir_partes: '{"ruta":"src/app.js","accion":"iniciar","contenido":"..."}',
+      indice: '{"carpeta":"src"}',
+      simbolo: '{"nombre":"createApp"}',
+      plan: '{"pasos":["inspeccionar","editar","probar"]}',
+      borrar: '{"ruta":"archivo.txt"}',
+      mover: '{"origen":"a.txt","destino":"b.txt"}',
+      git_diff: '{"ruta":"src/app.js"}',
+    };
+    const lineas = tools.map((t) => {
+      const f = t.function || {};
+      const req = (f.parameters?.required || []).join(", ") || "sin argumentos obligatorios";
+      return `- ${f.name}: ${f.description} Argumentos: ${req}. Ejemplo: ${ejemplos[f.name] || "{}"}`;
+    });
+    return `GUÍA DE HERRAMIENTAS PARA GPT-OSS:\nCada llamada va en el canal nativo; no escribas la llamada como texto. Puedes hacer varias llamadas independientes en un turno y esperar sus resultados.\n${lineas.join("\n")}`;
+  }
+
   /**
-   * Primer reintento tras peg-native: conserva las tools nativas pero exige una
-   * sola llamada y nada de texto. Si el modelo vuelve a romper el parser, se
-   * pasa al reintento JSON sin tools.
    * @param {Array<Record<string, any>>} messages
    * @returns {Array<Record<string, any>>}
    */
@@ -1111,8 +1134,14 @@ export class BonsaiChat {
     let tokensBefore = null, memoryBudget = Math.max(600, Math.min(2500, Math.floor(this.historyCap() * 0.08))), memoryOmitted = false;
     task.stateBudget = Math.max(180, Math.min(1800, Math.floor(this.historyCap() * 0.12)));
     task.contextHint = "";
-    const system = [CODER_SYSTEM, contextoEntorno({root:task.root,python:this.pythonCmd,...this.entornoAgente}), this.rules ? `PROJECT RULES:\n${this.rules}` : "", this.globalMemory, task.projectMetadata ? `PROJECT METADATA:\n${takeHeadByTokens(task.projectMetadata,250,estimateTokens)}` : ""].filter(Boolean).join("\n\n");
+    const system = [CODER_SYSTEM, this.puedeFallbackTexto() ? this.guiaHerramientas() : "", contextoEntorno({root:task.root,python:this.pythonCmd,...this.entornoAgente}), this.rules ? `PROJECT RULES:\n${this.rules}` : "", this.globalMemory, task.projectMetadata ? `PROJECT METADATA:\n${takeHeadByTokens(task.projectMetadata,250,estimateTokens)}` : ""].filter(Boolean).join("\n\n");
     const turns = this.session.turns.slice(task.startTurnIndex || 0);
+    const argumentosValidos = (call) => {
+      if (call?.arguments && typeof call.arguments === "object") return true;
+      const texto = String(call?.arguments ?? "");
+      if (!texto.trim()) return false;
+      try { JSON.parse(texto); return true; } catch { return false; }
+    };
     const groups = [];
     for (const turn of turns.slice(1)) {
       if (turn.role === "tool") {
@@ -1120,6 +1149,21 @@ export class BonsaiChat {
         if (first?.role === "assistant" && first.toolCalls?.some((call, i) => (call.id || `call_${i}`) === turn.toolCallId)) groups.at(-1).push(turn);
         else groups.push([notaDeResultado(turn, "llamada anterior no disponible")]);
       } else groups.push([turn]);
+    }
+    // Una llamada con JSON truncado de una versión anterior no debe envenenar el
+    // prompt: se quita y se quitan sus resultados huérfanos. Las nuevas ya no se
+    // guardan (ver runTurn).
+    for (const group of groups) {
+      const first = group[0];
+      if (first?.role !== "assistant" || !Array.isArray(first.toolCalls)) continue;
+      const validas = first.toolCalls.filter(argumentosValidos);
+      if (validas.length === first.toolCalls.length) continue;
+      first.toolCalls = validas;
+      const ids = new Set(validas.map((call, i) => call.id || `call_${i}`));
+      for (let i = group.length - 1; i >= 0; i -= 1) {
+        if (group[i].role === "tool" && !ids.has(group[i].toolCallId)) group.splice(i, 1);
+      }
+      if (!validas.length) delete first.toolCalls;
     }
     // Un reinicio puede dejar una llamada guardada sin resultado; no se vuelve a ejecutar.
     for (const group of groups) {
@@ -1534,6 +1578,7 @@ export class BonsaiChat {
      * @returns {boolean}
      */
     const callIncompleta = (call) => {
+      if (call?.arguments && typeof call.arguments === "object") return false;
       const texto = String(call?.arguments || "");
       if (!texto.trim()) return true;
       try {
@@ -1716,6 +1761,16 @@ export class BonsaiChat {
     }
 
     const spoken = /^sin respuesta\.?$/i.test(draft.trim()) ? "" : draft;
+    // Con --skip-chat-parsing el servidor no marca `length` cuando el modelo corta
+    // una llamada: llega con finish_reason "stop" y argumentos JSON truncados. Esa
+    // llamada no debe guardarse en el historial, porque el template la vuelve a
+    // serializar y llama.cpp falla al parsear los argumentos en el siguiente turno.
+    const validas = toolCalls.filter((call) => !callIncompleta(call));
+    if (validas.length !== toolCalls.length) {
+      for (const call of toolCalls) if (callIncompleta(call)) cortadas.push(call.name || "una función");
+      toolCalls.splice(0, toolCalls.length, ...validas);
+      this.note(`[${cortadas.length} llamada(s) con JSON incompleto: no se guardan; se piden de nuevo]`);
+    }
     if (spoken.trim() || toolCalls.length) {
       /** @type {{role: "assistant", content: string, toolCalls?: Array<{id: string, name: string, arguments: string}>, cortadas?: string[]}} */
       const turn = { role: "assistant", content: spoken };

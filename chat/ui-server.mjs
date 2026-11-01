@@ -1793,7 +1793,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const UI_VERSION = "2.3.4";
+  const UI_VERSION = "2.3.5";
   // El lanzador de escritorio elige el perfil de agente. `optimized` era el
   // nombre histórico del perfil de coding; hoy el único perfil con el harness
   // nuevo es `small-local-coder`. Los ajustes guardados siguen mandando.
@@ -1835,7 +1835,7 @@ async function main(args) {
           datos.editorModerno = true;
           // El viejo default (32768) partía la ventana 50/50. En 2.3.4 el
           // presupuesto vuelve a ser automático: ventana - salida - margen.
-          if (Number(datos.historial) === 32768) datos.historial = 0;
+          if (Number(datos.historial) >= 32768) datos.historial = 0;
           try { fs.writeFileSync(SETTINGS_FILE, JSON.stringify(datos, null, 2), "utf8"); } catch { /* solo lectura */ }
         }
         return datos;
@@ -4591,8 +4591,10 @@ async function main(args) {
             // a responder en XML) a veces escribe igualmente un <tool_call> como texto. Esa
             // respuesta no pasa por present(), así que se guardaba y se le enseñaba al usuario
             // tal cual. Se limpia aquí; si no queda nada, se cierra con lo que sí se hizo.
-            const cierre = chat.session.turns[chat.session.turns.length - 1];
-            if (!ac.signal.aborted && cierre?.role === "assistant") {
+            // Cierra con el último assistant, no con el último mensaje (puede ser
+            // un resultado de tool). Así nunca queda una respuesta vacía.
+            const cierre = [...chat.session.turns].reverse().find((t) => t.role === "assistant");
+            if (!ac.signal.aborted && cierre) {
               const bruto = String(cierre.content || "");
               const limpio = stripFakeToolText(bruto).trim();
               const texto = limpio || resumenDeAcciones(chat.session.turns);

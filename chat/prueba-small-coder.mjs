@@ -123,15 +123,16 @@ try {
       .ok,
     false,
   );
-  assert.equal(
-    validateCall({ name: "leer", arguments: '{"ruta":"a","unexpected":1}' }).ok,
-    false,
-  );
+  const extra = validateCall({ name: "leer", arguments: '{"ruta":"a","unexpected":1}' });
+  assert.equal(extra.ok, true);
+  assert.equal(extra.args.unexpected, undefined);
+  assert.equal(extra.args.ruta, "a");
   assert.equal(
     validateCall({ name: "leer", arguments: '{"ruta":"a"' }).ok,
     false,
   );
   assert.equal(validateCall({ name: "leer", arguments: '```json\n{"ruta":"a"}\n```' }).ok, true);
+  assert.equal(validateCall({ name: "buscar_codigo", arguments: '{"consulta":"x","ruta":"src"}' }).ok, true, "buscar_codigo acepta ruta opcional");
   assert.ok(CODER_TOOLS.some(t => t.function.name === "escribir_partes"));
   const cancelled = new AbortController();
   cancelled.abort();

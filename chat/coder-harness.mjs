@@ -105,8 +105,8 @@ export const CODER_TOOLS = [
   ),
   tool(
     "buscar_codigo",
-    "Búsqueda textual local literal; devuelve rutas y líneas.",
-    { consulta: str },
+    "Búsqueda textual local literal; devuelve rutas y líneas. `ruta` limita la búsqueda a una carpeta o archivo.",
+    { consulta: str, ruta: str },
     ["consulta"],
   ),
   tool(
@@ -210,8 +210,13 @@ export function validateCall(call, tools = CODER_TOOLS) {
       for (const k of s.required || [])
         if (!Object.hasOwn(v, k)) return `${p}.${k}: campo obligatorio`;
       for (const [k, x] of Object.entries(v)) {
-        if (!Object.hasOwn(s.properties || {}, k))
-          return `${p}.${k}: campo desconocido`;
+        // El modelo a veces añade un campo que no está en el schema (por ejemplo
+        // `ruta` en una búsqueda). Un extra inocuo no debe tumbar el turno: se
+        // ignora y se valida el resto. Los obligatorios y los tipos sí se exigen.
+        if (!Object.hasOwn(s.properties || {}, k)) {
+          delete v[k];
+          continue;
+        }
         const e = check(x, s.properties[k], `${p}.${k}`);
         if (e) return e;
       }
@@ -533,7 +538,14 @@ export class CoderTask {
     const a = JSON.parse(call.arguments);
     await this.context.refresh();
     let result;
-    if (call.name === "buscar_codigo") result = this.context.search(a.consulta);
+    if (call.name === "buscar_codigo") {
+      result = this.context.search(a.consulta);
+      const base = String(a.ruta || "").replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "");
+      if (base) {
+        const filtrado = result.split("\n").filter((linea) => linea === base || linea.startsWith(`${base}/`) || linea.startsWith(`${base}:`)).join("\n");
+        result = filtrado || `Sin coincidencias en ${base}.`;
+      }
+    }
     else if (call.name === "buscar_estructural") {
       const busqueda = await buscarEstructural(this.root, a.patron, a.lenguaje, { max: a.max });
       result = busqueda.ok
