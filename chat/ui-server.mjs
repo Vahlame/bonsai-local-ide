@@ -1717,7 +1717,13 @@ async function main(args) {
     const outTokens = histAuto
       ? Math.min(engine?.coderOutputTokens || 12288, salidaTokens)
       : salidaTokens;
-    chat.coderConfig = { ...CODER_CONFIG, contextTokens: ctxTokens, outputTokens: outTokens, toolResultTokens: Math.max(1000, Math.min(6000, Math.floor(ctxTokens / 10))), thinkingTokens: Number(ajustes.pensar) > 0 ? Number(ajustes.pensar) : 2048, ...(engine?.thinkingTokens ? {thinkingTokens:engine.thinkingTokens} : {}), ...coderOptions(process.env.BONSAI_CODER_OPTIONS), ...(ajustes.coderContextTokens ? { contextTokens: ajustes.coderContextTokens } : {}) };
+    const pedidoPensar = Number(ajustes.pensar);
+    const thinkingTokens = Number.isFinite(pedidoPensar) && pedidoPensar !== 0
+      ? pedidoPensar
+      : (engine?.thinkingTokens || 2048);
+    chat.coderConfig = { ...CODER_CONFIG, contextTokens: ctxTokens, outputTokens: outTokens, toolResultTokens: Math.max(1000, Math.min(6000, Math.floor(ctxTokens / 10))), thinkingTokens, ...coderOptions(process.env.BONSAI_CODER_OPTIONS), ...(ajustes.coderContextTokens ? { contextTokens: ajustes.coderContextTokens } : {}) };
+    const itemRazonamiento = catalogoModelos().find((m) => m.clave === modeloActualClave());
+    chat.razonamientoEsfuerzo = itemRazonamiento?.pensar?.nivel || "";
     chat.imageMaxTokens = Number(MODELO.catalogo?.[modeloActualClave()]?.vision?.imageMaxTokens) || 1024;
     const perfil = typeof ajustes.perfil === "string" ? ajustes.perfil : "";
     if (perfil && MODELO.muestreo[perfil]) chat.perfil = perfil;
@@ -1727,7 +1733,8 @@ async function main(args) {
     // Razonamiento: el que pidió el usuario, pero SOLO si el modelo cargado lo admite
     // (catalogo.<clave>.pensar). Con bolding_v1 se queda apagado aunque esté pedido.
     const capacidadPensar = pensarDe(modeloActualClave());
-    chat.thinkBudget = presupuestoPensar(modeloActualClave(), Number(ajustes.pensar) > 0 ? Number(ajustes.pensar) : capacidadPensar.presupuesto);
+    const pedidoEfectivo = Number.isFinite(pedidoPensar) && pedidoPensar !== 0 ? pedidoPensar : capacidadPensar.presupuesto;
+    chat.thinkBudget = presupuestoPensar(modeloActualClave(), pedidoEfectivo);
     // Tope de pasos del agente y tope de tiempo por comando: configurables con límites sanos.
     const topePasos = Number(ajustes.saltosTope);
     if (Number.isFinite(topePasos)) saltosTope = Math.max(24, Math.min(400, Math.round(topePasos)));
@@ -2688,7 +2695,8 @@ async function main(args) {
           const techo = validarTechoModelo(clave, cfg.contexto, cfg.vision);
           if (!techo.ok) throw new Error(`${techo.motivo}. El cambio se rechaza sin apagar el modelo actual.`);
           const presetProfile = cfg.enginePreset && isNamedEnginePreset(cfg.enginePreset) ? engineProfile(cfg.enginePreset) : null;
-          const pensar = presupuestoPensar(clave, Number(presetProfile?.thinkingTokens ?? (raw.pensar ?? actualAjustes.pensar)));
+          const pedidoPensar = raw.pensar ?? actualAjustes.pensar;
+          const pensar = presupuestoPensar(clave, Number(pedidoPensar ?? presetProfile?.thinkingTokens));
           const solicitado = {
             enginePreset: cfg.enginePreset, contexto: cfg.contexto,
             contextoExplicito: raw.contexto !== undefined || raw.context !== undefined,
@@ -2710,7 +2718,7 @@ async function main(args) {
             historial: cfg.historial,
             engineKv: cfg.kv,
             engineVision: cfg.vision,
-            ...(cfg.thinkingTokens ? { pensar: cfg.thinkingTokens } : {}),
+            pensar,
           };
           aplicarAjustesAlChat(guardarAjustes(nuevosAjustes));
           // Aquí es donde consta que el modelo nuevo contesta: se guarda la elección para

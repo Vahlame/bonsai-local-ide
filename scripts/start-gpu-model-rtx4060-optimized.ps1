@@ -549,7 +549,7 @@ if ($Vision) {
     $ServerArgs += "--image-max-tokens", "512"
 }
 
-if ($Pensar -gt 0) {
+if ($Pensar -ne 0) {
     $ServerArgs += "--reasoning-budget", "$Pensar"
     $ServerArgs += "--reasoning-format", "deepseek"
     $Nivel = if ($PensarNivel) { $PensarNivel } elseif ($Item.pensar.nivel) { [string]$Item.pensar.nivel } else { "" }

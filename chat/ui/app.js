@@ -1843,7 +1843,7 @@
     // reiniciarlo; apagarlo no (cada petición dice si razona).
     const infoPensar = ajustes.pensarInfo || { compatible: true, recomendado: 2048 };
     const pensar = el("select");
-    for (const [v, t] of [[512, "512 tokens"], [1024, "1024 tokens"], [2048, `2048 tokens${infoPensar.recomendado === 2048 ? " (recomendado)" : ""}`], [4096, "4096 tokens"], [8192, "8192 tokens (lento)"]]) {
+    for (const [v, t] of [[-1, "Sin límite (Qwen3.8)"], [512, "512 tokens"], [1024, "1024 tokens"], [2048, `2048 tokens${infoPensar.recomendado === 2048 ? " (recomendado)" : ""}`], [4096, "4096 tokens"], [8192, "8192 tokens (lento)"]]) {
       const o = el("option", "", t);
       o.value = String(v);
       if (Number(ajustes.pensar || infoPensar.recomendado) === v) o.selected = true;
@@ -1854,16 +1854,17 @@
       const nuevo = Number(pensar.value);
       await guardarAjustes({ pensar: nuevo });
       const info = ajustes.pensarInfo || {};
-      if (nuevo > 0 && info.compatible === false) {
+      if (nuevo !== 0 && info.compatible === false) {
         avisar("El modelo cargado no admite el modo razonamiento: queda guardado para un modelo compatible.", "warn", 8000);
         return;
       }
-      if (nuevo > 0 && nuevo !== antes && info.servidor !== nuevo) {
+      if (nuevo !== 0 && nuevo !== antes && info.servidor !== nuevo) {
         const actual = estadoModelos.actual || info.modelo;
         if (!actual) return;
+        const etiqueta = nuevo === -1 ? "sin límite de pensamiento" : `con ${nuevo} tokens`;
         const ok = await confirmar(
           "Reiniciar el modelo para razonar",
-          `El razonamiento se fija al arrancar el servidor del modelo. ¿Lo reinicio ahora con ${nuevo} tokens? Tarda unos segundos y el chat se conserva.`,
+          `El razonamiento se fija al arrancar el servidor del modelo. ¿Lo reinicio ahora ${etiqueta}? Tarda unos segundos y el chat se conserva.`,
           "Reiniciar",
         );
         if (ok) void recargarModelo(actual);
@@ -1885,7 +1886,9 @@
     }
     esfuerzo.addEventListener("change", () => guardarAjustes({ engineEffort: esfuerzo.value }));
     if ((ajustes.agentePerfil || "legacy") === "small-local-coder") {
-      const limite=el("small","",`Coding permite hasta ${infoPensar.limiteCoding ?? 512} tokens de pensamiento; el resto de la salida queda para la respuesta y las ediciones.`);
+      const limite=el("small","", Number(infoPensar.limiteCoding) === -1
+        ? "Sin límite de pensamiento; el tope total de salida del turno sigue aplicándose."
+        : `Coding permite hasta ${infoPensar.limiteCoding ?? 512} tokens de pensamiento; el resto de la salida queda para la respuesta y las ediciones.`);
       limite.style.cssText="max-width:280px;color:var(--muted)"; pensarCaja.append(limite);
     }
     if (infoPensar.compatible === false) {
@@ -2361,7 +2364,7 @@
     if (boton) {
       const etiqueta = boton.querySelector(".modelo-nombre");
       // «· piensa» cuando el razonamiento está encendido Y el modelo cargado lo admite.
-      const piensa = Number(ajustes.pensarInfo?.efectivo) > 0;
+      const piensa = Number(ajustes.pensarInfo?.efectivo) !== 0;
       if (etiqueta) etiqueta.textContent = cargandoModelo ? `Cargando ${cargandoModelo}…` : `${nombre}${piensa ? " · piensa" : ""}`;
       boton.disabled = Boolean(cargandoModelo);
       boton.title = cargandoModelo
@@ -2465,7 +2468,7 @@
             marcarModeloInicio();
             fondo.remove();
             dialogoModeloInicioAbierto = false;
-            avisar(`${r.nombre || m.nombre || m.clave} listo · ventana ${r.nCtx} tok${r.pensar ? ` · razona ${r.pensar}` : ""}`, "ok", 7000);
+            avisar(`${r.nombre || m.nombre || m.clave} listo · ventana ${r.nCtx} tok${r.pensar === -1 ? " · razona sin límite" : r.pensar ? ` · razona ${r.pensar}` : ""}`, "ok", 7000);
             window.dispatchEvent(new CustomEvent("bonsai:modelos-cambiados"));
             await cargarAjustes();
             await refrescarModelos();
@@ -2551,7 +2554,7 @@
       const r = await api("/api/modelos", { cuerpo });
       cargandoModelo = "";
       cerrar();
-      avisar(`${r.nombre} listo${r.pensar ? ` · razona con hasta ${r.pensar} tokens` : ""}`, "ok", 6000);
+      avisar(`${r.nombre} listo${r.pensar === -1 ? " · razona sin límite" : r.pensar ? ` · razona con hasta ${r.pensar} tokens` : ""}`, "ok", 6000);
       await cargarAjustes();
       void actualizarChipPresupuesto();
     } catch (err) {
@@ -2579,7 +2582,7 @@
       const r = await api("/api/modelos", { cuerpo: { clave, auto: true } });
       cargandoModelo = "";
       cerrar();
-      avisar(r.cambiado ? `${r.nombre} cargado · ventana ${r.nCtx} tok${r.pensar ? ` · razona con hasta ${r.pensar} tokens` : ""}` : `${r.nombre} ya estaba cargado`, "ok", 6000);
+      avisar(r.cambiado ? `${r.nombre} cargado · ventana ${r.nCtx} tok${r.pensar === -1 ? " · razona sin límite" : r.pensar ? ` · razona con hasta ${r.pensar} tokens` : ""}` : `${r.nombre} ya estaba cargado`, "ok", 6000);
       await cargarAjustes();
       await refrescarModelos();
       void pintarChipVision();

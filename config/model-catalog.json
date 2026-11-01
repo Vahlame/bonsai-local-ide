@@ -1274,8 +1274,9 @@
       "toolcalls": "nativo",
       "pensar": {
         "compatible": true,
-        "presupuesto": 4096,
-        "nivel": "medium"
+        "presupuesto": -1,
+        "nivel": "xhigh",
+        "nota": "Sin límite de tokens de pensamiento; el tope total de salida del turno sigue aplicándose."
       },
       "agente": {
         "saltos": 48,
@@ -1408,7 +1409,9 @@
       },
       "pensar": {
         "compatible": true,
-        "presupuesto": 4096
+        "presupuesto": -1,
+        "nivel": "xhigh",
+        "nota": "Sin límite de tokens de pensamiento; el tope total de salida del turno sigue aplicándose."
       },
       "muestreo": {
         "codigo": {

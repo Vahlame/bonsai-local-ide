@@ -6,6 +6,32 @@ versionado semántico.
 
 ## [Unreleased]
 
+### Qwen3.8-27B (2026-11-01)
+
+#### Añadido
+
+- Perfil `qwen38-27b-perf-iq4` con IQ4_XS mixto, MTP 2, `--cache-ram 512`,
+  `--cache-recurrent-prefix` y `LLAMA_MMAP_TRIM_GPU=1`. El perfil y el GGUF
+  originales se conservan para rollback.
+- Checkpoints recurrentes en límites de mensaje y ancla estable del primer
+  mensaje. El segundo paso de agente reutiliza 6508 tokens; un follow-up nuevo
+  reutiliza 4551; un prefijo de 25K reutiliza 24.997.
+- Pensamiento libre para Qwen3.8: `--reasoning-budget -1`,
+  `thinking_budget_tokens: -1`, esfuerzo `xhigh` y opción
+  **Sin límite (Qwen3.8)** en Ajustes. El tope total de salida del turno sigue
+  aplicándose.
+- Tool calling nativo validado en dos turnos reales: lecturas paralelas, fallo
+  de test, edición dirigida, UTF-8 y recuperación de una denegación de política.
+- Gráfico `docs/graficos/qwen38-cache.svg` y sección Qwen3.8 en el README.
+
+#### Corregido
+
+- `launch-ide.ps1` acepta los presets optimizados y arranca modelos
+  `gpu-parcial`; una segunda apertura no duplica el servidor.
+- Un turno cancelado se reporta como `cancelled`/`incompleto`, no `completed`.
+- El ajuste de razonamiento del usuario manda sobre el preset del motor y se
+  guarda el valor efectivo.
+
 ### Cambiado
 
 - Registro único `config/llama-binaries.json`, consumido por lanzadores, parada y Node.

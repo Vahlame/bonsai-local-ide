@@ -237,7 +237,7 @@ export function pensarDe(clave) {
   const fila = clave ? MODELO.catalogo?.[clave] : null;
   const p = fila && typeof fila.pensar === "object" && fila.pensar ? fila.pensar : {};
   const compatible = p.compatible === true;
-  const presupuesto = compatible && Number.isInteger(p.presupuesto) && p.presupuesto > 0 ? p.presupuesto : 0;
+  const presupuesto = compatible && Number.isInteger(p.presupuesto) && (p.presupuesto === -1 || p.presupuesto > 0) ? p.presupuesto : 0;
   return { compatible, presupuesto };
 }
 
@@ -250,6 +250,7 @@ export function pensarDe(clave) {
  */
 export function presupuestoPensar(clave, pedido) {
   const n = Number(pedido);
+  if (n === -1) return pensarDe(clave).compatible ? -1 : 0;
   if (!Number.isFinite(n) || n <= 0) return 0;
   return pensarDe(clave).compatible ? Math.floor(n) : 0;
 }

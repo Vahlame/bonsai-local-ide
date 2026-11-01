@@ -216,7 +216,8 @@ export class BonsaiChat {
      */
     this.faseSalto = opts.faseSalto === undefined ? undefined : opts.faseSalto;
     /** Razonamiento APAGADO por defecto: solo se enciende con un presupuesto explícito (tokens). */
-    this.thinkBudget = Number.isInteger(opts.think) && /** @type {number} */ (opts.think) > 0 ? /** @type {number} */ (opts.think) : 0;
+    this.thinkBudget = Number.isInteger(opts.think) && (/** @type {number} */ (opts.think) === -1 || /** @type {number} */ (opts.think) > 0) ? /** @type {number} */ (opts.think) : 0;
+    this.razonamientoEsfuerzo = "";
     /**
      * ¿Razona la próxima generación? Solo cuenta si hay presupuesto (thinkBudget > 0). El
      * agente lo apaga en los saltos rutinarios y lo enciende al planificar y tras un fallo:
@@ -491,7 +492,8 @@ export class BonsaiChat {
       inputUsed,
       inputRemaining: Math.max(0, this.historyCap() - inputUsed),
       outputReserved,
-      thinkingReserved: this.thinkBudget > 0 && this.pensarEsteSalto ? this.effectiveThinkingBudget() : 0,
+      thinkingReserved: this.thinkBudget < 0 && this.pensarEsteSalto ? -1
+        : this.thinkBudget > 0 && this.pensarEsteSalto ? this.effectiveThinkingBudget() : 0,
       thinkingIncludedInOutput: true,
       imagesReserved: this.pendingImageTokens || 0,
       safetyMargin: 128,
@@ -625,11 +627,12 @@ export class BonsaiChat {
     // Se limita al modelo GPT-OSS para no cambiar la plantilla de otros modelos.
     const esGptOss = /gpt-oss/i.test(`${this.model || ""} ${this.props?.model_path || ""}`);
     const harmony = esGptOss && caps.supports_reasoning_effort === true && Array.isArray(caps.reasoning_effort_levels);
-    if (think && this.thinkBudget > 0) {
+    if (think && this.thinkBudget !== 0) {
+      const esfuerzo = this.razonamientoEsfuerzo || MODELO.razonamiento.esfuerzo;
       return {
         chat_template_kwargs: harmony
-          ? { reasoning_effort: MODELO.razonamiento.esfuerzo }
-          : { enable_thinking: true, reasoning_effort: MODELO.razonamiento.esfuerzo },
+          ? { reasoning_effort: esfuerzo }
+          : { enable_thinking: true, reasoning_effort: esfuerzo },
         thinking_budget_tokens: this.effectiveThinkingBudget(),
       };
     }
@@ -646,6 +649,7 @@ export class BonsaiChat {
   }
 
   effectiveThinkingBudget() {
+    if (this.thinkBudget < 0) return -1;
     const taskCap = this.consultation || this.faseSalto === "charla" ? 256
       : this.coderTask?.state.phase === "REPAIR" ? 4096 : 1024;
     const editLimit = this.agentProfile === "small-local-coder" ? this.thinkingLimit() : Math.max(0, this.reservaSalida() - 256);
@@ -661,7 +665,7 @@ export class BonsaiChat {
   samplingFields(think = false) {
     const archivo = path.basename(String(this.props?.model_path || this.model || ""));
     const clave = Object.keys(MODELO.catalogo || {}).find((key) => MODELO.catalogo[key]?.archivo === archivo) || "";
-    return muestreo(think && this.thinkBudget > 0 ? "razonar" : this.perfil, clave);
+    return muestreo(think && this.thinkBudget !== 0 ? "razonar" : this.perfil, clave);
   }
 
   toolFields(choiceOverride, incluirTools = true) {
@@ -1276,7 +1280,7 @@ export class BonsaiChat {
     let firstUsefulDelta = null;
     // El razonamiento (si está encendido) solo acompaña a una generación nueva: una
     // continuación ya viene con el bloque de pensamiento cerrado en la plantilla.
-    const think = !continueFinal && this.thinkBudget > 0;
+    const think = !continueFinal && this.thinkBudget !== 0;
     const sinParser = opciones.sinParserNativo === true;
     /** @type {Record<string, unknown>} */
     const body = {
@@ -1285,7 +1289,9 @@ export class BonsaiChat {
       stream: true,
       stream_options: { include_usage: true },
       cache_prompt: this.agentProfile === "small-local-coder" ? (this.coderTask?.config || this.coderConfig || CODER_CONFIG).promptCache !== false : true,
-      max_tokens: this.agentProfile === "small-local-coder" ? Math.min(maxTokens,this.reservaSalida()) : maxTokens,
+      max_tokens: this.agentProfile === "small-local-coder" && this.thinkBudget >= 0
+        ? Math.min(maxTokens, this.reservaSalida())
+        : maxTokens,
       ...this.samplingFields(think),
       ...this.templateFields(think),
       ...this.toolFields(sinParser ? "none" : undefined, !sinParser),
@@ -1585,7 +1591,14 @@ export class BonsaiChat {
     // Con herramientas se empieza ya con hueco para un archivo grande: con 2048 tokens un
     // HTML mediano no cabía, y cada intento tirado eran 1-4 minutos de generación perdida.
     // El tope real lo pone igualmente `room` (lo que queda en la ventana).
-    let sliceCap = this.actOnPc && this.toolChoice !== "none" ? Math.max(AGENT_SLICE_TOKENS, this.reservaSalida()) : SLICE_TOKENS;
+    // Con razonamiento libre el modelo puede consumir más de la slice corta de
+    // charla antes de escribir la respuesta. La reserva de salida ya acota el
+    // turno; no se recorta a 2048 cuando hay pensamiento.
+    const pensamientoLibre = this.thinkBudget < 0;
+    let sliceCap = this.actOnPc && this.toolChoice !== "none"
+      ? Math.max(AGENT_SLICE_TOKENS, this.reservaSalida())
+      : (pensamientoLibre ? Math.max(SLICE_TOKENS, Math.min(16384, this.nCtx - 128))
+        : (this.thinkBudget !== 0 ? Math.max(SLICE_TOKENS, this.reservaSalida()) : SLICE_TOKENS));
     let escalados = 0;
     /**
      * ¿Los `arguments` de esta llamada llegaron cortados? (JSON que no cierra)
