@@ -1,4 +1,4 @@
-# Detiene SOLO el llama-server administrado por esta instalacion.
+﻿# Detiene SOLO el llama-server administrado por esta instalacion.
 #
 # El marcador logs\servidor-administrado-PORT.json registra el PID real de llama-server.exe
 # (pidServidor) y el del lanzador de PowerShell (wrapperPid). Si el lanzador murio pero el
@@ -7,21 +7,23 @@
 # otro puerto u otro modelo, devuelve el mismo error de siempre y no lo detiene.
 #
 # Tambien entiende marcadores antiguos (solo `pid` del lanzador + `iniciado` + hijos).
-param([Parameter(Mandatory=$true)][int]$Port, [switch]$CheckOnly)
+param([Parameter(Mandatory=$true)][ValidateRange(1,65535)][int]$Port, [switch]$CheckOnly, [switch]$Json, [switch]$AllowStarting, [int]$TimeoutMs = 35000)
 $ErrorActionPreference = "Stop"
+if ($Json) { [Console]::OutputEncoding = New-Object Text.UTF8Encoding($false) }
 $RootDir = Split-Path -Parent $PSScriptRoot
 $Marker = Join-Path $RootDir "logs\servidor-administrado-$Port.json"
-# Un servidor administrado puede usar el binario historico (bin\) o el optimizado
-# para sm89 (.local\opt\...\build-RTX4060-Opt-sm89\bin\). Ambos son validos.
-$ExpectedExes = @(
-    [IO.Path]::GetFullPath((Join-Path $RootDir "bin\llama-server.exe")),
-    # El lanzador optimizado elige primero este build de laboratorio. Si falta aquí,
-    # el marcador es válido pero Test-ServidorEsperado rechaza el proceso real y el
-    # botón Detener contesta "puerto no administrado" sin cerrar nada.
-    [IO.Path]::GetFullPath((Join-Path $RootDir "bin\builds\lab-server-mvq2\bin\llama-server.exe")),
-    [IO.Path]::GetFullPath((Join-Path $env:USERPROFILE ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe")),
-    [IO.Path]::GetFullPath((Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"))
-)
+. (Join-Path $PSScriptRoot 'managed-server-common.ps1')
+$Binaries = @(Get-BonsaiBinaries)
+$ExpectedExes = @($Binaries | ForEach-Object { $_.exe })
+$mutex = Get-BonsaiMutex
+$locked = $false
+$Info = $null
+$Servidores = @()
+$Lanzador = $null
+$ListaEspera = @()
+try {
+Enter-BonsaiMutex $mutex $TimeoutMs
+$locked = $true
 $Catalogo = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 # Model Hub: modelos descargados en models/hub-catalog.json. Sin esto, un
 # llama-server de un modelo del Hub no se reconocería como propio y no se podría
@@ -41,12 +43,13 @@ if (Test-Path -LiteralPath $HubPath) {
 # Cualquiera de estos lanzadores es "nuestro" (historico u optimizado).
 $StartScripts = @(
     (Join-Path $RootDir "scripts\start-server.ps1"),
+    (Join-Path $RootDir "scripts\start-gpu-model.ps1"),
     (Join-Path $RootDir "scripts\start-gpu-model-rtx4060-optimized.ps1")
 )
 
 function Get-Win32Process([int]$Id) {
     if ($Id -le 0) { return $null }
-    $fila = @(Get-CimInstance Win32_Process -Filter ("ProcessId=" + $Id) -ErrorAction SilentlyContinue)
+    $fila = @(Get-CimInstance Win32_Process -Filter ("ProcessId=" + $Id) -ErrorAction Stop)
     if ($fila.Count -eq 0) { return $null }
     return $fila[0]
 }
@@ -73,6 +76,10 @@ function Test-ServidorEsperado($Proceso, [string]$ModelPath) {
     if (-not $Proceso -or -not $Proceso.ExecutablePath) { return $false }
     $exe = Get-RealPath $Proceso.ExecutablePath
     if (-not ($ExpectedExes | Where-Object { $_ -ieq $exe })) { return $false }
+    if ($Info.binId -or $Info.exe) {
+        $entry = $Binaries | Where-Object { $_.id -ceq [string]$Info.binId } | Select-Object -First 1
+        if (-not $entry -or $entry.exe -ine (Get-RealPath $Info.exe) -or $entry.exe -ine $exe) { return $false }
+    }
     $cmd = [string]$Proceso.CommandLine
     if (-not $cmd) { return $false }
     if (-not ($cmd -match ("(?i)(?:^|\s)--port\s+" + $Port + "(?:\s|$)"))) { return $false }
@@ -91,6 +98,7 @@ function Test-Lanzador($Proceso, $Info) {
     $esNuestro = $false
     foreach ($script in $StartScripts) { if ($cmd -like ("*" + $script + "*")) { $esNuestro = $true; break } }
     if (-not $esNuestro) { return $false }
+    if ($cmd -match '(?i)(?:^|\s)-Port\s+(\d+)(?:\s|$)' -and [int]$Matches[1] -ne $Port) { return $false }
     $marcador = Read-Ticks ([string]$Info.iniciado)
     if ($marcador -le 0) { return $false }
     return ((Get-StartTicks ([int]$Proceso.ProcessId)) -eq $marcador)
@@ -106,18 +114,23 @@ if (Test-Path -LiteralPath $Marker) {
     }
 }
 $ModelPath = if ($MarkerValido) { Get-ModelPathDelMarcador $Info } else { "" }
-$ListaEspera = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { [int]$_ })
+function Get-Listeners {
+    # Query the class, rather than swallowing access/transport errors as an empty port.
+    @(Get-CimInstance -Namespace root/StandardCimv2 -ClassName MSFT_NetTCPConnection -Filter "LocalPort=$Port AND State=2" -ErrorAction Stop | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { [int]$_ })
+}
+$ListaEspera = @(Get-Listeners)
 $Servidores = New-Object System.Collections.Generic.List[int]
 $Lanzador = $null
 
 if ($MarkerValido) {
     $IniciadoMarcador = Read-Ticks ([string]$Info.iniciado)
     # 1) Marcador nuevo: el PID real de llama-server.exe, verificado por ejecutable, puerto,
-    #    modelo y arranque posterior al del lanzador. iniciadoServidor queda como dato de
-    #    diagnostico (no se exige igualdad exacta para no rechazar un cierre legitimo).
+    #    modelo y arranque posterior al del lanzador. Si iniciadoServidor esta presente,
+    #    debe coincidir exactamente para rechazar un PID reutilizado.
     if ($Info.pidServidor) {
         $srv = Get-Win32Process ([int]$Info.pidServidor)
-        if ((Test-ServidorEsperado $srv $ModelPath) -and ((Get-StartTicks ([int]$Info.pidServidor)) -ge $IniciadoMarcador)) {
+        if ((Test-ServidorEsperado $srv $ModelPath) -and ((Get-StartTicks ([int]$Info.pidServidor)) -ge $IniciadoMarcador) -and
+            (-not $Info.iniciadoServidor -or (Get-StartTicks ([int]$Info.pidServidor)) -eq (Read-Ticks ([string]$Info.iniciadoServidor)))) {
             $Servidores.Add([int]$Info.pidServidor)
         }
     }
@@ -135,10 +148,10 @@ if ($MarkerValido) {
     }
     # 3) Huerfano (BUG-05): el lanzador ya no existe, pero el marcador identifica el modelo que
     #    se lanzo y el listener es el bin\llama-server.exe esperado con el --port correcto.
-    if ($Servidores.Count -eq 0 -and -not $Lanzador) {
+    if ($Servidores.Count -eq 0 -and -not $Lanzador -and -not $Info.pidServidor) {
         foreach ($listener in $ListaEspera) {
             $srv = Get-Win32Process ($listener)
-            if ((Test-ServidorEsperado $srv $ModelPath) -and ((Get-StartTicks $listener) -ge $IniciadoMarcador)) {
+            if ((Test-ServidorEsperado $srv $ModelPath) -and $srv.ParentProcessId -eq $WrapperId -and ((Get-StartTicks $listener) -ge $IniciadoMarcador)) {
                 $Servidores.Add([int]$listener)
             }
         }
@@ -146,45 +159,92 @@ if ($MarkerValido) {
 }
 $Servidores = @($Servidores | Select-Object -Unique)
 
-foreach ($listener in $ListaEspera) {
-    if ($listener -notin $Servidores) {
-        throw "El puerto $Port pertenece a un proceso que esta interfaz no administra. Cierra ese servidor manualmente si deseas cambiar el modelo."
-    }
+
+$foreign = @($ListaEspera | Where-Object { $_ -notin $Servidores })
+$state = if ($foreign.Count) { 'foreign' } elseif ($ListaEspera.Count) { 'ready' } elseif ($Lanzador -or $Servidores.Count) { 'starting' } else { 'empty' }
+$Details = [ordered]@{
+    ok = $true; state = $state; port = $Port; marker = $Info; markerPath = $Marker;
+    wrapperPid = $(if ($Lanzador) { [int]$Lanzador.ProcessId } else { $null });
+    serverPid = $(if ($Servidores.Count) { [int]$Servidores[0] } else { $null });
+    exe = $(if ($Servidores.Count) { (Get-Win32Process $Servidores[0]).ExecutablePath } else { $Info.exe });
+    binId = $Info.binId; model = $Info.modelo; listenerPids = $ListaEspera;
+    portClosed = ($ListaEspera.Count -eq 0); markerRemoved = (-not (Test-Path -LiteralPath $Marker))
 }
 if ($CheckOnly) {
-    if ($ListaEspera.Count -gt 0) { Write-Output "managed" }
-    elseif ($Lanzador -or $Servidores.Count -gt 0) { Write-Output "starting" }
-    else { Write-Output "empty" }
+    if ($Json) { $Details | ConvertTo-Json -Compress -Depth 8 }
+    elseif ($state -eq 'foreign') { throw "El puerto $Port pertenece a un proceso que esta interfaz no administra" }
+    elseif ($state -eq 'ready') { Write-Output 'managed' }
+    else { Write-Output $state }
     exit 0
 }
-if ($Servidores.Count -eq 0) {
-    if ($Lanzador) {
-        throw "Hay un arranque administrado en curso para el puerto $Port; espera a que termine y vuelve a intentarlo."
-    }
-    # Marcador sin procesos: restos de un arranque que ya termino. Se descarta para no bloquear.
-    if ($MarkerValido) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
-    exit 0
+if ($state -eq 'foreign') { throw "El puerto $Port pertenece a un proceso que esta interfaz no administra" }
+if ($Lanzador -and -not $Servidores.Count -and -not $AllowStarting) {
+    throw "Hay un arranque administrado en curso para el puerto $Port"
 }
-foreach ($servidor in $Servidores) {
-    # Si ya murió entre la inspección y el cierre, no es un error: el objetivo es que no quede vivo.
-    try { Stop-Process -Id $servidor -Force -ErrorAction Stop } catch { }
+$stopped = New-Object 'System.Collections.Generic.List[int]'
+$deadline = (Get-Date).AddMilliseconds($TimeoutMs)
+# Revalidate immediately before killing: a reused PID is never permission to kill.
+foreach ($serverId in $Servidores) {
+    $proc = Get-Win32Process $serverId
+    if ($proc -and -not (Test-ServidorEsperado $proc $ModelPath)) { throw "Cambio la identidad del PID $serverId; no se detiene" }
+    if ($proc -and $Info.pidServidor -eq $serverId -and $Info.iniciadoServidor -and (Get-StartTicks $serverId) -ne (Read-Ticks ([string]$Info.iniciadoServidor))) { throw "Cambio la fecha del PID $serverId" }
+    if ($proc) { Stop-Process -Id $serverId -Force -ErrorAction Stop; $stopped.Add($serverId) }
 }
-$limite = (Get-Date).AddSeconds(8)
-while ((Get-Date) -lt $limite) {
-    $vivos = @($Servidores | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue })
-    $escuchando = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
-    if ($vivos.Count -eq 0 -and $escuchando.Count -eq 0) { break }
-    Start-Sleep -Milliseconds 100
+# Wait for the model and port before forcing a wrapper that did not exit naturally.
+if ($Servidores.Count) {
+    do {
+        $modelAlive = @($Servidores | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue })
+        $modelListeners = @(Get-Listeners)
+        if (-not $modelAlive.Count -and -not $modelListeners.Count) { break }
+        Start-Sleep -Milliseconds 100
+    } while ((Get-Date) -lt $deadline)
+    if ($modelAlive.Count -or $modelListeners.Count) { throw "El modelo o puerto $Port siguen vivos; se conserva el marcador" }
 }
-$vivos = @($Servidores | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue })
-$escuchando = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
-if ($vivos.Count -gt 0 -or $escuchando.Count -gt 0) {
-    # No se borra el marcador: deja la puerta abierta a reintentar y a diagnosticar.
-    throw "El servidor del puerto $Port sigue vivo después de Stop-Process (PID(s): $($vivos -join ', ')). No se borró el marcador."
-}
-# El lanzador ya debería haber salido al morir su hijo. Si quedó atascado, es nuestro
-# (Test-Lanzador lo verificó) y se cierra para no dejar un proceso zombi.
+# In a start cancellation the wrapper must stop creating children before the final scan.
 if ($Lanzador) {
-    try { Stop-Process -Id ([int]$Lanzador.ProcessId) -Force -ErrorAction SilentlyContinue } catch { }
+    $wrapperId = [int]$Lanzador.ProcessId
+    $proc = Get-Win32Process $wrapperId
+    if ($proc -and -not (Test-Lanzador $proc $Info)) { throw "Cambio la identidad del wrapper $wrapperId" }
+    if ($proc) { Stop-Process -Id $wrapperId -Force -ErrorAction Stop; $stopped.Add($wrapperId) }
+    $children = @(Get-CimInstance Win32_Process -Filter ("ParentProcessId=" + $wrapperId) -ErrorAction Stop)
+    foreach ($child in $children) {
+        if (Test-ServidorEsperado $child $ModelPath) {
+            $childId = [int]$child.ProcessId
+            if ((Get-StartTicks $childId) -ge (Read-Ticks ([string]$Info.iniciado))) {
+                Stop-Process -Id $childId -Force -ErrorAction Stop
+                if ($childId -notin $Servidores) { $Servidores += $childId }
+                $stopped.Add($childId)
+            }
+        }
+    }
 }
-Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue
+$checkIds = @($Servidores) + @($stopped)
+do {
+    $alive = @($checkIds | Select-Object -Unique | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue })
+    $listeners = @(Get-Listeners)
+    if (-not $alive.Count -and -not $listeners.Count) { break }
+    Start-Sleep -Milliseconds 100
+} while ((Get-Date) -lt $deadline)
+if ($alive.Count -or $listeners.Count) { throw "El servidor del puerto $Port sigue vivo; PID(s): $($alive -join ','); se conserva el marcador" }
+if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction Stop }
+if (Test-Path -LiteralPath $Marker) { throw 'No se pudo borrar el marcador' }
+if ($Json) {
+    $Details.state = 'empty'
+    $Details.portClosed = $true
+    $Details.markerRemoved = $true
+    $Details.stoppedPids = @($stopped | Select-Object -Unique)
+    $Details | ConvertTo-Json -Compress -Depth 8
+}
+} catch {
+    if ($Json) {
+        [ordered]@{ ok = $false; state = $(if ($state -eq 'foreign') { 'foreign' } else { 'error' });
+            error = $_.Exception.Message; port = $Port; marker = $Info; markerPath = $Marker;
+            serverPids = @($Servidores); wrapperPid = $(if ($Lanzador) { $Lanzador.ProcessId } else { $null });
+            listenerPids = @($ListaEspera); markerRemoved = (-not (Test-Path -LiteralPath $Marker)) } | ConvertTo-Json -Compress -Depth 8
+        exit 1
+    }
+    throw
+} finally {
+    if ($locked) { $mutex.ReleaseMutex() }
+    $mutex.Dispose()
+}

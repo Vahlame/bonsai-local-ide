@@ -23,7 +23,9 @@ import { NavegadorLocal } from "./navegador.mjs";
 import { McpPlaywright } from "./mcp-playwright.mjs";
 import { buscarWeb, leerWeb } from "./investigacion.mjs";
 import { buscarEstructural, buscarTexto } from "./code-search.mjs";
-import { cambiarConRecuperacion } from "./cambio-modelo.mjs";
+import { createManagedServer, configurationFromMarker, closeHttpServer, LifecycleError } from "./lifecycle/managed-server.mjs";
+import { createProcessAdapter } from "./lifecycle/process-adapter.mjs";
+import { selectBinary } from "./lifecycle/binary-registry.mjs";
 import { ocrLocal } from "./ocr.mjs";
 import { imagenesParaModelo } from "./imagenes.mjs";
 import { analizarEstadoGit, elegirRutasGit } from "./git-seguro.mjs";
@@ -1216,74 +1218,6 @@ async function main(args) {
     return fila ? fila.clave : "";
   }
 
-  /** Detiene únicamente el servidor de esta instalación y de este puerto. */
-  function apagarLlamaServer(soloComprobar = false) {
-    return new Promise((resolve, reject) => {
-      const url = new URL(chat.base);
-      if (!["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
-        reject(new Error("solo se puede administrar un servidor local"));
-        return;
-      }
-      const port = url.port || (url.protocol === "https:" ? "443" : "80");
-      const script = path.join(PROJECT, "scripts", "stop-managed-server.ps1");
-      const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Port", port];
-      if (soloComprobar) args.push("-CheckOnly");
-      execFile("powershell.exe", args, { windowsHide: true, timeout: 25000 }, (err, stdout, stderr) => {
-        if (err) reject(new Error(String(stderr || err.message).trim()));
-        else resolve(String(stdout || "").trim());
-      });
-    });
-  }
-
-  /**
-   * VRAM libre en MiB (null si no se pudo medir, para no confundir fallo con éxito).
-   * @returns {Promise<number | null>}
-   */
-  function vramLibreMiB() {
-    return new Promise((resolve) => {
-      execFile("nvidia-smi", ["--query-gpu=memory.free", "--format=csv,noheader,nounits"], { windowsHide: true, timeout: 8000 }, (err, stdout) => {
-        const n = Number.parseInt(String(stdout || "").trim(), 10);
-        if (err || !Number.isFinite(n)) {
-          process.stderr.write("[GPU] nvidia-smi falló o no devolvió VRAM libre: no se pudo medir la memoria disponible.\n");
-          resolve(null);
-          return;
-        }
-        resolve(n);
-      });
-    });
-  }
-
-  /**
-   * Deja la GPU libre para el modelo nuevo: insiste en apagar (la ventana puede estar
-   * relanzándolo) hasta que no quede proceso, el puerto esté cerrado y la VRAM se haya
-   * soltado. Lanzar antes de eso hacía que start-server.ps1 se negara a arrancar.
-   * @param {number} ms
-   * @param {number} [umbralMiB] VRAM mínima libre requerida; por defecto deriva del catálogo.
-   * @returns {Promise<boolean>}
-   */
-  async function liberarGpu(ms, alDetener = () => {}, umbralMiB) {
-    await apagarLlamaServer();
-    alDetener();
-    const fin = Date.now() + ms;
-    while (Date.now() < fin) {
-      let puertoCerrado = true;
-      try {
-        await chat.request("/health");
-        puertoCerrado = false;
-      } catch {
-        puertoCerrado = true;
-      }
-      const libre = await vramLibreMiB();
-      const umbral = umbralMiB ?? 6500;
-      if (puertoCerrado && libre !== null && libre >= umbral) return true;
-      await new Promise((r) => setTimeout(r, 600));
-    }
-    if (await vramLibreMiB() === null) {
-      process.stderr.write("[GPU] No se pudo medir VRAM tras el tiempo de espera: no se confirma que la GPU esté libre.\n");
-    }
-    return false;
-  }
-
   /**
    * Comando PowerShell listo para pegar que arranca el servidor optimizado con el
    * preset dado, usando rutas absolutas (la interfaz corre en el navegador y no
@@ -1295,7 +1229,8 @@ async function main(args) {
    * @returns {string}
    */
   function comandoServidorOptimizado(preset, puerto, clave = "ornith9b") {
-    const modeloItem = (MODELO.catalogo && MODELO.catalogo[clave]) || (MODELO.catalogo && MODELO.catalogo.ornith9b) || {};
+    const modeloItem = MODELO.catalogo?.[clave];
+    if (!modeloItem) throw new LifecycleError(`Modelo desconocido: ${clave}`, { state: "error", port: puerto }, 400);
     const planGuardado = modeloItem.plan;
     const nombre = isNamedEnginePreset(preset) ? preset : (preset === "AUTO" || preset === "CUSTOM") && planGuardado ? "" : "8GB-VISION-MAX-Q8-100K";
     const p = nombre
@@ -1318,12 +1253,7 @@ async function main(args) {
     const projPath = projArchivo ? path.join(PROJECT, "models", projArchivo) : "";
     const templatePath = path.join(PROJECT, "logs", `chat_template_${puerto}.jinja`);
 
-    const cands = [
-      path.join(PROJECT, ".local", "opt", "bonsai-inference", "build-RTX4060-Opt-sm89", "bin", "llama-server.exe"),
-      path.join(process.env.USERPROFILE || "", ".local", "opt", "bonsai-inference", "build-RTX4060-Opt-sm89", "bin", "llama-server.exe"),
-    ];
-    let bin = path.join(PROJECT, "bin", "llama-server.exe");
-    for (const c of cands) { try { if (fs.existsSync(c)) { bin = c; break; } } catch { /* ignora */ } }
+    const { exe: bin } = selectBinary(PROJECT);
 
     const a = ["-m", modelPath, "--gpu-layers", "99"];
     if (!estable) a.push("--fit", "off", "--kv-offload");
@@ -1375,123 +1305,27 @@ async function main(args) {
     return `cd "${PROJECT}"; & ${linea}`;
   }
 
-  /**
-   * Lanza el servidor de IA. Para los presets optimizados de la RTX 4060 usa el
-   * lanzador dedicado (`start-gpu-model-rtx4060-optimized.ps1`), que arranca el
-   * binario sm89 y aplica f16/vision/chat-template. Para el resto, el historico.
-   * @param {string} clave
-   * @param {Record<string, any> | null} configuracion
-   */
-  function lanzarServidorLlama(clave, configuracion = null) {
-    const logArranque = process.env.BONSAI_LOG_ARRANQUE || path.join(PROJECT, "logs", "arranque-modelo.log");
-    const puerto = new URL(chat.base).port || "80";
-    const preset = configuracion ? configuracion.enginePreset || "" : leerAjustes().enginePreset || "";
-    // Presets optimizados RTX 4060 -> lanzador dedicado con binario sm89.
-    const item = MODELO.catalogo?.[clave];
-    const optimizado = /^(8GB-VISION-MAX-Q8-100K|8GB-VISION-MAX-Q8|8GB-VISION-MAX-Q4|8GB-VISION-MAX-F16|8GB-VISION-DEFAULT-F16|8GB-VISION-ULTRA-F16|8GB-VISION-HIGH|8GB-VISION-BALANCED|8GB-VISION-SAFE|8GB-CODE-MAX|8GB-CODE-HIGH|8GB-CODE-BALANCED|8GB-CODE-FAST|8GB-RESEARCH|8GB-VISION-QUALITY|8GB-VISION-ULTRA|CUSTOM|AUTO)$/.test(preset) ||
-      Boolean(item && item.fuente === "hub");
-    const script = path.join(PROJECT, "scripts", optimizado ? "start-gpu-model-rtx4060-optimized.ps1" : "start-server.ps1");
-    const args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-ManagedByIDE", "-Modelo", clave, "-Port", puerto];
-    try {
-      fs.mkdirSync(path.dirname(logArranque), { recursive: true });
-      args.push("-Log", logArranque);
-    } catch {
-      /* sin registro: se lanza igual */
-    }
-    if (preset && isNamedEnginePreset(preset) && item?.servidor?.tipo !== "moe-hibrido") {
-      args.push("-EnginePreset", preset);
-    } else if (preset === "CUSTOM" || preset === "AUTO") {
-      // En MoE el lanzador aplica el plan del modelo; no se le pasa un preset
-      // denso que sobreescriba contexto/KV.
-      args.push("-EnginePreset", "CUSTOM");
-    }
-    const conVision = configuracion && typeof configuracion.vision === "boolean"
-      ? configuracion.vision
-      : (preset && isNamedEnginePreset(preset)) ? Boolean(engineProfile(preset).vision)
-      : typeof leerAjustes().engineVision === "boolean" ? leerAjustes().engineVision
-      : mmprojDisponible(clave);
-    if (conVision) args.push("-Vision");
-    else if (!optimizado) args.push("-SinVision");
-    // Un MoE que cabe en RAM arranca mucho más rápido si las páginas ya están
-    // en la page cache; el lanzador omite la precarga si el GGUF no cabe.
-    if (item?.servidor?.tipo === "moe-hibrido") args.push("-Precargar");
-    if (configuracion) {
-      // Solo se pasan contexto/KV si vienen definidos; si no, manda el preset.
-      if (configuracion.contexto !== undefined && configuracion.contexto !== null) args.push("-ContextSize", String(configuracion.contexto));
-      if (configuracion.contextoExplicito === true) args.push("-ContextoExplicito");
-      if (configuracion.kv) args.push("-KVCacheType", configuracion.kv);
-      if (configuracion.mmprojCPU === true) args.push("-MmprojCPU");
-      if (configuracion.draftModel) args.push("-DraftModel", String(configuracion.draftModel));
-      if (configuracion.draftTokens) args.push("-DraftTokens", String(configuracion.draftTokens));
-      if ("dormir" in configuracion) args.push("-DormirSeg", String(configuracion.dormir));
-      if (configuracion.hostIP) args.push("-HostIP", configuracion.hostIP);
-    } else {
-      const aj = leerAjustes();
-      // En MoE manda el plan (32k por defecto): pasar la ventana global de 110k
-      // dejaría casi toda la VRAM en KV y muy pocos expertos en la GPU.
-      if (aj.coderContextTokens && item?.servidor?.tipo !== "moe-hibrido") args.push("-ContextSize", String(aj.coderContextTokens));
-      if (preset === "CUSTOM") args.push("-KVCacheType", ["f16", "bf16", "q8_0", "q4_0"].includes(aj.engineKv) ? aj.engineKv : "f16");
-    }
-    // Siempre explícito: el razonamiento que pidió el usuario si ESE modelo lo admite, o 0.
-    const pensar = configuracion ? configuracion.pensar : presupuestoPensar(clave, Number(leerAjustes().pensar));
-    args.push("-Pensar", String(pensar));
-    pensarServidor = pensar;
-    const effort = String(configuracion?.pensarNivel || leerAjustes().engineEffort || "default");
-    if (effort && effort !== "default") args.push("-PensarNivel", effort);
-    // OJO: nada de `detached: true`. En Windows deja al hijo SIN consola y PowerShell
-    // 5.1 sale con código 0 sin ejecutar ni una línea (costó media tarde averiguarlo:
-    // el servidor nunca arrancaba y no había ni un mensaje de error). Con `windowsHide`
-    // el hijo recibe una consola oculta y funciona; el proceso sigue vivo aunque el
-    // ui-server muera, que es lo que hace falta.
-    const hijo = spawn("powershell.exe", args, { stdio: "ignore", windowsHide: true, cwd: PROJECT });
-    hijo.on("error", (err) => { hijo.errorArranque = err; });
-    hijo.unref();
-    return hijo;
-  }
-
-  /**
-   * Espera a que el servidor conteste /health (el modelo tarda en cargar).
-   * @param {number} ms
-   * @returns {Promise<boolean>}
-   */
-  async function esperarEncendido(ms, hijo) {
-    const fin = Date.now() + ms;
-    while (Date.now() < fin) {
-      if (hijo.errorArranque) throw hijo.errorArranque;
-      if (hijo.exitCode !== null) throw new Error(`el proceso del modelo terminó con código ${hijo.exitCode}; revisa logs/arranque-modelo.log`);
-      try {
-        const res = await chat.request("/health");
-        if (res.ok) return true;
-      } catch {
-        /* todavía no escucha */
-      }
-      await new Promise((r) => setTimeout(r, 1000));
-    }
-    return false;
-  }
-
-  /** Guarda la configuración del servidor administrado antes de detenerlo. */
+  const lifecycle = createManagedServer({
+    port: args.llamaPort,
+    adapter: createProcessAdapter({ root: PROJECT, catalog: MODELO, getSettings: leerAjustes, isNamedEnginePreset,
+      engineProfile, mmprojDisponible, presupuestoPensar, onThinking: (n) => { pensarServidor = n; } }),
+  });
   async function configuracionAnterior() {
-    const estado = await apagarLlamaServer(true);
-    if (estado === "empty") return null;
-    if (estado !== "managed") throw new Error("hay un arranque en curso; espera a que termine");
-    try {
-      const port = new URL(chat.base).port || "80";
-      const datos = JSON.parse(fs.readFileSync(path.join(PROJECT, "logs", `servidor-administrado-${port}.json`), "utf8"));
-      const perfil = MODELO.catalogo?.[datos.modelo]?.servidor;
-      if (datos.modelo !== modeloActualClave() || (perfil?.tipo !== "gpu-completa" && perfil?.tipo !== "moe-hibrido") ||
-          !Number.isInteger(datos.contexto) || datos.contexto < 4096 || datos.contexto > perfil.contexto ||
-          !["f16", "q8_0", "q4_0"].includes(datos.kv) || typeof datos.vision !== "boolean" ||
-          (datos.mmprojCPU !== undefined && typeof datos.mmprojCPU !== "boolean") ||
-          !Number.isInteger(datos.pensar) || datos.pensar < 0 || datos.pensar > 65536 ||
-          !Number.isInteger(datos.dormir) || datos.dormir < 0 || datos.dormir > 86400 ||
-          !["127.0.0.1", "localhost", "::1"].includes(datos.hostIP)) throw new Error("datos incompletos");
-      if (datos.enginePreset && isNamedEnginePreset(datos.enginePreset)) engineProfile(datos.enginePreset);
-      return { clave: datos.modelo, contexto: datos.contexto, contextoExplicito: true, kv: datos.kv, vision: datos.vision, mmprojCPU: datos.mmprojCPU === true, pensar: datos.pensar, dormir: datos.dormir, hostIP: datos.hostIP, enginePreset: datos.enginePreset || "" };
-    } catch {
-      // Un arranque de una versión anterior no guardaba estos parámetros.
-      return { error: "no se guardó la configuración anterior; reinicia el IDE manualmente" };
+    const state = await lifecycle.inspect();
+    if (state.state === "empty") return null;
+    if (state.state !== "ready") throw new LifecycleError("El servidor no está listo para cambiar de modelo", state, 409);
+    const previous = configurationFromMarker(state.marker);
+    const perfil = MODELO.catalogo?.[previous?.model]?.servidor;
+    if (!previous || previous.model !== modeloActualClave() || !["gpu-completa", "moe-hibrido"].includes(perfil?.tipo) || previous.config.contexto > perfil.contexto) {
+      return { error: "no se guardó una configuración anterior recuperable" };
     }
+    return { clave: previous.model, ...previous.config };
+  }
+  async function conectarModelo(clave) {
+    await chat.connect();
+    if (modeloActualClave() !== clave) throw new Error("El servidor respondió con otro modelo");
+    chat.vision = Boolean(chat.props?.modalities?.vision);
+    aplicarAjustesAlChat(leerAjustes());
   }
 
   function archiveActive() {
@@ -2557,60 +2391,17 @@ async function main(args) {
         return;
       }
       // ---------------------------------------------------------------- modelos
-      if (req.method === "GET" && url.pathname === "/api/servidor") {
-        let encendido = false;
-        try { encendido = (await fetch(`${chat.base}/health`, { signal: AbortSignal.timeout(2000) })).ok; } catch { /* apagado o no disponible */ }
-        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
-        res.end(JSON.stringify({ encendido, ocupado: busy }));
-        return;
-      }
-      if (req.method === "POST" && url.pathname === "/api/servidor") {
-        const raw = JSON.parse(await readBody(req));
-        if (!["encender", "apagar", "cerrar"].includes(raw?.accion)) { res.writeHead(400).end("Acción desconocida"); return; }
-        if (busy) { res.writeHead(409).end("Hay una operación en curso; espera a que termine o detenla primero."); return; }
-        busy = true;
+      if (req.method === "GET" && ["/api/servidor", "/api/server/state"].includes(url.pathname)) {
         try {
-          const estado = await apagarLlamaServer(true);
-          if (raw.accion === "encender") {
-            if (estado === "starting") throw new Error("El servidor ya está arrancando; espera a que termine.");
-            if (estado === "empty") {
-              const clave = configuracionApagada?.clave || modeloGuardadoClave();
-              const hijo = lanzarServidorLlama(clave, configuracionApagada);
-              if (!(await esperarEncendido(180000, hijo))) throw new Error("El modelo no arrancó; revisa logs/arranque-modelo.log");
-              await chat.connect();
-              if (modeloActualClave() !== clave) throw new Error("El servidor respondió con otro modelo.");
-              chat.vision = Boolean(chat.props?.modalities?.vision);
-              aplicarAjustesAlChat(leerAjustes());
-            }
-          } else {
-            if (estado === "starting") throw new Error("El servidor está arrancando; espera a que termine.");
-            if (estado === "managed") {
-              const anterior = await configuracionAnterior();
-              if (anterior && !anterior.error) configuracionApagada = anterior;
-              await apagarLlamaServer();
-              let parado = false;
-              for (let i = 0; i < 10; i++) {
-                if (await apagarLlamaServer(true) === "empty") { parado = true; break; }
-                await new Promise((resolve) => setTimeout(resolve, 500));
-              }
-              if (!parado) throw new Error("El servidor no terminó de apagarse.");
-            }
-          }
+          const state = await lifecycle.inspect();
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
-          if (raw.accion === "cerrar") {
-            res.once("finish", () => {
-              server.close(() => process.exit(0));
-              server.closeAllConnections();
-            });
-          }
-          res.end(JSON.stringify({ ok: true, encendido: raw.accion === "encender" }));
-        } finally { busy = false; }
+          res.end(JSON.stringify({ ok: true, ...state, encendido: state.state === "ready" || state.healthy === true, ocupado: busy || lifecycle.busy }));
+        } catch (err) {
+          res.writeHead(err.status || 500, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: false, state: err.state || "error", error: err.message, context: err.context }));
+        }
         return;
       }
-      
-      // ================================================================
-      // OPTIMIZED SERVER MANAGEMENT (RTX 4060)
-      // ================================================================
       if (req.method === "GET" && url.pathname === "/api/server/command") {
         // Devuelve un comando PowerShell listo para pegar, con rutas absolutas.
         const preset = url.searchParams.get("preset") || "8GB-VISION-MAX-Q8-100K";
@@ -2620,12 +2411,48 @@ async function main(args) {
         res.end(JSON.stringify({ command: comando, preset, model: clave }));
         return;
       }
-      if (req.method === "POST" && url.pathname === "/api/server/start") {
-        if (busy) { res.writeHead(409).end("Hay una operación en curso"); return; }
-        busy = true;
+      if (req.method === "POST" && ["/api/servidor", "/api/server/start", "/api/server/stop", "/api/server/close"].includes(url.pathname)) {
+        let ownsBusy = false;
         try {
-          const raw = JSON.parse(await readBody(req));
-          const preset = String(raw?.preset || "8GB-VISION-MAX-Q8-100K");
+          const raw = JSON.parse((await readBody(req)) || "{}");
+          const action = url.pathname === "/api/servidor"
+            ? ({ encender: "start", apagar: "stop", cerrar: "close" })[raw?.accion]
+            : url.pathname.split("/").at(-1);
+          if (!action) { res.writeHead(400).end("Acción desconocida"); return; }
+          if ((busy || lifecycle.busy) && !(action === "stop" && lifecycle.busy)) {
+            throw new LifecycleError("Hay una operación en curso; espera a que termine", { state: "starting", port: args.llamaPort }, 409);
+          }
+          ownsBusy = !busy;
+          if (ownsBusy) busy = true;
+          let result;
+          if (action === "stop" || action === "close") {
+            const onBeforeStop = (snapshot) => {
+              const previous = configurationFromMarker(snapshot.marker);
+              if (previous) configuracionApagada = { clave: previous.model, ...previous.config };
+            };
+            result = action === "stop" ? await lifecycle.stop({ onBeforeStop }) : await lifecycle.closeIde({
+              onBeforeStop,
+              shutdown: () => {
+                let scheduled = false;
+                const shutdown = () => {
+                  if (scheduled) return;
+                  scheduled = true;
+                  void closeHttpServer(server, { timeoutMs: 3000, exit: (code) => process.exit(code) }).catch((err) => process.stderr.write(`[lifecycle] ${err.message}\n`));
+                };
+                res.once("finish", shutdown);
+                res.once("close", shutdown);
+                if (res.destroyed) setImmediate(shutdown);
+              },
+            });
+          } else if (url.pathname === "/api/servidor") {
+            const snapshot = await lifecycle.inspect();
+            if (snapshot.state === "ready") result = { ok: true, ...snapshot };
+            else {
+              const model = configuracionApagada?.clave || modeloGuardadoClave();
+              result = await lifecycle.start({ model, config: configuracionApagada, onReady: () => conectarModelo(model) });
+            }
+          } else {
+          const preset = String(raw?.preset || leerAjustes().enginePreset || "8GB-VISION-MAX-Q8-100K");
           const modelo = String(raw?.model || modeloGuardadoClave() || MODELO.modeloPredeterminado);
           const item = catalogoModelos().find((m) => m.clave === modelo);
           if (!item) { res.writeHead(400).end(`modelo desconocido: ${modelo}`); return; }
@@ -2663,49 +2490,25 @@ async function main(args) {
             configuracion = { enginePreset: "CUSTOM", contexto, kv, vision: raw?.vision !== false && Boolean(item.vision), mmprojCPU: raw?.mmprojCPU === true };
           }
           
-          // Stop any existing server first
-          await apagarLlamaServer();
-          await new Promise(r => setTimeout(r, 800));
-          
-          // El preset decide contexto, KV y visión. AUTO calcula el plan con la
-          // arquitectura REAL del GGUF y la VRAM de esta máquina.
-          const hijo = lanzarServidorLlama(modelo, {
-            ...configuracion,
-            pensar: presupuestoPensar(modelo, Number(raw?.pensar ?? 4096)),
-            dormir: 0,
-            hostIP: "127.0.0.1"
-          });
-          
-          if (!(await esperarEncendido(240000, hijo))) {
-            throw new Error("El modelo no arrancó; revisa logs/arranque-modelo.log");
+
+            const options = { model: modelo, config: { ...configuracion,
+              pensar: presupuestoPensar(modelo, Number(raw?.pensar ?? 4096)), dormir: 0, hostIP: "127.0.0.1" },
+              onReady: () => conectarModelo(modelo) };
+            const snapshot = await lifecycle.inspect();
+            options.onRestore = () => conectarModelo(snapshot.marker?.modelo);
+            result = snapshot.state === "empty" ? await lifecycle.start(options) : await lifecycle.restart(options);
+            try { guardarModeloActivo(item); } catch { /* el arranque ya funcionó */ }
+            result = { ...result, preset, auto: preset === "AUTO" };
           }
-          
-          await chat.connect();
-          chat.vision = Boolean(chat.props?.modalities?.vision);
-          try { guardarModeloActivo(item); } catch { /* el arranque ya funcionó */ }
-          
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
-          res.end(JSON.stringify({ ok: true, encendido: true, preset, model: modelo, auto: preset === "AUTO" }));
+          res.end(JSON.stringify({ ...result, encendido: result.state === "ready" }));
         } catch (err) {
-          res.writeHead(500).end(String(err.message || err));
-        } finally { busy = false; }
+          res.writeHead(err instanceof SyntaxError ? 400 : err.status || 500, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: false, state: err.state || "error", error: err.message, context: err.context }));
+        } finally { if (ownsBusy) busy = false; }
         return;
       }
-      
-      if (req.method === "POST" && url.pathname === "/api/server/stop") {
-        if (busy) { res.writeHead(409).end("Hay una operación en curso"); return; }
-        busy = true;
-        try {
-          await apagarLlamaServer();
-          await new Promise(r => setTimeout(r, 1000));
-          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
-          res.end(JSON.stringify({ ok: true, encendido: false }));
-        } catch (err) {
-          res.writeHead(500).end(String(err.message || err));
-        } finally { busy = false; }
-        return;
-      }
-      
+
       // ================================================================ model hub
       if (req.method === "GET" && url.pathname === "/api/hub/status") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
@@ -2878,43 +2681,21 @@ async function main(args) {
           // Validación temprana del techo del modelo: si no cabe, falla ANTES de parar el servidor.
           const techo = validarTechoModelo(clave, cfg.contexto, cfg.vision);
           if (!techo.ok) throw new Error(`${techo.motivo}. El cambio se rechaza sin apagar el modelo actual.`);
-          await cambiarConRecuperacion({
-            anterior,
-            liberar: async (alDetener) => {
-              const modeloCatalogo = catalogoModelos().find((m) => m.clave === clave);
-              // VRAM que hay que dejar libre antes de arrancar. No se usa
-              // margenObjetivoMiB: en el lanzador histórico ese campo es un
-              // margen que se SUMA al requisito, no un umbral de VRAM libre.
-              const planTotal = Number(modeloCatalogo?.plan?.totalMiB) || (Math.ceil((Number(modeloCatalogo?.esperado) || 0) / (1024 * 1024)) + 1500);
-              const margenVRAM = Math.min(7800, Math.max(3500, planTotal + 200));
-              if (!(await liberarGpu(35000, alDetener, margenVRAM))) throw new Error("no se pudo liberar la GPU o el puerto");
-            },
-            arrancar: async (restaurar) => {
-              if (restaurar?.error) throw new Error(restaurar.error);
-              const objetivo = restaurar?.clave || clave;
-              chat.note(restaurar ? "recuperando el modelo anterior…" : `cambiando de modelo: ${item.nombre}…`);
-              const p = (cfg.enginePreset && isNamedEnginePreset(cfg.enginePreset)) ? engineProfile(cfg.enginePreset) : null;
-              const pensar = presupuestoPensar(objetivo, Number(p?.thinkingTokens ?? (raw.pensar ?? actualAjustes.pensar)));
-              const solicitado = restaurar || {
-                enginePreset: cfg.enginePreset,
-                contexto: cfg.contexto,
-                contextoExplicito: raw.contexto !== undefined || raw.context !== undefined,
-                kv: cfg.kv,
-                vision: cfg.vision,
-                mmprojCPU: cfg.mmprojCPU === true,
-                dormir: cfg.dormir,
-                hostIP: cfg.hostIP,
-                pensar,
-              };
-              const hijo = lanzarServidorLlama(objetivo, solicitado);
-              if (!(await esperarEncendido(90000, hijo))) throw new Error(`el modelo ${objetivo} no arrancó; revisa logs/arranque-modelo.log`);
-              await chat.connect();
-              if (modeloActualClave() !== objetivo) throw new Error("el servidor respondió con un modelo diferente del solicitado");
-              chat.vision = Boolean(chat.props?.modalities?.vision === true);
-              if (restaurar && (chat.vision !== restaurar.vision || chat.nCtx !== restaurar.contexto)) {
-                throw new Error("el modelo anterior no recuperó su ventana o visión previas");
-              }
-              aplicarAjustesAlChat(leerAjustes());
+          const presetProfile = cfg.enginePreset && isNamedEnginePreset(cfg.enginePreset) ? engineProfile(cfg.enginePreset) : null;
+          const pensar = presupuestoPensar(clave, Number(presetProfile?.thinkingTokens ?? (raw.pensar ?? actualAjustes.pensar)));
+          const solicitado = {
+            enginePreset: cfg.enginePreset, contexto: cfg.contexto,
+            contextoExplicito: raw.contexto !== undefined || raw.context !== undefined,
+            kv: cfg.kv, vision: cfg.vision, mmprojCPU: cfg.mmprojCPU === true,
+            dormir: cfg.dormir, hostIP: cfg.hostIP, pensar,
+          };
+          await lifecycle.restart({
+            model: clave, config: solicitado, timeoutMs: 90000,
+            previous: anterior ? { model: anterior.clave, config: anterior } : null,
+            onReady: () => conectarModelo(clave),
+            onRestore: async () => {
+              await conectarModelo(anterior.clave);
+              if (chat.vision !== anterior.vision || chat.nCtx !== anterior.contexto) throw new Error("El modelo anterior no recuperó su ventana o visión previas");
             },
           });
           const nuevosAjustes = {

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     RTX 4060 8GB optimized llama-server launcher (llama.cpp v0.8.0+, sm89 build).
 
@@ -10,14 +10,12 @@
 
         Start-Process -NoNewWindow -PassThru  +  WaitForExit()
 
-    This wrapper stays alive for as long as llama-server runs. It must NOT exit
-    early: llama-server is a child process and Windows tears down the whole job
-    when the parent exits. The caller (ui-server.mjs) spawns us with
-    windowsHide:true and unref(); that is what keeps the server alive after the
-    caller dies.
+    The wrapper normally stays alive while llama-server runs. The marker records
+    both identities so a later stop can also recover a child whose wrapper died.
+    Node launches this script with windowsHide:true and without detached:true.
 
 .NOTES
-    - Designed to be spawned from chat/ui-server.mjs (lanzarServidorLlama).
+    - Designed to be spawned from chat/lifecycle/process-adapter.mjs.
     - Writes logs/servidor-administrado-<port>.json so stop-managed-server.ps1
       can find and stop exactly this process (never foreign servers).
     - The chat template from chat/modelo.json is written to a .jinja file and
@@ -25,6 +23,7 @@
 #>
 
 param (
+    [switch]$Json,
     [Parameter(Mandatory = $true)][string]$Modelo,
     [string]$ContextSize = "auto",
     [int]$Port = 8080,
@@ -50,8 +49,18 @@ param (
 
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'managed-server-common.ps1')
+if ($Json) {
+    [Console]::OutputEncoding = New-Object Text.UTF8Encoding($false)
+    function Write-Host { param($Object, $ForegroundColor, $BackgroundColor, [switch]$NoNewline, $Separator) }
+}
+trap {
+    if ($Json) { @{ ok = $false; state = 'error'; port = $Port; error = $_.Exception.Message; detail = $_.ScriptStackTrace } | ConvertTo-Json -Compress; exit 1 }
+    break
+}
 
-if ($Log) {
+
+if ($Log -and -not $Json) {
     try { Start-Transcript -Path $Log -Append -Force | Out-Null } catch { }
 }
 
@@ -166,16 +175,9 @@ if ([int64]$Item.bytes -gt 0 -and (Get-Item -LiteralPath $ModelPath).Length -ne 
     throw "El modelo no tiene el tamano verificado; descarga incompleta."
 }
 
-$BinPath = Join-Path $RootDir "bin\llama-server.exe"
-$Candidates = @(
-    (Join-Path $RootDir "bin\builds\lab-server-mvq2\bin\llama-server.exe"),
-    (Join-Path $RootDir ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"),
-    (Join-Path $env:USERPROFILE ".local\opt\bonsai-inference\build-RTX4060-Opt-sm89\bin\llama-server.exe"),
-    (Join-Path $RootDir "bin\llama-server.exe")
-)
-foreach ($cand in $Candidates) {
-    if (Test-Path -LiteralPath $cand) { $BinPath = $cand; break }
-}
+$Binary = Get-BonsaiBinaries | Where-Object { Test-Path -LiteralPath $_.exe } | Select-Object -First 1
+if (-not $Binary) { throw "No hay binario llama-server permitido disponible" }
+$BinPath = $Binary.exe
 $UsingOptimized = ($BinPath -like "*build-RTX4060-Opt-sm89*") -or ($BinPath -like "*lab-server-mvq2*")
 $Threads = 4
 # Perfil del modelo (Hub): batch/ubatch/hilos medidos o recomendados. En presets
@@ -512,6 +514,7 @@ function ConvertTo-ArgumentText([string]$Value) {
 }
 $ArgumentLine = (($ServerArgs | ForEach-Object { ConvertTo-ArgumentText ([string]$_) }) -join ' ')
 
+if ($DryRun -and $Json) { @{ ok = $true; state = 'dry-run'; port = $Port; binId = $Binary.id; exe = $BinPath; arguments = $ServerArgs } | ConvertTo-Json -Compress -Depth 4; exit 0 }
 if ($DryRun) {
     Write-Host ("BIN: " + $BinPath)
     Write-Host ("ARGS: " + $ArgumentLine)
@@ -521,51 +524,6 @@ if ($DryRun) {
 # =============================================================================
 # LAUNCH (proven lifecycle: Start-Process -NoNewWindow + WaitForExit)
 # =============================================================================
-$Wrapper = Get-Process -Id $PID -ErrorAction Stop
-$WrapperTicks = $Wrapper.StartTime.ToUniversalTime().Ticks.ToString()
-$Marker = Join-Path $RootDir "logs\servidor-administrado-$Port.json"
-$MarkerTmp = $Marker + ".tmp"
-
-$LlamaVersion = "desconocida"
-try {
-    $oldEAP = $ErrorActionPreference
-    $ErrorActionPreference = "SilentlyContinue"
-    $out = & $BinPath --version 2>&1
-    $ErrorActionPreference = $oldEAP
-    if ($out) { $LlamaVersion = ($out -split "`r?`n" | Select-Object -First 1).Trim() }
-} catch { }
-
-$ActiveKey = $null
-if ($Vision -and $VisionProfile -and $VisionProfile.archivo) { $ActiveKey = $VisionProfile.archivo }
-
-function Write-MarcadorAdministrado([int]$ServidorPid) {
-    $Info = [ordered]@{
-        modelo = $Modelo; puerto = $Port; contexto = $ContextTokens; kv = $KVCacheType;
-        vision = [bool]$Vision; pensar = $Pensar; dormir = $DormirSeg; hostIP = $HostIP;
-        pid = $PID; wrapperPid = $PID; iniciado = $WrapperTicks; enginePreset = $EnginePreset;
-        llamaVersion = $LlamaVersion; activeKey = $ActiveKey; speculative = $SpeculativeDecoding;
-        optimized = $UsingOptimized; mmprojCPU = [bool]$ProjectorCPU;
-        moe = [bool]$IsMoe; nCpuMoe = $NCpuMoe; capasMoe = $CapasMoe;
-        gpuExpertosMiB = $GpuExpertosMiB; loadMode = $LoadMode
-    }
-    if ($ServidorPid -gt 0) {
-        $Info.pidServidor = $ServidorPid
-        $Info.iniciadoServidor = (Get-Process -Id $ServidorPid -ErrorAction Stop).StartTime.ToUniversalTime().Ticks.ToString()
-    }
-    New-Item -ItemType Directory -Force (Split-Path -Parent $Marker) | Out-Null
-    $Info | ConvertTo-Json -Compress | Set-Content -LiteralPath $MarkerTmp -Encoding ASCII
-    if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
-    Rename-Item -LiteralPath $MarkerTmp -NewName $Marker -Force
-}
-
-if ($ManagedByIDE) {
-    try { Write-MarcadorAdministrado 0 } catch { Write-Host "Aviso marcador: $($_.Exception.Message)" -ForegroundColor Yellow }
-}
-
-if (-not $env:BONSAI_LLAMA_LOG_PREFIX) {
-    $env:BONSAI_LLAMA_LOG_PREFIX = Join-Path $RootDir "logs\llama-server-$Port"
-}
-
 # Precalentar la page cache evita que la primera generación lea expertos del
 # SSD página a página. Solo tiene sentido si el GGUF cabe en RAM; en Nemotron 3
 # Nano (16,85 GiB) provocaría thrashing, así que se omite.
@@ -581,55 +539,14 @@ if ($Precargar -and $IsMoe -and $LoadMode -eq "mmap") {
     }
 }
 
-$ExecOptions = @{
-    FilePath               = $BinPath
-    ArgumentList           = $ArgumentLine
-    PassThru               = $true
-    NoNewWindow            = $true
-    RedirectStandardOutput = $env:BONSAI_LLAMA_LOG_PREFIX + ".out.log"
-    RedirectStandardError  = $env:BONSAI_LLAMA_LOG_PREFIX + ".err.log"
+$Metadata = [ordered]@{
+    modelo = $Modelo; puerto = $Port; contexto = $ContextTokens; kv = $KVCacheType;
+    vision = [bool]$Vision; pensar = $Pensar; dormir = $DormirSeg; hostIP = $HostIP;
+    enginePreset = $EnginePreset; llamaVersion = "desconocida";
+    activeKey = $(if ($Vision -and $VisionProfile) { $VisionProfile.archivo } else { $null });
+    speculative = $SpeculativeDecoding; optimized = $UsingOptimized; mmprojCPU = [bool]$ProjectorCPU;
+    moe = [bool]$IsMoe; nCpuMoe = $NCpuMoe; capasMoe = $CapasMoe;
+    gpuExpertosMiB = $GpuExpertosMiB; loadMode = $LoadMode
 }
-$Exec = Start-Process @ExecOptions
-$null = $Exec.Handle
-
-# En portátiles Windows puede aplicar EcoQoS (throttling) y memoria de baja
-# prioridad a un proceso lanzado en segundo plano. En un MoE eso se nota mucho:
-# los hilos que leen expertos de RAM se frenan. Se sube la prioridad de memoria
-# y se desactiva EcoQoS sin tocar la prioridad del resto del sistema.
-if ($IsMoe) {
-    try {
-        $opt = Join-Path $PSScriptRoot "win-optimize-process.ps1"
-        if (Test-Path -LiteralPath $opt) {
-            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $opt -Pid $Exec.Id | Out-Null
-        }
-    } catch { }
-}
-
-if ($ManagedByIDE) {
-    Start-Sleep -Milliseconds 300
-    $Vivo = Get-Process -Id $Exec.Id -ErrorAction SilentlyContinue
-    if (-not $Vivo -or $Vivo.HasExited) {
-        Write-Host "Error: llama-server.exe murio al arrancar (PID $($Exec.Id)). Revisa $($env:BONSAI_LLAMA_LOG_PREFIX).err.log" -ForegroundColor Red
-        if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
-        exit 1
-    }
-    try { Write-MarcadorAdministrado ([int]$Exec.Id) } catch { Write-Host "Aviso marcador PID: $($_.Exception.Message)" -ForegroundColor Yellow }
-}
-
-$ExitCode = 1
-try {
-    $Exec.WaitForExit()
-    $NativeExitCode = $Exec.ExitCode
-    if ($null -eq $NativeExitCode) { $ExitCode = 1 } else { $ExitCode = [int]$NativeExitCode }
-} finally {
-    if ($ManagedByIDE) {
-        try {
-            if (Test-Path -LiteralPath $Marker) {
-                $Info = Get-Content -LiteralPath $Marker -Raw | ConvertFrom-Json
-                $esMio = if ($Info.pidServidor) { [int]$Info.pidServidor -eq [int]$Exec.Id } else { [int]$Info.wrapperPid -eq $PID }
-                if ($esMio) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
-            }
-        } catch { }
-    }
-}
+$ExitCode = Start-BonsaiManagedProcess $Metadata
 exit $ExitCode

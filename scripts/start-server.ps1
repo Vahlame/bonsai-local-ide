@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # Arranque de modelos verificados para GPU completa en la RTX 4060 de 8 GB.
 # Los datos del modelo y el muestreo salen de chat\modelo.json (GGUF + docs de PrismML).
 #
@@ -11,6 +11,7 @@
 # ==============================================================================
 
 param (
+    [switch]$Json,
     [string]$ContextSize = "auto",   # auto = la mayor ventana (KV q4_0) que cabe en la VRAM libre; o un numero de tokens
     [int]$Port = 8080,
     [string]$HostIP = "127.0.0.1",
@@ -33,7 +34,18 @@ param (
 )
 
 $RootDir = Split-Path -Parent $PSScriptRoot
-$BinPath = Join-Path $RootDir "bin\llama-server.exe"
+. (Join-Path $PSScriptRoot 'managed-server-common.ps1')
+if ($Json) {
+    [Console]::OutputEncoding = New-Object Text.UTF8Encoding($false)
+    function Write-Host { param($Object, $ForegroundColor, $BackgroundColor, [switch]$NoNewline, $Separator) }
+}
+trap {
+    if ($Json) { @{ ok = $false; state = 'error'; port = $Port; error = $_.Exception.Message; detail = $_.ScriptStackTrace } | ConvertTo-Json -Compress; exit 1 }
+    break
+}
+
+$Binary = Get-BonsaiBinaries | Where-Object { $_.id -eq "legacy-root" }
+$BinPath = $Binary.exe
 $M = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 # Model Hub: modelos descargados en models/hub-catalog.json (ver chat/model-hub.mjs).
 $HubPath = Join-Path $RootDir "models\hub-catalog.json"
@@ -51,7 +63,7 @@ if (Test-Path -LiteralPath $HubPath) {
 
 # Registro opcional: sin esto, cuando el servidor lo lanza otra aplicacion (el cambio
 # de modelo de la interfaz) el motivo de un fallo no queda en ningun sitio visible.
-if ($Log) {
+if ($Log -and -not $Json) {
     try { Start-Transcript -Path $Log -Append -Force | Out-Null } catch { }
     Write-Host ("[{0}] start-server.ps1 -Modelo '{1}'{2}" -f (Get-Date).ToString("s"), $Modelo, $(if ($Vision) { " -Vision" } else { "" })) -ForegroundColor DarkGray
 }
@@ -139,7 +151,7 @@ if ($claveModelo -and $M.catalogo.$claveModelo.servidor.tipo -eq "gpu-completa")
         $Vision = [bool](Get-Content (Join-Path $RootDir 'config\local-engine-presets.json') -Raw | ConvertFrom-Json).$EnginePreset.vision
     }
     if ($SinVision) { $Vision = $false; $VisionGpu = $false }
-    & (Join-Path $PSScriptRoot "start-gpu-model.ps1") -Modelo $claveModelo -ContextSize $ContextSize -Port $Port -HostIP $HostIP -KVCacheType $KVCacheType -Pensar $Pensar -DryRun:$DryRun -DormirSeg $DormirSeg -Vision:($Vision -or $VisionGpu) -ManagedByIDE:$ManagedByIDE -EnginePreset $EnginePreset
+    & (Join-Path $PSScriptRoot "start-gpu-model.ps1") -Modelo $claveModelo -ContextSize $ContextSize -Port $Port -HostIP $HostIP -KVCacheType $KVCacheType -Pensar $Pensar -DryRun:$DryRun -DormirSeg $DormirSeg -Vision:($Vision -or $VisionGpu) -ManagedByIDE:$ManagedByIDE -Json:$Json -EnginePreset $EnginePreset
     exit $LASTEXITCODE
 }
 

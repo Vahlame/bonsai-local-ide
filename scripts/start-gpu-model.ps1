@@ -1,8 +1,9 @@
-# Modelos con todos los tensores y KV en CUDA. Nunca reduce las capas a CPU.
+﻿# Modelos con todos los tensores y KV en CUDA. Nunca reduce las capas a CPU.
 # El perfil automatico (-ContextSize auto y/o -KVCacheType auto) busca la mejor combinacion
 # contexto/KV que quepa en la VRAM libre y la recuerda en logs\perfil-servidor-PORT.json para
 # que el siguiente arranque no vuelva en silencio a 16K/f16.
 param (
+    [switch]$Json,
     [Parameter(Mandatory=$true)][string]$Modelo,
     [string]$ContextSize = "auto",
     [int]$Port = 8080,
@@ -21,6 +22,16 @@ param (
 )
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'managed-server-common.ps1')
+if ($Json) {
+    [Console]::OutputEncoding = New-Object Text.UTF8Encoding($false)
+    function Write-Host { param($Object, $ForegroundColor, $BackgroundColor, [switch]$NoNewline, $Separator) }
+}
+trap {
+    if ($Json) { @{ ok = $false; state = 'error'; port = $Port; error = $_.Exception.Message; detail = $_.ScriptStackTrace } | ConvertTo-Json -Compress; exit 1 }
+    break
+}
+
 $EngineOptions = $null
 $SafetyMiB = 0
 # CUSTOM = perfil definido por el usuario: no hay preset que buscar; mandan -ContextSize,
@@ -40,7 +51,8 @@ $Catalogo = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding U
 $Item = $Catalogo.catalogo.$Modelo
 if (-not $Item -or $Item.servidor.tipo -ne "gpu-completa") { throw "Modelo sin perfil de GPU completa: $Modelo" }
 $ModelPath = Join-Path $RootDir ("models\" + $Item.archivo)
-$BinPath = Join-Path $RootDir "bin\llama-server.exe"
+$Binary = Get-BonsaiBinaries | Where-Object { $_.id -eq "legacy-root" }
+$BinPath = $Binary.exe
 if (-not (Test-Path -LiteralPath $ModelPath)) { throw "Falta el modelo: $ModelPath" }
 if ((Get-Item -LiteralPath $ModelPath).Length -ne [int64]$Item.bytes) { throw "El modelo no tiene el tamano verificado; descarga incompleta." }
 if (-not $DryRun -and @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue).Count -gt 0) { throw "El puerto $Port ya esta ocupado. No se modifican servidores ajenos." }
@@ -270,85 +282,14 @@ function ConvertTo-ArgumentText([string]$Value) {
     return '"' + $Value.Replace('"', '\"') + '"'
 }
 $ArgumentLine = (($ServerArgs | ForEach-Object { ConvertTo-ArgumentText ([string]$_) }) -join ' ')
+if ($DryRun -and $Json) { @{ ok = $true; state = 'dry-run'; port = $Port; binId = $Binary.id; exe = $BinPath; arguments = $ServerArgs } | ConvertTo-Json -Compress -Depth 4; exit 0 }
 if ($DryRun) { Write-Host ($BinPath + " " + $ArgumentLine); exit 0 }
 
-# Se lanza SIEMPRE con Start-Process -PassThru: el marcador guarda el PID real de llama-server.exe
-# (el del lanzador esta en wrapperPid). Si el wrapper muere, stop-managed-server.ps1 puede cerrar
-# el servidor huerfano sin tocar procesos ajenos. El marcador se escribe ANTES de lanzar (no hay
-# ventana sin marcador, igual que antes) y se completa con el PID real en cuanto existe.
-$Wrapper = Get-Process -Id $PID -ErrorAction Stop
-$WrapperTicks = $Wrapper.StartTime.ToUniversalTime().Ticks.ToString()
-$Marker = Join-Path $RootDir "logs\servidor-administrado-$Port.json"
-$MarkerTmp = $Marker + ".tmp"
-
-# P2-10: capturar versión de llama.cpp (usa stderr; no romper con ErrorActionPreference=Stop)
-$LlamaVersion = "desconocida"
-try {
-    $out = & $BinPath --version 2>&1
-    if ($out) { $LlamaVersion = ($out -split "`r?`n" | Select-Object -First 1).Trim() }
-} catch {
-    # ignorar; version se queda como "desconocida"
+$Metadata = [ordered]@{
+    modelo = $Modelo; puerto = $Port; contexto = $ContextTokens; kv = $KvType;
+    vision = [bool]$Vision; pensar = $Pensar; dormir = $DormirSeg; hostIP = $HostIP;
+    enginePreset = $EnginePreset; llamaVersion = "desconocida";
+    activeKey = $(if ($Vision -and $VisionProfile) { $VisionProfile.archivo } else { $null })
 }
-
-# P2-13: activeKey para reutilización (proyector de visión si está activo)
-$ActiveKey = $null
-if ($Vision -and $VisionProfile -and $VisionProfile.archivo) {
-    $ActiveKey = $VisionProfile.archivo
-}
-
-function Write-MarcadorAdministrado([int]$ServidorPid) {
-    $Info = [ordered]@{
-        modelo = $Modelo; puerto = $Port; contexto = $ContextTokens; kv = $KvType;
-        vision = [bool]$Vision; pensar = $Pensar; dormir = $DormirSeg; hostIP = $HostIP;
-        pid = $PID; wrapperPid = $PID; iniciado = $WrapperTicks; enginePreset = $EnginePreset;
-        llamaVersion = $LlamaVersion
-        activeKey = $ActiveKey
-    }
-    if ($ServidorPid -gt 0) {
-        $Info.pidServidor = $ServidorPid
-        $Info.iniciadoServidor = (Get-Process -Id $ServidorPid -ErrorAction Stop).StartTime.ToUniversalTime().Ticks.ToString()
-    }
-    New-Item -ItemType Directory -Force (Split-Path -Parent $Marker) | Out-Null
-    # P2-12: escritura atómica (tmp -> rename)
-    $Info | ConvertTo-Json -Compress | Set-Content -LiteralPath $MarkerTmp -Encoding ASCII
-    if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
-    Rename-Item -LiteralPath $MarkerTmp -NewName $Marker -Force
-}
-if ($ManagedByIDE) {
-    try { Write-MarcadorAdministrado 0 } catch { Write-Host "Aviso: no se pudo escribir el marcador del servidor administrado: $($_.Exception.Message)" -ForegroundColor Yellow }
-}
-# P2-09: prefijo de log por defecto si no está configurado
-if (-not $env:BONSAI_LLAMA_LOG_PREFIX) {
-    $env:BONSAI_LLAMA_LOG_PREFIX = Join-Path $RootDir "logs\llama-server-$Port"
-}
-$ExecOptions = @{ FilePath = $BinPath; ArgumentList = $ArgumentLine; PassThru = $true; NoNewWindow = $true; RedirectStandardOutput = $env:BONSAI_LLAMA_LOG_PREFIX + ".out.log"; RedirectStandardError = $env:BONSAI_LLAMA_LOG_PREFIX + ".err.log" }
-$Exec = Start-Process @ExecOptions
-$null = $Exec.Handle
-# P2-12: comprobar que el proceso sigue vivo tras lanzar
-if ($ManagedByIDE) {
-    Start-Sleep -Milliseconds 200
-    $Vivo = Get-Process -Id $Exec.Id -ErrorAction SilentlyContinue
-    if (-not $Vivo -or $Vivo.HasExited) {
-        Write-Host "Error: llama-server.exe murió inmediatamente tras lanzarse (PID $($Exec.Id)). Revisa $($env:BONSAI_LLAMA_LOG_PREFIX).err.log" -ForegroundColor Red
-        if (Test-Path -LiteralPath $Marker) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
-        exit 1
-    }
-    try { Write-MarcadorAdministrado ([int]$Exec.Id) } catch { Write-Host "Aviso: no se pudo completar el marcador con el PID real de llama-server.exe: $($_.Exception.Message)" -ForegroundColor Yellow }
-}
-$ExitCode = 1
-try {
-    $Exec.WaitForExit()
-    $NativeExitCode = $Exec.ExitCode
-    if ($null -eq $NativeExitCode) { $ExitCode = 1 } else { $ExitCode = [int]$NativeExitCode }
-} finally {
-    if ($ManagedByIDE) {
-        try {
-            if (Test-Path -LiteralPath $Marker) {
-                $Info = Get-Content -LiteralPath $Marker -Raw | ConvertFrom-Json
-                $esMio = if ($Info.pidServidor) { [int]$Info.pidServidor -eq [int]$Exec.Id } else { [int]$Info.wrapperPid -eq $PID }
-                if ($esMio) { Remove-Item -LiteralPath $Marker -Force -ErrorAction SilentlyContinue }
-            }
-        } catch { }
-    }
-}
+$ExitCode = Start-BonsaiManagedProcess $Metadata
 exit $ExitCode
