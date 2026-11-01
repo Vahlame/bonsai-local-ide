@@ -39,7 +39,7 @@
    * @param {{metodo?: string, cuerpo?: unknown}} [opciones]
    */
   async function api(ruta, opciones = {}) {
-    const timeout = ruta === "/api/modelos" || ruta === "/api/servidor" ? 300000 : ruta === "/api/edit" ? 180000 : 15000;
+    const timeout = ruta === "/api/modelos" || ruta === "/api/servidor" || ruta.startsWith("/api/server/") ? 300000 : ruta === "/api/edit" ? 180000 : 15000;
     const init = { method: opciones.metodo || "GET", cache: "no-store", signal: AbortSignal.timeout(timeout) };
     if (opciones.cuerpo !== undefined) {
       init.method = opciones.metodo || "POST";
@@ -48,7 +48,8 @@
     }
     const res = await fetch(ruta, init);
     if (!res.ok) {
-      const detalle = (await res.text()) || `HTTP ${res.status}`;
+      let detalle = (await res.text()) || `HTTP ${res.status}`;
+      try { detalle = JSON.parse(detalle).error || detalle; } catch { /* text response */ }
       const error = new Error(detalle);
       // El estado HTTP importa para distinguir un 409 (el archivo cambió en disco y no
       // hay que pisarlo) de un fallo genérico del servidor.
@@ -2300,54 +2301,11 @@
   let estadoModelos = { actual: "", modelos: [] };
   /** Nombre del modelo que se está cargando ("" si no hay cambio en curso). */
   let cargandoModelo = "";
-  let servidorEncendido = false;
-  let cambiandoServidor = false;
-
-  let servidorEnCurso = false;
-  async function refrescarServidor() {
-    const boton = $("#servidor-toggle");
-    if (!boton || cambiandoServidor || servidorEnCurso || document.hidden) return;
-    servidorEnCurso = true;
-    try {
-      const estado = await api("/api/servidor");
-      if (cambiandoServidor) return;
-      servidorEncendido = estado.encendido;
-      boton.textContent = servidorEncendido ? "Apagar IA" : "Encender IA";
-      boton.title = servidorEncendido ? "Apagar el servidor local de IA" : "Encender el servidor local de IA";
-      boton.disabled = false;
-    } catch { boton.textContent = "IA sin conexión"; boton.disabled = true; }
-    finally { servidorEnCurso = false; }
-  }
-
-  async function controlarServidor(accion) {
-    if (cambiandoServidor) return;
-    if (accion === "cerrar") {
-      const sucias = pestanas.filter((p) => p.texto !== p.guardado && !p.truncado).length;
-      if (!(await confirmar("Cerrar IDE e IA", sucias ? `Hay ${sucias} archivo(s) con cambios sin guardar. Se perderán al cerrar.` : "Se apagará la IA y se cerrará el servidor del IDE.", "Cerrar ambos"))) return;
-    }
-    cambiandoServidor = true;
-    const boton = $("#servidor-toggle"), cerrar = $("#cerrar-bonsai");
-    if (boton) { boton.disabled = true; boton.textContent = accion === "encender" ? "Encendiendo IA." : "Apagando IA."; }
-    if (cerrar) cerrar.disabled = true;
-    try {
-      await api("/api/servidor", { cuerpo: { accion } });
-      if (accion === "cerrar") {
-        document.body.innerHTML = "<main style='padding:2rem;font-family:sans-serif'>IDE e IA cerrados. Puedes cerrar esta pestaña.</main>";
-        // En una ventana --app abierta por el lanzador, close() suele funcionar; si no,
-        // queda el aviso anterior en vez de una pestaña en blanco.
-        try { window.close(); } catch { /* el navegador decide */ }
-        return;
-      }
-      avisar(accion === "encender" ? "Servidor de IA encendido" : "Servidor de IA apagado", "ok");
-      await refrescarModelos();
-    } catch (err) { avisar(`No se pudo completar la operación: ${err.message}`, "error", 10000); }
-    finally { cambiandoServidor = false; if (cerrar) cerrar.disabled = false; void refrescarServidor(); }
-  }
-
-  $("#servidor-toggle")?.addEventListener("click", () => void controlarServidor(servidorEncendido ? "apagar" : "encender"));
-  $("#cerrar-bonsai")?.addEventListener("click", () => void controlarServidor("cerrar"));
-  void refrescarServidor();
-  setInterval(() => void refrescarServidor(), 15000);
+  const servidor = window.BonsaiServerController({
+    api, confirmar, avisar,
+    dirtyCount: () => pestanas.filter((p) => p.texto !== p.guardado && !p.truncado).length,
+    onChange: () => refrescarModelos(),
+  });
 
   let modelosEnCurso = false;
   async function refrescarModelos() {
@@ -2416,7 +2374,7 @@
     let servidor;
     let lista;
     try {
-      [servidor, lista] = await Promise.all([api("/api/servidor"), api("/api/modelos")]);
+      [servidor, lista] = await Promise.all([api("/api/server/state"), api("/api/modelos")]);
     } catch {
       return;
     }
@@ -2664,7 +2622,7 @@
 
   // Al cerrar con cambios sin guardar, el navegador pregunta.
   window.addEventListener("beforeunload", (e) => {
-    if (pestanas.some((p) => p.texto !== p.guardado && !p.truncado)) {
+    if (!servidor.closed && pestanas.some((p) => p.texto !== p.guardado && !p.truncado)) {
       e.preventDefault();
       e.returnValue = "";
     }
@@ -2824,7 +2782,7 @@
     // Los intervalos no trabajan con la pestaña oculta; al volver se refresca de inmediato.
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) return;
-      void refrescarServidor();
+      void servidor.refresh();
       void refrescarModelos();
       refrescarGit();
       void comprobarCambiosExternos();

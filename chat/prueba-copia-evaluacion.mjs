@@ -44,6 +44,11 @@ try {
   }
   assert.ok(inicio, `la interfaz copiada debe iniciar sin instalar node_modules dentro de ella: ${log}`);
   assert.equal((await fetch(`http://127.0.0.1:${port}/`)).status, 200);
+  const serverState = await fetch(`http://127.0.0.1:${port}/api/server/state`);
+  assert.equal(serverState.status, 200);
+  const lifecycle = await serverState.json();
+  assert.equal(lifecycle.state, "foreign", "la copia nunca se atribuye el modelo externo");
+  assert.equal(lifecycle.encendido, true, "conserva la detección de salud sin scripts de Windows");
 
   process.env.BONSAI_PLAYWRIGHT_MODULE = path.join(chat, "node_modules", "playwright-core", "index.mjs");
   const { NavegadorLocal } = await import(pathToFileURL(path.join(copia, "navegador.mjs")));

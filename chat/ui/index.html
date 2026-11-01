@@ -632,6 +632,7 @@
       </button>
       <select class="server-preset" id="server-preset" title="Preset de motor" aria-label="Preset de motor optimizado">
         <option value="AUTO" selected>Auto · plan por modelo</option>
+        <option value="CUSTOM">Personalizado · ajustes guardados</option>
         <option value="8GB-VISION-MAX-Q8-100K">110k · q8_0 · visión CPU</option>
         <option value="8GB-VISION-MAX-Q8">71k · q8_0 · visión GPU</option>
         <option value="8GB-VISION-MAX-Q4">110k · q4_0 · visión GPU</option>
@@ -785,6 +786,7 @@
   <script src="/ui/vendor/editor.js"></script>
   <script src="/ui/vendor/terminal.js"></script>
   <!-- Editor con pestanas, paleta de comandos, busqueda, git y ajustes -->
+  <script src="/ui/server-controller.js"></script>
   <script src="/ui/app.js"></script>
   <script src="/ui/paneles.js"></script>
 </body>

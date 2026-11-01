@@ -33,6 +33,8 @@ const LINEAS_DE_FALLO = 50;
 /** Suites aisladas: no necesitan GPU ni modelo real (varias usan un llama-server falso). */
 /** @type {Suite[]} */
 const AISLADAS = [
+  { archivo: "chat/prueba-lifecycle.mjs" },
+  { archivo: "chat/prueba-lifecycle-adapter.mjs" },
   { archivo: "chat/modelo.mjs" },
   { archivo: "chat/model-plan.mjs" },
   { archivo: "chat/prueba-model-hub.mjs", timeout: 180_000 },
@@ -104,6 +106,7 @@ const GPU_EXCLUSIVA = [
 /** Suites que abren un navegador real (Edge/Chrome headless). No forman parte de `npm test`. */
 /** @type {Suite[]} */
 const NAVEGADOR = [
+  { archivo: "chat/prueba-lifecycle-navegador.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-mcp-playwright.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-navegador-desarrollo.mjs", timeout: 120_000 },
   { archivo: "chat/prueba-navegador.mjs", timeout: 180_000 },
