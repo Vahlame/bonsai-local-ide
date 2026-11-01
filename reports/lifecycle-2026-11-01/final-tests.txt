@@ -1,0 +1,158 @@
+
+> bonsai-local-ide@2.3.6 test
+> node scripts/run-tests.mjs
+
+Bonsai IDE · 50 suite(s) · grupos: aisladas
+
+▶ 1/50 chat/prueba-lifecycle.mjs
+OK   chat/prueba-lifecycle.mjs (0.3 s)
+
+▶ 2/50 chat/prueba-lifecycle-adapter.mjs
+OK   chat/prueba-lifecycle-adapter.mjs (1.6 s)
+
+▶ 3/50 chat/modelo.mjs
+OK   chat/modelo.mjs (0.1 s)
+
+▶ 4/50 chat/model-plan.mjs
+OK   chat/model-plan.mjs (0.1 s)
+
+▶ 5/50 chat/prueba-model-hub.mjs
+OK   chat/prueba-model-hub.mjs (1.2 s)
+
+▶ 6/50 chat/bonsai-chat.mjs --self-test
+OK   chat/bonsai-chat.mjs --self-test (0.1 s)
+
+▶ 7/50 chat/actions.mjs
+OK   chat/actions.mjs (0.1 s)
+
+▶ 8/50 chat/prueba-entorno-local.mjs
+OK   chat/prueba-entorno-local.mjs (0.1 s)
+
+▶ 9/50 chat/prueba-investigacion.mjs
+OK   chat/prueba-investigacion.mjs (0.4 s)
+
+▶ 10/50 chat/prueba-imagenes.mjs
+OK   chat/prueba-imagenes.mjs (0.3 s)
+
+▶ 11/50 chat/prueba-code-search.mjs
+OK   chat/prueba-code-search.mjs (0.3 s)
+
+▶ 12/50 chat/prueba-tool-schemas.mjs
+OK   chat/prueba-tool-schemas.mjs (0.1 s)
+
+▶ 13/50 chat/prueba-gpt-oss-tools.mjs
+OK   chat/prueba-gpt-oss-tools.mjs (0.1 s)
+
+▶ 14/50 chat/harmony.mjs
+OK   chat/harmony.mjs (0.1 s)
+
+▶ 15/50 chat/prueba-coder-archivos.mjs
+OK   chat/prueba-coder-archivos.mjs (0.2 s)
+
+▶ 16/50 chat/prueba-terminal.mjs
+OK   chat/prueba-terminal.mjs (6.8 s)
+
+▶ 17/50 chat/prueba-diagnosticos.mjs
+OK   chat/prueba-diagnosticos.mjs (0.9 s)
+
+▶ 18/50 chat/editar.mjs
+OK   chat/editar.mjs (0.1 s)
+
+▶ 19/50 chat/adaptadores.mjs
+OK   chat/adaptadores.mjs (0.0 s)
+
+▶ 20/50 chat/prueba-ui.mjs
+OK   chat/prueba-ui.mjs (0.1 s)
+
+▶ 21/50 chat/prueba-editor.mjs
+OK   chat/prueba-editor.mjs (0.1 s)
+
+▶ 22/50 chat/prueba-contexto.mjs
+OK   chat/prueba-contexto.mjs (0.2 s)
+
+▶ 23/50 chat/prueba-compactacion.mjs
+OK   chat/prueba-compactacion.mjs (0.3 s)
+
+▶ 24/50 chat/prueba-memoria-global.mjs
+OK   chat/prueba-memoria-global.mjs (0.1 s)
+
+▶ 25/50 chat/prueba-registros.mjs
+OK   chat/prueba-registros.mjs (0.2 s)
+
+▶ 26/50 chat/prueba-stream.mjs
+OK   chat/prueba-stream.mjs (10.5 s)
+
+▶ 27/50 chat/prueba-lecturas.mjs
+OK   chat/prueba-lecturas.mjs (0.1 s)
+
+▶ 28/50 chat/prueba-markdown-seguro.mjs
+OK   chat/prueba-markdown-seguro.mjs (0.1 s)
+
+▶ 29/50 chat/prueba-navegador-rutas.mjs
+OK   chat/prueba-navegador-rutas.mjs (0.1 s)
+
+▶ 30/50 chat/prueba-archivos-seguros.mjs
+OK   chat/prueba-archivos-seguros.mjs (0.1 s)
+
+▶ 31/50 chat/prueba-escritura-incremental.mjs
+OK   chat/prueba-escritura-incremental.mjs (0.1 s)
+
+▶ 32/50 chat/prueba-git-seguro.mjs
+OK   chat/prueba-git-seguro.mjs (3.0 s)
+
+▶ 33/50 chat/prueba-procesos.mjs
+OK   chat/prueba-procesos.mjs (16.3 s)
+
+▶ 34/50 chat/prueba-seguridad.mjs
+OK   chat/prueba-seguridad.mjs (1.1 s)
+
+▶ 35/50 chat/prueba-sin-gpu.mjs
+OK   chat/prueba-sin-gpu.mjs (0.8 s)
+
+▶ 36/50 chat/prueba-truncado.mjs
+OK   chat/prueba-truncado.mjs (1.4 s)
+
+▶ 37/50 chat/prueba-api.mjs
+OK   chat/prueba-api.mjs (4.1 s)
+
+▶ 38/50 chat/prueba-agente-limites.mjs
+OK   chat/prueba-agente-limites.mjs (10.4 s)
+
+▶ 39/50 chat/prueba-servidor-estado.mjs
+OK   chat/prueba-servidor-estado.mjs (1.1 s)
+
+▶ 40/50 chat/prueba-recuperacion-modelo.mjs
+OK   chat/prueba-recuperacion-modelo.mjs (0.1 s)
+
+▶ 41/50 chat/prueba-agente.mjs
+OK   chat/prueba-agente.mjs (18.0 s)
+
+▶ 42/50 chat/prueba-servidor-administrado.mjs
+OK   chat/prueba-servidor-administrado.mjs (7.3 s)
+
+▶ 43/50 chat/prueba-lanzador.mjs
+OK   chat/prueba-lanzador.mjs (0.4 s)
+
+▶ 44/50 chat/prueba-perfil-gpu.mjs
+OK   chat/prueba-perfil-gpu.mjs (5.1 s)
+
+▶ 45/50 chat/prueba-copia-evaluacion.mjs
+OK   chat/prueba-copia-evaluacion.mjs (2.0 s)
+
+▶ 46/50 chat/prueba-small-coder.mjs
+OK   chat/prueba-small-coder.mjs (10.9 s)
+
+▶ 47/50 chat/prueba-cancelacion-y-cierre.mjs
+OK   chat/prueba-cancelacion-y-cierre.mjs (6.3 s)
+
+▶ 48/50 chat/prueba-benchmark-coder.mjs
+OK   chat/prueba-benchmark-coder.mjs (8.3 s)
+
+▶ 49/50 chat/prueba-python-coder.mjs
+OK   chat/prueba-python-coder.mjs (1.2 s)
+
+▶ 50/50 chat/prueba-code-intelligence.mjs
+OK   chat/prueba-code-intelligence.mjs (5.5 s)
+
+50/50 OK · 0 FALLO · 128.1 s
+Todo en verde.

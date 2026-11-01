@@ -1,0 +1,1 @@
+Lifecycle navegador: foreign preservado, error visible, cambios sin guardar confirmados, dos stop 200, alias y cierre real de Node correctos.

@@ -1,0 +1,32 @@
+
+> bonsai-local-ide@2.3.6 test:navegador
+> node scripts/run-tests.mjs navegador
+
+Bonsai IDE · 8 suite(s) · grupos: navegador
+
+▶ 1/8 chat/prueba-lifecycle-navegador.mjs
+OK   chat/prueba-lifecycle-navegador.mjs (18.7 s)
+
+▶ 2/8 chat/prueba-mcp-playwright.mjs
+OK   chat/prueba-mcp-playwright.mjs (1.8 s)
+
+▶ 3/8 chat/prueba-navegador-desarrollo.mjs
+OK   chat/prueba-navegador-desarrollo.mjs (7.3 s)
+
+▶ 4/8 chat/prueba-navegador.mjs
+OK   chat/prueba-navegador.mjs (5.5 s)
+
+▶ 5/8 chat/prueba-navegador-aislamiento.mjs
+OK   chat/prueba-navegador-aislamiento.mjs (2.6 s)
+
+▶ 6/8 chat/prueba-ui-humo.mjs
+OK   chat/prueba-ui-humo.mjs (6.9 s)
+
+▶ 7/8 chat/prueba-editor-moderno.mjs
+OK   chat/prueba-editor-moderno.mjs (4.4 s)
+
+▶ 8/8 chat/prueba-inicio-modelo.mjs
+OK   chat/prueba-inicio-modelo.mjs (4.1 s)
+
+8/8 OK · 0 FALLO · 51.5 s
+Todo en verde.

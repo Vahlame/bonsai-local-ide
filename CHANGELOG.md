@@ -4,6 +4,28 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [Unreleased]
+
+### Cambiado
+
+- Registro único `config/llama-binaries.json`, consumido por lanzadores, parada y Node.
+- Ciclo de vida extraído a `chat/lifecycle/`: estado, mutex, start/stop/restart/close,
+  limpieza de arranques fallidos y rollback. Alias HTTP anteriores conservados.
+- Un controlador de UI y un polling para Iniciar, Detener y Cerrar IDE e IA.
+
+### Corregido
+
+- La parada confirma PIDs, puerto, marcador y VRAM; dos stop simultáneos comparten resultado.
+- El cierre rechazado conserva el IDE y muestra el error. El cierre HTTP tiene timeout y
+  termina conexiones SSE/keep-alive después de enviar la respuesta.
+- Los scripts ofrecen JSON sin mensajes mezclados y validan `binId` y ejecutable real.
+
+### Añadido
+
+- Regresiones aisladas y de navegador; E2E GPU con wrapper huérfano, paradas concurrentes,
+  arranque fallido, rollback y evidencia de VRAM.
+- [Contrato del ciclo de vida](docs/LIFECYCLE.md) y [notas del candidato 2.4.0](docs/RELEASE-2.4.0.md).
+
 ## [2.3.6] - 2026-11-01
 
 ### Añadido

@@ -1,0 +1,4 @@
+UI: botón Detener visible
+Detener: llama-server cerrado, UI viva, marcador limpio
+Rearranque: llama-server PID 65032
+Cerrar IDE e IA: UI y llama-server cerrados, sin marcador
