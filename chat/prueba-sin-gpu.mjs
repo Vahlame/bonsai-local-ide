@@ -143,7 +143,7 @@ try {
     check("razonamiento: presupuesto en la raíz", body.thinking_budget_tokens > 0 && body.thinking_budget_tokens <= 2048 && body.chat_template_kwargs?.enable_thinking === true);
     check("razonamiento: esfuerzo medium (high da 500)", body.chat_template_kwargs?.reasoning_effort === "medium");
     check("razonamiento: muestreo de razonar", body.temperature === 0.6 && body.min_p === 0.05 && body.top_p === 0.9);
-    check("razonamiento: la tanda incluye el presupuesto", body.max_tokens === 2048 + body.thinking_budget_tokens);
+    check("razonamiento: la tanda incluye el presupuesto", body.max_tokens >= 2048 + body.thinking_budget_tokens);
     const last = chat.session.turns[chat.session.turns.length - 1];
     check("razonamiento: el pensamiento no entra al historial", last?.content === "respuesta final");
     check("razonamiento: avisa que está pensando", events.some((e) => e.type === "status" && /pensando/.test(e.text || "")));

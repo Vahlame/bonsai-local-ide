@@ -389,6 +389,14 @@ if ($IsMoe) {
             $NCpuMoe = [math]::Min($CapasMoe, $NCpuMoe + [int]$ExtraCpu)
             Write-Host ("MoE medido: VRAM libre {0} MiB (< {1}); +{2} capas a CPU" -f $FreeMiB, $MeasuredMoe.freeVramAssumedMiB, $ExtraCpu) -ForegroundColor Yellow
         }
+        # La UI y la visión añaden presión sobre la VRAM (browser, proyector,
+        # buffers de compute). El reparto medido es el más rápido, pero el plan
+        # del modelo deja más margen. Con visión/UI se usa el plan si es más
+        # conservador; así el arranque desde la UI no muere por OOM.
+        if ($Vision -and [int]$GpuProfile.moe.nCpuMoe -gt $NCpuMoe) {
+            Write-Host ("MoE: visión/UI; se usa el reparto del plan ({0} capas en CPU) en vez del medido ({1})." -f $GpuProfile.moe.nCpuMoe, $NCpuMoe) -ForegroundColor Yellow
+            $NCpuMoe = [int]$GpuProfile.moe.nCpuMoe
+        }
         $CapasGpu = $CapasMoe - $NCpuMoe
         $GpuExpertosMiB = 0
         for ($i = $NCpuMoe; $i -lt $CapasMoe; $i++) {

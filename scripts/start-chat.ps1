@@ -7,7 +7,7 @@ param (
     [string]$ContextSize = "auto",   # auto = la VRAM libre; o un numero de tokens
     [int]$Port = 8080,
     [int]$PromptCap = 3072,
-    [int]$Pensar = -1,            # -1 = auto (ajuste "Modo razonamiento" de la interfaz, solo si el modelo lo admite). 0 = apagado. N>0 = tope de N tokens
+    [int]$Pensar = -2,            # -2 = auto (presupuesto del modelo); -1 = sin límite; 0 = apagado; N>0 = tope de N tokens
     [switch]$SinVision            # por defecto la vision se enciende sola si el proyector esta descargado
 )
 
@@ -27,7 +27,7 @@ if (-not $SinVision) {
     if ($mmproj -and (Test-Path (Join-Path $RootDir ("models\" + $mmproj)))) { $VisionFlags = @("-Vision") }
 }
 $VisionArgs = if ($VisionFlags.Count -gt 0) { " " + ($VisionFlags -join " ") } else { "" }
-$PensarArgs = if ($Pensar -ge 0) { " -Pensar $Pensar" } else { "" }
+$PensarArgs = if ($Pensar -ne -2) { " -Pensar $Pensar" } else { "" }
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Error "No esta node en el PATH."

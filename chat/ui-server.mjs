@@ -1633,7 +1633,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const UI_VERSION = "2.3.6";
+  const UI_VERSION = "2.4.0";
   // El lanzador de escritorio elige el perfil de agente. `optimized` era el
   // nombre histórico del perfil de coding; hoy el único perfil con el harness
   // nuevo es `small-local-coder`. Los ajustes guardados siguen mandando.
@@ -1852,16 +1852,21 @@ async function main(args) {
           url: `${fs.existsSync(path.join(workspaceRoot, file.rel)) ? "/p" : "/salida"}/${file.rel.split("/").map(encodeURIComponent).join("/")}`,
         }));
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-        const usage = chat.usage || {
-          prompt: 0,
-          generated: 0,
+        const usage = {
+          ...(chat.usage || {
+            prompt: 0,
+            generated: 0,
+            memory: estimateTokens(chat.session.memory),
+            globalMemory: estimateTokens(chat.globalMemory),
+            globalMemoryEntries: chat.globalMemoryIds.length,
+          }),
+          // La ventana y el tope son del servidor ACTUAL, no de la sesión que
+          // se cargó con otro modelo. Sin esto el medidor podía seguir
+          // mostrando 65536 tras cambiar a un modelo de 32768.
           cap: chat.historyCap(),
           nCtx: chat.nCtx,
           folded: chat.session.folded,
           turns: chat.session.turns.length,
-          memory: estimateTokens(chat.session.memory),
-          globalMemory: estimateTokens(chat.globalMemory),
-          globalMemoryEntries: chat.globalMemoryIds.length,
         };
         res.end(JSON.stringify({
           agentProfile: chat.agentProfile,

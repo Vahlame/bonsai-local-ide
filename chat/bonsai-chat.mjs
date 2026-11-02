@@ -1698,9 +1698,9 @@ export class BonsaiChat {
           this.note("[no queda hueco en la ventana]");
           break;
         }
-        // Con razonamiento (opt-in), la primera tanda lleva además el presupuesto para pensar.
-        const thinkRoom = slice === 0 && this.thinkBudget > 0 ? this.effectiveThinkingBudget() : 0;
-        const maxTokens = Math.min(sliceCap + thinkRoom, room);
+        // `sliceCap` ya incluye la reserva de pensamiento cuando está activo;
+        // sumarla otra vez duplicaba el presupuesto de la tanda.
+        const maxTokens = Math.min(sliceCap, room);
         this.livePrompt = historyTokens;
         this.liveGenerated = estimateTokens(draft);
         try {
