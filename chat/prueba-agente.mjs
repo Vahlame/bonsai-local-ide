@@ -125,6 +125,12 @@ const guion = (body, n) => {
   if (body.tool_choice === "none" && /Ya no hagas más acciones/.test(ultimo) && body.messages.some((m) => m.tool_call_id === "call_cierre")) {
     return [{ content: "<tool_call>\n<function=ejecutar>\n<parameter=comando>\nnode -e \"console.log(7)\"\n</parameter>\n</function>\n</tool_call>" }];
   }
+  // Pedido de información externa: el primer intento no llama a buscar y la app
+  // debe empujar una vez; el segundo ya no se queda en bucle.
+  if (/busca en internet la última versión/i.test(ultimo)) {
+    if (!/información externa o actual/.test(ultimo)) return [{ content: "Puedo responder de memoria." }];
+    return [{ content: "No encontré fuentes; no voy a inventar." }];
+  }
   // Ctrl+K: el servidor manda tool_choice "none" y solo espera el reemplazo.
   if (body.tool_choice === "none") return [{ content: "linea editada" }];
   // Prueba del cierre: pide un comando y, tras su resultado (role "tool"), lo repite una y
@@ -379,6 +385,11 @@ try {
   const ultimo = visto[visto.length - 1];
   const mensajeUsuario = String(ultimo?.messages?.[ultimo.messages.length - 1]?.content || "");
   check("el modelo recibe el aviso de la imagen", mensajeUsuario.includes("No tienes visión") && mensajeUsuario.includes(String(adjunto.archivo)), mensajeUsuario.slice(-220));
+
+  // --- 6b. Si piden internet, la app empuja a buscar una vez ---------------
+  await chat("busca en internet la última versión de llama.cpp");
+  const empujones = visto.filter((b) => /información externa o actual/i.test(String(b.messages?.[b.messages.length - 1]?.content || "")));
+  check("un pedido externo sin búsqueda recibe un empujón", empujones.length >= 1, JSON.stringify(visto.slice(-2).map((b) => String(b.messages?.at(-1)?.content || "").slice(-80))));
 
   // --- 7. Llamada a función escrita como XML (no parseada por el servidor) ---
   await chat("prueba del xml");

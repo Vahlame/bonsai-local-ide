@@ -5,6 +5,19 @@
 import { turnoInterno } from "../context.mjs";
 
 /**
+ * ¿El pedido pide información externa o actual? Sirve para empujar al modelo a
+ * usar `buscar` cuando se queda respondiendo de memoria.
+ * @param {string} texto
+ * @returns {boolean}
+ */
+export function pideBusquedaExterna(texto) {
+  const t = String(texto || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (!t || t.length > 3000) return false;
+  if (/\b(busca|buscar|consulta|consultar|investiga|investigar|mira|revisa)\b[^.\n]{0,60}\b(internet|web|online|fuentes?|google|searxng)\b/.test(t)) return true;
+  return /\b(noticias|ultima version|ultimas novedades|precio actual|clima|documentacion oficial|estado actual|que ha pasado)\b/.test(t);
+}
+
+/**
  * @param {string} text
  * @param {number} [max]
  * @returns {string}

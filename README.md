@@ -9,7 +9,7 @@ inferencia no usa una API en la nube; las búsquedas web y las descargas del Hub
 son opcionales. Sin telemetría y sin claves de API.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.4.7-8fb8ff">
+  <img alt="version" src="https://img.shields.io/badge/version-2.4.8-8fb8ff">
   <img alt="CI" src="https://github.com/Vahlame/bonsai-local-ide/actions/workflows/ci.yml/badge.svg">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
@@ -17,18 +17,20 @@ son opcionales. Sin telemetría y sin claves de API.
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.4.7 - Servidor modular, sin cambiar el comportamiento.** El primer corte
-> saca de `ui-server.mjs` los argumentos HTTP, el catálogo de modelos, la GPU, el
-> navegador y los puntos de deshacer. Se mantienen **51/51 tests**, **9/9
-> navegador**, UI 2.4.7 con 0 errores de consola y CI verde. Notas:
-> [RELEASE-2.4.7](docs/RELEASE-2.4.7.md).
+> **v2.4.8 - Servidor y UI modulares, tool registry y búsqueda web opcional.**
+> `ui-server.mjs` baja de 4.115 a 1.055 líneas; el bucle del agente, las rutas,
+> el parser legacy y las tools quedan separados. La UI estrena módulos de núcleo
+> sin cambiar el diseño. Se añade acceso LAN con `--unsafe-lan` + token y un
+> proveedor SearXNG opcional para `buscar`. **56/56 tests**, **9/9 navegador**,
+> UI 2.4.8 con 0 errores de consola y CI verde. Notas:
+> [RELEASE-2.4.8](docs/RELEASE-2.4.8.md).
 
 > **Modelo principal: Qwen3.6 35B-A3B (MoE).** Es el mejor equilibrio
 > calidad/velocidad del benchmark 2026-11-01 (90/100, 35–40 tok/s) y el que
 > usa el IDE para el agente. GPT-OSS 20B sigue disponible como alternativa
 > Harmony para proyectos desde cero.
 
-![Bonsai IDE 2.4: explorador, agente, vista previa de la app generada y métricas de GPU](docs/graficos/ui-2.4.7-main.png)
+![Bonsai IDE 2.4: explorador, agente, vista previa de la app generada y métricas de GPU](docs/graficos/ui-2.4.8-main.png)
 
 ---
 
@@ -65,7 +67,7 @@ son opcionales. Sin telemetría y sin claves de API.
 
 | Diff/merge en Ctrl+K | Ajustes 2.4 | Estado vacío |
 |---|---|---|
-| ![Diff](docs/graficos/ui-2.3-diff.png) | ![Ajustes](docs/graficos/ui-2.4.7-settings.png) | ![Inicio](docs/graficos/ui-2.3-vacio.png) |
+| ![Diff](docs/graficos/ui-2.3-diff.png) | ![Ajustes](docs/graficos/ui-2.4.8-settings.png) | ![Inicio](docs/graficos/ui-2.3-vacio.png) |
 
 ---
 
@@ -376,6 +378,8 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 |---|---|
 | [AUDIT-2026-11-01](docs/AUDIT-2026-11-01.md) | Inventario, sintaxis, enlaces, UI, runtime y límites |
 | [CONTRIBUTING](CONTRIBUTING.md) | Setup, pruebas, estilo, modelos y releases |
+| [RELEASE-2.4.8](docs/RELEASE-2.4.8.md) | Servidor/rutas/agente modulares, tool registry, LAN con token y SearXNG |
+| [INVESTIGACION-WEB](docs/INVESTIGACION-WEB.md) | Búsqueda web del agente y SearXNG local seguro |
 | [RELEASE-2.4.7](docs/RELEASE-2.4.7.md) | Primer corte modular del servidor |
 | [RELEASE-2.4.6](docs/RELEASE-2.4.6.md) | Medidor de memoria extractiva y primer turno directo |
 | [RELEASE-2.4.5](docs/RELEASE-2.4.5.md) | Sin cierre/resumen fantasma tras una respuesta útil |
@@ -441,6 +445,13 @@ models/          GGUF locales (no viajan en Git)
 - Rutas confinadas al workspace; escrituras atómicas y undo por escritura.
 - Git sin `add -A`; el agente solo commitea lo que seleccionas.
 - Sin telemetría ni CDN en la UI. La inferencia es local; las búsquedas web y las descargas del Hub son opcionales.
+- El servidor escucha en loopback por defecto. Para LAN hace falta `--unsafe-lan`
+  y un token de al menos 16 caracteres; el primer acceso `/?token=...` deja una
+  cookie de sesión. Detalle: [SECURITY](SECURITY.md).
+- `buscar` y `leer_web` mantienen las protecciones anti-SSRF y de puertos del IDE.
+  Si configuras `BONSAI_SEARXNG_URL`, la búsqueda usa tu instancia local de
+  [SearXNG](https://github.com/searxng/searxng); si falla, vuelve a los
+  proveedores anteriores. Guía: [INVESTIGACION-WEB](docs/INVESTIGACION-WEB.md).
 - No hay debugger multi-lenguaje, ecosistema de extensiones ni remote
   development: eso es VS Code. Bonsai se enfoca en el agente local sobre
   Windows + llama.cpp + GPU modesta.

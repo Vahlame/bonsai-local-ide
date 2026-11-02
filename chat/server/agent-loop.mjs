@@ -26,7 +26,7 @@ import { readGpu, resetGpuCache } from "./gpu.mjs";
 import { SKIP_EXT } from "./workspace.mjs";
 import { candidatosDeMemoria } from "../memoria-global.mjs";
 import { legacyCommands, legacyImpliedAction, legacyIndexScope, legacyReads, legacySearches, legacyWrites } from "../legacy-tool-parser.mjs";
-import { AVISO_SEGUIR, anunciaAccion, clipText, hiddenTurn, looksLikeEdit, resumenDeAcciones } from "./text.mjs";
+import { AVISO_SEGUIR, anunciaAccion, clipText, hiddenTurn, looksLikeEdit, pideBusquedaExterna, resumenDeAcciones } from "./text.mjs";
 
 const extractCommands = legacyCommands;
 const extractWrites = legacyWrites;
@@ -232,6 +232,11 @@ async function agentLoop(req, res) {
           // prefijo del turno, cada tarjeta es única dentro de la conversación.
           const idTurno = `t${(ctx.turno += 1)}`;
           let nudges = 0;
+          // Pedidos de información externa/actual: un solo empujón si el modelo
+          // intenta responder de memoria sin llamar a buscar/leer_web.
+          const busquedaExternaPedida = pideBusquedaExterna(text);
+          let busquedaIntentada = false;
+          let avisoBusquedaDado = false;
           // Cuántos saltos dar y cuántos avisos mandar antes de rendirse lo dice el MODELO
           // cargado (chat\modelo.json → catalogo.<clave>.agente), no una constante igual
           // para todos: bolding_v1 necesita más margen que override6 y se rinde antes.
@@ -1043,6 +1048,7 @@ async function agentLoop(req, res) {
               poner(`cmd:${rawCommand}`, `Salida de ${command} (código ${result.code}; registro ${registro.id}, consulta con consultar_salida):\n${recortarCentro(result.output, 3000)}${ready ? `\n${ready}` : ""}${failed}`);
               ranCommand = true;
             }
+            if (searches.length) busquedaIntentada = true;
             for (const query of searches) {
               const row = showAction("search", query, "run");
               let detail = "Sin resultados.";
@@ -1057,6 +1063,7 @@ async function agentLoop(req, res) {
               progresoPaso = true;
             }
             for (const [i, argsWeb] of (effects?.webs || []).entries()) {
+              busquedaIntentada = true;
               ac.signal.throwIfAborted();
               const row = showAction("read", String(argsWeb.url), "run");
               try {
@@ -1074,6 +1081,7 @@ async function agentLoop(req, res) {
             }
             const imagenesPorLlamada = new Map();
             for (const [i, argsNav] of (effects?.navegaciones || []).entries()) {
+              busquedaIntentada = true;
               ac.signal.throwIfAborted();
               const row = showAction("browser", `${argsNav.accion || "inspeccionar"} ${argsNav.ruta || argsNav.url || argsNav.selector || ""}`, "run");
               try {
@@ -1174,6 +1182,15 @@ async function agentLoop(req, res) {
             if (follow && nudges < agente.avisos && anunciaAccion(announced)) {
               nudges += 1;
               return { texto: "Sigue con lo que pedí. No llamaste ninguna función. Llámala ahora, sin escribir la salida.", resultados };
+            }
+            // El usuario pidió internet/actualidad y el modelo respondió de memoria:
+            // un único empujón. Si aun así no busca, el cierre dirá que faltó.
+            if (follow && busquedaExternaPedida && !busquedaIntentada && !avisoBusquedaDado) {
+              avisoBusquedaDado = true;
+              return {
+                texto: "Sigue con lo que pedí. El usuario pidió información externa o actual. Llama a la función buscar con una consulta concreta y, después, lee la fuente con leer_web antes de citar o responder. No respondas de memoria ni inventes datos actuales. Si la búsqueda falla, prueba otra consulta o una fuente conocida; no repitas el mismo intento en bucle.",
+                resultados,
+              };
             }
             return null;
           };

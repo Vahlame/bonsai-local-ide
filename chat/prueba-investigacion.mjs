@@ -1,16 +1,27 @@
 import assert from "node:assert/strict";
 import http from "node:http";
-import { buscarWeb, descargarWeb, extraerPagina, leerWeb, resultadosBusqueda } from "./investigacion.mjs";
+import { buscarWeb, descargarWeb, extraerPagina, leerWeb, resultadosBusqueda, resultadosSearxng } from "./investigacion.mjs";
 import { nativeToolEffects, PC_TOOLS } from "./actions.mjs";
 
 // El orden de atributos en DuckDuckGo cambia; no debe convertir resultados reales en vacíos.
 const html = '<a href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.org%2Fdocs" class="result__a">Documentación &amp; API</a><div class="result__snippet">Fuente original</div>';
 assert.deepEqual(resultadosBusqueda(html, "duckduckgo"), [{ titulo: "Documentación & API", url: "https://example.org/docs", resumen: "Fuente original" }]);
+const searxJson = { results: [{ title: "SearXNG docs", url: "https://docs.searxng.org/", content: "Metasearch segura" }, { title: "inválida", url: "file:///x" }] };
+assert.deepEqual(resultadosSearxng(searxJson), [{ titulo: "SearXNG docs", url: "https://docs.searxng.org/", resumen: "Metasearch segura" }]);
+const conSearxng = JSON.parse(await buscarWeb("API oficial", {
+  searxngUrl: "https://searx.example/",
+  fetcher: async (url) => {
+    assert.match(String(url), /\/search\?/);
+    return new Response(JSON.stringify(searxJson), { headers: { "content-type": "application/json" } });
+  },
+}));
+assert.equal(conSearxng.proveedor, "searxng");
+assert.equal(conSearxng.resultados[0].url, "https://docs.searxng.org/");
 const rss = '<rss><channel><item><title><![CDATA[Documentación]]></title><link>https://example.org/api</link><description>API oficial</description></item></channel></rss>';
 let intentos = 0;
-const fallback = JSON.parse(await buscarWeb("API oficial", { fetcher: async () => ++intentos === 1 ? new Response("captcha", { status: 403 }) : new Response(rss, { headers: { "content-type": "application/xml" } }) }));
+const fallback = JSON.parse(await buscarWeb("API oficial", { searxngUrl: "", fetcher: async () => ++intentos === 1 ? new Response("captcha", { status: 403 }) : new Response(rss, { headers: { "content-type": "application/xml" } }) }));
 assert.equal(fallback.proveedor, "bing-rss"); assert.equal(fallback.resultados[0].titulo, "Documentación");
-await assert.rejects(buscarWeb("consulta", { fetcher: async () => new Response("verificación", { status: 200 }) }), /No se obtuvieron fuentes/);
+await assert.rejects(buscarWeb("consulta", { searxngUrl: "", fetcher: async () => new Response("verificación", { status: 200 }) }), /No se obtuvieron fuentes/);
 const parsed = await extraerPagina('<title>Fuente</title><nav>MENU</nav><main><h1>Guía</h1><script>INSTRUCCION_OCULTA</script><p>A &lt; B &#x1F680;</p><a href="/api">API</a></main>', "https://example.org/docs");
 assert.match(parsed.texto, /A < B 🚀/); assert.doesNotMatch(parsed.texto, /MENU|INSTRUCCION/);
 assert.equal(parsed.enlaces[0].url, "https://example.org/api");

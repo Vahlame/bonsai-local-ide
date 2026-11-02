@@ -1,6 +1,6 @@
 /** Pruebas de las funciones de texto extraídas a chat/server/text.mjs. */
 import assert from "node:assert/strict";
-import { AVISO_SEGUIR, anunciaAccion, chatTitle, clipText, hiddenTurn, looksLikeEdit, resumenDeAcciones } from "./server/text.mjs";
+import { AVISO_SEGUIR, anunciaAccion, chatTitle, clipText, hiddenTurn, looksLikeEdit, pideBusquedaExterna, resumenDeAcciones } from "./server/text.mjs";
 
 assert.equal(clipText("", 10), "(sin salida)");
 assert.equal(clipText("hola   ", 10), "hola");
@@ -14,6 +14,12 @@ assert.equal(anunciaAccion("Déjame comprobar."), true);
 assert.equal(anunciaAccion("Voy a leer, ¿qué prefieres?"), false, "una pregunta no es un anuncio pendiente");
 assert.equal(anunciaAccion("Hecho. Ahora calcula el total."), false);
 assert.equal(anunciaAccion("x".repeat(400)), false);
+
+assert.equal(pideBusquedaExterna("Busca en internet las últimas noticias de llama.cpp"), true);
+assert.equal(pideBusquedaExterna("¿Cuál es la última versión de Qwen?"), true);
+assert.equal(pideBusquedaExterna("consulta la documentación oficial"), true);
+assert.equal(pideBusquedaExterna("busca en el proyecto dónde está la función"), false);
+assert.equal(pideBusquedaExterna("explica qué es una closure"), false);
 
 assert.equal(hiddenTurn({ role: "tool", content: "resultado" }), true);
 assert.equal(hiddenTurn({ role: "user", content: AVISO_SEGUIR }), true);

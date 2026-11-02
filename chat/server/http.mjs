@@ -36,7 +36,7 @@ export const UI_SERVIDOS = new Set([".js", ".mjs", ".css", ".html", ".svg", ".js
 export function parseArgs(argv) {
   // think = presupuesto de razonamiento en tokens; 0 (por defecto) = APAGADO.
   // historyCap = 0 -> automatico: el historial usa toda la ventana menos la reserva de salida.
-  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 0, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo", agentProfile:"optimized", unsafeLan: false, token: String(process.env.BONSAI_UI_TOKEN || "").trim() };
+  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 0, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo", agentProfile:"optimized", unsafeLan: false, token: "" };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--host") out.host = argv[++i] ?? out.host;
@@ -57,10 +57,16 @@ export function parseArgs(argv) {
       throw new Error(`--host ${out.host} expone el IDE fuera de loopback. Usa --unsafe-lan junto con --token (o BONSAI_UI_TOKEN) si de verdad quieres servirlo en la LAN.`);
     }
   }
-  if (out.unsafeLan || !esLoopback(out.host)) {
+  const requiereToken = out.unsafeLan || !esLoopback(out.host);
+  if (requiereToken) {
+    // El token del entorno se reserva para LAN: en loopback no debe activar auth
+    // por accidente (por ejemplo, en una suite de pruebas que herede el entorno).
+    if (!out.token) out.token = String(process.env.BONSAI_UI_TOKEN || "").trim();
     if (out.token.length < 16) {
       throw new Error("--unsafe-lan exige un token de al menos 16 caracteres: --token <secreto> o BONSAI_UI_TOKEN.");
     }
+  } else if (out.token && out.token.length < 16) {
+    throw new Error("El token de acceso debe tener al menos 16 caracteres.");
   }
   // -1 es "sin limite" (Qwen3.6 free thinking); 0 apaga el razonamiento.
   if (!Number.isInteger(out.think) || out.think < -1) throw new Error("--think es un presupuesto en tokens (-1 = sin limite, 0 = apagado)");

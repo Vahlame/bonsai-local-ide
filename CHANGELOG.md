@@ -4,6 +4,62 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.8] - 2026-11-02
+
+### Arquitectura
+
+- `ui-server.mjs` baja de 4.115 a 1.055 líneas. El bucle de `/api/chat` vive en
+  `chat/server/agent-loop.mjs` y los handlers HTTP en `chat/server/routes/`
+  (`static`, `files`, `git`, `models`, `settings`, `chat`) con un `routeContext`
+  explícito.
+- `workspace.mjs` y `text.mjs` separan operaciones de carpeta y texto; los
+  módulos no leen variables globales de `ui-server.mjs`.
+- La UI estrena `core/dom.mjs`, `core/api.mjs`, `core/state.mjs`,
+  `editor/text.mjs` y `workspace/paths.mjs`. `app.js`, `hub.js` y `paneles.js`
+  son módulos ES; el diseño y los flujos no cambian.
+
+### Tools
+
+- `chat/tool-registry.mjs` es la fuente única de esquemas, validación,
+  descripción, permisos y despacho de efectos para `PC_TOOLS` y `CODER_TOOLS`.
+- `tool-schemas.mjs` deriva Zod del JSON Schema del registro.
+- Se elimina la copia fantasma de `buscar_texto`; no existe una segunda tool
+  solo para que un test compare dos copias.
+
+### Parser legacy
+
+- El parseo de tools escritas como texto se concentra en
+  `chat/legacy-tool-parser.mjs`.
+- Se añaden métricas en `GET /api/stats`, el flag
+  `BONSAI_LEGACY_TOOL_PARSER=0` y fecha de retirada **2027-06-30**.
+
+### Búsqueda web
+
+- `buscar` puede usar una instancia propia de
+  [SearXNG](https://github.com/searxng/searxng) mediante
+  `BONSAI_SEARXNG_URL`, antes de los fallbacks DuckDuckGo/Bing.
+- SearXNG no es una dependencia obligatoria; si no está configurado o falla, se
+  conserva el camino anterior.
+- Si un pedido de información actual/externa intenta responderse de memoria, el
+  agente envía un único aviso para usar `buscar` y `leer_web`; no entra en bucle.
+- Guía y límites de seguridad: `docs/INVESTIGACION-WEB.md`.
+
+### Seguridad
+
+- Un `--host` que no sea loopback exige `--unsafe-lan` y un token de al menos
+  16 caracteres (`--token` o `BONSAI_UI_TOKEN`).
+- El arranque con `/?token=...` deja cookie `HttpOnly` y redirige a `/`; la API
+  acepta `X-Bonsai-Token` y `Authorization: Bearer`.
+- `start-ui.ps1` acepta `-UnsafeLan` y `-Token`.
+
+### CI y pruebas
+
+- Nuevo job de smoke de navegador en GitHub Actions.
+- `prueba-lanzador.mjs` crea y verifica un acceso directo real en `%TEMP%`.
+- Nuevas suites: `prueba-server-workspace`, `prueba-server-text`,
+  `prueba-tool-registry`, `prueba-legacy-tool-parser` y `prueba-lan-auth`.
+- Total: 56/56 tests aislados y 9/9 de navegador.
+
 ## [2.4.7] - 2026-11-02
 
 ### Arquitectura

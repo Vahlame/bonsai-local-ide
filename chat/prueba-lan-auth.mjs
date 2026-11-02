@@ -10,13 +10,24 @@ import { parseArgs } from "./server/http.mjs";
 import { revisarPeticion } from "./guardia.mjs";
 
 const TOKEN = "secreto-local-123456";
-assert.throws(() => parseArgs(["--host", "0.0.0.0"]), /--unsafe-lan/);
-assert.throws(() => parseArgs(["--host", "0.0.0.0", "--unsafe-lan"]), /token/);
-const lan = parseArgs(["--host", "0.0.0.0", "--unsafe-lan", "--token", TOKEN]);
-assert.equal(lan.unsafeLan, true);
-assert.equal(lan.token, TOKEN);
-assert.equal(parseArgs([]).token, "");
-assert.equal(parseArgs(["--token", TOKEN]).token, TOKEN, "loopback también puede exigir token");
+const tokenPrevio = process.env.BONSAI_UI_TOKEN;
+delete process.env.BONSAI_UI_TOKEN;
+try {
+  assert.throws(() => parseArgs(["--host", "0.0.0.0"]), /--unsafe-lan/);
+  assert.throws(() => parseArgs(["--host", "0.0.0.0", "--unsafe-lan"]), /token/);
+  const lan = parseArgs(["--host", "0.0.0.0", "--unsafe-lan", "--token", TOKEN]);
+  assert.equal(lan.unsafeLan, true);
+  assert.equal(lan.token, TOKEN);
+  assert.equal(parseArgs([]).token, "");
+  assert.equal(parseArgs(["--token", TOKEN]).token, TOKEN, "loopback también puede exigir token");
+
+  process.env.BONSAI_UI_TOKEN = TOKEN;
+  assert.equal(parseArgs(["--host", "0.0.0.0", "--unsafe-lan"]).token, TOKEN, "LAN toma el token del entorno");
+  assert.equal(parseArgs([]).token, "", "loopback ignora el token del entorno salvo que se pida");
+} finally {
+  if (tokenPrevio === undefined) delete process.env.BONSAI_UI_TOKEN;
+  else process.env.BONSAI_UI_TOKEN = tokenPrevio;
+}
 
 const conToken = { host: "127.0.0.1", port: 8787, token: TOKEN };
 const pide = (headers, url = "/api/state") => revisarPeticion({ method: "GET", headers: { host: "127.0.0.1:8787", ...headers }, url }, conToken);
@@ -52,9 +63,11 @@ try {
   assert.ok(listo, "el servidor con token debe arrancar");
   assert.equal((await fetch(`${base}/`)).status, 401, "sin token no se sirve ni la página");
   const arranque = await fetch(`${base}/?token=${TOKEN}`, { redirect: "manual" });
-  assert.equal(arranque.status, 200);
+  assert.equal(arranque.status, 302);
+  assert.equal(arranque.headers.get("location"), "/");
   const cookie = String(arranque.headers.get("set-cookie") || "");
   assert.match(cookie, /bonsai_token=/);
+  assert.equal((await fetch(`${base}/`, { headers: { cookie: cookie.split(";")[0] } })).status, 200, "la cookie de arranque sirve la página");
   assert.equal((await fetch(`${base}/api/stats`, { headers: { cookie: cookie.split(";")[0] } })).status, 200, "la cookie de sesión vale para la API");
   assert.equal((await fetch(`${base}/api/stats`)).status, 401);
   console.log("LAN auth: flag, token, cookie de arranque y rechazo sin token verificados.");

@@ -876,7 +876,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const UI_VERSION = "2.4.7";
+  const UI_VERSION = "2.4.8";
   // El lanzador de escritorio elige el perfil de agente. `optimized` era el
   // nombre histórico del perfil de coding; hoy el único perfil con el harness
   // nuevo es `small-local-coder`. Los ajustes guardados siguen mandando.
@@ -1072,9 +1072,14 @@ async function main(args) {
       }
       const url = new URL(req.url || "/", `http://${args.host}`);
       // El primer acceso LAN llega como `/?token=...`: se deja una cookie de
-      // sesión para que la UI y sus recursos no tengan que arrastrar el token.
+      // sesión y se redirige a `/` para que el token no quede en la barra.
       if (args.token && url.pathname === "/" && url.searchParams.get("token") === args.token) {
-        res.setHeader("Set-Cookie", `bonsai_token=${encodeURIComponent(args.token)}; HttpOnly; SameSite=Strict; Path=/`);
+        res.writeHead(302, {
+          Location: "/",
+          "Set-Cookie": `bonsai_token=${encodeURIComponent(args.token)}; HttpOnly; SameSite=Strict; Path=/`,
+          "Cache-Control": "no-store",
+        }).end();
+        return;
       }
       if (await routes(req, res, url)) return;
       res.writeHead(404).end("no está");
@@ -1100,11 +1105,17 @@ async function main(args) {
   await new Promise((resolve) => {
     server.listen(args.port, args.host, () => resolve(undefined));
   });
-  const pageUrl = `http://${args.host}:${args.port}`;
+  const hostVisible = args.host === "0.0.0.0" || args.host === "::" ? "127.0.0.1" : args.host;
+  const pageUrl = `http://${hostVisible}:${args.port}`;
   const pythonHome = findPythonHome();
   const thinkNote = chat.thinkBudget ? `razonamiento ${chat.thinkBudget} tok` : "sin razonamiento";
   process.stdout.write(`Bonsai en ${pageUrl}\nmodelo ${modeloActualClave() || chat.model} · ventana ${chat.nCtx} · historial ${chat.historyCap()} · muestreo ${chat.perfil} · ${thinkNote}${chat.vision ? " · visión" : ""} · carpeta ${workspaceRoot}\npython ${pythonHome || "(no encontrado)"}\n`);
-  if (args.open) openBrowser(pageUrl);
+  if (args.open) {
+    // El navegador necesita el token una vez para obtener la cookie; la consola
+    // no lo imprime para no dejarlo en logs.
+    const openUrl = args.token ? `${pageUrl}/?token=${encodeURIComponent(args.token)}` : pageUrl;
+    openBrowser(openUrl);
+  }
 }
 
 main(parseArgs(process.argv.slice(2))).catch((err) => {

@@ -196,6 +196,35 @@ export async function extraerPagina(html, url) {
   }
 }
 
+/**
+ * Resultados del JSON API de SearXNG. Se acepta el formato estándar
+ * `{ results: [{ title, url, content, engine }] }` y se descartan URLs no HTTP.
+ * @param {unknown} json
+ * @returns {Array<{titulo: string, url: string, resumen: string}>}
+ */
+export function resultadosSearxng(json) {
+  const rows = json && typeof json === "object" && Array.isArray(/** @type {{results?: unknown}} */ (json).results)
+    ? /** @type {Array<Record<string, unknown>>} */ (/** @type {{results: unknown[]}} */ (json).results)
+    : [];
+  /** @type {Array<{titulo: string, url: string, resumen: string}>} */
+  const out = [];
+  for (const row of rows.slice(0, 8)) {
+    if (!row || typeof row !== "object") continue;
+    const titulo = textoPlano(row.title || "");
+    const rawUrl = typeof row.url === "string" ? row.url : "";
+    if (!titulo || !rawUrl) continue;
+    try {
+      const url = urlHttp(rawUrl);
+      if (!out.some((item) => item.url === url)) {
+        out.push({ titulo, url, resumen: textoPlano(row.content || row.snippet || "").slice(0, 700) });
+      }
+    } catch {
+      /* resultado inválido o no HTTP */
+    }
+  }
+  return out;
+}
+
 export function resultadosBusqueda(html, proveedor) {
   const results = [];
   const add = (titulo, rawUrl, resumen) => {
@@ -224,6 +253,30 @@ export async function buscarWeb(consulta, opts = {}) {
   const q = String(consulta || "").trim().slice(0, 500);
   if (!q) throw new Error("Consulta vacía.");
   const fallos = [];
+  // SearXNG es opcional: si el usuario tiene una instancia propia, se usa primero.
+  // Es un metasearch libre y auditables; no se manda nada a instancias públicas por
+  // defecto, solo a la URL que configure. El contenido sigue siendo dato no confiable.
+  const searxng = String(opts.searxngUrl !== undefined ? opts.searxngUrl : (process.env.BONSAI_SEARXNG_URL || "")).trim();
+  if (searxng) {
+    try {
+      const base = searxng.endsWith("/") ? searxng : `${searxng}/`;
+      const endpoint = new URL("search", base);
+      endpoint.searchParams.set("q", q);
+      endpoint.searchParams.set("format", "json");
+      endpoint.searchParams.set("language", "es");
+      endpoint.searchParams.set("safesearch", "1");
+      const page = await descargarWeb(endpoint.href, { ...opts, allowPrivate: true });
+      const datos = JSON.parse(page.text);
+      const resultados = resultadosSearxng(datos);
+      if (resultados.length) {
+        return JSON.stringify({ consulta: q, proveedor: "searxng", resultados, aviso: AVISO }, null, 2);
+      }
+      fallos.push("searxng: sin resultados utilizables");
+    } catch (err) {
+      opts.signal?.throwIfAborted();
+      fallos.push(`searxng: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
   for (const [proveedor, base] of [["duckduckgo", "https://html.duckduckgo.com/html/?q="], ["bing-rss", "https://www.bing.com/search?format=rss&q="]]) {
     try {
       const page = await descargarWeb(base + encodeURIComponent(q), opts);

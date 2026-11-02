@@ -17,7 +17,10 @@ param (
     [ValidateSet("", "legacy", "small-local-coder")][string]$AgentProfile = "",
     [string]$EnginePreset = "",
     [switch]$SinVision,           # por defecto la vision se enciende sola si el proyector esta descargado
-    [switch]$NoBrowser
+    [switch]$NoBrowser,
+    # LAN: exige el flag y un token de >=16. Sin -UnsafeLan, el servidor sigue en loopback.
+    [switch]$UnsafeLan,
+    [string]$Token = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -237,7 +240,10 @@ Write-Host ""
 # character by character into native commands ("--open" became "-", "-", "o", ...).
 [string[]]$UiEngineArgs = @()
 if ($EnginePreset) { $UiEngineArgs = @('--engine-preset', $EnginePreset) }
+[string[]]$LanArgs = @()
+if ($UnsafeLan) { $LanArgs += @('--unsafe-lan') }
+if ($Token) { $LanArgs += @('--token', $Token) }
 [string[]]$BrowserArgs = @()
 if (-not $NoBrowser) { $BrowserArgs = @('--open') }
-& node $Server --port $UiPort --llama-port $Port --prompt-cap $PromptCap @ThinkArgs @UiEngineArgs @BrowserArgs
+& node $Server --port $UiPort --llama-port $Port --prompt-cap $PromptCap @ThinkArgs @UiEngineArgs @LanArgs @BrowserArgs
 exit $LASTEXITCODE

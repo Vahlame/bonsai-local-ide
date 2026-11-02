@@ -70,7 +70,7 @@ const DEFINITIONS = {
     name: "buscar",
     permission: "network",
     profiles: "pc,coder",
-    description: "Investiga en internet con buscadores públicos. Devuelve títulos, URLs y resúmenes; usa leer_web para leer las fuentes antes de citar o aplicar detalles técnicos.",
+    description: "Investiga en internet. Devuelve títulos, URLs y resúmenes; usa leer_web antes de citar. Úsala si el dato puede ser reciente o no está en el proyecto.",
     parameters: { type: "object", properties: { consulta: { type: "string" } }, required: ["consulta"] },
   },
   leer_web: {
