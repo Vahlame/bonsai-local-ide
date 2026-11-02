@@ -1,0 +1,229 @@
+[
+  {
+    "tarea": "fluid",
+    "modelo": "qwen36-35b-a3b",
+    "contexto": 65536,
+    "nota": "MoE 35B-A3B",
+    "wall_s": 259.9,
+    "helper_code": 0,
+    "report_error": null,
+    "done": {
+      "elapsed_ms": 259646.7889000196,
+      "type": "done",
+      "motivo": "verified",
+      "saltos": 8,
+      "incompleto": false
+    },
+    "decode_tps_med": 40.2,
+    "decode_tps_max": 41.8,
+    "prompt_tps_med": 764.1,
+    "generated_tokens": 5451,
+    "html_exists": true,
+    "html_bytes": 8521,
+    "check": {
+      "task": "fluid",
+      "ok": true,
+      "errors": [],
+      "info": {
+        "canvas": true,
+        "fps": true,
+        "particulas": true,
+        "canvasSize": [
+          1280,
+          800
+        ],
+        "fpsText": "80",
+        "particulasText": "600",
+        "rafFrames": 82,
+        "fpsValue": 80,
+        "particulasValue": 600
+      }
+    },
+    "task_errors": [],
+    "actions": [
+      {
+        "kind": "write",
+        "title": "index.html",
+        "state": "done"
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "run"
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "abrir index.html",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "abrir index.html",
+        "state": "done"
+      },
+      {
+        "kind": "deny",
+        "title": "tool inválida",
+        "state": "denied"
+      },
+      {
+        "kind": "browser",
+        "title": "evaluar ",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "evaluar ",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "clic #btnAnadir",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "clic #btnAnadir",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "evaluar ",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "evaluar ",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "clic #btnPausa",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "clic #btnPausa",
+        "state": "done"
+      }
+    ],
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen36-35b-a3b.png"
+  },
+  {
+    "tarea": "game",
+    "modelo": "qwen36-35b-a3b",
+    "contexto": 65536,
+    "nota": "MoE 35B-A3B",
+    "wall_s": 80.7,
+    "helper_code": 0,
+    "done": {},
+    "decode_tps_med": null,
+    "decode_tps_max": null,
+    "prompt_tps_med": null,
+    "generated_tokens": 0,
+    "html_exists": true,
+    "html_bytes": 7081,
+    "check": {
+      "task": "game",
+      "ok": true,
+      "errors": [],
+      "info": {
+        "canvas": true,
+        "score": true,
+        "state": true,
+        "canvasSize": [
+          480,
+          300
+        ],
+        "scoreText": "Puntos: 0",
+        "stateText": "Vidas: 3"
+      }
+    },
+    "task_errors": [],
+    "actions": [],
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\game-qwen36-35b-a3b.png",
+    "harness_error": "'charmap' codec can't encode character '\\U0001f480' in position 5174: character maps to <undefined>",
+    "harness_note": "El helper falló al imprimir un emoji; la tarea se completó y el checker la verificó. Corregido a UTF-8."
+  },
+  {
+    "tarea": "app",
+    "modelo": "qwen36-35b-a3b",
+    "contexto": 65536,
+    "nota": "MoE 35B-A3B",
+    "wall_s": 63.2,
+    "helper_code": 0,
+    "done": {},
+    "decode_tps_med": null,
+    "decode_tps_max": null,
+    "prompt_tps_med": null,
+    "generated_tokens": 0,
+    "html_exists": true,
+    "html_bytes": 6550,
+    "check": {
+      "task": "app",
+      "ok": true,
+      "errors": [],
+      "info": {
+        "input": true,
+        "add": true,
+        "list": true,
+        "before": "Tarea de prueba✏️🗑️",
+        "after": "Tarea de prueba✏️🗑️",
+        "persisted": true,
+        "added": true
+      }
+    },
+    "task_errors": [],
+    "actions": [],
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\app-qwen36-35b-a3b.png",
+    "harness_error": "'charmap' codec can't encode character '\\U0001f4dd' in position 2438: character maps to <undefined>"
+  },
+  {
+    "tarea": "skyblock",
+    "modelo": "qwen36-35b-a3b",
+    "contexto": 65536,
+    "nota": "MoE 35B-A3B",
+    "wall_s": 56.3,
+    "helper_code": 0,
+    "report_error": null,
+    "done": {
+      "elapsed_ms": 56164.19030004181,
+      "type": "done",
+      "motivo": "completed",
+      "saltos": 2,
+      "incompleto": false
+    },
+    "decode_tps_med": 37.4,
+    "decode_tps_max": 37.6,
+    "prompt_tps_med": 703.2,
+    "generated_tokens": 1457,
+    "html_exists": true,
+    "html_bytes": 2583,
+    "check": {
+      "task": "skyblock",
+      "ok": true,
+      "errors": [],
+      "info": {
+        "three": "149",
+        "canvas": true,
+        "canvasWidth": 1280,
+        "canvasHeight": 800,
+        "title": "Skyblock Chill"
+      }
+    },
+    "task_errors": [],
+    "actions": [
+      {
+        "kind": "write",
+        "title": "index.html",
+        "state": "done"
+      }
+    ],
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen36-35b-a3b.png"
+  }
+]

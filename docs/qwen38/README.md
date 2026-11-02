@@ -1,4 +1,4 @@
-# Qwen3.8-27B: runtime, caché y validación
+# Qwen3.8-27B y benchmark de modelos: runtime, caché y validación
 
 Esta carpeta reúne los informes de la integración local de Qwen3.8-27B en el
 IDE. El modelo y los binarios no se guardan en Git; aquí quedan las recetas,
@@ -46,6 +46,32 @@ ser de un configure anterior.
 | [prefill-ubatch](prefill-ubatch.md) | Ubatch 384: rechazado |
 | [mtp-pmin](mtp-pmin.md) | MTP `p-min 0.1`: rechazado |
 | [backend-sampling](backend-sampling.md) | Draft backend sampling: rechazado |
+| [SKYBLOCK-2026-11-01](SKYBLOCK-2026-11-01.md) | Diagnóstico del Skyblock con Qwen3.8: timeouts y slice |
+| [SKYBLOCK-BENCHMARK-PLAN](SKYBLOCK-BENCHMARK-PLAN.md) | Plan de benchmark de modelos con Skyblock |
+| [TASK-BENCHMARK-2026-11-01](TASK-BENCHMARK-2026-11-01.md) | 7 modelos × 4 tareas, puntuaciones y capturas |
+| [MODEL-SCORECARD-2026-11-01](MODEL-SCORECARD-2026-11-01.md) | Qwen3.6 × 3 repeticiones: 90/100 y 36–40 tok/s |
+| [prompts](prompts/) | Prompts de fluidos, juego, app y Skyblock |
+
+## Benchmark de modelos
+
+La misma matriz de cuatro tareas (fluidos, juego, app y Skyblock) con el motor
+optimizado y pensamiento libre. **Qwen3.6 35B-A3B** es el mejor equilibrio
+calidad/velocidad; **Qwen3.5 9B** es el más rápido; **Qwen3-Coder 30B-A3B** es
+el especialista de código.
+
+![Velocidad por modelo](../graficos/bench-model-speed.svg)
+
+![Matriz de puntuaciones](../graficos/bench-task-matrix.svg)
+
+![Scorecard de Qwen3.6](../graficos/bench-best-score.svg)
+
+![Offload MoE](../graficos/moe-offload.svg)
+
+![Optimizaciones del motor](../graficos/engine-optimizations.svg)
+
+Resultados crudos en
+[task-benchmark-results.json](task-benchmark-results.json); capturas en
+[task-benchmark-shots](task-benchmark-shots/).
 
 ## Límites
 

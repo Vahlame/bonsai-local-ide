@@ -110,6 +110,77 @@ Detalle: [BENCHMARKS.md](BENCHMARKS.md) · [OPTIMIZATIONS.md](OPTIMIZATIONS.md) 
 
 ---
 
+## Benchmark de tareas (2026-11-01)
+
+Probé **7 modelos × 4 tareas** con el mismo stack: pensamiento libre
+(`--reasoning-budget -1`), motor `build-RTX4060-Opt-sm89`, MoE con expertos en
+CPU y verificación real en Edge headless. Las tareas fueron **fluidos con
+física**, **juego arcade**, **app CRUD con `localStorage`** y **Skyblock
+Three.js**. Cada captura y cada resultado están versionados.
+
+![Velocidad del benchmark](docs/graficos/bench-model-speed.svg)
+
+![Matriz de puntuaciones](docs/graficos/bench-task-matrix.svg)
+
+| Modelo | Skyblock | Fluidos | Juego | App | Score |
+| --- | ---: | ---: | --- | --- | ---: |
+| **Qwen3.6 35B-A3B** | 34,9 tok/s | 37,8 tok/s | OK | OK | **90** |
+| Qwen3-Coder 30B-A3B | 17,7 tok/s | 22,4 tok/s | OK | OK | 89 |
+| Qwen3 30B-A3B 2507 | 29,1 tok/s | 35,5 tok/s | OK | OK | 87 |
+| Qwen3.5 9B | 45,9 tok/s | HUD 0 | OK | OK | 75 |
+| Qwen3 8B | 39,4 tok/s | fallo | OK | OK | 43 |
+| GPT-OSS 20B | — | física pobre | timeout | parcial | 41 |
+| DeepSeek-Coder-V2-Lite | 10,5 tok/s | sin HTML | sin HTML | sin HTML | 0 |
+| Qwen3.8 27B | 7,2 tok/s | — | — | — | control |
+
+El **score** combina completitud, funcionalidad medida y revisión visual de la
+captura (0–100). Para Qwen3.6 es la **media de 3 repeticiones** (12/12 checks);
+fluidos 98, juego 94, app 92 y Skyblock 77. **Qwen3.6 35B-A3B es la
+recomendación principal**: hace las cuatro tareas a 35–40 tok/s y con buena
+calidad. **Qwen3.5 9B** es el más
+rápido (45–46 tok/s) para juego/app/Skyblock, pero su fluido no cumple.
+**Qwen3-Coder 30B-A3B** es el especialista de código a 17–22 tok/s.
+**Qwen3 8B** sirve para tareas simples. **DeepSeek-Coder-V2-Lite** no produjo
+archivos y **GPT-OSS 20B** fue variable en tareas visuales.
+
+![Scorecard de Qwen3.6](docs/graficos/bench-best-score.svg)
+
+### Motor y offload
+
+<p>
+  <img alt="Offload MoE" src="docs/graficos/moe-offload.svg" width="49%">
+  <img alt="Optimizaciones del motor" src="docs/graficos/engine-optimizations.svg" width="49%">
+</p>
+
+- **MoE híbrido:** atención y capas densas en GPU; capas de expertos frías en
+  CPU/RAM (`--n-cpu-moe 12/22/36`). GPT-OSS 20B: 12/24; Qwen3.6 35B-A3B:
+  22/40; Qwen3-Coder 30B-A3B: 36/48.
+- **Carga:** `--load-mode none` cuando los expertos caben en RAM; `mmap`
+  cuando no. La VRAM se llena con las últimas capas de expertos.
+- **KV y atención:** `-ctk q8_0 -ctv q8_0`, `--flash-attn on`, batch
+  1024/512 y 8 hilos físicos.
+- **Caché y contexto:** `--cache-ram 0`, `--ctx-checkpoints 0`,
+  `--no-context-shift`; 32K/64K según el plan del modelo.
+- **Pensamiento:** `--reasoning-budget -1` y effort `high`/`xhigh`; GPT-OSS
+  usa Harmony con `--skip-chat-parsing` y el parser propio.
+
+### Descargas y correcciones
+
+Se descargaron **Qwen3-Coder-30B-A3B** (16,45 GiB),
+**DeepSeek-Coder-V2-Lite** (9,65 GiB) y **Qwen3-8B** (4,68 GiB) con
+`fast-download.mjs` a ~10,3 MiB/s. También se corrigieron la delegación de
+`moe-hibrido` al lanzador optimizado, el binario `optimized-sm89-user`, la
+restauración con `pensar=-1`, el nombre real del GGUF de GPT-OSS y el contexto
+de Qwen3-30B a 32K.
+
+Informe completo: [TASK-BENCHMARK-2026-11-01.md](docs/qwen38/TASK-BENCHMARK-2026-11-01.md) ·
+Scorecard: [MODEL-SCORECARD-2026-11-01.md](docs/qwen38/MODEL-SCORECARD-2026-11-01.md) ·
+Resultados: [task-benchmark-results.json](docs/qwen38/task-benchmark-results.json) ·
+Capturas: [task-benchmark-shots](docs/qwen38/task-benchmark-shots/) ·
+Pipeline: [benchmark-pipeline.svg](docs/graficos/benchmark-pipeline.svg).
+
+---
+
 ## Arranque rápido
 
 Requisitos: **Windows 10/11**, **Node ≥ 22**, una GPU compatible con el build

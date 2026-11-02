@@ -1,0 +1,682 @@
+[
+  {
+    "modelo": "gpt-oss-20b",
+    "contexto": 65536,
+    "nota": "MoE 3.6B activos",
+    "wall_s": 525.8,
+    "helper_code": 0,
+    "report_error": null,
+    "done": {
+      "elapsed_ms": 525580.6697999942,
+      "type": "done",
+      "motivo": "verified",
+      "saltos": 10,
+      "incompleto": false
+    },
+    "decode_tps_med": 33.3,
+    "decode_tps_max": 34.7,
+    "prompt_tps_med": 878.8,
+    "generated_tokens": 15498,
+    "cache_tokens": 14918,
+    "speeds": [
+      {
+        "elapsed_ms": 86058.32739998004,
+        "type": "speed",
+        "t": "2026-11-01T23:30:46.176Z",
+        "cache_n": 0,
+        "prompt_n": 4864,
+        "prompt_ps": 861.3,
+        "prompt_ms": 5647.217,
+        "predicted_n": 2585,
+        "predicted_ps": 32.3,
+        "predicted_ms": 80045.745,
+        "prompt_tokens": 4864,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 107176.84129998088,
+        "type": "speed",
+        "t": "2026-11-01T23:31:07.306Z",
+        "cache_n": 0,
+        "prompt_n": 5043,
+        "prompt_ps": 914.2,
+        "prompt_ms": 5516.028,
+        "predicted_n": 523,
+        "predicted_ps": 33.9,
+        "predicted_ms": 15406.024,
+        "prompt_tokens": 5043,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 204767.22019998124,
+        "type": "speed",
+        "t": "2026-11-01T23:32:44.894Z",
+        "cache_n": 4902,
+        "prompt_n": 161,
+        "prompt_ps": 342.2,
+        "prompt_ms": 470.429,
+        "predicted_n": 3228,
+        "predicted_ps": 33.3,
+        "predicted_ms": 96907.932,
+        "prompt_tokens": 5063,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 216463.1593999802,
+        "type": "speed",
+        "t": "2026-11-01T23:32:56.580Z",
+        "cache_n": 0,
+        "prompt_n": 5106,
+        "prompt_ps": 920.9,
+        "prompt_ms": 5544.536,
+        "predicted_n": 207,
+        "predicted_ps": 34.7,
+        "predicted_ms": 5936.683,
+        "prompt_tokens": 5106,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 221909.36129997135,
+        "type": "speed",
+        "t": "2026-11-01T23:33:02.034Z",
+        "cache_n": 4987,
+        "prompt_n": 161,
+        "prompt_ps": 339.3,
+        "prompt_ms": 474.569,
+        "predicted_n": 166,
+        "predicted_ps": 34.7,
+        "predicted_ms": 4757.417,
+        "prompt_tokens": 5148,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 320599.7115999926,
+        "type": "speed",
+        "t": "2026-11-01T23:34:40.773Z",
+        "cache_n": 5029,
+        "prompt_n": 162,
+        "prompt_ps": 331.8,
+        "prompt_ms": 488.214,
+        "predicted_n": 3217,
+        "predicted_ps": 32.8,
+        "predicted_ms": 98034.018,
+        "prompt_tokens": 5191,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 369620.9447000001,
+        "type": "speed",
+        "t": "2026-11-01T23:35:29.726Z",
+        "cache_n": 0,
+        "prompt_n": 6718,
+        "prompt_ps": 883.9,
+        "prompt_ms": 7600.566,
+        "predicted_n": 1350,
+        "predicted_ps": 32.9,
+        "predicted_ms": 41056.211,
+        "prompt_tokens": 6718,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 383428.9735999773,
+        "type": "speed",
+        "t": "2026-11-01T23:35:43.530Z",
+        "cache_n": 0,
+        "prompt_n": 6766,
+        "prompt_ps": 879.8,
+        "prompt_ms": 7690.58,
+        "predicted_n": 199,
+        "predicted_ps": 33.9,
+        "predicted_ms": 5843.563,
+        "prompt_tokens": 6766,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 404409.5404999971,
+        "type": "speed",
+        "t": "2026-11-01T23:36:04.514Z",
+        "cache_n": 0,
+        "prompt_n": 6813,
+        "prompt_ps": 878.8,
+        "prompt_ms": 7752.577,
+        "predicted_n": 433,
+        "predicted_ps": 33.4,
+        "predicted_ms": 12949.05,
+        "prompt_tokens": 6813,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 518433.246999979,
+        "type": "speed",
+        "t": "2026-11-01T23:37:58.474Z",
+        "cache_n": 0,
+        "prompt_n": 6862,
+        "prompt_ps": 880.2,
+        "prompt_ms": 7795.74,
+        "predicted_n": 3493,
+        "predicted_ps": 33,
+        "predicted_ms": 105882.775,
+        "prompt_tokens": 6862,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 525580.546799989,
+        "type": "speed",
+        "t": "2026-11-01T23:38:05.744Z",
+        "cache_n": 0,
+        "prompt_n": 3237,
+        "prompt_ps": 807.1,
+        "prompt_ms": 4010.715,
+        "predicted_n": 97,
+        "predicted_ps": 32.6,
+        "predicted_ms": 2943.717,
+        "prompt_tokens": 3237,
+        "n_ctx": 65536,
+        "continued": false
+      }
+    ],
+    "actions": [
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "run",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "done",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "run",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "done",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "run",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "done",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "run",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "done",
+        "code": null
+      },
+      {
+        "kind": "write",
+        "title": "index.html",
+        "state": "done",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "run",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "done",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "buscar_codigo",
+        "state": "run",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "buscar_codigo",
+        "state": "done",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "run",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "indice",
+        "state": "done",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "buscar_codigo",
+        "state": "run",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "buscar_codigo",
+        "state": "done",
+        "code": null
+      }
+    ],
+    "errors": [],
+    "html_exists": true,
+    "html_lines": 55,
+    "html_bytes": 2518,
+    "check": {
+      "info": {
+        "three": "149",
+        "canvas": true,
+        "canvasWidth": 1280,
+        "canvasHeight": 800,
+        "sceneChildren": 3,
+        "title": "Skyblock Chill",
+        "text": "Skyblock Chill\n\nArrastra para orbitar Â· Rueda para zoom"
+      },
+      "errors": [
+        "TypeError: Cannot read properties of undefined (reading 'addEventListener')"
+      ]
+    },
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\skyblock-benchmark-shots\\gpt-oss-20b.png"
+  },
+  {
+    "modelo": "qwen3-30b-a3b-2507",
+    "contexto": 65536,
+    "nota": "MoE 3B activos",
+    "switch_error": "HTTP Error 500: Internal Server Error"
+  },
+  {
+    "modelo": "qwen36-35b-a3b",
+    "contexto": 65536,
+    "nota": "MoE 3B activos",
+    "wall_s": 74.1,
+    "helper_code": 0,
+    "report_error": null,
+    "done": {
+      "elapsed_ms": 73778.88769999845,
+      "type": "done",
+      "motivo": "completed",
+      "saltos": 3,
+      "incompleto": false
+    },
+    "decode_tps_med": 40.5,
+    "decode_tps_max": 40.7,
+    "prompt_tps_med": 752.9,
+    "generated_tokens": 1769,
+    "cache_tokens": 0,
+    "speeds": [
+      {
+        "elapsed_ms": 40170.98150000675,
+        "type": "speed",
+        "t": "2026-11-01T23:39:55.589Z",
+        "cache_n": 0,
+        "prompt_n": 5059,
+        "prompt_ps": 706.8,
+        "prompt_ms": 7157.485,
+        "predicted_n": 1230,
+        "predicted_ps": 37.6,
+        "predicted_ms": 32711.48,
+        "prompt_tokens": 5059,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 51652.28819998447,
+        "type": "speed",
+        "t": "2026-11-01T23:40:07.021Z",
+        "cache_n": 0,
+        "prompt_n": 6905,
+        "prompt_ps": 752.9,
+        "prompt_ms": 9171.464,
+        "predicted_n": 85,
+        "predicted_ps": 40.5,
+        "predicted_ms": 2073.933,
+        "prompt_tokens": 6905,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 73715.26880000602,
+        "type": "speed",
+        "t": "2026-11-01T23:40:29.089Z",
+        "cache_n": 0,
+        "prompt_n": 8201,
+        "prompt_ps": 757.2,
+        "prompt_ms": 10830.274,
+        "predicted_n": 454,
+        "predicted_ps": 40.7,
+        "predicted_ms": 11122.638,
+        "prompt_tokens": 8201,
+        "n_ctx": 65536,
+        "continued": false
+      }
+    ],
+    "actions": [
+      {
+        "kind": "write",
+        "title": "index.html",
+        "state": "done",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "run",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "done",
+        "code": null
+      }
+    ],
+    "errors": [],
+    "html_exists": true,
+    "html_lines": 93,
+    "html_bytes": 3177,
+    "check": {
+      "info": {
+        "three": "149",
+        "canvas": true,
+        "canvasWidth": 1280,
+        "canvasHeight": 800,
+        "sceneChildren": null,
+        "title": "Skyblock Chill",
+        "text": "Skyblock Chill\n\nArrastra para orbitar Â· Rueda para zoom"
+      },
+      "errors": []
+    },
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\skyblock-benchmark-shots\\qwen36-35b-a3b.png"
+  },
+  {
+    "modelo": "nemotron3-nano-30b",
+    "contexto": 65536,
+    "nota": "MoE 3B activos",
+    "wall_s": 265.3,
+    "helper_code": 0,
+    "report_error": null,
+    "done": {
+      "elapsed_ms": 265072.4057999905,
+      "type": "done",
+      "motivo": "completed",
+      "saltos": 2,
+      "incompleto": false
+    },
+    "decode_tps_med": 34.25,
+    "decode_tps_max": 34.4,
+    "prompt_tps_med": 190.15,
+    "generated_tokens": 5751,
+    "cache_tokens": 0,
+    "speeds": [
+      {
+        "elapsed_ms": 167449.70239998656,
+        "type": "speed",
+        "t": "2026-11-01T23:43:36.859Z",
+        "cache_n": 0,
+        "prompt_n": 5833,
+        "prompt_ps": 82.8,
+        "prompt_ms": 70427.57,
+        "predicted_n": 3295,
+        "predicted_ps": 34.1,
+        "predicted_ms": 96664.941,
+        "prompt_tokens": 5833,
+        "n_ctx": 65536,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 264951.57539998763,
+        "type": "speed",
+        "t": "2026-11-01T23:45:14.193Z",
+        "cache_n": 0,
+        "prompt_n": 7503,
+        "prompt_ps": 297.5,
+        "prompt_ms": 25221.364,
+        "predicted_n": 2456,
+        "predicted_ps": 34.4,
+        "predicted_ms": 71337.411,
+        "prompt_tokens": 7503,
+        "n_ctx": 65536,
+        "continued": false
+      }
+    ],
+    "actions": [
+      {
+        "kind": "write",
+        "title": "index.html",
+        "state": "done",
+        "code": null
+      }
+    ],
+    "errors": [],
+    "html_exists": true,
+    "html_lines": 89,
+    "html_bytes": 2847,
+    "check": {
+      "info": {
+        "three": "149",
+        "canvas": true,
+        "canvasWidth": 300,
+        "canvasHeight": 150,
+        "sceneChildren": 3,
+        "title": "Skyblock Chill",
+        "text": "Skyblock Chill\n\nArrastra para orbitar Â· Rueda para zoom\n\nindex.html"
+      },
+      "errors": []
+    },
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\skyblock-benchmark-shots\\nemotron3-nano-30b.png"
+  },
+  {
+    "modelo": "qwen35-9b",
+    "contexto": 32768,
+    "nota": "denso 9B",
+    "wall_s": 42.4,
+    "helper_code": 0,
+    "report_error": null,
+    "done": {
+      "elapsed_ms": 42145.59269999154,
+      "type": "done",
+      "motivo": "completed",
+      "saltos": 3,
+      "incompleto": false
+    },
+    "decode_tps_med": 46.6,
+    "decode_tps_max": 47.2,
+    "prompt_tps_med": 2037.6,
+    "generated_tokens": 1486,
+    "cache_tokens": 0,
+    "speeds": [
+      {
+        "elapsed_ms": 26180.249800003367,
+        "type": "speed",
+        "t": "2026-11-01T23:46:00.985Z",
+        "cache_n": 0,
+        "prompt_n": 5055,
+        "prompt_ps": 1990,
+        "prompt_ms": 2540.17,
+        "predicted_n": 1108,
+        "predicted_ps": 47.2,
+        "predicted_ms": 23436.284,
+        "prompt_tokens": 5055,
+        "n_ctx": 32768,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 31038.639799982775,
+        "type": "speed",
+        "t": "2026-11-01T23:46:05.791Z",
+        "cache_n": 0,
+        "prompt_n": 6862,
+        "prompt_ps": 2049.5,
+        "prompt_ms": 3348.206,
+        "predicted_n": 58,
+        "predicted_ps": 46.6,
+        "predicted_ms": 1223.549,
+        "prompt_tokens": 6862,
+        "n_ctx": 32768,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 42052.60259998613,
+        "type": "speed",
+        "t": "2026-11-01T23:46:16.791Z",
+        "cache_n": 0,
+        "prompt_n": 8124,
+        "prompt_ps": 2037.6,
+        "prompt_ms": 3987.02,
+        "predicted_n": 320,
+        "predicted_ps": 46.3,
+        "predicted_ms": 6892.338,
+        "prompt_tokens": 8124,
+        "n_ctx": 32768,
+        "continued": false
+      }
+    ],
+    "actions": [
+      {
+        "kind": "write",
+        "title": "index.html",
+        "state": "done",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "run",
+        "code": null
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "done",
+        "code": null
+      }
+    ],
+    "errors": [],
+    "html_exists": true,
+    "html_lines": 91,
+    "html_bytes": 3329,
+    "check": {
+      "info": {
+        "three": "149",
+        "canvas": true,
+        "canvasWidth": 1280,
+        "canvasHeight": 800,
+        "sceneChildren": 3,
+        "title": "Skyblock Chill",
+        "text": "Skyblock Chill\nArrastra para orbitar Â· Rueda para zoom"
+      },
+      "errors": []
+    },
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\skyblock-benchmark-shots\\qwen35-9b.png"
+  },
+  {
+    "modelo": "qwen3-4b-2507",
+    "contexto": 32768,
+    "nota": "denso 4B",
+    "wall_s": 25.6,
+    "helper_code": 0,
+    "report_error": null,
+    "done": {
+      "elapsed_ms": 25357.229599991115,
+      "type": "done",
+      "motivo": "completed",
+      "saltos": 2,
+      "incompleto": false
+    },
+    "decode_tps_med": 61.15,
+    "decode_tps_max": 62.8,
+    "prompt_tps_med": 2845.25,
+    "generated_tokens": 1384,
+    "cache_tokens": 5115,
+    "speeds": [
+      {
+        "elapsed_ms": 19403.08560000267,
+        "type": "speed",
+        "t": "2026-11-01T23:46:55.594Z",
+        "cache_n": 0,
+        "prompt_n": 5228,
+        "prompt_ps": 3088.8,
+        "prompt_ms": 1692.569,
+        "predicted_n": 1097,
+        "predicted_ps": 62.8,
+        "predicted_ms": 17451.347,
+        "prompt_tokens": 5228,
+        "n_ctx": 32768,
+        "continued": false
+      },
+      {
+        "elapsed_ms": 25270.96269998583,
+        "type": "speed",
+        "t": "2026-11-01T23:47:01.392Z",
+        "cache_n": 5115,
+        "prompt_n": 1956,
+        "prompt_ps": 2601.7,
+        "prompt_ms": 751.813,
+        "predicted_n": 287,
+        "predicted_ps": 59.5,
+        "predicted_ms": 4808.324,
+        "prompt_tokens": 7071,
+        "n_ctx": 32768,
+        "continued": false
+      }
+    ],
+    "actions": [
+      {
+        "kind": "write",
+        "title": "index.html",
+        "state": "done",
+        "code": null
+      }
+    ],
+    "errors": [],
+    "html_exists": true,
+    "html_lines": 112,
+    "html_bytes": 3454,
+    "check": {
+      "info": {
+        "three": null,
+        "canvas": true,
+        "canvasWidth": 1280,
+        "canvasHeight": 800,
+        "sceneChildren": null,
+        "title": "Skyblock Chill",
+        "text": "Skyblock Chill\nArrastra para orbitar Â· Rueda para zoom"
+      },
+      "errors": [
+        "TypeError: Cannot read properties of undefined (reading 'Scene')"
+      ]
+    },
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\skyblock-benchmark-shots\\qwen3-4b-2507.png"
+  }
+]

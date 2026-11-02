@@ -155,7 +155,7 @@ export function createManagedServer({ adapter, port = 8080, pollMs = 200, vramTo
 export function configurationFromMarker(m) {
   if (!m?.modelo || !Number.isInteger(m.contexto) || m.contexto < 4096 ||
       !["f16", "bf16", "q8_0", "q4_0"].includes(m.kv) || typeof m.vision !== "boolean" ||
-      !Number.isInteger(m.pensar) || m.pensar < 0 || m.pensar > 65536 ||
+      !Number.isInteger(m.pensar) || m.pensar < -1 || m.pensar > 65536 ||
       !Number.isInteger(m.dormir) || m.dormir < 0 || m.dormir > 86400 || !["127.0.0.1", "localhost", "::1"].includes(m.hostIP)) return null;
   return { model: m.modelo, config: { contexto: m.contexto, contextoExplicito: true, kv: m.kv, vision: m.vision,
     mmprojCPU: m.mmprojCPU === true, pensar: m.pensar, dormir: m.dormir, hostIP: m.hostIP, enginePreset: m.enginePreset || "" } };

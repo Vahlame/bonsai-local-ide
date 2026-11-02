@@ -146,8 +146,8 @@ if ($Pensar -gt 0 -and -not $pensarCompatible) {
 }
 
 $tipoServidor = if ($claveModelo) { [string]$M.catalogo.$claveModelo.servidor.tipo } else { "" }
-if ($tipoServidor -eq "gpu-parcial") {
-    # El reparto parcial lo decide el lanzador optimizado (plan del modelo y preset medido).
+if ($tipoServidor -eq "gpu-parcial" -or $tipoServidor -eq "moe-hibrido") {
+    # El reparto parcial/MoE lo decide el lanzador optimizado (plan del modelo y preset medido).
     $opt = Join-Path $PSScriptRoot "start-gpu-model-rtx4060-optimized.ps1"
     $optArgs = @{
         Modelo       = $claveModelo

@@ -7,7 +7,7 @@
   "toolResultTokens": 1000,
   "maxSteps": 400,
   "maxRepairs": 4,
-  "timeoutMs": 1800000,
+  "timeoutMs": 3600000,
   "maxFileBytes": 131072,
   "maxIndexBytes": 8388608,
   "maxFiles": 1500,

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560" role="img" aria-label="Skyblock benchmark decode speed by model">
+<rect width="1000" height="560" fill="#ffffff"/>
+<text x="24" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#17212b" text-anchor="start">Skyblock fase 1a: velocidad de generación</text>
+<text x="24" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#5b6773" text-anchor="start">RTX 4060 8 GB · pensamiento libre · motor optimizado · mismo prompt</text>
+<line x1="300.0" y1="90" x2="300.0" y2="484" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="300.0" y="506" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">0</text>
+<line x1="422.0" y1="90" x2="422.0" y2="484" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="422.0" y="506" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">10</text>
+<line x1="544.0" y1="90" x2="544.0" y2="484" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="544.0" y="506" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">20</text>
+<line x1="666.0" y1="90" x2="666.0" y2="484" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="666.0" y="506" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">30</text>
+<line x1="788.0" y1="90" x2="788.0" y2="484" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="788.0" y="506" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">40</text>
+<line x1="910.0" y1="90" x2="910.0" y2="484" stroke="#dfe5ea" stroke-width="0.8"/>
+<text x="910.0" y="506" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="middle">50</text>
+<line x1="409.8" y1="90" x2="409.8" y2="484" stroke="#b91c1c" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="415.8" y="84" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="700" fill="#b91c1c" text-anchor="start">objetivo &gt; 9 tok/s</text>
+<text x="286" y="122" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#17212b" text-anchor="end">Qwen3.5 9B · denso</text>
+<rect x="300" y="100" width="560.0" height="34" fill="#2f7d32" rx="5"/>
+<text x="867.98" y="122" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="start">45.9 tok/s</text>
+<text x="286" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#17212b" text-anchor="end">Qwen3 8B · denso</text>
+<rect x="300" y="148" width="480.1" height="34" fill="#2f7d32" rx="5"/>
+<text x="788.0699999999999" y="170" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="start">39.4 tok/s</text>
+<text x="286" y="218" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#17212b" text-anchor="end">Qwen3.6 35B-A3B · MoE</text>
+<rect x="300" y="196" width="425.8" height="34" fill="#2f7d32" rx="5"/>
+<text x="733.78" y="218" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="start">34.9 tok/s</text>
+<text x="286" y="266" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#17212b" text-anchor="end">GPT-OSS 20B · MoE</text>
+<rect x="300" y="244" width="406.3" height="34" fill="#2f7d32" rx="5"/>
+<text x="714.26" y="266" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="start">33.3 tok/s</text>
+<text x="286" y="314" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#17212b" text-anchor="end">Qwen3 30B-A3B 2507 · MoE</text>
+<rect x="300" y="292" width="355.6" height="34" fill="#d97706" rx="5"/>
+<text x="663.63" y="314" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="start">29.1 tok/s</text>
+<text x="286" y="362" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#17212b" text-anchor="end">Qwen3-Coder 30B-A3B · MoE</text>
+<rect x="300" y="340" width="215.3" height="34" fill="#d97706" rx="5"/>
+<text x="523.33" y="362" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="start">17.6 tok/s</text>
+<text x="286" y="410" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#17212b" text-anchor="end">DeepSeek-Coder-V2-Lite · MoE</text>
+<rect x="300" y="388" width="128.1" height="34" fill="#b91c1c" rx="5"/>
+<text x="436.1" y="410" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="start">10.5 tok/s</text>
+<text x="286" y="458" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="600" fill="#17212b" text-anchor="end">Qwen3.8 27B · híbrido</text>
+<rect x="300" y="436" width="87.8" height="34" fill="#b91c1c" rx="5"/>
+<text x="395.84000000000003" y="458" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="start">7.2 tok/s</text>
+<text x="24" y="542" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="start">Fuente: docs/qwen38/task-benchmark-results.json · GPT-OSS usa la medición de fluido (33,3 tok/s).</text>
+</svg>

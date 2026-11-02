@@ -1158,7 +1158,7 @@
       "clave": "gpt-oss-20b",
       "nombre": "GPT-OSS 20B",
       "repo": "ggml-org/gpt-oss-20b-GGUF",
-      "archivo": "gpt-oss-20b-MXFP4.gguf",
+      "archivo": "gpt-oss-20b-gpt-oss-20b-MXFP4.gguf",
       "bytes": 12109566624,
       "revision": "15dcfc7e7c608c6161507211ed43c5b590801b4b",
       "kvF16BytesPorToken": 49152,
@@ -1169,8 +1169,9 @@
       "toolcalls": "nativo gpt-oss-json",
       "pensar": {
         "compatible": true,
-        "presupuesto": 2048,
-        "nivel": "medium"
+        "presupuesto": -1,
+        "nivel": "high",
+        "nota": "Sin límite de tokens de pensamiento; GPT-OSS usa reasoning_effort high."
       },
       "muestreo": {
         "codigo": {
@@ -1212,7 +1213,78 @@
         131072
       ],
       "contextoMaximo": 131072,
-      "contextoPorDefecto": 65536
+      "contextoPorDefecto": 65536,
+      "servidor": {
+        "tipo": "moe-hibrido",
+        "contexto": 65536,
+        "capasAtencionCompleta": 24,
+        "cabezasKV": 8,
+        "dimCabeza": 64,
+        "kvF16BytesPorToken": 49152,
+        "kvFijoF16Bytes": 0,
+        "moe": {
+          "activo": true,
+          "expertos": 32,
+          "capas": 24,
+          "capasGpu": 12,
+          "nCpuMoe": 12,
+          "expertosMiB": 9683,
+          "bytes": 10152345600,
+          "densosMiB": 1867,
+          "gpuExpertosMiB": 4848,
+          "expertosRamMiB": 4848,
+          "porCapa": [
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400
+          ],
+          "loadMode": "none",
+          "ctxTope": 65536,
+          "motivo": "12/24 capas de expertos en VRAM (4848 MiB); 12 en RAM (4848 MiB); medido a 64K."
+        },
+        "reservaMiB": 850,
+        "margenObjetivoMiB": 7600,
+        "batch": 1024,
+        "ubatch": 512,
+        "threads": 8,
+        "cacheRamMiB": 0,
+        "noPreserveThinking": true,
+        "binario": "optimized-sm89-user",
+        "nota": "MoE híbrido medido: 12 capas de expertos en RAM, 8 hilos, 64K, KV q8_0, build RTX4060-Opt-sm89. Sin MTP."
+      },
+      "plan": {
+        "contexto": 65536,
+        "kv": "q8_0",
+        "vision": false,
+        "mmprojCPU": false,
+        "totalMiB": 7309,
+        "draftMiB": 0,
+        "libreMiB": 7956,
+        "reservaMiB": 850,
+        "margenMiB": 647,
+        "medido": true
+      }
     },
     {
       "clave": "nemotron3-nano-30b",
@@ -1499,6 +1571,159 @@
         "commit": "86db764",
         "minimoBits": 4
       }
+    },
+    {
+      "clave": "qwen3-8b",
+      "nombre": "Qwen3 8B",
+      "repo": "unsloth/Qwen3-8B-GGUF",
+      "archivo": "Qwen3-8B-Q4_K_M.gguf",
+      "bytes": 5027784512,
+      "revision": "a6adef130ffb23ddaf1a62fec9dced968c9bc482",
+      "ctxNativo": 131072,
+      "rol": "denso rápido",
+      "uso": "Denso 8B de Qwen3: cabe casi entero en 8 GB con KV q8_0; bueno para tareas rápidas de código.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": -1,
+        "nivel": "xhigh"
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "denso",
+        "8B"
+      ],
+      "vision": null,
+      "capas": 36,
+      "moe": false,
+      "contextos": [
+        32768,
+        65536,
+        131072
+      ],
+      "contextoMaximo": 131072,
+      "contextoPorDefecto": 32768
+    },
+    {
+      "clave": "deepseek-coder-v2-lite",
+      "nombre": "DeepSeek Coder V2 Lite",
+      "repo": "bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+      "archivo": "DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf",
+      "bytes": 10364416768,
+      "revision": "8f248fa2072348f77a8bc37754e470de1f61866e",
+      "ctxNativo": 131072,
+      "rol": "MoE código",
+      "uso": "MoE de 16B con 2.4B activos: especialista en código que puede correr con expertos en RAM.",
+      "licencia": "other",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": -1,
+        "nivel": "high"
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.3,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.3,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "MoE",
+        "16B",
+        "código"
+      ],
+      "vision": null,
+      "capas": 27,
+      "moe": true,
+      "contextos": [
+        32768,
+        65536,
+        131072
+      ],
+      "contextoMaximo": 131072,
+      "contextoPorDefecto": 32768
+    },
+    {
+      "clave": "qwen3-coder-30b-a3b",
+      "nombre": "Qwen3 Coder 30B-A3B",
+      "repo": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+      "archivo": "Qwen3-Coder-30B-A3B-Instruct-UD-Q4_K_XL.gguf",
+      "bytes": 17665334432,
+      "revision": "b17cb02dd882d5b6ab62fc777ad2995f19668350",
+      "ctxNativo": 262144,
+      "rol": "MoE código",
+      "uso": "MoE de 30B con 3B activos, especialista en código; los expertos viven en RAM y la atención en la GPU.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": -1,
+        "nivel": "xhigh"
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "MoE",
+        "30B",
+        "código"
+      ],
+      "vision": null,
+      "capas": 48,
+      "moe": true,
+      "contextos": [
+        32768,
+        65536,
+        131072,
+        262144
+      ],
+      "contextoMaximo": 262144,
+      "contextoPorDefecto": 65536
     }
   ]
 }
