@@ -6,6 +6,12 @@ import { muestreo } from "../modelo.mjs";
 import { engineProfile, isNamedEnginePreset } from "../engine-profiles.mjs";
 import { rutaSegura } from "../archivos-seguros.mjs";
 
+/** Hosts que no salen de la máquina. */
+function esLoopback(host) {
+  const limpio = String(host || "").trim().replace(/^\[|\]$/g, "").toLowerCase();
+  return limpio === "127.0.0.1" || limpio === "localhost" || limpio === "::1";
+}
+
 export const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -30,7 +36,7 @@ export const UI_SERVIDOS = new Set([".js", ".mjs", ".css", ".html", ".svg", ".js
 export function parseArgs(argv) {
   // think = presupuesto de razonamiento en tokens; 0 (por defecto) = APAGADO.
   // historyCap = 0 -> automatico: el historial usa toda la ventana menos la reserva de salida.
-  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 0, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo", agentProfile:"optimized" };
+  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 0, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo", agentProfile:"optimized", unsafeLan: false, token: String(process.env.BONSAI_UI_TOKEN || "").trim() };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--host") out.host = argv[++i] ?? out.host;
@@ -41,8 +47,20 @@ export function parseArgs(argv) {
     else if (arg === "--engine-preset") {out.enginePreset=argv[++i];if (isNamedEnginePreset(out.enginePreset)) engineProfile(out.enginePreset);}
     else if (arg === "--perfil") out.perfil = argv[++i] ?? out.perfil;
     else if (arg === "--agent-profile") out.agentProfile = argv[++i] ?? out.agentProfile;
+    else if (arg === "--unsafe-lan") out.unsafeLan = true;
+    else if (arg === "--token") out.token = String(argv[++i] || "").trim();
     else if (arg === "--open") out.open = true;
     else throw new Error(`Argumento desconocido: ${arg}`);
+  }
+  if (!esLoopback(out.host)) {
+    if (!out.unsafeLan) {
+      throw new Error(`--host ${out.host} expone el IDE fuera de loopback. Usa --unsafe-lan junto con --token (o BONSAI_UI_TOKEN) si de verdad quieres servirlo en la LAN.`);
+    }
+  }
+  if (out.unsafeLan || !esLoopback(out.host)) {
+    if (out.token.length < 16) {
+      throw new Error("--unsafe-lan exige un token de al menos 16 caracteres: --token <secreto> o BONSAI_UI_TOKEN.");
+    }
   }
   // -1 es "sin limite" (Qwen3.6 free thinking); 0 apaga el razonamiento.
   if (!Number.isInteger(out.think) || out.think < -1) throw new Error("--think es un presupuesto en tokens (-1 = sin limite, 0 = apagado)");

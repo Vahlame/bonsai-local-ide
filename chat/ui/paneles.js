@@ -7,11 +7,11 @@
  * nuevos de ui-server.mjs: /api/terminal, /api/diag, /api/simbolos y /api/definir.
  * Sin dependencias y sin tocar el resto de la interfaz.
  */
+import { $, $$ } from "./core/dom.mjs";
+import { crearApi } from "./core/api.mjs";
+
 (() => {
   "use strict";
-
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   const drawer = $("#drawer");
   const out = $("#term-out");
@@ -30,17 +30,7 @@
   };
 
   /** Petición JSON a la API propia. */
-  async function api(ruta, opciones = {}) {
-    const init = { method: opciones.metodo || "GET", cache: "no-store", signal: AbortSignal.timeout(30000) };
-    if (opciones.cuerpo !== undefined) {
-      init.method = opciones.metodo || "POST";
-      init.headers = { "Content-Type": "application/json" };
-      init.body = JSON.stringify(opciones.cuerpo);
-    }
-    const res = await fetch(ruta, init);
-    if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-    return res.status === 204 ? null : res.json();
-  }
+  const api = crearApi({ timeoutPorDefecto: 30000 });
 
   // ================================================================= terminal
   let termId = "";

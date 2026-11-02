@@ -37,7 +37,26 @@ if(process.platform!=='win32') {
         ...(!noBrowser?['--open']:[]),
       ]);
     }
-    console.log('Launcher: desktop --open and -NoBrowser arguments stay intact in Windows PowerShell.');
+    // Acceso directo real, sin GPU ni escritorio del usuario: se crea en %TEMP%.
+    const destino = path.join(temp, "Bonsai IDE prueba.lnk");
+    const crear = spawnSync("powershell.exe", [
+      "-NoProfile", "-ExecutionPolicy", "Bypass",
+      "-File", path.join(root, "scripts/crear-acceso-directo.ps1"),
+      "-Destino", destino,
+    ], { encoding: "utf8", windowsHide: true, timeout: 20000 });
+    assert.equal(crear.status, 0, crear.stderr || crear.stdout);
+    assert.equal(fs.existsSync(destino), true, "el acceso directo debe existir");
+    const leer = spawnSync("powershell.exe", ["-NoProfile", "-Command", [
+      "$s=(New-Object -ComObject WScript.Shell).CreateShortcut('" + destino.replaceAll("'", "''") + "')",
+      "[pscustomobject]@{target=$s.TargetPath;args=$s.Arguments;cwd=$s.WorkingDirectory}|ConvertTo-Json -Compress",
+    ].join("; ")], { encoding: "utf8", windowsHide: true, timeout: 10000 });
+    assert.equal(leer.status, 0, leer.stderr || leer.stdout);
+    const acceso = JSON.parse(leer.stdout.trim());
+    assert.match(acceso.target, /powershell\.exe$/i);
+    assert.ok(acceso.args.includes("bonsai-rtx4060.ps1"), "el acceso directo usa el lanzador real");
+    assert.ok(acceso.args.includes(" launch"), "el acceso directo arranca en modo launch");
+    assert.equal(path.resolve(acceso.cwd), root);
+    console.log("Launcher: argumentos y acceso directo de Windows verificados sin GPU.");
   } finally {
     assert.equal(path.dirname(temp),os.tmpdir());
     assert.ok(path.basename(temp).startsWith('bonsai-launcher-'));

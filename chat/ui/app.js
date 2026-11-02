@@ -14,50 +14,20 @@
  * Los `let`/`const`/`function` de primer nivel de index.html son globales: aquí se
  * leen y se reasignan (openFile, selectionInsideEditor, refreshTree) a propósito.
  */
+import { $, $$, el } from "./core/dom.mjs";
+import { crearApi } from "./core/api.mjs";
+import { crearEstadoUI } from "./core/state.mjs";
+import { analizarSaltos, normalizarSaltos, restaurarSaltos } from "./editor/text.mjs";
+import { rutaLimpia } from "./workspace/paths.mjs";
+
 (() => {
   "use strict";
 
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
-  /**
-   * @param {string} tag
-   * @param {string} [cls]
-   * @param {string} [texto]
-   * @returns {HTMLElement}
-   */
-  const el = (tag, cls, texto) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (texto !== undefined) n.textContent = texto;
-    return n;
-  };
-
-  /**
-   * Petición a la API propia. Siempre JSON, y lanza si la respuesta no es 2xx.
-   * @param {string} ruta
-   * @param {{metodo?: string, cuerpo?: unknown}} [opciones]
-   */
-  async function api(ruta, opciones = {}) {
-    const timeout = ruta === "/api/modelos" || ruta === "/api/servidor" || ruta.startsWith("/api/server/") ? 300000 : ruta === "/api/edit" ? 180000 : 15000;
-    const init = { method: opciones.metodo || "GET", cache: "no-store", signal: AbortSignal.timeout(timeout) };
-    if (opciones.cuerpo !== undefined) {
-      init.method = opciones.metodo || "POST";
-      init.headers = { "Content-Type": "application/json" };
-      init.body = JSON.stringify(opciones.cuerpo);
-    }
-    const res = await fetch(ruta, init);
-    if (!res.ok) {
-      let detalle = (await res.text()) || `HTTP ${res.status}`;
-      try { detalle = JSON.parse(detalle).error || detalle; } catch { /* text response */ }
-      const error = new Error(detalle);
-      // El estado HTTP importa para distinguir un 409 (el archivo cambió en disco y no
-      // hay que pisarlo) de un fallo genérico del servidor.
-      error.status = res.status;
-      throw error;
-    }
-    return res.status === 204 ? null : res.json();
-  }
+  // Contrato común de la API.Los tiempos largos son los mismos de antes: cambiar
+  // de modelo o arrancar el servidor puede tardar minutos.
+  const api = crearApi({
+    timeoutDeRuta: (ruta) => ruta === "/api/modelos" || ruta === "/api/servidor" || ruta.startsWith("/api/server/") ? 300000 : ruta === "/api/edit" ? 180000 : 15000,
+  });
 
   // =========================================================== avisos emergentes
   // Un solo contenedor: index.html ya trae #avisos. Antes se creaba un segundo
@@ -348,10 +318,15 @@
   });
 
   // ================================================================== ajustes
+  const estadoUI = crearEstadoUI();
   /** @type {{tema: string, perfil: string, pensar: number, reglas: boolean, historial: number}} */
-  let ajustes = { tema: "slate", perfil: "codigo", pensar: 0, reglas: true, historial: 0, continuarAuto: true, saltosTope: 192, comandoSegundos: 180, preguntarModelo: true, editorModerno: true };
-
-  let TEMAS = [["slate","Grafito"],["ocean","Niebla azul"],["forest","Bosque"],["sand","Arena"],["light","Marfil"],["dark","Medianoche"]];
+  let ajustes = estadoUI.ajustes;
+  /** Sincroniza la copia local con el estado compartido (una sola fuente inicial). */
+  function sincronizarAjustes(nuevos) {
+    ajustes = nuevos;
+    estadoUI.ajustes = nuevos;
+  }
+  let TEMAS = estadoUI.temas;
   function siguienteTema() { const i=TEMAS.findIndex(([v])=>v===ajustes.tema); return TEMAS[(i+1)%TEMAS.length][0]; }
   function aplicarTema(tema) {
     const elegido=TEMAS.find(([v])=>v===tema)||TEMAS[0];
@@ -377,7 +352,7 @@
 
   async function cargarAjustes() {
     try {
-      ajustes = { ...ajustes, ...(await api("/api/settings")) };
+      sincronizarAjustes({ ...ajustes, ...(await api("/api/settings")) });
     } catch {
       /* sin ajustes guardados: se usan los de defecto */
     }
@@ -387,7 +362,7 @@
   /** @param {Partial<typeof ajustes>} cambios */
   async function guardarAjustes(cambios) {
     try {
-      ajustes = { ...ajustes, ...(await api("/api/settings", { cuerpo: cambios })) };
+      sincronizarAjustes({ ...ajustes, ...(await api("/api/settings", { cuerpo: cambios })) });
       aplicarTema(ajustes.tema);
       if (typeof pintarChipModelo === "function") pintarChipModelo();
     } catch (err) {
@@ -399,29 +374,6 @@
   /** @type {{rel: string, texto: string, guardado: string, original: string, eol: string, truncado: boolean, bytes: number, cursor: number}[]} */
   const pestanas = [];
   let activa = -1;
-
-  /**
-   * El navegador convierte CRLF a LF dentro de un <textarea>. Se edita siempre en LF
-   * y se reconstruye el estilo original al guardar. En archivos mixtos se conserva el
-   * estilo dominante (política explícita: no se reescribe el archivo sin guardar).
-   * @param {string} texto
-   * @returns {{eol: string, mixto: boolean}}
-   */
-  function analizarSaltos(texto) {
-    const crlf = (texto.match(/\r\n/g) || []).length;
-    const lf = (texto.match(/(^|[^\r])\n/g) || []).length;
-    return { eol: crlf > lf ? "\r\n" : "\n", mixto: crlf > 0 && lf > 0 };
-  }
-
-  /** @param {string} texto */
-  function normalizarSaltos(texto) {
-    return texto.replace(/\r\n/g, "\n");
-  }
-
-  /** @param {string} texto @param {string} eol */
-  function restaurarSaltos(texto, eol) {
-    return eol === "\r\n" ? texto.replace(/\n/g, "\r\n") : texto;
-  }
 
   const editor = $("#editor");
   const code = $("#code");
@@ -1195,7 +1147,7 @@
    * @param {string} rel
    * @returns {string}
    */
-  const rutaLimpia = (rel) => String(rel || "").trim().replace(/\\/g, "/").replace(/^\/+/, "");
+
 
   async function nuevoArchivo() {
     const rel = rutaLimpia(await preguntar({
@@ -2797,6 +2749,7 @@
     try {
       const registry = await api("/ui/themes.json");
       TEMAS = registry.map(theme => [theme.id, theme.name]);
+      estadoUI.temas = TEMAS;
       window.BonsaiAppearance.init(registry);
     } catch (err) { console.error("No se cargaron los temas", err); window.BonsaiAppearance.init([]); }
     pintarIconos(document);

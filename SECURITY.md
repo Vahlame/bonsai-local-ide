@@ -27,8 +27,12 @@ Se acusará recibo y se coordinará la corrección y la divulgación.
 
 ## Modelo de seguridad
 
-- La API (`8080`) y la interfaz (`8787`) escuchan en local y **no tienen autenticación**.
-  No las expongas a una red no confiable ni a Internet.
+- La interfaz escucha en loopback por defecto y no pide autenticación en ese caso. Un
+  `--host` que no sea loopback se rechaza salvo que se pase `--unsafe-lan` **y** un token
+  de al menos 16 caracteres (`--token` o `BONSAI_UI_TOKEN`). Con token, la primera visita
+  a `/?token=...` deja una cookie de sesión; la API también acepta `X-Bonsai-Token` o
+  `Authorization: Bearer`. No expongas el IDE a Internet ni a una red no confiable.
+- La API del modelo (`8080`) sigue siendo local; no la publiques fuera de la máquina.
 - El agente conserva los permisos del usuario de Windows. Las comprobaciones de comandos
   no son un sandbox del sistema operativo.
 - Las herramientas de archivos rechazan rutas fuera del proyecto, enlaces y junctions.

@@ -11,21 +11,21 @@ dependencias y no lea variables de otro archivo.
 | `gpu.mjs` | lectura cacheada de nvidia-smi/RAM |
 | `browser.mjs` | abrir Edge/Chrome en modo aplicación sin GPU |
 | `undo.mjs` | puntos de deshacer, poda y conflictos de escritura/renombrado |
+| `workspace.mjs` | listado/índice del proyecto, adjuntos, instantáneas y rutas canónicas |
+| `text.mjs` | títulos, recortes, anuncios y resumen de acciones |
+| `agent-loop.mjs` | bucle del agente de `/api/chat` y coordinación de herramientas |
+| `routes/*.mjs` | handlers HTTP por grupo con el contexto del servidor explícito |
 
-## Lo que sigue en `ui-server.mjs`
+## Frontera actual
 
-El archivo sigue siendo el **composition root** y aún contiene:
+`ui-server.mjs` es el **composition root**: crea el estado mutable, arma el
+objeto `routeContext` y delega en `server/routes/index.mjs`. Los grupos de rutas
+no leen variables de `ui-server`; reciben `routeContext` con getters/setters
+para carpeta activa, turno, permisos y ciclo de vida del modelo.
 
-- el router HTTP y los handlers que dependen de `chat`, `workspaceRoot`,
-  `busy`, `permitMode` y del ciclo de vida del modelo;
-- el bucle del agente y la coordinación de herramientas;
-- la selección de contexto específica de la UI.
-
-La siguiente extracción segura es mover esos handlers a `server/routes/` con un
-objeto de contexto explícito (`chat`, `workspace`, `lifecycle`, `permit`), y
-después separar `server/agent-loop.mjs` del arranque HTTP. No se hace de golpe
-porque cada handler comparte estado mutable y las pruebas de agente/visión
-dependen de ese contrato.
+`agent-loop.mjs` recibe ese mismo contexto y conserva exactamente el
+comportamiento anterior del agente. Las tools legacy siguen detrás de
+`legacy-tool-parser.mjs`; su retirada se hará con métricas y fecha, no de golpe.
 
 ## Regla para nuevas piezas
 

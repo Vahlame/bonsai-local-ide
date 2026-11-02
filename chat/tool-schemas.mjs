@@ -1,29 +1,28 @@
 /**
- * Schemas Zod de las herramientas nuevas.
+ * Fachada Zod sobre el registro único de tools.
  *
- * No se importan desde el servidor para que la copia aislada de evaluación siga
- * arrancando sin `node_modules`; se usan en pruebas y para generar JSON Schema
- * reproducible. La fuente de verdad de las tools sigue siendo `CODER_TOOLS`.
+ * No define esquemas propios: toma el JSON Schema de `tool-registry.mjs` y lo
+ * convierte a Zod solo cuando una prueba o una herramienta externa lo pide.
+ * La fuente de verdad sigue siendo el registro.
  */
 import { z } from "zod";
+import { toolPermission, toolSchema, validateToolCall } from "./tool-registry.mjs";
 
-export const busquedaEstructuralSchema = z.object({
-  patron: z.string().min(2).max(500),
-  lenguaje: z.enum(["ts", "tsx", "js", "jsx", "html", "css"]),
-  max: z.number().int().min(1).max(120).optional(),
-});
+/** @type {Map<string, import("zod").ZodType>} */
+const cache = new Map();
 
-export const busquedaTextoSchema = z.object({
-  consulta: z.string().min(2).max(500),
-  max: z.number().int().min(1).max(200).optional(),
-  caseSensitive: z.boolean().optional(),
-  fixed: z.boolean().optional(),
-});
-
-export const schemasHerramientas = Object.freeze({
-  buscar_estructural: busquedaEstructuralSchema,
-  buscar_texto: busquedaTextoSchema,
-});
+/**
+ * @param {string} nombre
+ * @returns {import("zod").ZodType | null}
+ */
+export function zodDe(nombre) {
+  if (cache.has(nombre)) return cache.get(nombre) || null;
+  const json = toolSchema(nombre);
+  if (!json) return null;
+  const schema = z.fromJSONSchema(json);
+  cache.set(nombre, schema);
+  return schema;
+}
 
 /**
  * @param {string} nombre
@@ -31,16 +30,32 @@ export const schemasHerramientas = Object.freeze({
  * @returns {{ok: true, datos: unknown} | {ok: false, error: string}}
  */
 export function validarHerramienta(nombre, args) {
-  const schema = schemasHerramientas[nombre];
-  if (!schema) return { ok: false, error: `herramienta desconocida: ${nombre}` };
+  if (!toolSchema(nombre)) return { ok: false, error: `herramienta desconocida: ${nombre}` };
+  const schema = zodDe(nombre);
   const resultado = schema.safeParse(args);
   return resultado.success
     ? { ok: true, datos: resultado.data }
     : { ok: false, error: resultado.error.issues.map((i) => `${i.path.join(".") || "args"}: ${i.message}`).join("; ") };
 }
 
+/**
+ * Valida con el mismo motor que usa el agente (JSON Schema del registro).
+ * @param {string} nombre
+ * @param {unknown} args
+ */
+export function validarComoAgente(nombre, args) {
+  return validateToolCall({ name: nombre, arguments: args }, [{ type: "function", function: { name: nombre, parameters: toolSchema(nombre) } }]);
+}
+
+/**
+ * @param {string} nombre
+ * @returns {Record<string, unknown> | null}
+ */
 export function jsonSchemaDe(nombre) {
-  const schema = schemasHerramientas[nombre];
-  if (!schema) return null;
-  return z.toJSONSchema(schema, { target: "draft-7" });
+  return toolSchema(nombre);
+}
+
+/** @param {string} nombre */
+export function permisoDe(nombre) {
+  return toolPermission(nombre);
 }

@@ -5,16 +5,12 @@
  * en Hugging Face, las descargas con progreso y los modelos instalados.
  * app.js solo abre este diálogo desde el menú de modelo y desde el botón Modelos.
  */
+import { $, el } from "./core/dom.mjs";
+import { crearApi } from "./core/api.mjs";
+
 (() => {
   "use strict";
 
-  const $ = (sel, raiz = document) => raiz.querySelector(sel);
-  const el = (tag, cls, texto) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (texto !== undefined) n.textContent = texto;
-    return n;
-  };
   const ico = (nombre, tam = 16) => {
     const span = el("span", "hub-ico");
     if (typeof ICO !== "undefined" && ICO[nombre]) span.innerHTML = ICO[nombre]({ tam });
@@ -103,18 +99,7 @@
     ultimoListo: "",
   };
 
-  const api = async (ruta, opciones = {}) => {
-    const timeout = Number(opciones.timeout) || 30000;
-    const init = { method: opciones.metodo || "GET", cache: "no-store", signal: AbortSignal.timeout(timeout) };
-    if (opciones.cuerpo !== undefined) {
-      init.method = opciones.metodo || "POST";
-      init.headers = { "Content-Type": "application/json" };
-      init.body = JSON.stringify(opciones.cuerpo);
-    }
-    const res = await fetch(ruta, init);
-    if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-    return res.status === 204 ? null : res.json();
-  };
+  const api = crearApi({ timeoutPorDefecto: 30000 });
 
   function cabecera() {
     const h = el("div", "hub-head");

@@ -10,12 +10,17 @@
 # se abre nada".
 # ==============================================================================
 
+param(
+    # Solo para pruebas: permite crear el acceso directo fuera del escritorio.
+    [string]$Destino = ""
+)
+
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $PSScriptRoot
 $Icono = Join-Path $RootDir "recursos\bonsai-ide.ico"
 $Launcher = Join-Path $RootDir "scripts\bonsai-rtx4060.ps1"
 $Escritorio = [Environment]::GetFolderPath("Desktop")
-$Destino = Join-Path $Escritorio "Bonsai IDE.lnk"
+if (-not $Destino) { $Destino = Join-Path $Escritorio "Bonsai IDE.lnk" }
 
 if (-not (Test-Path $Launcher)) { Write-Error "No está $Launcher"; exit 1 }
 if (-not (Test-Path $Icono)) {

@@ -8,7 +8,9 @@ import { buscarEstructural } from "./code-search.mjs";
 import { rutaProyecto } from "./archivos-seguros.mjs";
 import { diagnosticarArchivo } from "./diagnosticos.mjs";
 import { SYSTEM_RULES, AGENT_WORKFLOW, TOOL_WORKFLOW, CODER_TOOL_WORKFLOW, estimateTokens, takeHeadByTokens } from "./context.mjs";
-import { PC_TOOLS, unifiedDiff } from "./actions.mjs";
+import { unifiedDiff } from "./actions.mjs";
+import { CODER_TOOLS, validateToolCall } from "./tool-registry.mjs";
+export { CODER_TOOLS };
 import { matarArbol } from "./procesos.mjs";
 import { verificationCommands } from "./project-verification.mjs";
 import { TypeScriptLsp, typeScriptProject } from "./code-intelligence.mjs";
@@ -76,99 +78,6 @@ export function coderOptions(raw = "") {
     throw new Error("outputTokens debe ser >= 256");
   return out;
 }
-const str = { type: "string" },
-  int = { type: "integer", minimum: 1 };
-const tool = (name, description, properties, required = []) => ({
-  type: "function",
-  function: {
-    name,
-    description,
-    strict: true,
-    parameters: {
-      type: "object",
-      properties,
-      required,
-      additionalProperties: false,
-    },
-  },
-});
-const base = (name) =>
-  structuredClone(PC_TOOLS.find((t) => t.function.name === name));
-export const CODER_TOOLS = [
-  base("mcp_playwright"),
-  base("navegador"),
-  base("buscar"),
-  base("leer_web"),
-  tool(
-    "indice",
-    "Mapa compacto de archivos, símbolos y dependencias relevantes.",
-    { carpeta: str },
-  ),
-  tool(
-    "buscar_codigo",
-    "Búsqueda textual local literal; devuelve rutas y líneas. `ruta` limita la búsqueda a una carpeta o archivo.",
-    { consulta: str, ruta: str },
-    ["consulta"],
-  ),
-  tool(
-    "buscar_estructural",
-    "Búsqueda AST con metavariables ($X, $$$ARGS) en JS/TS/TSX/HTML/CSS. Úsala para 'todas las llamadas a X' o patrones de forma.",
-    {
-      patron: str,
-      lenguaje: { type: "string", enum: ["ts", "tsx", "js", "jsx", "html", "css"] },
-      max: { type: "integer", minimum: 1, maximum: 120 },
-    },
-    ["patron", "lenguaje"],
-  ),
-  tool(
-    "simbolo",
-    "Busca definiciones o referencias textuales de un símbolo.",
-    {
-      nombre: str,
-      referencias: { type: "boolean" },
-      ruta: str,
-      linea: int,
-      columna: int,
-    },
-    ["nombre"],
-  ),
-  tool(
-    "leer",
-    "Lee hasta 120 líneas numeradas. Pide un rango, un símbolo o alrededor de una línea.",
-    { ruta: str, desde: int, hasta: int, simbolo: str, alrededor: int },
-    ["ruta"],
-  ),
-  base("reemplazar"),
-  tool(
-    "archivo",
-    "Crea o reemplaza texto; para cambios localizados usa reemplazar y para archivos nuevos grandes escribir_partes.",
-    { ruta: str, contenido: str },
-    ["ruta", "contenido"],
-  ),
-  base("escribir_partes"),
-  base("consultar_salida"),
-  tool(
-    "ejecutar",
-    "Ejecuta un comando de desarrollo o tests en la shell del proyecto; salida acotada.",
-    { comando: str, segundo_plano: { type: "boolean" }, repetir: { type: "boolean" } },
-    ["comando"],
-  ),
-  base("proceso"),
-  base("borrar"),
-  base("mover"),
-  tool("git_diff", "Diff actual de Git (incluye cambios preexistentes).", {
-    ruta: str,
-  }),
-  base("plan"),
-].map((t) => ({
-  ...t,
-  function: {
-    ...t.function,
-    strict: true,
-    parameters: { ...t.function.parameters, additionalProperties: false },
-  },
-}));
-
 export const CODER_SYSTEM =
   [SYSTEM_RULES, AGENT_WORKFLOW, TOOL_WORKFLOW, CODER_TOOL_WORKFLOW].join("\n\n");
 export const PHASE_PROMPTS = Object.freeze({
@@ -184,64 +93,11 @@ export const PHASE_PROMPTS = Object.freeze({
 
 const hash = (s) => crypto.createHash("sha256").update(s).digest("hex");
 export function validateCall(call, tools = CODER_TOOLS) {
-  const schema = tools.find((t) => t.function.name === call.name)?.function
-    .parameters;
-  if (!schema)
-    return {
-      ok: false,
-      error: `función desconocida ${String(call.name).slice(0, 80)}. Disponibles: ${tools.map(t => t.function.name).join(", ")}`,
-    };
-  let args;
-  try {
-    if (typeof call.arguments === "string") {
-      const text = call.arguments.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i, "$1");
-      args = JSON.parse(text);
-      if (typeof args === "string" && /^\s*\{/.test(args)) args = JSON.parse(args);
-    } else args = call.arguments;
-  } catch {
-    return {
-      ok: false,
-      error: "arguments: JSON inválido; envía un objeto JSON completo",
-    };
-  }
-  const check = (v, s, p) => {
-    if (s.type === "object") {
-      if (!v || typeof v !== "object" || Array.isArray(v))
-        return `${p}: se esperaba object`;
-      for (const k of s.required || [])
-        if (!Object.hasOwn(v, k)) return `${p}.${k}: campo obligatorio`;
-      for (const [k, x] of Object.entries(v)) {
-        // El modelo a veces añade un campo que no está en el schema (por ejemplo
-        // `ruta` en una búsqueda). Un extra inocuo no debe tumbar el turno: se
-        // ignora y se valida el resto. Los obligatorios y los tipos sí se exigen.
-        if (!Object.hasOwn(s.properties || {}, k)) {
-          delete v[k];
-          continue;
-        }
-        const e = check(x, s.properties[k], `${p}.${k}`);
-        if (e) return e;
-      }
-    } else if (s.type === "array") {
-      if (!Array.isArray(v)) return `${p}: se esperaba array`;
-      if (v.length > 30) return `${p}: máximo 30 elementos`;
-      for (const x of v) {
-        const e = check(x, s.items || {}, p + "[]");
-        if (e) return e;
-      }
-    } else if (
-      s.type === "integer"
-        ? !Number.isInteger(v)
-        : s.type && typeof v !== s.type
-    )
-      return `${p}: se esperaba ${s.type}, recibido ${JSON.stringify(v)?.slice(0, 80)}`;
-    if (s.minimum !== undefined && v < s.minimum)
-      return `${p}: mínimo ${s.minimum}`;
-    if (s.enum && !s.enum.includes(v))
-      return `${p}: esperado ${s.enum.join("|")}`;
-    return "";
-  };
-  const error = check(args, schema, call.name);
-  return error ? { ok: false, error } : { ok: true, args };
+  const result = validateToolCall(call, tools);
+  if (result.ok) return result;
+  // Conserva el prefijo con el nombre de la tool que ya usaban los mensajes.
+  const error = String(result.error || "").replace(/^arguments/, String(call?.name || "arguments"));
+  return { ok: false, error };
 }
 
 export function runCheck(

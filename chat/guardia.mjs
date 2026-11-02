@@ -37,8 +37,46 @@
  * afectados. Los que mandan cuerpo ya usan application/json.
  */
 
+import crypto from "node:crypto";
 import net from "node:net";
 import os from "node:os";
+
+/** Comparación de tokens sin filtrar la longitud por temporización. */
+function tokenIgual(a, b) {
+  const x = Buffer.from(String(a || ""), "utf8");
+  const y = Buffer.from(String(b || ""), "utf8");
+  return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
+}
+
+/**
+ * Token presentado por el cliente: cabecera propia, Bearer o cookie de sesión.
+ * La query `?token=` solo se admite en `/` para el primer arranque de la UI.
+ * @param {{headers?: Record<string, string | string[] | undefined>, url?: string}} req
+ * @returns {string}
+ */
+function tokenPresentado(req) {
+  const cabeceras = req.headers || {};
+  const propio = cabeceras["x-bonsai-token"];
+  if (typeof propio === "string" && propio) return propio;
+  const autorizacion = cabeceras.authorization;
+  if (typeof autorizacion === "string" && /^Bearer\s+/i.test(autorizacion)) return autorizacion.replace(/^Bearer\s+/i, "").trim();
+  const cookie = cabeceras.cookie;
+  if (typeof cookie === "string") {
+    for (const parte of cookie.split(";")) {
+      const [nombre, ...resto] = parte.trim().split("=");
+      if (nombre === "bonsai_token") {
+        try { return decodeURIComponent(resto.join("=")); } catch { return resto.join("="); }
+      }
+    }
+  }
+  try {
+    const url = new URL(String(req.url || "/"), "http://bonsai.local");
+    if (url.pathname === "/") return String(url.searchParams.get("token") || "");
+  } catch {
+    /* URL inválida: sin token */
+  }
+  return "";
+}
 
 /** Tipos "simples" que un formulario o un no-cors puede enviar sin preflight. */
 const JSON = /^application\/(?:[\w.+-]+\+)?json\s*(?:;|$)/i;
@@ -154,6 +192,15 @@ function origenPermitido(origen, host) {
 export function revisarPeticion(req, args) {
   const cabeceras = req.headers || {};
   const metodo = String(req.method || "GET").toUpperCase();
+
+  // LAN/token: si hay token configurado, TODA la API y la página lo exigen.
+  // Se acepta la cookie que deja el arranque con `/?token=...`, o la cabecera
+  // `X-Bonsai-Token` / `Authorization: Bearer` para clientes de confianza.
+  if (args.token) {
+    if (!tokenIgual(tokenPresentado(req), args.token)) {
+      return { ok: false, status: 401, motivo: "token de acceso ausente o incorrecto" };
+    }
+  }
 
   const host = normalizar(/** @type {string} */ (cabeceras.host));
   if (!host) return { ok: false, motivo: "falta la cabecera Host" };
