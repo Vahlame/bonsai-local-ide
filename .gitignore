@@ -73,6 +73,7 @@ id_ed25519
 # runtime CUDA de la evaluación K2 (~900 MB, con .exe y .dll), PDFs de verificación,
 # copias de estado de la interfaz y la URL efímera del túnel de Cursor.
 reports/k2-evaluation-2026-10-27/
+reports/agent-ui-2026-11-01/appearance-*/
 reports/coder-2026-10-28/baseline-app/
 reports/coder-2026-10-28/before/
 reports/coder-2026-10-28/after-*/
