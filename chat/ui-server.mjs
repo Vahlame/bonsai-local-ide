@@ -916,6 +916,19 @@ function resumenDeAcciones(turns) {
   return `No llegué a cerrar con un resumen (el modelo quería seguir con otra acción). Lo que hice:\n${ultimas.map((linea) => `- ${linea}`).join("\n")}${unicas.length > ultimas.length ? `\n- …y ${unicas.length - ultimas.length} más` : ""}`;
 }
 
+/**
+ * ¿La respuesta es solo el anuncio de una acción futura ("voy a leer…",
+ * "déjame comprobar…")? Se exige que empiece así y que no sea una pregunta:
+ * "Hecho. Ahora calcula…" es una respuesta válida, no un anuncio pendiente.
+ * @param {string} texto
+ * @returns {boolean}
+ */
+function anunciaAccion(texto) {
+  const t = String(texto || "").trim();
+  if (!t || t.length >= 320 || /[?¿]/.test(t)) return false;
+  return /^(?:voy a|ahora (?:voy a|reviso|leo|ejecuto|escribo|busco|abro|creo)|siguiente paso|d[eé]jame|procedo a|leer[eé]|ejecutar[eé]|escribir[eé]|buscar[eé])\b/i.test(t);
+}
+
 /** Instrucción que acompaña a un resultado cuando NO viaja como role "tool". */
 const AVISO_SEGUIR = "Sigue con lo que pedí. Abajo está solo el resultado de esta herramienta. Si con esto ya está todo lo pedido y comprobado, responde al usuario con un resumen breve y sin más acciones. Si falta algo o hubo un error, haz la siguiente acción. No repitas comandos ni vuelvas a leer lo que ya salió bien, y no des por bueno un resultado solo porque el comando terminó: la salida tiene que ser la pedida.";
 
@@ -1642,7 +1655,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const UI_VERSION = "2.4.4";
+  const UI_VERSION = "2.4.5";
   // El lanzador de escritorio elige el perfil de agente. `optimized` era el
   // nombre histórico del perfil de coding; hoy el único perfil con el harness
   // nuevo es `small-local-coder`. Los ajustes guardados siguen mandando.
@@ -4170,7 +4183,12 @@ async function main(args) {
             if (coder) {
               if (effects?.plan) { coder.state.plan = effects.plan; coder.state.phase = "EDIT"; }
               const mutations = actions.some(a=>a.state === "done" && (a.kind === "write" || (a.kind === "cmd" && a.code !== undefined)));
-              if (mutations || (!usadas.length && !current.cortadas?.length)) {
+              // Un plan que termina preguntando algo no es una tarea fallida: no se
+              // lanza la verificación automática (no hay nada que verificar todavía) y
+              // se deja la pregunta visible para que el usuario pueda responder.
+              const sinTrabajo = !mutations && !(coder.state.modified?.length) && !(coder.state.tests?.length);
+              const pideDatos = /[?¿]/.test(prose);
+              if (!(sinTrabajo && pideDatos) && (mutations || (!usadas.length && !current.cortadas?.length))) {
                 const verification = await verifyCoder(coder, !usadas.length, actions);
                 if (verification.changed) {
                   ponerEn(ultimaId, `Verificación automática:\n${verification.summary}`);
@@ -4228,7 +4246,7 @@ async function main(args) {
               return { texto: "Sigue con lo que pedí. Escribiste la llamada a la función como texto XML y así no se ejecuta. Llama la función de verdad (tool call) o responde con el resultado: no escribas bloques <tool_call>.", resultados };
             }
             const announced = prose.replace(/\s+/g, " ").trim();
-            if (follow && nudges < agente.avisos && announced.length > 0 && announced.length < 320 && /\b(voy a|ahora |siguiente|leer[eé]|ejecutar[eé]|escribir[eé]|buscar[eé]|d[eé]jame)\b/i.test(announced)) {
+            if (follow && nudges < agente.avisos && anunciaAccion(announced)) {
               nudges += 1;
               return { texto: "Sigue con lo que pedí. No llamaste ninguna función. Llámala ahora, sin escribir la salida.", resultados };
             }
@@ -4370,7 +4388,7 @@ async function main(args) {
           if (motivoParada === "completed" && !soloCharla && chat.coderTask?.state.phase !== "DONE") {
             const ultimo = chat.session.turns[chat.session.turns.length - 1];
             const dicho = String(ultimo?.content || "").trim();
-            const anuncia = dicho.length > 0 && dicho.length < 320 && /\b(voy a|ahora |siguiente|leer[eé]|ejecutar[eé]|escribir[eé]|buscar[eé]|d[eé]jame|procedo a)\b/i.test(dicho);
+            const anuncia = anunciaAccion(dicho);
             if (anuncia) motivoParada = "stalled";
           }
           // Si la última intervención quedó sin texto, o el turno paró por límite/atasco, se
@@ -4386,10 +4404,14 @@ async function main(args) {
                 : "";
           const lastTurn = chat.session.turns[chat.session.turns.length - 1];
           const lastAssistant = [...chat.session.turns].reverse().find((t) => t.role === "assistant");
-          // Si el último mensaje es un resultado de tool (o el assistant cerró con
-          // content vacío porque todo fue razonamiento), también hay que pedir el
-          // resumen final. Antes solo se miraba el último turno y quedaba en blanco.
-          if (!ac.signal.aborted && (!lastAssistant || !String(lastAssistant.content || "").trim() || motivoParada !== "completed")) {
+          // Solo se fuerza un turno de cierre si NO hay una respuesta útil. Antes
+          // también se lanzaba cuando el motivo era `stalled`/`step_limit` aunque el
+          // modelo ya hubiera respondido: el resumen sustituía la respuesta buena y
+          // el usuario no podía contestar a sus preguntas. Un anuncio corto ("voy a
+          // leer…") tampoco es una respuesta final y sí se cierra.
+          const ultimoTexto = String(lastAssistant?.content || "").trim();
+          const esAnuncio = anunciaAccion(ultimoTexto);
+          if (!ac.signal.aborted && (!ultimoTexto || esAnuncio)) {
             chat.faseSalto = "final";
             chat.toolChoice = "none";
             // El cierre también razona si el modelo lo tiene activado. GPT-OSS, sin

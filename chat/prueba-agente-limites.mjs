@@ -186,6 +186,18 @@ try {
   check("20: el rango de columnas recupera el sufijo oculto", rangoSufijo.includes("SUFIJO_NO_VISIBLE"));
   check("20: el sufijo recuperado se puede usar en el resultado", gigante.existeResultado && fs.readFileSync(path.join(gigante.work, "resultado.txt"), "utf8") === "SUFIJO_ENCONTRADO");
 
+  // ---------- 21: un plan con preguntas no se convierte en resumen de cierre ----------
+  const planPreguntas = await integracion(
+    "plan-con-preguntas",
+    (n) => n === 1
+      ? tool("r1", "indice", { carpeta: "." })
+      : { content: "Plan en 3 pasos:\n1. Crear la estructura.\n2. Implementar el motor.\n3. Verificar.\n\n¿Qué licencia prefieres para el motor y qué formato de salida necesitas?" },
+    () => {},
+    "Planifica el proyecto y hazme preguntas antes de crear archivos.",
+  );
+  check("21: un plan con preguntas termina como completado", planPreguntas.done?.motivo === "completed", JSON.stringify(planPreguntas.done));
+  check("21: la respuesta útil no se sustituye por un resumen", /¿Qué licencia prefieres/.test(planPreguntas.final) && !/Resumen del trabajo realizado/.test(planPreguntas.final), planPreguntas.final.slice(0, 240));
+
   // ---------- 15b: turno atascado no se presenta como terminado ----------
   const atasco = await integracion("atasco", () => tool("same", "leer", { ruta: "f1.txt" }));
   check("15b: un bucle de lecturas idénticas se detecta como atasco", atasco.done?.motivo === "stalled", JSON.stringify(atasco.done));

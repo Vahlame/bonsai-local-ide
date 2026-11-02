@@ -4,6 +4,25 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.5] - 2026-11-02
+
+### Corregido
+
+- **Sin resumen fantasma.** Si el modelo ya entregó una respuesta útil (por
+  ejemplo un plan con preguntas), el servidor ya no lanza el turno de cierre
+  que sustituía esa respuesta por «Resumen del trabajo realizado». Solo se
+  fuerza el cierre cuando el assistant quedó vacío o solo anunció una acción.
+- **Verificación solo con trabajo real.** Un plan que termina preguntando algo
+  ya no dispara la verificación automática: antes fallaba sin cambios, marcaba
+  `unresolved_verification` y encadenaba el resumen.
+- **La UI no auto-continúa con respuesta visible.** «Continuar solo hasta
+  terminar» solo encola otro turno si el assistant no dejó texto; si hay una
+  respuesta, el usuario puede contestar a sus preguntas.
+- **Detección de anuncios más estricta.** «Hecho. Ahora calcula…» ya no se
+  confunde con «Voy a…»; solo cuenta un inicio de acción futuro y nunca una
+  respuesta con `?`.
+- Regresión en `prueba-agente-limites` (caso 21: leer → plan con preguntas).
+
 ## [2.4.4] - 2026-11-02
 
 ### Corregido

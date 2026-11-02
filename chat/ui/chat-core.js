@@ -1457,17 +1457,19 @@
         }
         const did = log.querySelector(`.action[data-ask="${askId}"]`);
         if (!did) addStatus("Sin acciones.");
+        let respuestaVisible = "";
         if (bubble) {
           const body = msgText(bubble);
           if (body.dataset.raw !== undefined) setBody(body, body.dataset.raw);
-          if (!(body.dataset.raw || body.textContent || "").trim()) bubble.remove();
+          respuestaVisible = String(body.dataset.raw || body.textContent || "").trim();
+          if (!respuestaVisible) bubble.remove();
         }
         pintarRevertirTurno(escriturasConUndo);
         // «Continuar hasta terminar»: si el turno paró por falta de pasos o atasco y no lo
         // cancelaste, se encola un turno interno (no se pinta como mensaje del usuario) para
         // que el agente siga con el plan pendiente. Máximo 3 seguidos; el contador se
         // reinicia en cuanto escribes un mensaje nuevo.
-        if (lastDone && lastDone.incompleto && !current.signal.aborted && autoContinuaciones < 3
+        if (lastDone && lastDone.incompleto && !respuestaVisible && !current.signal.aborted && autoContinuaciones < 3
           && (lastDone.motivo === "step_limit" || lastDone.motivo === "stalled")
           && localStorage.getItem("bonsai-continuar-auto") !== "0") {
           autoContinuaciones += 1;
