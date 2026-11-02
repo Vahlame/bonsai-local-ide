@@ -11,6 +11,7 @@ const ARCHIVOS = [
   "model-plan.mjs", "model-hub.mjs", "imagenes.mjs", "code-search.mjs",
   "investigacion.mjs", "mcp-playwright.mjs", "memoria-global.mjs", "registros.mjs", "modelo.mjs", "modelo.json", "navegador.mjs", "ocr.mjs", "procesos.mjs", "sse.mjs", "terminal.mjs", "ui-server.mjs",
   "lifecycle/managed-server.mjs", "lifecycle/process-adapter.mjs", "lifecycle/binary-registry.mjs", "runtime-facts.mjs", "verify-node-webapp.mjs",
+  "server/http.mjs", "server/catalog.mjs", "server/gpu.mjs", "server/browser.mjs", "server/undo.mjs",
   "ui/server-controller.js", "ui/appearance.js", "ui/themes.json", "ui/refresh.css", "ui/app.js", "ui/chat-core.js", "ui/hub.js", "ui/iconos.js", "ui/ide.css", "ui/ide.js", "ui/index.html", "ui/markdown.js", "ui/paneles.js",
   "ui/vendor/editor.js", "ui/vendor/terminal.js", "ui/vendor/xterm.css",
   "ui/tema.css", "ui/fuentes/fuentes.css", "ui/fuentes/inter-latin.woff2",

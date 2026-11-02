@@ -4,6 +4,20 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.7] - 2026-11-02
+
+### Arquitectura
+
+- Primer corte modular de `ui-server.mjs`: se extraen `server/http.mjs`
+  (argumentos, cuerpo, MIME y rutas), `server/catalog.mjs` (catálogo y elección
+  de modelo), `server/gpu.mjs`, `server/browser.mjs` y `server/undo.mjs`.
+- `ui-server.mjs` baja de 4.504 a 4.115 líneas y deja de mezclar esas políticas
+  con el router.
+- `chat/server/README.md` documenta las fronteras actuales y la siguiente
+  extracción segura: handlers con contexto explícito y bucle del agente.
+- `copia-app.mjs` incluye los nuevos módulos para que la copia de evaluación
+  siga arrancando aislada.
+
 ## [2.4.6] - 2026-11-02
 
 ### Corregido

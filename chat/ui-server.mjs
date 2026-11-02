@@ -16,6 +16,11 @@ import { dialectoDe, llamadasCrudas } from "./adaptadores.mjs";
 import { BonsaiChat, metadatosSesion } from "./bonsai-chat.mjs";
 import { MODELO, muestreo, pensarDe, perfilAgente, presupuestoPensar } from "./modelo.mjs";
 import { DEFAULT_HISTORY_CAP, RULES_CAP_TOKENS, estimateTokens, takeHeadByTokens, turnoInterno } from "./context.mjs";
+import { TYPES, UI_SERVIDOS, parseArgs, readBody, fileInside } from "./server/http.mjs";
+import { MODELOS_DIR, modeloGuardadoClave, guardarModeloActivo, catalogoModelos, mmprojDisponible } from "./server/catalog.mjs";
+import { readGpu, resetGpuCache } from "./server/gpu.mjs";
+import { openBrowser } from "./server/browser.mjs";
+import { UndoStore } from "./server/undo.mjs";
 import { aplicarRespuesta, construirMensajes, contarLineas, recorteLineas } from "./editar.mjs";
 import { revisarPeticion } from "./guardia.mjs";
 import { ejecutarComando, lanzarEnFondo, matarArbol, recortarCentro } from "./procesos.mjs";
@@ -43,7 +48,6 @@ import { EscrituraIncremental } from "./escritura-incremental.mjs";
 import { consultarRegistro } from "./registros.mjs";
 import {
   HUB_FILE,
-  MODELS_DIR as HUB_MODELS_DIR,
   borrarModelo,
   buscarHuggingFace,
   catalogoHub,
@@ -102,6 +106,13 @@ function crearRegistroSalida() {
 }
 /** @type {string} */
 let workspaceRoot = PROJECT;
+const undoStore = new UndoStore({
+  dir: UNDO_DIR,
+  getWorkspaceRoot: () => workspaceRoot,
+  fileInside,
+  escribirAtomico,
+  limiteTexto: LIMITE_TEXTO,
+});
 
 // --- Ajustes de alcance que se pueden cambiar desde Ajustes (ver aplicarAjustesAlChat) ---
 /** Tope duro de pasos del agente en un turno (el bucle puede encadenar tandas hasta este número). */
@@ -163,267 +174,8 @@ function textoPlan(plan) {
 }
 
 
-/**
- * Un punto de deshacer. `antes`/`despues` son el contenido antes y después;
- * `null` significa "el archivo no existía". `renombrado` guarda solo el destino.
- * @typedef {{tipo?: "texto" | "renombrado", rel: string, antes?: string | null, despues?: string | null, destino?: string, ts?: number}} PuntoUndo
- */
-
-/**
- * Guarda un punto de deshacer. Devuelve "" si no se pudo escribir (mejor seguir
- * sin poder deshacer que romper el guardado).
- * @param {PuntoUndo} dato
- * @param {string[]} [bolsa] si se pasa, el id se apunta para "revertir el turno"
- * @returns {string}
- */
-function guardarUndo(dato, bolsa) {
-  const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  try {
-    fs.mkdirSync(UNDO_DIR, { recursive: true });
-    escribirAtomico(path.join(UNDO_DIR, `${id}.json`), JSON.stringify({ ...dato, workspace: path.resolve(workspaceRoot), ts: Date.now() }));
-  } catch {
-    return "";
-  }
-  if (bolsa) bolsa.push(id);
-  podarUndoDiferido();
-  return id;
-}
-
-function descartarUndo(id, bolsa) {
-  if (!id) return;
-  try { fs.rmSync(path.join(UNDO_DIR, `${id}.json`), { force: true }); } catch { /* la copia sigue siendo recuperable */ }
-  if (bolsa) {
-    const index = bolsa.indexOf(id);
-    if (index >= 0) bolsa.splice(index, 1);
-  }
-}
-
-const PROTEGIDOS = new Set([".git"]);
-function enCarpetaProtegida(rel) {
-  const partes = String(rel).replace(/\\/g, "/").split("/").map((parte) => parte.replace(/[. ]+$/, "").toLowerCase()).filter(Boolean);
-  return partes.some((parte) => PROTEGIDOS.has(parte));
-}
-
-/**
- * Cuántos puntos de deshacer se conservan (cada uno guarda hasta dos versiones de un archivo). */
-const UNDO_MAX = 400;
-/** Cada cuántas escrituras se lanza la poda en segundo plano (no en la ruta del guardado). */
-const PODAR_CADA = 16;
-let podarPendiente = false;
-let escriturasUndo = 0;
-
-/**
- * Poda diferida: antes CADA guardado hacía readdir + statSync de hasta 400 JSON en el
- * hilo principal. Ahora se cuenta y se lanza con setImmediate cada PODAR_CADA escrituras,
- * fuera de la ruta crítica del guardado (el resultado es el mismo: se conservan los más
- * recientes).
- * @returns {void}
- */
-function podarUndoDiferido() {
-  escriturasUndo += 1;
-  if (podarPendiente || escriturasUndo % PODAR_CADA !== 0) return;
-  podarPendiente = true;
-  setImmediate(() => {
-    podarPendiente = false;
-    podarUndo();
-  });
-}
-
-/**
- * chat\undo\ crecía sin límite: cada escritura del agente o del editor dejaba un JSON con el
- * contenido anterior y el nuevo, y nadie los borraba nunca. Se conservan los más recientes.
- * @returns {void}
- */
-function podarUndo() {
-  try {
-    const nombres = fs.readdirSync(UNDO_DIR).filter((n) => n.endsWith(".json"));
-    if (nombres.length <= UNDO_MAX) return;
-    const fichas = nombres.map((n) => {
-      const abs = path.join(UNDO_DIR, n);
-      let mtime = 0;
-      try {
-        mtime = fs.statSync(abs).mtimeMs;
-      } catch {
-        mtime = 0;
-      }
-      return { n, abs, mtime };
-    });
-    fichas.sort((a, b) => b.mtime - a.mtime);
-    for (const ficha of fichas.slice(UNDO_MAX)) fs.rmSync(ficha.abs, { force: true });
-  } catch {
-    /* si no se puede podar, no se rompe el guardado */
-  }
-}
-
-/**
- * Deshace un punto: restaura el texto anterior (o borra el archivo si no existía)
- * o deshace un renombrado. Con `soloComprobar` no toca nada: sirve para detectar
- * conflictos antes de revertir un turno entero.
- * @param {string} id
- * @param {boolean} forzar
- * @param {boolean} [soloComprobar]
- * @returns {{ok: boolean, code: number, motivo?: string, rel?: string}}
- */
-function aplicarUndo(id, forzar, soloComprobar = false) {
-  if (!/^[a-z0-9-]{4,40}$/i.test(id)) return { ok: false, code: 400, motivo: "id no valido" };
-  const fichero = path.join(UNDO_DIR, `${id}.json`);
-  if (!fs.existsSync(fichero)) return { ok: false, code: 404, motivo: "ese punto de deshacer ya no esta" };
-  /** @type {PuntoUndo} */
-  let dato;
-  try {
-    dato = JSON.parse(fs.readFileSync(fichero, "utf8"));
-  } catch {
-    return { ok: false, code: 500, motivo: "punto de deshacer ilegible" };
-  }
-  if (!dato || typeof dato.rel !== "string" || !dato.rel) return { ok: false, code: 500, motivo: "punto de deshacer corrupto" };
-  const identidad = (p) => process.platform === "win32" ? path.resolve(p).toLowerCase() : path.resolve(p);
-  if (typeof dato.workspace !== "string" || identidad(dato.workspace) !== identidad(workspaceRoot)) return { ok: false, code: 409, motivo: "ese punto pertenece a otra carpeta o no identifica su proyecto" };
-  if (enCarpetaProtegida(dato.rel) || (dato.destino && enCarpetaProtegida(dato.destino))) return { ok: false, code: 403, motivo: "carpeta protegida" };
-
-  if (dato.tipo === "renombrado") {
-    const destino = typeof dato.destino === "string" ? dato.destino : "";
-    const absOrigen = fileInside(workspaceRoot, dato.rel);
-    const absDestino = fileInside(workspaceRoot, destino);
-    if (!absOrigen || !absDestino) return { ok: false, code: 403, motivo: "ruta no permitida" };
-    if (!fs.existsSync(absDestino)) return { ok: false, code: 404, motivo: "el archivo renombrado ya no esta" };
-    if (fs.existsSync(absOrigen) && !forzar) return { ok: false, code: 409, motivo: `ya existe ${dato.rel}`, rel: dato.rel };
-    if (!soloComprobar) {
-      fs.mkdirSync(path.dirname(absOrigen), { recursive: true });
-      if (fs.existsSync(absOrigen)) fs.rmSync(absOrigen, { recursive: true, force: true });
-      fs.renameSync(absDestino, absOrigen);
-    }
-    return { ok: true, code: 200, rel: dato.rel };
-  }
-
-  const abs = fileInside(workspaceRoot, dato.rel);
-  if (!abs) return { ok: false, code: 403, motivo: "ruta no permitida", rel: dato.rel };
-  const previsto = typeof dato.despues === "string" ? dato.despues : null;
-  let actual = null;
-  if (fs.existsSync(abs)) {
-    const st = fs.statSync(abs);
-    if (!st.isFile()) return { ok: false, code: 409, motivo: "hay una carpeta en esa ruta", rel: dato.rel };
-    // Los puntos de deshacer solo guardan escrituras de ≤2 MB: si el archivo actual es
-    // mayor, es que cambió por fuera. No se carga entero para compararlo.
-    if (st.size > LIMITE_TEXTO) return { ok: false, code: 409, motivo: "el archivo cambio desde entonces (es demasiado grande para compararlo)", rel: dato.rel };
-    actual = fs.readFileSync(abs, "utf8");
-  }
-  if (!forzar && actual !== previsto) return { ok: false, code: 409, motivo: "el archivo cambio desde entonces", rel: dato.rel };
-  if (soloComprobar) return { ok: true, code: 200, rel: dato.rel };
-  if (typeof dato.antes === "string") {
-    fs.mkdirSync(path.dirname(abs), { recursive: true });
-    if (!fileInside(workspaceRoot, dato.rel)) return { ok: false, code: 403, motivo: "ruta no permitida", rel: dato.rel };
-    escribirAtomico(abs, dato.antes);
-  } else if (fs.existsSync(abs)) {
-    fs.rmSync(abs);
-  }
-  return { ok: true, code: 200, rel: dato.rel };
-}
-
 const SKIP_DIR = new Set(["bin", "models", ".git", "node_modules", "dist", "build"]);
 const SKIP_EXT = new Set([".dll", ".exe", ".gguf", ".zip", ".pdb", ".tmp", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".woff", ".woff2", ".mp3", ".mp4", ".bin"]);
-
-const TYPES = {
-  ".html": "text/html; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".mjs": "text/javascript; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".json": "application/json; charset=utf-8",
-  ".woff2": "font/woff2",
-  ".woff": "font/woff",
-  ".png": "image/png",
-  ".txt": "text/plain; charset=utf-8",
-  ".md": "text/plain; charset=utf-8",
-  ".py": "text/plain; charset=utf-8",
-};
-
-// Extensiones que se pueden servir desde chat/ui/ (todo lo demas es 404).
-const UI_SERVIDOS = new Set([".js", ".mjs", ".css", ".html", ".svg", ".json", ".woff2", ".woff", ".png"]);
-
-/**
- * @param {string[]} argv
- */
-function parseArgs(argv) {
-  // think = presupuesto de razonamiento en tokens; 0 (por defecto) = APAGADO.
-  // historyCap = 0 -> automático: el historial usa toda la ventana menos la reserva de salida.
-  const out = { host: "127.0.0.1", port: 8787, llamaPort: 8080, historyCap: 0, open: false, think: 0, thinkProvided:false, enginePreset:"", perfil: "codigo", agentProfile:"optimized" };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--host") out.host = argv[++i] ?? out.host;
-    else if (arg === "--port") out.port = Number(argv[++i]);
-    else if (arg === "--llama-port") out.llamaPort = Number(argv[++i]);
-    else if (arg === "--prompt-cap") out.historyCap = Number(argv[++i]);
-    else if (arg === "--think") {out.think = Number(argv[++i]);out.thinkProvided=true;}
-    else if (arg === "--engine-preset") {out.enginePreset=argv[++i];if (isNamedEnginePreset(out.enginePreset)) engineProfile(out.enginePreset);}
-    else if (arg === "--perfil") out.perfil = argv[++i] ?? out.perfil;
-    else if (arg === "--agent-profile") out.agentProfile = argv[++i] ?? out.agentProfile;
-    else if (arg === "--open") out.open = true;
-    else throw new Error(`Argumento desconocido: ${arg}`);
-  }
-  // -1 es "sin limite" (Qwen3.6 free thinking); 0 apaga el razonamiento.
-  if (!Number.isInteger(out.think) || out.think < -1) throw new Error("--think es un presupuesto en tokens (-1 = sin limite, 0 = apagado)");
-  muestreo(out.perfil);
-  return out;
-}
-
-/**
- * @param {import("node:http").IncomingMessage} req
- * @param {number} [limite] bytes maximos; por defecto 200 KB (mensajes de chat)
- * @returns {Promise<string>}
- */
-function readBody(req, limite = 200_000) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    let size = 0;
-    let rechazado = false;
-    // Un 413 limpio necesita que el servidor pueda contestar ANTES de cerrar la conexión:
-    // antes se hacía req.destroy() al pasarse del límite y el cliente veía una conexión
-    // interrumpida en vez del error prometido. Ahora se rechaza con un error tipado, se
-    // deja de acumular y el manejador de arriba responde 413 y cierra cuando toca.
-    req.on("data", (chunk) => {
-      if (rechazado) return;
-      size += chunk.length;
-      if (size > limite) {
-        rechazado = true;
-        chunks.length = 0;
-        const err = new Error(`cuerpo demasiado grande (máximo ${limite} bytes)`);
-        err.name = "PayloadTooLargeError";
-        err.code = "PAYLOAD_TOO_LARGE";
-        err.limite = limite;
-        reject(err);
-        req.pause();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on("end", () => {
-      if (!rechazado) resolve(Buffer.concat(chunks).toString("utf8"));
-    });
-    req.on("error", (err) => {
-      if (!rechazado) reject(err);
-    });
-    req.on("aborted", () => {
-      if (!rechazado) reject(new Error("petición interrumpida por el cliente"));
-    });
-  });
-}
-
-/**
- * Resuelve una ruta YA DECODIFICADA dentro de `root`, o null si se sale.
- *
- * No decodifica por su cuenta a propósito: cuando lo hacía aquí y el llamante ya la
- * había decodificado (los `searchParams` de /api/file, o el handler de /p/, que
- * decodifica antes), un archivo con `%` en el nombre daba 404 —`decodeURIComponent`
- * lanza URIError con un `%` suelto— y `a%20b.txt` se resolvía como `a b.txt`, es decir
- * OTRO archivo. La decodificación de URL se hace en los dos sitios que son de verdad
- * una URL: el handler de /ui/ y el de /p/ y /salida/.
- * @param {string} root
- * @param {string} rel
- * @returns {string | null}
- */
-function fileInside(root, rel) {
-  return rutaSegura(root, rel);
-}
 
 /**
  * @param {string} root
@@ -552,122 +304,6 @@ function attachImagenes(text, imagenes) {
   }
   if (!piezas.length) return text;
   return `${text}\n\nEl usuario adjuntó ${piezas.length} imagen(es), guardadas en ${ADJUNTOS_DIR}:\n${piezas.join("\n")}\nNo tienes visión, así que no puedes ver su contenido: no lo inventes. Si la respuesta depende de la imagen, dilo y pide que la describan o que se active la visión (mmproj).`;
-}
-
-/** Carpeta de los GGUF y catálogo de modelos que se pueden cargar en caliente. */
-const MODELOS_DIR = HUB_MODELS_DIR;
-/**
- * Elección de modelo guardada en disco (chat\modelo-activo.json). Es lo que hace que
- * el modelo elegido en la interfaz siga puesto después de cerrar y volver a abrir:
- * `modelo.archivo` de chat\modelo.json solo decide mientras no haya ninguna elección.
- * La lee también scripts\start-server.ps1, que es quien arranca el servidor.
- */
-const MODELO_ACTIVO = path.join(HERE, "modelo-activo.json");
-
-/**
- * Clave del modelo guardado en disco ("" si no hay archivo o está ilegible).
- * @returns {string}
- */
-function modeloGuardadoClave() {
-  try {
-    const raw = JSON.parse(fs.readFileSync(MODELO_ACTIVO, "utf8"));
-    return raw && typeof raw.clave === "string" ? raw.clave.trim() : "";
-  } catch {
-    return "";
-  }
-}
-
-/**
- * Persiste la elección de modelo. Se llama SOLO cuando el modelo nuevo ya contestó:
- * así el archivo nunca apunta a uno que no llegó a cargar.
- * @param {{clave: string, archivo: string}} item
- * @returns {void}
- */
-function guardarModeloActivo(item) {
-  const tmp = `${MODELO_ACTIVO}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify({
-    clave: item.clave,
-    archivo: item.archivo,
-    actualizado: new Date().toISOString(),
-  }, null, 2), "utf8");
-  fs.renameSync(tmp, MODELO_ACTIVO);
-}
-
-/**
- * Catálogo de modelos de `chat/modelo.json`, con si el GGUF está entero en disco.
- * @returns {Array<{clave: string, nombre: string, archivo: string, bytes: number, esperado: number, rol: string, uso: string, existe: boolean, predeterminado: boolean, recomendado: boolean, tareas: number}>}
- */
-function catalogoModelos() {
-  fusionarCatalogo();
-  /** @type {Array<{clave: string, nombre: string, archivo: string, bytes: number, esperado: number, rol: string, uso: string, existe: boolean, predeterminado: boolean}>} */
-  const out = [];
-  const cat = MODELO.catalogo || {};
-  for (const clave of Object.keys(cat)) {
-    if (clave.startsWith("_")) continue;
-    const row = cat[clave];
-    if (!row || typeof row.archivo !== "string") continue;
-    let bytes = 0;
-    try {
-      bytes = fs.statSync(path.join(MODELOS_DIR, row.archivo)).size;
-    } catch {
-      bytes = 0;
-    }
-    const esperado = Number(row.bytes) || 0;
-    out.push({
-      clave,
-      nombre: typeof row.nombre === "string" && row.nombre ? row.nombre : clave,
-      archivo: row.archivo,
-      bytes,
-      esperado,
-      rol: typeof row.rol === "string" ? row.rol : "",
-      uso: typeof row.uso === "string" ? row.uso : "",
-      existe: bytes > 0 && (esperado === 0 || bytes === esperado),
-      gpuCompleta: row.servidor?.tipo === "gpu-completa" || row.servidor?.tipo === "moe-hibrido" || row.servidor?.tipo === "gpu-parcial",
-      margenObjetivoMiB: Number(row.servidor?.margenObjetivoMiB) || 0,
-      predeterminado: clave === MODELO.modeloPredeterminado,
-      recomendado: clave === MODELO.modeloRecomendado,
-      tareas: Number(MODELO.benchmarkTareas?.[clave]) || 0,
-      fuente: typeof row.fuente === "string" ? row.fuente : "curado",
-      origen: typeof row.origen === "string" ? row.origen : "",
-      licencia: typeof row.licencia === "string" ? row.licencia : "",
-      oculto: row.oculto === true,
-      vision: Boolean(row.vision?.archivo && mmprojDisponible(clave)),
-      visionArchivo: typeof row.vision?.archivo === "string" ? row.vision.archivo : "",
-      plan: row.plan || null,
-      pruebas: row.pruebas || null,
-      contextos: Array.isArray(row.contextos) ? row.contextos : [],
-      contextoMaximo: Number(row.contextoMaximo) || 0,
-      contextoPorDefecto: Number(row.contextoPorDefecto) || 0,
-      capacidades: Array.isArray(row.capacidades) ? row.capacidades : [],
-      etiquetas: Array.isArray(row.etiquetas) ? row.etiquetas : [],
-      pensar: row.pensar || null,
-      muestreo: row.muestreo || null,
-    });
-  }
-  // Relevancia para coding/web app primero; auxiliares (borradores) al final.
-  out.sort((a, b) =>
-    (a.oculto ? 1 : 0) - (b.oculto ? 1 : 0) ||
-    (Number(b.recomendado) || 0) - (Number(a.recomendado) || 0) ||
-    (Number(b.tareas) || 0) - (Number(a.tareas) || 0) ||
-    (Number(b.pruebas?.coding?.global) || 0) - (Number(a.pruebas?.coding?.global) || 0) ||
-    (Number(b.pruebas?.webapp?.global) || 0) - (Number(a.pruebas?.webapp?.global) || 0) ||
-    String(a.nombre).localeCompare(String(b.nombre), "es"));
-  return out;
-}
-
-/** ¿Está el proyector de visión descargado y entero? */
-function mmprojDisponible(clave) {
-  const config = MODELO.catalogo?.[clave]?.vision;
-  if (config === false) return false;
-  const vision = config?.archivo ? config : MODELO.vision;
-  const archivo = vision?.archivo;
-  if (!archivo) return false;
-  try {
-    const bytes = fs.statSync(path.join(MODELOS_DIR, archivo)).size;
-    return bytes > 0 && (!vision.bytes || bytes === Number(vision.bytes));
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -937,34 +573,6 @@ function hiddenTurn(turn) {
   return turnoInterno(turn);
 }
 
-/** @type {{at: number, data: Record<string, unknown>}} */
-let gpuCache = { at: 0, data: { ok: false } };
-
-/**
- * Estado de la GPU y de la RAM para el medidor de hardware. Una sola consulta a nvidia-smi por
- * segundo aunque haya varias pestañas abiertas.
- * @returns {Promise<Record<string, unknown>>}
- */
-function readGpu() {
-  if (Date.now() - gpuCache.at < 900) return Promise.resolve(gpuCache.data);
-  return new Promise((resolve) => {
-    const fields = "name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw,enforced.power.limit,clocks.sm,clocks.max.sm,pstate,power.default_limit,memory.free";
-    execFile("nvidia-smi", [`--query-gpu=${fields}`, "--format=csv,noheader,nounits"], { timeout: 3000, windowsHide: true }, (err, stdout) => {
-      const mem = { ramFreeMiB: Math.round(os.freemem() / 1048576), ramTotalMiB: Math.round(os.totalmem() / 1048576) };
-      let data = { ok: false, ...mem };
-      if (!err) {
-        const p = String(stdout).trim().split("\n")[0].split(",").map((s) => s.trim());
-        const n = (i) => (Number.isFinite(Number(p[i])) ? Number(p[i]) : null);
-        if (p.length >= 10) {
-          data = { ok: true, name: p[0], util: n(1), vramUsedMiB: n(2), vramTotalMiB: n(3), temp: n(4), watts: n(5), wattsLimit: n(6), mhz: n(7), mhzMax: n(8), pstate: p[9], wattsDefault: n(10), vramFreeMiB:n(11), visionTransientMiB:64, ...mem };
-        }
-      }
-      gpuCache = { at: Date.now(), data };
-      resolve(data);
-    });
-  });
-}
-
 /**
  * @param {InstanceType<typeof BonsaiChat>} chat
  */
@@ -1112,26 +720,6 @@ function chatTitle(session) {
   const first = (session.turns || []).find((turn) => turn.role === "user" && typeof turn.content === "string" && !turnoInterno(turn));
   const text = (first?.content || "").replace(/\s+/g, " ").trim();
   return text.slice(0, 48) || "Nueva conversación";
-}
-
-function openBrowser(url) {
-  // Ventana de aplicacion SIN GPU (rasterizado por software): la NVIDIA queda libre
-  // para el modelo. Si el script no existe (o no es Windows), se abre el navegador normal.
-  try {
-    const launcher = path.join(PROJECT, "scripts", "open-ide.ps1");
-    const port = new URL(url).port || "8787";
-    if (process.platform === "win32" && fs.existsSync(launcher)) {
-      // Sin `detached`: en Windows, un PowerShell detached + stdio ignore no puede
-      // crear la ventana de Edge y falla en silencio (el acceso directo abría la UI
-      // pero no el navegador). El proceso lanzador termina enseguida; no hace falta
-      // desacoplarlo para que sobreviva.
-      const child = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", launcher, "-Port", port], { stdio: "ignore", windowsHide: true });
-      child.unref();
-      return;
-    }
-  } catch { /* cae al navegador normal */ }
-  const child = spawn("cmd", ["/c", "start", "", url], { detached: true, stdio: "ignore", windowsHide: true });
-  child.unref();
 }
 
 /**
@@ -1515,7 +1103,7 @@ async function main(args) {
         if (e.name.startsWith(".") && e.name !== ".cursor") continue;
         const hijoRel = rel ? `${rel}/${e.name}` : e.name;
         if (e.isDirectory()) {
-          if (SKIP_DIR.has(e.name) || PROTEGIDOS.has(e.name)) continue;
+          if (SKIP_DIR.has(e.name) || e.name === ".git") continue;
           pendientes.push(hijoRel);
           continue;
         }
@@ -1655,7 +1243,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const UI_VERSION = "2.4.6";
+  const UI_VERSION = "2.4.7";
   // El lanzador de escritorio elige el perfil de agente. `optimized` era el
   // nombre histórico del perfil de coding; hoy el único perfil con el harness
   // nuevo es `small-local-coder`. Los ajustes guardados siguen mandando.
@@ -2022,7 +1610,7 @@ async function main(args) {
           res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" }).end("ruta no permitida");
           return;
         }
-        if (enCarpetaProtegida(rel)) {
+        if (undoStore.enCarpetaProtegida(rel)) {
           res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" }).end("esa carpeta esta protegida");
           return;
         }
@@ -2066,14 +1654,14 @@ async function main(args) {
           res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end("El archivo cambio en disco. Tus cambios siguen en el editor; revisa la version nueva antes de guardar.");
           return;
         }
-        const undoId = guardarUndo({ tipo: "texto", rel, antes, despues: contenido });
+        const undoId = undoStore.guardar({ tipo: "texto", rel, antes, despues: contenido });
         if (!undoId) throw new Error("No se pudo preparar la copia para deshacer; el archivo no se cambió");
         try {
           fs.mkdirSync(path.dirname(abs), { recursive: true });
           if (!fileInside(workspaceRoot, rel)) throw new Error("ruta no permitida");
           escribirAtomico(abs, contenido);
         } catch (err) {
-          descartarUndo(undoId);
+          undoStore.descartar(undoId);
           throw err;
         }
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -2095,7 +1683,7 @@ async function main(args) {
           /** @type {Array<{id: string, rel: string, motivo: string}>} */
           const conflictos = [];
           for (const id of pendientes) {
-            const visto = aplicarUndo(id, forzar, true);
+            const visto = undoStore.aplicar(id, forzar, true);
             if (!visto.ok) conflictos.push({ id, rel: visto.rel || "", motivo: visto.motivo || "no se puede" });
           }
           if (conflictos.length && !forzar) {
@@ -2106,7 +1694,7 @@ async function main(args) {
           /** @type {string[]} */
           const revertidos = [];
           for (const id of pendientes) {
-            const hecho = aplicarUndo(id, forzar);
+            const hecho = undoStore.aplicar(id, forzar);
             if (hecho.ok && hecho.rel) revertidos.push(hecho.rel);
           }
           undoDelTurno.length = 0;
@@ -2115,7 +1703,7 @@ async function main(args) {
           return;
         }
         const id = raw && typeof raw.id === "string" ? raw.id : "";
-        const hecho = aplicarUndo(id, forzar);
+        const hecho = undoStore.aplicar(id, forzar);
         if (!hecho.ok) {
           res.writeHead(hecho.code, { "Content-Type": "text/plain; charset=utf-8" }).end(hecho.motivo || "no se pudo deshacer");
           return;
@@ -2142,7 +1730,7 @@ async function main(args) {
           res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" }).end("ruta no permitida");
           return;
         }
-        if (enCarpetaProtegida(rel)) {
+        if (undoStore.enCarpetaProtegida(rel)) {
           res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" }).end("esa carpeta esta protegida");
           return;
         }
@@ -2157,12 +1745,12 @@ async function main(args) {
           if (op === "carpeta") {
             fs.mkdirSync(abs, { recursive: true });
           } else {
-            undoId = guardarUndo({ tipo: "texto", rel, antes: null, despues: "" });
+            undoId = undoStore.guardar({ tipo: "texto", rel, antes: null, despues: "" });
             if (!undoId) throw new Error("No se pudo preparar la copia para deshacer; el archivo no se creó");
             try {
               if (!fileInside(workspaceRoot, rel)) throw new Error("ruta no permitida");
               escribirAtomico(abs, "");
-            } catch (err) { descartarUndo(undoId); throw err; }
+            } catch (err) { undoStore.descartar(undoId); throw err; }
           }
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ ok: true, op, rel, undo: undoId }));
@@ -2174,7 +1762,7 @@ async function main(args) {
             return;
           }
           const absDestino = fileInside(workspaceRoot, destino);
-          if (!absDestino || enCarpetaProtegida(destino)) {
+          if (!absDestino || undoStore.enCarpetaProtegida(destino)) {
             res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" }).end("ruta no permitida");
             return;
           }
@@ -2189,7 +1777,7 @@ async function main(args) {
           fs.mkdirSync(path.dirname(absDestino), { recursive: true });
           if (!fileInside(workspaceRoot, rel) || !fileInside(workspaceRoot, destino)) throw new Error("ruta no permitida");
           fs.renameSync(abs, absDestino);
-          const undoId = guardarUndo({ tipo: "renombrado", rel, destino });
+          const undoId = undoStore.guardar({ tipo: "renombrado", rel, destino });
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ ok: true, op, rel, to: destino, undo: undoId }));
           return;
@@ -2207,7 +1795,7 @@ async function main(args) {
             const st = fs.statSync(abs);
             if (st.size <= LIMITE_TEXTO) {
               const buf = fs.readFileSync(abs);
-              if (!buf.includes(0)) undoId = guardarUndo({ tipo: "texto", rel, antes: buf.toString("utf8"), despues: null });
+              if (!buf.includes(0)) undoId = undoStore.guardar({ tipo: "texto", rel, antes: buf.toString("utf8"), despues: null });
             }
           }
           fs.rmSync(abs, { recursive: true, force: true });
@@ -2234,7 +1822,7 @@ async function main(args) {
           return;
         }
         const abs = fileInside(workspaceRoot, rel);
-        if (!abs || enCarpetaProtegida(rel)) {
+        if (!abs || undoStore.enCarpetaProtegida(rel)) {
           res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" }).end("ruta no permitida");
           return;
         }
@@ -3192,7 +2780,7 @@ async function main(args) {
         chat.coderTask = null;
         try {
           if(imagenes.length&&chat.vision){
-            gpuCache.at=0;
+            resetGpuCache();
             const gpu=await readGpu(), transientMiB=64;
             // La validación local midió 46 MiB transitorios por imagen; no se añade
             // una reserva fija de 400 MiB al modelo ya cargado.
@@ -3488,7 +3076,7 @@ async function main(args) {
                     antes = buf.toString("utf8");
                   }
                   if (antes !== write.content) {
-                    undoId = guardarUndo({ tipo: "texto", rel, antes, despues: write.content }, undoDelTurno);
+                    undoId = undoStore.guardar({ tipo: "texto", rel, antes, despues: write.content }, undoDelTurno);
                     if (!undoId) throw new Error("No se pudo preparar la copia para deshacer; el archivo no se cambió");
                   }
                   const saved = antes === null
@@ -3498,7 +3086,7 @@ async function main(args) {
                       : await escribirAtomicoCondicional(workspaceRoot, rel, antes, write.content, ac.signal);
                   savedNow.push({ ...saved, antes, undoId });
                 } catch (err) {
-                  descartarUndo(undoId, undoDelTurno);
+                  undoStore.descartar(undoId, undoDelTurno);
                   const detail = err instanceof Error ? err.message : String(err);
                   showAction("deny", write.rel, "denied", detail);
                   log.push(`bloqueado: ${write.rel}\n${detail}`);
@@ -3591,12 +3179,12 @@ async function main(args) {
                 return;
               }
               try {
-                const undoId = guardarUndo({ tipo: "texto", rel, antes, despues: r.texto }, undoDelTurno);
+                const undoId = undoStore.guardar({ tipo: "texto", rel, antes, despues: r.texto }, undoDelTurno);
                 if (!undoId) throw new Error("No se pudo preparar la copia para deshacer; el archivo no se cambió");
                 let guardado;
                 try {
                   guardado = await escribirAtomicoCondicional(workspaceRoot, rel, antes, r.texto, ac.signal);
-                } catch (err) { descartarUndo(undoId, undoDelTurno); throw err; }
+                } catch (err) { undoStore.descartar(undoId, undoDelTurno); throw err; }
                 step += 1;
                 /** @type {ActionRow} */
                 const row = { id: `${idTurno}-a${step}`, kind: "write", title: guardado.rel, state: "done", detail: clipText(unifiedDiff(guardado.rel, antes, r.texto), 8000) };
@@ -3654,7 +3242,7 @@ async function main(args) {
                 ultimoFallo = true;
               };
               if (!rel || !abs) return fallar("No se borró: ruta no permitida.");
-              if (enCarpetaProtegida(rel)) return fallar(`No se borró ${rel}: esa carpeta está protegida.`);
+              if (undoStore.enCarpetaProtegida(rel)) return fallar(`No se borró ${rel}: esa carpeta está protegida.`);
               if (!fs.existsSync(abs)) return fallar(`No se borró: ${rel} no existe.`);
               let st;
               try { st = fs.statSync(abs); } catch (err) { return fallar(`No se pudo leer ${rel}: ${err instanceof Error ? err.message : String(err)}`); }
@@ -3663,11 +3251,11 @@ async function main(args) {
               try {
                 if (st.isFile() && st.size <= LIMITE_TEXTO) {
                   const buf = fs.readFileSync(abs);
-                  if (!buf.includes(0)) undoId = guardarUndo({ tipo: "texto", rel, antes: buf.toString("utf8"), despues: null }, undoDelTurno);
+                  if (!buf.includes(0)) undoId = undoStore.guardar({ tipo: "texto", rel, antes: buf.toString("utf8"), despues: null }, undoDelTurno);
                 }
                 fs.rmSync(abs, { recursive: false });
               } catch (err) {
-                descartarUndo(undoId, undoDelTurno);
+                undoStore.descartar(undoId, undoDelTurno);
                 return fallar(`No se pudo borrar ${rel}: ${err instanceof Error ? err.message : String(err)}`);
               }
               step += 1;
@@ -3700,7 +3288,7 @@ async function main(args) {
                 ultimoFallo = true;
               };
               if (!origen || !destino || !absO || !absD) return fallar("No se movió: ruta no permitida.");
-              if (enCarpetaProtegida(origen) || enCarpetaProtegida(destino)) return fallar("No se movió: hay una carpeta protegida en la ruta.");
+              if (undoStore.enCarpetaProtegida(origen) || undoStore.enCarpetaProtegida(destino)) return fallar("No se movió: hay una carpeta protegida en la ruta.");
               if (!fs.existsSync(absO)) return fallar(`No se movió: ${origen} no existe.`);
               // Si el destino es una carpeta que ya existe, se mete dentro (como un arrastrar).
               if (fs.existsSync(absD) && fs.statSync(absD).isDirectory()) {
@@ -3715,7 +3303,7 @@ async function main(args) {
               } catch (err) {
                 return fallar(`No se pudo mover ${origen} a ${destino}: ${err instanceof Error ? err.message : String(err)}`);
               }
-              const undoId = guardarUndo({ tipo: "renombrado", rel: origen, destino }, undoDelTurno);
+              const undoId = undoStore.guardar({ tipo: "renombrado", rel: origen, destino }, undoDelTurno);
               step += 1;
               /** @type {ActionRow} */
               const rowMover = { id: `${idTurno}-a${step}`, kind: "cmd", title: `mover ${origen} → ${destino}`, state: "done", detail: "Movido (hay punto de deshacer)." };
@@ -3838,11 +3426,11 @@ async function main(args) {
                   else if (a.accion === "cancelar") detail = JSON.stringify(store.cancelar(a.id));
                   else if (a.accion === "finalizar") {
                     const pending = store.preparar(a.id, a.offset);
-                    const undoId = guardarUndo({ tipo: "texto", rel: pending.rel, antes: null, despues: pending.contenido }, undoDelTurno);
+                    const undoId = undoStore.guardar({ tipo: "texto", rel: pending.rel, antes: null, despues: pending.contenido }, undoDelTurno);
                     if (!undoId) throw new Error("No se pudo preparar deshacer; no se guardó el archivo");
                     let saved;
                     try { saved = writeNewOutput(workspaceRoot, pending.rel, pending.contenido); }
-                    catch (err) { descartarUndo(undoId, undoDelTurno); throw err; }
+                    catch (err) { undoStore.descartar(undoId, undoDelTurno); throw err; }
                     store.borrar(a.id);
                     coder?.noteWritten(saved.rel);
                     send({ type: "file", rel: saved.rel, url: saved.url, bytes: saved.bytes });
