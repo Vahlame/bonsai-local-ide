@@ -11,6 +11,16 @@ const edge = browserPath();
 const out = path.join(__dirname, "..", "docs", "graficos");
 
 (async () => {
+  // Las capturas llevan la versión real de la UI, no un número escrito a mano.
+  let version = "dev";
+  try {
+    const respuesta = await fetch(`${url}/api/settings`);
+    version = (await respuesta.json()).uiVersion || version;
+  } catch {
+    /* la UI aún no responde: se usa "dev" y el resto del smoke lo reportará */
+  }
+  const shot = (nombre) => path.join(out, `ui-${version}-${nombre}.png`);
+
   const browser = await chromium.launch({
     executablePath: edge,
     headless: true,
@@ -67,7 +77,7 @@ const out = path.join(__dirname, "..", "docs", "graficos");
       chats: document.querySelectorAll("#log .msg").length,
     };
   });
-  await page.screenshot({ path: `${out}/ui-2.4.0-main.png` });
+  await page.screenshot({ path: shot("main") });
 
   let hub = null;
   try {
@@ -79,7 +89,7 @@ const out = path.join(__dirname, "..", "docs", "graficos");
       sections: [...document.querySelectorAll(".hub-dialog h2, .hub-dialog h3")].map((e) => e.innerText.trim()).filter(Boolean).slice(0, 20),
       text: (document.querySelector(".hub-dialog")?.innerText || "").slice(0, 1200),
     }));
-    await page.screenshot({ path: `${out}/ui-2.4.0-hub.png` });
+    await page.screenshot({ path: shot("hub") });
     await page.keyboard.press("Escape");
     await page.waitForTimeout(500);
   } catch (err) {
@@ -100,7 +110,7 @@ const out = path.join(__dirname, "..", "docs", "graficos");
       selects: [...document.querySelectorAll(".dialogo.ajustes select")].map((s) => ({ value: s.value, label: s.options[s.selectedIndex]?.text || "" })),
       checks: [...document.querySelectorAll(".dialogo.ajustes input[type=checkbox]")].map((c) => c.checked),
     }));
-    await page.screenshot({ path: `${out}/ui-2.4.0-settings.png` });
+    await page.screenshot({ path: shot("settings") });
     await page.keyboard.press("Escape");
   } catch (err) {
     errors.push(`settings: ${err}`);
@@ -129,7 +139,7 @@ const out = path.join(__dirname, "..", "docs", "graficos");
     errors.push(`api: ${err}`);
   }
 
-  process.stdout.write(JSON.stringify({ url, errors, startup, main, hub, settings, api }, null, 2) + "\n");
+  process.stdout.write(JSON.stringify({ url, version, errors, startup, main, hub, settings, api }, null, 2) + "\n");
   await browser.close();
 })().catch((err) => {
   process.stdout.write(JSON.stringify({ url, errors: [String(err)], main: null, hub: null, settings: null, api: null }, null, 2) + "\n");

@@ -53,8 +53,12 @@ if (-not $Item -or $Item.servidor.tipo -ne "gpu-completa") { throw "Modelo sin p
 $ModelPath = Join-Path $RootDir ("models\" + $Item.archivo)
 $Binary = Get-BonsaiBinaries | Where-Object { $_.id -eq "legacy-root" }
 $BinPath = $Binary.exe
-if (-not (Test-Path -LiteralPath $ModelPath)) { throw "Falta el modelo: $ModelPath" }
-if ((Get-Item -LiteralPath $ModelPath).Length -ne [int64]$Item.bytes) { throw "El modelo no tiene el tamano verificado; descarga incompleta." }
+# -DryRun solo calcula el plan y la linea de comandos: un clon limpio o CI no tiene
+# los GGUF. El arranque real sigue exigiendo el archivo y su tamano exacto.
+if (-not $DryRun) {
+    if (-not (Test-Path -LiteralPath $ModelPath)) { throw "Falta el modelo: $ModelPath" }
+    if ((Get-Item -LiteralPath $ModelPath).Length -ne [int64]$Item.bytes) { throw "El modelo no tiene el tamano verificado; descarga incompleta." }
+}
 if (-not $DryRun -and @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue).Count -gt 0) { throw "El puerto $Port ya esta ocupado. No se modifican servidores ajenos." }
 
 # VRAM libre: nvidia-smi es la fuente real. El override solo existe para pruebas DryRun
@@ -90,7 +94,7 @@ $VisionMiB = 0
 if ($Vision) {
     if (-not $VisionProfile.archivo -or -not $VisionProfile.offload -or -not $VisionProfile.contexto) { throw "Este perfil solo admite vision con proyector propio en GPU y un techo de contexto declarado." }
     $ProjectorPath = Join-Path $RootDir ("models\" + $VisionProfile.archivo)
-    if (-not (Test-Path -LiteralPath $ProjectorPath) -or (Get-Item -LiteralPath $ProjectorPath).Length -ne [int64]$VisionProfile.bytes) { throw "Falta el proyector de vision verificado: $ProjectorPath" }
+    if (-not $DryRun -and (-not (Test-Path -LiteralPath $ProjectorPath) -or (Get-Item -LiteralPath $ProjectorPath).Length -ne [int64]$VisionProfile.bytes)) { throw "Falta el proyector de vision verificado: $ProjectorPath" }
     $VisionMiB = [int]$VisionProfile.reservaMiB
 }
 

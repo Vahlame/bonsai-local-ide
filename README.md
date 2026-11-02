@@ -8,7 +8,7 @@ navegador controlado y visión, todo contra tu propia GPU. Sin nube, sin
 telemetría y sin claves de API.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.4.1-8fb8ff">
+  <img alt="version" src="https://img.shields.io/badge/version-2.4.2-8fb8ff">
   <img alt="CI" src="https://github.com/Vahlame/bonsai-local-ide/actions/workflows/ci.yml/badge.svg">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
@@ -16,17 +16,17 @@ telemetría y sin claves de API.
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.4.1 - Auditoría completa, CI y portabilidad.** 168 archivos Node,
-> 32 PowerShell, 28 Python, 618 JSON y 55 SVG validados; **51/51 tests**,
-> **0 enlaces rotos** y **0 errores de consola** en la UI. Se corrigieron rutas
-> no portables, BOM, OOM de UI/visión, propagación de `-1` y el medidor de
-> contexto. Notas: [RELEASE-2.4.1](docs/RELEASE-2.4.1.md).
+> **v2.4.2 - CI verde y arranque reproducible en clon limpio.** La suite
+> aislada pasa **51/51** sin GGUF instalados, la UI carga Qwen3.6 con **0
+> errores de consola** y GitHub Actions valida enlaces y tests en Windows. La
+> release corrige el `-DryRun` del lanzador y las comprobaciones que depend�an
+> de pesos locales. Notas: [RELEASE-2.4.2](docs/RELEASE-2.4.2.md).
 
-![Bonsai IDE 2.4 con CodeMirror, explorador, chat y panel de conversación](docs/graficos/ui-2.4.0-main.png)
+![Bonsai IDE 2.4: explorador, agente, vista previa de la app generada y métricas de GPU](docs/graficos/ui-2.4.2-main.png)
 
 ---
 
-## Qué cambia en 2.3
+## Novedades principales
 
 - **Un solo editor.** Se eliminó el editor textarea/pre paralelo. CodeMirror 6
   aporta undo/redo, multi-cursor, búsqueda, plegado, autocompletado, resaltado
@@ -41,9 +41,10 @@ telemetría y sin claves de API.
   Schema son el camino canónico. El parser de llamadas escritas como texto vive
   en `chat/legacy-tool-parser.mjs` y se apaga con
   `BONSAI_LEGACY_TOOL_PARSER=0`. Detalle: [TOOL-CALLING](docs/TOOL-CALLING.md).
-- **GPT-OSS 20B como agente principal.** Plantilla Harmony del GGUF,
-  `reasoning_effort` en vez de `enable_thinking`, tool calls nativas (varias si
-  son independientes), fallback JSON y salida cruda con `BONSAI_RAW_STREAM=1`.
+- **Qwen3.6 35B-A3B como agente recomendado.** MoE con expertos en CPU, visión
+  y pensamiento libre; 35–40 tok/s en las cuatro tareas del benchmark. GPT-OSS
+  20B se mantiene para Harmony (`reasoning_effort`, tool calls nativas y salida
+  cruda con `BONSAI_RAW_STREAM=1`).
 - **Qwen3.8-27B denso local.** Perfil `qwen38-27b-perf-iq4` con IQ4_XS mixto,
   MTP 2, caché recurrente por checkpoints y pensamiento sin tope de tokens
   (`--reasoning-budget -1`, esfuerzo `xhigh`). Tool calling nativo validado en
@@ -56,9 +57,9 @@ telemetría y sin claves de API.
 
 ### Galería
 
-| Diff/merge en Ctrl+K | Ajustes 2.3 | Estado vacío |
+| Diff/merge en Ctrl+K | Ajustes 2.4 | Estado vacío |
 |---|---|---|
-| ![Diff](docs/graficos/ui-2.3-diff.png) | ![Ajustes](docs/graficos/ui-2.3-ajustes.png) | ![Inicio](docs/graficos/ui-2.3-vacio.png) |
+| ![Diff](docs/graficos/ui-2.3-diff.png) | ![Ajustes](docs/graficos/ui-2.4.2-settings.png) | ![Inicio](docs/graficos/ui-2.3-vacio.png) |
 
 ---
 
@@ -101,8 +102,9 @@ dejaba libre** (GPT-OSS 64k pasó de 16 a 12 capas de expertos en CPU) y **8 hil
 físicos** en vez de 12. El único cambio de kernel que sobrevivió es MMVQ a 2
 warps para K-quants en sm_89: +4,6 % en el 4B, neutro en 9B y -0,4 % en el 7B.
 
-> **Coding:** Ornith 9B no se recomienda para coding. Su calidad medida está por
-> debajo de GPT-OSS-20B, Qwen3.6-35B-A3B y Qwen3-30B-A3B.
+> **Coding:** Ornith 9B es el perfil GPU-completa de referencia (todo en VRAM),
+> pero no se recomienda como agente de coding: su calidad medida está por debajo
+> de Qwen3.6-35B-A3B, Qwen3-Coder-30B-A3B y Qwen3-30B-A3B.
 
 Detalle: [BENCHMARKS.md](BENCHMARKS.md) · [OPTIMIZATIONS.md](OPTIMIZATIONS.md) ·
 [TUNING.md](TUNING.md).
@@ -332,8 +334,9 @@ Informes completos, parche de runtime y evidencia:
 
 ## Tool calling
 
-El agente principal de coding es **GPT-OSS 20B**. Usa la plantilla **Harmony**
-del GGUF, tool calls nativas y `reasoning_effort` (no `enable_thinking`).
+El agente recomendado es **Qwen3.6 35B-A3B**: MoE con expertos en CPU, tool
+calls nativas y pensamiento libre. **GPT-OSS 20B** sigue disponible con la
+plantilla **Harmony** del GGUF y `reasoning_effort` (no `enable_thinking`).
 
 La fuente de verdad son las **tool calls nativas** del servidor OpenAI local,
 con argumentos validados por **Zod** y publicados como **JSON Schema**. La build
@@ -362,6 +365,7 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 |---|---|
 | [AUDIT-2026-11-01](docs/AUDIT-2026-11-01.md) | Inventario, sintaxis, enlaces, UI, runtime y límites |
 | [CONTRIBUTING](CONTRIBUTING.md) | Setup, pruebas, estilo, modelos y releases |
+| [RELEASE-2.4.2](docs/RELEASE-2.4.2.md) | CI verde, `-DryRun` sin GGUF y arranque reproducible |
 | [RELEASE-2.4.1](docs/RELEASE-2.4.1.md) | Auditoría completa, CI, portabilidad y 51/51 tests |
 | [RELEASE-2.4.0](docs/RELEASE-2.4.0.md) | Benchmark de 7 modelos × 4 tareas, MoE, UI verificada y release 2.4.0 |
 | [RELEASE-2.3.6](docs/RELEASE-2.3.6.md) | Detener y Cerrar IDE e IA verificados; prompt de refactor 2.4 |
@@ -387,14 +391,15 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 ## Pruebas
 
 ```powershell
-npm test                  # 48 suites aisladas, sin GPU ni modelo real
+npm test                  # 51 suites aisladas, sin GPU ni modelo real
 npm run test:navegador    # 7 suites con Edge/Chrome headless
 npm run docs:links        # enlaces relativos de la documentación
 npm run build:ui-vendor   # reconstruye editor.js, terminal.js y xterm.css
 ```
 
-Cobertura de esta release: 48/48 aisladas, 7/7 navegador, ciclo de vida real
-(Detener/Cerrar) y `docs:links` sin enlaces rotos.
+Cobertura de esta release: 51/51 aisladas, 7/7 navegador, ciclo de vida real
+(Detener/Cerrar) y `docs:links` sin enlaces rotos. La suite aislada corre en CI
+sin GGUF instalados.
 
 ---
 

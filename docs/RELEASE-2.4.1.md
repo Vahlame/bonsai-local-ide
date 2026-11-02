@@ -17,7 +17,7 @@ funcional; 2.4.1 la deja presentable para revisión externa.
 | Scripts Python | **28/28** compilación |
 | JSON | **618/618** |
 | SVG | **55/55** XML |
-| Documentación | **68 documentos, 185 enlaces, 0 roto(s)** |
+| Documentación | **69 documentos, 190 enlaces, 0 roto(s)** |
 | Pruebas aisladas | **51/51 OK** |
 | UI real | **0 errores de consola**, `IA lista`, Hub y Ajustes |
 | Modelo real | Qwen3.6, 22 capas de expertos en CPU, visión CPU, `-1` |

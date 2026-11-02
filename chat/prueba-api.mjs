@@ -382,7 +382,17 @@ try {
   const mj = modelos.status === 200 ? JSON.parse(modelos.body) : { modelos: [] };
   check("el catálogo de modelos sale", modelos.status === 200 && mj.modelos.length >= 2, `HTTP ${modelos.status} ${modelos.body.slice(0, 90)}`);
   check("dice cuál está cargado", mj.actual === "override6", String(mj.actual));
-  check("los GGUF del catálogo están enteros", mj.modelos.every((m) => m.existe), JSON.stringify(mj.modelos.map((m) => [m.clave, m.existe])));
+  // El catálogo debe reflejar el disco. No se exige que los GGUF estén instalados:
+  // un clon limpio y CI no los tienen, pero `existe`/`bytes` deben seguir siendo
+  // exactos para cada archivo (presente o ausente).
+  const modeloDir = path.join(HERE, "..", "models");
+  const catalogoCoherente = mj.modelos.every((m) => {
+    let bytes = 0;
+    try { bytes = fs.statSync(path.join(modeloDir, m.archivo)).size; } catch { bytes = 0; }
+    const esperado = Number(m.esperado) || 0;
+    return m.bytes === bytes && m.existe === (bytes > 0 && (esperado === 0 || bytes === esperado));
+  });
+  check("el catálogo refleja los GGUF instalados (sin exigir que existan)", catalogoCoherente, JSON.stringify(mj.modelos.map((m) => [m.clave, m.existe, m.bytes, m.esperado])));
   check("marca Ornith como predeterminado de GPU completa", mj.modelos.some((m) => m.predeterminado && m.clave === "ornith9b" && m.gpuCompleta), JSON.stringify(mj.modelos.map((m) => m.predeterminado)));
   const desconocido = await pedir("POST", "/api/modelos", { clave: "no-existe" });
   check("rechaza un modelo desconocido", desconocido.status === 400, `HTTP ${desconocido.status}`);

@@ -4,6 +4,22 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.2] - 2026-11-01
+
+### CI y portabilidad
+
+- `start-gpu-model.ps1 -DryRun` ya no exige los GGUF ni el proyector: calcula el
+  plan y la linea de comandos en un clon limpio. El arranque real sigue
+  verificando presencia y tamano exactos.
+- `chat/prueba-api.mjs` valida que el catalogo refleje el disco (bytes y
+  `existe`) sin exigir que los modelos esten instalados.
+- GitHub Actions usa `checkout@v7`, `setup-node@v7` y `setup-python@v7`; se
+  elimina el aviso de Node 20.
+- Verificacion con los GGUF de Ornith y su proyector ausentes: 51/51 tests y
+  `-DryRun` en verde.
+- `scripts/check-ui.cjs` deriva el nombre de las capturas de la version real de
+  la UI (`ui-2.4.2-*.png`); README y auditoria apuntan a las nuevas.
+
 ## [2.4.1] - 2026-11-01
 
 ### Calidad
