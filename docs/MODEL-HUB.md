@@ -298,10 +298,11 @@ tests ocultos ejecutados con `node --test`. El modelo no escribe los tests.
 | Qwen2.5 Coder 7B | 49 % | 2/9 | 5/5 | 1 |
 | Ornith 1.5 9B | 35 % | 0/9 | 5/5 | 1 |
 
-**Recomendación:** GPT-OSS-20B para arquitectura desde cero; Qwen3.6-35B-A3B
-para bugfix y código guiado (100 % en bugfix y ~39 tok/s); Qwen3-30B-A3B si
-manda la velocidad (~42 tok/s). Los densos pequeños sirven para ediciones, no
-para diseñar un proyecto entero.
+**Recomendación:** para el uso diario del IDE, **Qwen3.6-35B-A3B** es el modelo
+principal: mejor equilibrio global, 90/100 en el benchmark de tareas y 100 % en
+bugfix. **GPT-OSS-20B** sigue siendo la referencia para arquitectura desde cero;
+**Qwen3-30B-A3B** si manda la velocidad (~42 tok/s). Los densos pequeños sirven
+para ediciones, no para diseñar un proyecto entero.
 
 El informe incluye los hallazgos de pipeline (cercas markdown, rutas sin `src/`,
 timeout de tests, `max_tokens` y continuación) y los gráficos:
@@ -327,12 +328,14 @@ GPT-OSS es el que mejor sigue el contrato de archivos y API. Qwen3.6 funciona
 pero inlinó los estáticos; Qwen3-30B falla PATCH/DELETE por un `slice(13)`.
 Informe: [reports/WEBAPP-2026-10-31.md](../reports/WEBAPP-2026-10-31.md).
 
-### GPT-OSS: perfil recomendado
+### GPT-OSS: perfil Harmony de referencia
 
-GPT-OSS es el modelo principal para coding/web app de este equipo. El perfil
-automático usa **Harmony**, muestreo oficial (`temp 1.0`, `top_p 1.0`,
-`top_k 0`, `min_p 0.01`) y `--reasoning-effort high`. El contexto por defecto es
-**64k**; el Hub ofrece 32k/64k/96k/128k y recalcula las capas de expertos.
+GPT-OSS ya no es el modelo principal del IDE. Se conserva como alternativa
+Harmony para proyectos desde cero y contratos de webapp, donde sigue midiendo
+muy bien. El perfil automático usa **Harmony**, muestreo oficial (`temp 1.0`,
+`top_p 1.0`, `top_k 0`, `min_p 0.01`) y `--reasoning-effort high`. El contexto
+por defecto es **64k**; el Hub ofrece 32k/64k/96k/128k y recalcula las capas de
+expertos.
 
 | Contexto | KV | Capas CPU | Generación | RAM |
 |---:|---|---:|---:|---:|
@@ -362,7 +365,9 @@ La lectura honesta: **más contexto no es mejor si el modelo falla**. Gemma cabe
 131k gracias a su atención local, pero su tool-calling no sirve para el agente;
 Qwen2.5 Coder rinde mejor con 32k f16 y su formato de tool call hay que
 traducirlo; Qwen3 4B es el que mejor combina contexto, herramientas y calidad.
-Ornith sigue siendo el modelo principal por su visión y su agente ya ajustado.
+Ornith sigue siendo el perfil GPU-completa de referencia por su visión y su
+agente ajustado, pero no es la recomendación de coding: para eso está
+Qwen3.6 35B-A3B.
 
 ### Decodificación especulativa medida (Qwen2.5 Coder + draft)
 

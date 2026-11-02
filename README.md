@@ -22,6 +22,11 @@ telemetría y sin claves de API.
 > release corrige el `-DryRun` del lanzador y las comprobaciones que depend�an
 > de pesos locales. Notas: [RELEASE-2.4.2](docs/RELEASE-2.4.2.md).
 
+> **Modelo principal: Qwen3.6 35B-A3B (MoE).** Es el mejor equilibrio
+> calidad/velocidad del benchmark 2026-11-01 (90/100, 35–40 tok/s) y el que
+> usa el IDE para el agente. GPT-OSS 20B sigue disponible como alternativa
+> Harmony para proyectos desde cero.
+
 ![Bonsai IDE 2.4: explorador, agente, vista previa de la app generada y métricas de GPU](docs/graficos/ui-2.4.2-main.png)
 
 ---
@@ -85,6 +90,11 @@ telemetría y sin claves de API.
 Los números de 2.2 siguen siendo la referencia para los modelos que usan el
 runtime histórico. Qwen3.8-27B usa un runtime aparte y añade la sección
 siguiente. El laboratorio es reproducible y cada dato tiene su registro A/B.
+
+> **Ojo con la tabla:** las filas de GPT-OSS documentan las optimizaciones
+> históricas de 2.2, no el modelo recomendado hoy. Para el agente, la
+> recomendación actual es **Qwen3.6 35B-A3B**; GPT-OSS queda como alternativa
+> Harmony.
 
 ![Rendimiento medido por modelo](docs/graficos/rtx4060-throughput.svg)
 

@@ -4,6 +4,14 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [Unreleased]
+
+### Documentación
+
+- Aclarado que **Qwen3.6 35B-A3B (MoE)** es el modelo principal y la
+  recomendación actual. GPT-OSS 20B queda como alternativa Harmony; se
+  corrigieron las guías que aún lo presentaban como agente principal.
+
 ## [2.4.2] - 2026-11-01
 
 ### CI y portabilidad

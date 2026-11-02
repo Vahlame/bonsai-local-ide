@@ -3,6 +3,10 @@
 Este documento es la guía práctica para esta máquina. Los números vienen de
 `BENCHMARKS.md` y de `config/measured-moe-profiles.json`.
 
+> **Recomendación actual (2026-11-01):** **Qwen3.6 35B-A3B**. Las tablas de
+> GPT-OSS se conservan como referencia histórica de las optimizaciones 2.2; no
+> son el modelo principal del IDE.
+
 ---
 
 ## 1. Reglas que no se negocian
@@ -20,7 +24,7 @@ Este documento es la guía práctica para esta máquina. Los números vienen de
 
 ---
 
-## 2. GPT-OSS-20B (el mejor coder de la máquina)
+## 2. GPT-OSS-20B (alternativa Harmony; referencia histórica de MoE)
 
 | Perfil | Contexto | KV | n-cpu-moe | Hilos | Decode | Prefill | VRAM |
 |---|---:|---|---:|---:|---:|---:|---:|
@@ -37,20 +41,24 @@ llama-server -m models\gpt-oss-20b-gpt-oss-20b-MXFP4.gguf `
   --host 127.0.0.1 --port 8080 --jinja --metrics --cache-ram 2048
 ```
 
-La calidad de coding ya estaba verificada al 100% (18/18 + 10/10) y no cambia
-con el reparto: los pesos y el sampler son los mismos.
+La calidad de coding ya estaba verificada al 100 % (18/18 + 10/10) en el
+benchmark de proyecto de 2.0 y no cambia con el reparto: los pesos y el sampler
+son los mismos. En el benchmark de tareas de 2.4, Qwen3.6 queda muy por delante
+en calidad global.
 
 ---
 
-## 3. Qwen3.6-35B-A3B (más contexto, algo menos de coding)
+## 3. Qwen3.6-35B-A3B (modelo recomendado)
 
 | Perfil | Contexto | n-cpu-moe | Hilos | Decode | Prefill | VRAM |
 |---|---:|---:|---:|---:|---:|---:|
 | **`balanced`** | 32k | 19 | 8 | **44.79** | 856 | 7,409 MiB |
 | `max_quality` | 64k | 21 | 8 | 43.92 | 814 | 7,327 MiB |
 
-n-cpu-moe 18 a 32k hace OOM; 19 es el máximo medido. A 64k, 20 no se validó y
-21 es el máximo seguro de la tabla.
+n-cpu-moe 18 a 32k hace OOM; 19 es el máximo medido sin navegador. El plan
+automático de la UI usa **22 capas de expertos en CPU** para dejar margen a
+visión y al navegador headless. A 64k, 20 no se validó y 21 es el máximo seguro
+de la tabla.
 
 ---
 
@@ -83,7 +91,8 @@ hay un hotspot único que justifique un kernel nuevo.
 
 52.1 tok/s de decode y 2,564 tok/s de prefill a 8k. Es el 100% del roofline; no
 hay nada que ganar en GEMV. Úsalo si prefieres un denso predecible; para coding
-duro, GPT-OSS-20B tiene mejor calidad.
+duro, Qwen3.6 35B-A3B es la referencia actual y GPT-OSS-20B sigue siendo fuerte
+en proyectos desde cero.
 
 ### Ornith 9B
 

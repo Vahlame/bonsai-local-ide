@@ -1,4 +1,4 @@
-# Tool calling en Bonsai 2.3
+# Tool calling en Bonsai 2.4
 
 Este documento fija el contrato de herramientas del agente. La regla es simple:
 **las tool calls nativas son el camino canónico; el texto libre no es una API.**
@@ -78,8 +78,10 @@ modelo y **no se escribe nada**.
 
 ## GPT-OSS 20B y Harmony
 
-GPT-OSS es el agente de coding principal de Bonsai. Su plantilla no es genérica:
-es **Harmony** y viaja en el GGUF. El lanzador la escribe en
+El agente recomendado por defecto es **Qwen3.6 35B-A3B**, con tool calls
+nativas y pensamiento libre. **GPT-OSS 20B** se conserva como alternativa
+Harmony para proyectos desde cero. Su plantilla no es genérica: es **Harmony**
+y viaja en el GGUF. El lanzador la escribe en
 `logs/chat_template_<puerto>.jinja` y arranca `llama-server` con `--jinja` y
 `--chat-template-file`. El servidor expone en `/props`:
 

@@ -34,7 +34,8 @@ maestros se regeneran con `bench/merge_results.py`.
 > **Nota sobre Ornith 9B:** el usuario indicó que su calidad de coding no es
 > aceptable. Sigue en la matriz densa como referencia de ancho de banda, pero
 > **no** se usa para recomendaciones de coding. Los perfiles de coding se
-> centran en GPT-OSS-20B, Qwen3.6-35B-A3B y Qwen3-30B-A3B.
+> centran en Qwen3.6-35B-A3B (recomendado), Qwen3-30B-A3B y GPT-OSS-20B
+> (alternativa Harmony).
 
 ---
 
@@ -123,7 +124,7 @@ donde el tamaño es el límite. Q8_0 no compensa para chat en 8 GB.
 
 ---
 
-## 4. MoE que sí programa: GPT-OSS-20B
+## 4. MoE que sí programa: GPT-OSS-20B (referencia histórica)
 
 El plan anterior usaba `--n-cpu-moe 16 --threads 12` a 64k. La tabla medida
 muestra que caben **12 capas CPU / 12 capas GPU** y que **8 hilos** son mejores

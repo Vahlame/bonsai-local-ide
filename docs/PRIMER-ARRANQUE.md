@@ -72,13 +72,12 @@ Si la IA está apagada, la UI muestra **¿Qué modelo quieres cargar?**:
 - **Ahora no** cierra el diálogo y deja el IDE usable sin modelo.
 
 En el Hub puedes descargar el catálogo curado, buscar en Hugging Face, pegar una
-URL o importar un `.gguf` local. Para GPT-OSS-20B el plan por defecto usa
-**64k**, Harmony y muestreo oficial; el máximo probado es **128k**.
+URL o importar un `.gguf` local. El modelo recomendado es **Qwen3.6 35B-A3B**:
+32k, MoE con expertos en CPU, visión y pensamiento libre. **GPT-OSS 20B** sigue
+disponible con 64k, Harmony y su muestreo oficial; el máximo probado es 128k.
 
 La pregunta se desactiva en **Ajustes → Preguntar modelo al iniciar**. Si se
 desactiva, el IDE arranca sin cargar nada y el modelo se elige desde **Modelos**.
-
-![Diálogo de primer arranque con GPT-OSS recomendado](graficos/ui-inicio-modelo-gptoss.png)
 
 ## 5. Comprobar que quedó bien
 
