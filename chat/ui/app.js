@@ -2473,6 +2473,8 @@
             fondo.remove();
             dialogoModeloInicioAbierto = false;
             avisar(`${r.nombre || m.nombre || m.clave} listo · ventana ${r.nCtx} tok${r.pensar === -1 ? " · razona sin límite" : r.pensar ? ` · razona ${r.pensar}` : ""}`, "ok", 7000);
+            const meta = document.getElementById("meta");
+            if (meta) meta.textContent = `ventana ${r.nCtx}`;
             window.dispatchEvent(new CustomEvent("bonsai:modelos-cambiados"));
             await cargarAjustes();
             await refrescarModelos();

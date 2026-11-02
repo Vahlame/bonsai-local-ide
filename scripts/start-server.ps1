@@ -6,7 +6,9 @@
 #   .\scripts\start-server.ps1 -ContextSize 16384   # contexto fijo
 #   .\scripts\start-server.ps1 -DryRun          # solo comprueba la VRAM y muestra el comando
 #   .\scripts\start-server.ps1 -Pensar 2048     # razona con un tope de 2048 tokens (solo modelos que lo admiten)
+#   .\scripts\start-server.ps1 -Pensar -1       # pensamiento sin límite
 #   .\scripts\start-server.ps1 -Pensar 0        # sin razonamiento aunque la interfaz lo tenga encendido
+#   .\scripts\start-server.ps1 -Pensar -2       # automático: el presupuesto del modelo
 #   .\scripts\start-server.ps1 -Vision          # vision con proyector en GPU
 # ==============================================================================
 
@@ -17,7 +19,7 @@ param (
     [string]$HostIP = "127.0.0.1",
     [ValidateSet("auto", "f16", "q8_0", "q4_0")]
     [string]$KVCacheType = "auto",   # auto = el KV mas preciso que quepa en la VRAM libre
-    [int]$Pensar = -1,               # -1 = auto: lo del ajuste "Modo razonamiento" de la interfaz SI el modelo lo admite (catalogo.<clave>.pensar). 0 = apagado. N>0 = tope de N tokens
+    [int]$Pensar = -2,               # -2 = auto (presupuesto del modelo); -1 = sin límite; 0 = apagado; N>0 = tope de N tokens
     [int]$Threads = 8,
     [int]$UBatch = 512,
     [string]$EnginePreset = "",
@@ -125,7 +127,7 @@ $claveModelo = ($M.catalogo.PSObject.Properties | Where-Object { $_.Name -notlik
 $pensarCat = if ($claveModelo) { $M.catalogo.$claveModelo.pensar } else { $null }
 $pensarCompatible = [bool]($pensarCat -and $pensarCat.compatible)
 $pensarOrigen = "explicito"
-if ($Pensar -lt 0) {
+if ($Pensar -eq -2) {
     # Auto: lo que diga el ajuste "Modo razonamiento" de la interfaz (chat\ui-settings.json).
     $pensarOrigen = "ajuste de la interfaz"
     $Pensar = if ($pensarCompatible) { [int]$pensarCat.presupuesto } else { 0 }
@@ -139,7 +141,7 @@ if ($Pensar -lt 0) {
         }
     }
 }
-if ($pensarCompatible -and $Pensar -le 0) { $Pensar = [int]$pensarCat.presupuesto; Write-Host "Razonamiento activo con el presupuesto del modelo: $Pensar tokens." }
+if ($pensarCompatible -and $Pensar -eq -2) { $Pensar = [int]$pensarCat.presupuesto; Write-Host "Razonamiento activo con el presupuesto del modelo: $Pensar tokens." }
 if ($Pensar -gt 0 -and -not $pensarCompatible) {
     Write-Host ("Aviso: {0} no admite el modo razonamiento (ver chat\modelo.json); se arranca sin el." -f $(if ($claveModelo) { $claveModelo } else { $ModelFile })) -ForegroundColor Yellow
     $Pensar = 0

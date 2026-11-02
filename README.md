@@ -8,22 +8,21 @@ navegador controlado y visión, todo contra tu propia GPU. Sin nube, sin
 telemetría y sin claves de API.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.3.6-8fb8ff">
+  <img alt="version" src="https://img.shields.io/badge/version-2.4.0-8fb8ff">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
   <img alt="gpu" src="https://img.shields.io/badge/GPU-RTX%204060%208GB-76B900">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.3.6 — Detener y Cerrar IDE e IA de verdad.** El cierre reconoce el build
-> de laboratorio que usa el lanzador optimizado, espera a que mueran el modelo y
-> el wrapper, comprueba el puerto y borra el marcador. La UI ya no depende de un
-> `#servidor-toggle` inexistente: Cerrar IDE e IA vuelve a funcionar y la ventana
-> intenta cerrarse. Incluye el prompt de refactor 2.4 en
-> [PROMPT-REFACTOR-2.4](docs/PROMPT-REFACTOR-2.4.md).
-> Notas: [RELEASE-2.3.6](docs/RELEASE-2.3.6.md).
+> **v2.4.0 - Benchmark, MoE y UI verificada.** Qwen3.6 35B-A3B crea cuatro
+> proyectos a 36-40 tok/s y **90/100** en tres repeticiones; Qwen3.5 9B llega a
+> 45-46 tok/s. El motor usa expertos en CPU, KV q8_0, pensamiento libre y un
+> reparto conservador al cargar desde la UI. Incluye el Model Hub con los
+> modelos nuevos, ajustes de razonamiento sin límite y verificación visual de
+> la UI. Notas: [RELEASE-2.4.0](docs/RELEASE-2.4.0.md).
 
-![Bonsai IDE 2.3 con CodeMirror, explorador, chat y panel de conversación](docs/graficos/ui-2.3-main.png)
+![Bonsai IDE 2.4 con CodeMirror, explorador, chat y panel de conversación](docs/graficos/ui-2.3-main.png)
 
 ---
 
@@ -361,6 +360,7 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 
 | Documento | Contenido |
 |---|---|
+| [RELEASE-2.4.0](docs/RELEASE-2.4.0.md) | Benchmark de 7 modelos × 4 tareas, MoE, UI verificada y release 2.4.0 |
 | [RELEASE-2.3.6](docs/RELEASE-2.3.6.md) | Detener y Cerrar IDE e IA verificados; prompt de refactor 2.4 |
 | [RELEASE-2.3.5](docs/RELEASE-2.3.5.md) | Guía de tools, `buscar_codigo.ruta`, historial saneado y app GPT-OSS |
 | [RELEASE-2.3.4](docs/RELEASE-2.3.4.md) | Contexto automático y menos restricciones para GPT-OSS |

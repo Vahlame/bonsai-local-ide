@@ -13,7 +13,7 @@ param (
     [int]$UiPort = 8787,
     [int]$PromptCap = 0,          # 0 = automatico: historial = ventana menos reserva de salida
     [ValidateSet("auto", "f16", "q8_0", "q4_0")][string]$KVCacheType = "auto",
-    [int]$Pensar = -1,            # -1 = auto (ajuste "Modo razonamiento" de la interfaz, solo si el modelo lo admite). 0 = apagado. N>0 = tope de N tokens
+    [int]$Pensar = -2,            # -2 = auto (presupuesto del modelo); -1 = sin límite; 0 = apagado; N>0 = tope de N tokens
     [ValidateSet("", "legacy", "small-local-coder")][string]$AgentProfile = "",
     [string]$EnginePreset = "",
     [switch]$SinVision,           # por defecto la vision se enciende sola si el proyector esta descargado
@@ -122,7 +122,7 @@ if ($EnginePreset -eq 'CUSTOM' -and -not $SinVision -and $SavedSettings -and $Sa
 }
 $VisionArgs = if ($VisionFlags.Count -gt 0) { " " + ($VisionFlags -join " ") } else { "" }
 if ($SinVision) { $VisionArgs = ' -SinVision' }
-$PensarArgs = if ($Pensar -ge 0) { " -Pensar $Pensar" } else { "" }
+$PensarArgs = if ($Pensar -ne -2) { " -Pensar $Pensar" } else { "" }
 $EngineArgs = if ($ServerEnginePreset) { " -EnginePreset $ServerEnginePreset" } else { "" }
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
@@ -146,7 +146,7 @@ $serverState = & "$RootDir\scripts\stop-managed-server.ps1" -Port $Port -CheckOn
 if ($serverState -eq 'managed' -and $EnginePreset) {
     $CurrentMarker = Get-Content -LiteralPath (Join-Path $RootDir "logs\servidor-administrado-$Port.json") -Raw | ConvertFrom-Json
     $IncompatibleCustom = $EnginePreset -eq 'CUSTOM' -and (($ContextSize -ne 'auto' -and [int]$CurrentMarker.contexto -ne [int]$ContextSize) -or ($KVCacheType -ne 'auto' -and $CurrentMarker.kv -ne $KVCacheType) -or ([bool]$CurrentMarker.vision -ne ($VisionFlags.Count -gt 0)))
-    if ($CurrentMarker.enginePreset -ne $ServerEnginePreset -or ($Pensar -ge 0 -and $CurrentMarker.pensar -ne $Pensar) -or $IncompatibleCustom) {
+    if ($CurrentMarker.enginePreset -ne $ServerEnginePreset -or ($Pensar -ne -2 -and $CurrentMarker.pensar -ne $Pensar) -or $IncompatibleCustom) {
         & "$RootDir\scripts\stop-managed-server.ps1" -Port $Port
         if ($LASTEXITCODE -ne 0) { throw 'No se pudo detener el servidor administrado anterior.' }
         $serverState = 'empty'

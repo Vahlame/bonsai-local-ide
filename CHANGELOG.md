@@ -4,7 +4,53 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
-## [Unreleased]
+## [2.4.0] - 2026-11-01
+
+### Benchmark de modelos y tareas (2026-11-01)
+
+#### Añadido
+
+- Matriz reproducible de **7 modelos × 4 tareas** (fluidos, juego, app CRUD y
+  Skyblock), con prompts, workspaces aislados, checkers de Edge headless y
+  capturas.
+- **Qwen3.6 35B-A3B**: 90/100 en tres repeticiones y 36–40 tok/s. Fluidos 98,
+  juego 94, app 92 y Skyblock 77. Qwen3.5 9B llega a 45–46 tok/s; Qwen3-Coder
+  30B-A3B se queda en 17–22 tok/s; Qwen3.8 27B sigue en 7,2.
+- Descargas y registro de `qwen3-coder-30b-a3b`, `deepseek-coder-v2-lite` y
+  `qwen3-8b` con `fast-download.mjs` a ~10,3 MiB/s.
+- Gráficos `bench-model-speed`, `bench-task-matrix`, `bench-best-score`,
+  `moe-offload`, `benchmark-pipeline` y `engine-optimizations`.
+- `scripts/bench-tasks.py`, `scripts/check-task.cjs`, `scripts/check-ui.cjs`,
+  `scripts/make-bench-svgs.py` y el helper UTF-8
+  `scripts/qwen38_ide_agent_task.py`.
+
+#### Corregido
+
+- El lanzador no delegaba los modelos `moe-hibrido`; GPT-OSS se rechazaba como
+  “sin perfil de GPU completa”.
+- El perfil de GPT-OSS pedía el binario `optimized-sm89` en una ruta
+  inexistente; se usa `optimized-sm89-user`.
+- El catálogo de GPT-OSS apuntaba a un GGUF que no existe.
+- `configurationFromMarker()` rechazaba `pensar=-1`.
+- `start-server.ps1` trataba `-1` como automático; ahora `-2` es automático y
+  `-1` es sin límite. La UI y los lanzadores propagan el valor.
+- Al cargar desde la UI con visión se usa el reparto conservador del plan
+  (Qwen3.6: 22 capas de expertos en CPU) para evitar OOM con el navegador.
+- El helper de benchmark usaba cp1252 y se caía con emojis; ahora es UTF-8.
+- El checker de fluidos acepta simulaciones pausadas y el 404 de favicon ya no
+  cuenta como error.
+- El medidor de la UI conservaba la ventana del modelo anterior; `/api/state`
+  usa la ventana actual.
+- El diálogo de inicio actualiza la etiqueta `ventana` al cargar.
+
+### UI/UX
+
+- `scripts/check-ui.cjs` verifica la UI real: 0 errores de consola, 44 tarjetas
+  en el Hub, diálogo de inicio, Hub y Ajustes, estado `IA lista` y ventana
+  actualizada.
+- Capturas en `docs/graficos/ui-2.4.0-main.png`, `ui-2.4.0-hub.png` y
+  `ui-2.4.0-settings.png`.
+
 
 ### Qwen3.8-27B (2026-11-01)
 
