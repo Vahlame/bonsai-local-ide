@@ -4,6 +4,29 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.6] - 2026-11-02
+
+### Corregido
+
+- **Medidor de contexto del perfil de código.** `reportUsage` ahora lee la
+  memoria extractiva y los grupos descartados de `contextDiagnostics` en lugar
+  de `session.memory`/`session.folded` (que el perfil `small-local-coder` no
+  usa). La barra muestra `memoria N extractiva` y `grupos plegados N`; antes
+  enseñaba `memoria 0` con un prompt que ya llevaba miles de tokens de extractos.
+- **Primer turno más directo.** `AGENT_WORKFLOW` y la fase `PLAN` indican que,
+  si el usuario pide un plan, propuesta o preguntas antes de implementar, el
+  agente responda primero sin inspeccionar archivos por rutina. Además,
+  `pideAclaraciones()` desactiva las herramientas solo en el primer salto de
+  ese pedido (`tool_choice: none`): la respuesta inicial no empieza con un
+  `indice`/`leer` innecesario.
+- **Documentación de seguridad.** `SECURITY.md` ya no declara soporte de 1.2.x;
+  la tabla refleja la línea 2.4.x.
+- **Marketing del README.** «El mejor» pasa a una descripción defendible:
+  inferencia local sin API cloud, con búsquedas web y descargas del Hub
+  opcionales.
+- **Compactación documentada.** `CONTEXTO-Y-DIAGNOSTICO.md` explica que el
+  perfil de código usa memoria extractiva por petición, no `session.memory`.
+
 ## [2.4.5] - 2026-11-02
 
 ### Corregido

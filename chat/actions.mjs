@@ -837,6 +837,19 @@ export function esCharla(texto) {
   return /^[¿¡\s]*(explica|explicame|que es|que son|que significa|que diferencia|cual es la diferencia|diferencia entre|por que|como funciona|como funcionan|para que sirve|cuando se usa|cuando usar|que opinas|define|resume)\b/.test(t);
 }
 
+/**
+ * Un pedido que pide explícitamente un plan, una propuesta o preguntas antes de
+ * implementar. En ese caso el primer turno debe responder sin inspeccionar el
+ * proyecto por rutina; las herramientas quedan para cuando el usuario responda.
+ * @param {string} texto
+ * @returns {boolean}
+ */
+export function pideAclaraciones(texto) {
+  const t = String(texto || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (!t || t.length > 12000) return false;
+  return /\b(?:hazme|haz|hacer|formula|formular|plantea|plantear)\b[^.\n]{0,60}\bpreguntas?\b|\bpreguntas? bloqueantes?\b|\bplan detallado\b|\bpropuesta (?:inicial|detallada)\b|\bantes de implementar\b|\bno implementes\b|\brequisitos y preguntas\b/i.test(t);
+}
+
 export function inventedToolResult(text) {
   return /(?:^|\n)\s*código\s+\d+\b/i.test(text)
     || /is not recognized as an internal or external command/i.test(text)
@@ -1455,6 +1468,7 @@ export function selfTest() {
   check("si nombra un archivo no es charla", !esCharla("Explícame en 3 frases qué hace la función de algoritmo.py y cuál es su complejidad."));
   check("si hay algo que hacer no es charla", !esCharla("¿En qué archivo está definida la función conectar_db?") && !esCharla("Explica el error y arréglalo") && !esCharla("Crea un ejemplo de closure") && !esCharla("¿Qué es lo que falla en mis tests?"));
   check("un pedido normal no es charla", !esCharla("necesito que me hagas un modelo 3d en un archivo html") && esCharla("hola"));
+  check("un pedido de plan/preguntas pide aclaraciones primero", pideAclaraciones("Diseña e implementa el proyecto; dame un plan detallado y 5 preguntas bloqueantes antes de empezar.") && pideAclaraciones("Hazme 3 preguntas antes de tocar archivos.") && !pideAclaraciones("Implementa el plan y crea los archivos."));
   check("saludos breves no activan tareas", esCharla("hi") && esCharla("Hello!") && !esCharla("hi, crea un archivo"));
   const conEdit = nativeToolEffects([{ id: "e1", name: "reemplazar", arguments: { ruta: "a.py", buscar: "x = 1", poner: "x = 2" } }, { id: "e2", name: "reemplazar", arguments: { ruta: "a.py" } }]);
   check("reemplazar llega como edición con su id", conEdit.edits.length === 1 && conEdit.edits[0].poner === "x = 2" && conEdit.ids.get("edit:0") === "e1");

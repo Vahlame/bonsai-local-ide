@@ -86,6 +86,14 @@ El diagnóstico de Ajustes indica el conteo disponible, la reserva estimada de i
 antes y después de compactar, duración y costo informado del resumen cuando el backend
 lo suministra. El pensamiento va DENTRO de la reserva de salida: se reserva junto a la
 respuesta para que razonar no reduzca el espacio de la respuesta.
+
+En el perfil `small-local-coder` la compactación es distinta: no escribe
+`session.memory` ni incrementa `session.folded`, sino que construye una
+**memoria extractiva por petición** con fragmentos priorizados de los grupos
+descartados. El medidor de la barra inferior muestra esos valores efectivos
+(`memoria extractiva` y `grupos plegados`) tomados de
+`contextDiagnostics.compactionDetails` y `discardedGroups`; así no aparece un
+`memoria 0` engañoso cuando el prompt sí lleva extractos.
 Al pedir explícitamente «continúa» se incluye la tarea anterior y su estado guardado;
 el agente debe comprobar efectos inciertos antes de repetirlos. Esto no garantiza
 recuperación exacta de una operación interrumpida a mitad de ejecución.

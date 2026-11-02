@@ -1,14 +1,15 @@
 # 🌳 Bonsai Local IDE
 
-**El mejor entorno de coding agent local sobre Windows + llama.cpp + GPU modesta.**
+**Un entorno de coding agent local sobre Windows + llama.cpp + GPU modesta.**
 
 Bonsai no intenta ser VS Code. Es un IDE completo y opinionado para trabajar con
-un agente de código **100 % local**: editor moderno, terminal, Git, búsqueda,
-navegador controlado y visión, todo contra tu propia GPU. Sin nube, sin
-telemetría y sin claves de API.
+un agente de código que corre en tu equipo: editor moderno, terminal, Git,
+búsqueda, navegador controlado y visión, todo contra tu propia GPU. La
+inferencia no usa una API en la nube; las búsquedas web y las descargas del Hub
+son opcionales. Sin telemetría y sin claves de API.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.4.5-8fb8ff">
+  <img alt="version" src="https://img.shields.io/badge/version-2.4.6-8fb8ff">
   <img alt="CI" src="https://github.com/Vahlame/bonsai-local-ide/actions/workflows/ci.yml/badge.svg">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
@@ -16,19 +17,19 @@ telemetría y sin claves de API.
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.4.5 - Sin turno de cierre fantasma.** Si el agente ya dio una respuesta
-> útil con preguntas, no se inyecta otro turno ni se sustituye por un resumen.
-> Un plan que pregunta no dispara la verificación automática y la UI no
-> auto-continúa si ya hay respuesta visible. Se mantienen **51/51 tests**,
-> **9/9 navegador**, 0 errores de consola y CI verde. Notas:
-> [RELEASE-2.4.5](docs/RELEASE-2.4.5.md).
+> **v2.4.6 - Medidor de contexto honesto y primer turno más directo.** El
+> perfil de código ya muestra su **memoria extractiva** y los **grupos plegados**
+> reales, no `memoria 0`. El agente responde primero cuando el pedido es un plan
+> o preguntas, sin inspeccionar archivos por rutina. Se mantienen **51/51
+> tests**, **9/9 navegador**, 0 errores de consola y CI verde. Notas:
+> [RELEASE-2.4.6](docs/RELEASE-2.4.6.md).
 
 > **Modelo principal: Qwen3.6 35B-A3B (MoE).** Es el mejor equilibrio
 > calidad/velocidad del benchmark 2026-11-01 (90/100, 35–40 tok/s) y el que
 > usa el IDE para el agente. GPT-OSS 20B sigue disponible como alternativa
 > Harmony para proyectos desde cero.
 
-![Bonsai IDE 2.4: explorador, agente, vista previa de la app generada y métricas de GPU](docs/graficos/ui-2.4.5-main.png)
+![Bonsai IDE 2.4: explorador, agente, vista previa de la app generada y métricas de GPU](docs/graficos/ui-2.4.6-main.png)
 
 ---
 
@@ -65,7 +66,7 @@ telemetría y sin claves de API.
 
 | Diff/merge en Ctrl+K | Ajustes 2.4 | Estado vacío |
 |---|---|---|
-| ![Diff](docs/graficos/ui-2.3-diff.png) | ![Ajustes](docs/graficos/ui-2.4.5-settings.png) | ![Inicio](docs/graficos/ui-2.3-vacio.png) |
+| ![Diff](docs/graficos/ui-2.3-diff.png) | ![Ajustes](docs/graficos/ui-2.4.6-settings.png) | ![Inicio](docs/graficos/ui-2.3-vacio.png) |
 
 ---
 
@@ -376,6 +377,7 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 |---|---|
 | [AUDIT-2026-11-01](docs/AUDIT-2026-11-01.md) | Inventario, sintaxis, enlaces, UI, runtime y límites |
 | [CONTRIBUTING](CONTRIBUTING.md) | Setup, pruebas, estilo, modelos y releases |
+| [RELEASE-2.4.6](docs/RELEASE-2.4.6.md) | Medidor de memoria extractiva y primer turno directo |
 | [RELEASE-2.4.5](docs/RELEASE-2.4.5.md) | Sin cierre/resumen fantasma tras una respuesta útil |
 | [RELEASE-2.4.4](docs/RELEASE-2.4.4.md) | Cabecera sin solapes y diálogo con Qwen3.6 recomendado |
 | [RELEASE-2.4.3](docs/RELEASE-2.4.3.md) | Acceso directo, `--think -1` y verificación 2.4.3 |
@@ -438,7 +440,7 @@ models/          GGUF locales (no viajan en Git)
 
 - Rutas confinadas al workspace; escrituras atómicas y undo por escritura.
 - Git sin `add -A`; el agente solo commitea lo que seleccionas.
-- Sin telemetría, sin nube y sin CDN en la UI.
+- Sin telemetría ni CDN en la UI. La inferencia es local; las búsquedas web y las descargas del Hub son opcionales.
 - No hay debugger multi-lenguaje, ecosistema de extensiones ni remote
   development: eso es VS Code. Bonsai se enfoca en el agente local sobre
   Windows + llama.cpp + GPU modesta.

@@ -173,7 +173,7 @@ export const CODER_SYSTEM =
   [SYSTEM_RULES, AGENT_WORKFLOW, TOOL_WORKFLOW, CODER_TOOL_WORKFLOW].join("\n\n");
 export const PHASE_PROMPTS = Object.freeze({
   DISCOVER: "Localiza archivos y símbolos reales. Pide contexto solo si falta.",
-  PLAN: "Usa plan con cambios mínimos, archivos/símbolos y verificación. Solo decisiones operativas breves.",
+  PLAN: "Si el usuario pide un plan, una propuesta o preguntas, responde primero con ellas; no inspecciones archivos por rutina. Cuando toque actuar, usa plan con cambios mínimos, archivos/símbolos y verificación. Solo decisiones operativas breves.",
   EDIT: "Edita los archivos con las herramientas. Si plan es null, elige el siguiente cambio concreto según el pedido y lo inspeccionado; no necesitas crear un plan. No repitas el análisis. El host ejecuta tests después de editar; utiliza su resultado.",
   VERIFY:
     "La comprobación automática solo valida sintaxis y tests configurados, no la tarea completa. Si el pedido original menciona archivos que aún no existen, tests que no se han ejecutado o requisitos sin implementar, créalos/ejecútalos ahora. Solo resume y termina cuando todos los requisitos estén implementados y `npm test` (o la verificación configurada) pase. No inventes requisitos ni repitas comprobaciones sin nueva evidencia.",

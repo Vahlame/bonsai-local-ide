@@ -10,7 +10,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { execFile, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { aplicarReemplazo, commandAllowed, commandKey, esCharla, inventedToolResult, nativeToolEffects, resolveInside, stripCommands, stripFakeToolText, stripFileBlocks, stripIndex, stripReads, stripSearches, trozoParecido, unifiedDiff, writeNewOutput, writeOutputs } from "./actions.mjs";
+import { aplicarReemplazo, commandAllowed, commandKey, esCharla, inventedToolResult, nativeToolEffects, pideAclaraciones, resolveInside, stripCommands, stripFakeToolText, stripFileBlocks, stripIndex, stripReads, stripSearches, trozoParecido, unifiedDiff, writeNewOutput, writeOutputs } from "./actions.mjs";
 import { legacyCommands, legacyImpliedAction, legacyIndexScope, legacyReads, legacySearches, legacyWrites } from "./legacy-tool-parser.mjs";
 import { dialectoDe, llamadasCrudas } from "./adaptadores.mjs";
 import { BonsaiChat, metadatosSesion } from "./bonsai-chat.mjs";
@@ -1655,7 +1655,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const UI_VERSION = "2.4.5";
+  const UI_VERSION = "2.4.6";
   // El lanzador de escritorio elige el perfil de agente. `optimized` era el
   // nombre histórico del perfil de coding; hoy el único perfil con el harness
   // nuevo es `small-local-coder`. Los ajustes guardados siguen mandando.
@@ -3147,6 +3147,9 @@ async function main(args) {
         if (raw.modo !== undefined && !["agente","consulta"].includes(raw.modo)) { res.writeHead(400).end("Modo inválido"); return; }
         const consulta = (raw.modo || leerAjustes().modoRespuesta) === "consulta";
         const soloCharla = consulta || (!attached.length && !snippets.length && esCharla(text));
+        // Un pedido de plan/preguntas no debe empezar inspeccionando el proyecto:
+        // el primer turno responde sin herramientas y espera las respuestas.
+        const aclaraPrimero = !consulta && !attached.length && !snippets.length && pideAclaraciones(text);
         if (!text) {
           res.writeHead(400).end("falta el texto");
           return;
@@ -4319,9 +4322,12 @@ async function main(args) {
                 // de salida y NO desplaza la evidencia leída a la mitad, que era el fallo 16).
                 // Tras escribir/ejecutar lo normal es volver a leer: reserva de lectura.
                 chat.faseSalto = saltosUsados === 0 || accionPaso === "read" ? "plan" : "lectura";
+                // Primer turno de un pedido de plan/preguntas: sin herramientas.
+                chat.toolChoice = aclaraPrimero && saltosUsados === 0 ? "none" : "auto";
                 chat.pensarEsteSalto = chat.thinkBudget < 0 || saltosUsados === 0 || ultimoFallo;
                 // Las imágenes solo viajan en el primer salto del turno.
                 await enviar(siguiente, saltosUsados === 0 ? imagenesData : []);
+                chat.toolChoice = "auto";
                 saltosUsados += 1;
                 const current = chat.session.turns[chat.session.turns.length - 1];
                 if (current?.role !== "assistant") {

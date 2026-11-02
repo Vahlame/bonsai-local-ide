@@ -136,7 +136,13 @@
       segPrompt.style.width = `${Math.min(100, (prompt / nCtx) * 100)}%`;
       segGen.style.width = `${Math.min(100 - (prompt / nCtx) * 100, (generated / nCtx) * 100)}%`;
       meterNum.textContent = `${Math.min(nCtx, prompt + generated)} / ${nCtx}`;
-      meterDetail.textContent = `historial ${prompt}/${usage.cap || 0} · memoria ${usage.memory || 0} · respuesta ${generated}${speedNote ? ` · ${speedNote}` : ""}`;
+      const memoria = usage.memory
+        ? `memoria ${usage.memory}${usage.memoryMode === "extractiva" ? " extractiva" : ""}`
+        : "memoria 0";
+      const plegados = usage.folded
+        ? ` · ${usage.foldedUnit === "grupos" ? "grupos plegados" : "plegados"} ${usage.folded}`
+        : "";
+      meterDetail.textContent = `historial ${prompt}/${usage.cap || 0} · ${memoria}${plegados} · respuesta ${generated}${speedNote ? ` · ${speedNote}` : ""}`;
     }
 
     /**

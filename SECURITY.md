@@ -8,8 +8,8 @@ Internet.
 
 | Versión | Soporte |
 | --- | --- |
-| 1.2.x | Sí |
-| 1.1.x y anteriores | No |
+| 2.4.x | Sí |
+| 2.3.x y anteriores | No |
 
 ## Cómo informar de una vulnerabilidad
 

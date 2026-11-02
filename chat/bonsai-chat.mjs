@@ -322,14 +322,27 @@ export class BonsaiChat {
   reportUsage(prompt, generated) {
     this.livePrompt = prompt;
     this.liveGenerated = generated;
+    // El perfil de código no usa session.memory: su compactación es extractiva y
+    // vive en contextDiagnostics. Si el medidor leyera solo session.memory mostraría
+    // 0 aunque el prompt llevara miles de tokens de extractos y grupos plegados.
+    const compact = this.contextDiagnostics?.compactionDetails;
+    const coder = this.agentProfile === "small-local-coder";
+    const memoria = coder && Number.isFinite(Number(compact?.memoryTokensEstimate))
+      ? Number(compact.memoryTokensEstimate)
+      : estimateTokens(this.session.memory);
+    const folded = coder && Number.isFinite(Number(this.contextDiagnostics?.discardedGroups))
+      ? Number(this.contextDiagnostics.discardedGroups)
+      : this.session.folded;
     this.usage = {
       prompt,
       generated,
       cap: this.historyCap(),
       nCtx: this.nCtx,
-      folded: this.session.folded,
+      folded,
+      foldedUnit: coder ? "grupos" : "turnos",
       turns: this.session.turns.length,
-      memory: estimateTokens(this.session.memory),
+      memory: memoria,
+      memoryMode: coder ? "extractiva" : "resumen",
       globalMemory: estimateTokens(this.globalMemory),
       globalMemoryEntries: this.globalMemoryIds.length,
     };

@@ -68,7 +68,8 @@ async function integracion(nombre, script, preparar = () => {}, pedido = "Revisa
         if (req.url !== "/v1/chat/completions") return res.writeHead(404).end("{}");
         peticiones.push(body);
         if (!body.stream) return json({ choices: [{ message: { content: "resumen simulado" } }] });
-        const delta = body.tool_choice === "none" ? { content: "CIERRE: no quedó todo terminado, faltaba trabajo." } : script(++paso, body, { puertoUi, puertoLlama });
+        const esCierre = body.tool_choice === "none" && (body.messages || []).some((m) => typeof m.content === "string" && m.content.startsWith("Sigue con lo que pedí. Cierra el turno"));
+        const delta = esCierre ? { content: "CIERRE: no quedó todo terminado, faltaba trabajo." } : script(++paso, body, { puertoUi, puertoLlama });
         res.writeHead(200, { "content-type": "text/event-stream" });
         res.write(`data: ${JSON.stringify({ choices: [{ delta: delta.tool_calls ? { tool_calls: delta.tool_calls } : { content: delta.content || "" } }] })}\n\n`);
         res.write(`data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: delta.tool_calls ? "tool_calls" : "stop" }] })}\n\n`);
@@ -197,6 +198,21 @@ try {
   );
   check("21: un plan con preguntas termina como completado", planPreguntas.done?.motivo === "completed", JSON.stringify(planPreguntas.done));
   check("21: la respuesta útil no se sustituye por un resumen", /¿Qué licencia prefieres/.test(planPreguntas.final) && !/Resumen del trabajo realizado/.test(planPreguntas.final), planPreguntas.final.slice(0, 240));
+
+  // ---------- 22: un pedido de plan/preguntas no empieza con herramientas ----------
+  const aclara = await integracion(
+    "aclaraciones-primero",
+    (n, body) => {
+      if (n === 1) {
+        assert.equal(body.tool_choice, "none", "el primer salto de un plan debe ir sin herramientas");
+        return { content: "Plan inicial.\n\n¿Qué licencia y qué formato de salida prefieres?" };
+      }
+      return { content: "Continuación." };
+    },
+    () => {},
+    "Diseña el proyecto; dame un plan detallado y 5 preguntas bloqueantes antes de implementar.",
+  );
+  check("22: el primer turno de un plan va sin herramientas", aclara.done?.motivo === "completed" && /¿Qué licencia/.test(aclara.final), aclara.final.slice(0, 200));
 
   // ---------- 15b: turno atascado no se presenta como terminado ----------
   const atasco = await integracion("atasco", () => tool("same", "leer", { ruta: "f1.txt" }));
