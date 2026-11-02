@@ -1,7 +1,7 @@
 """Genera los SVG del benchmark de modelos y del motor MoE."""
 from pathlib import Path
 
-OUT = Path(r"C:\Users\user\Documents\prject_local_AI\docs\graficos")
+OUT = Path(__file__).resolve().parents[1] / "docs" / "graficos"
 FONT = "Segoe UI, Arial, sans-serif"
 INK = "#17212b"
 MUTED = "#5b6773"

@@ -4,6 +4,26 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.1] - 2026-11-01
+
+### Calidad
+
+- Auditoría completa: 168 archivos Node, 32 PowerShell, 28 Python, 618 JSON y
+  55 SVG; 51/51 tests, 0 enlaces rotos y 0 errores de consola en la UI.
+- BOM eliminado de tres JSON generados.
+- Rutas portables en los scripts de benchmark y checkers; helper
+  `scripts/lib/playwright.cjs`.
+- CI de Windows con Node 22 y Python 3.12: enlaces, tests y `npm ci`.
+- OOM de UI/visión corregido con el reparto conservador del plan (22 capas de
+  expertos en CPU para Qwen3.6).
+- `-1` es sin límite y `-2` automático; `pensar=0` se respeta y los modelos sin
+  razonamiento no reciben presupuesto.
+- Medidor de contexto y etiqueta `ventana` actualizados al cambiar de modelo.
+- Helper de benchmark en UTF-8; checker de fluidos pausados y favicon.
+- Reserva de pensamiento sin doble suma en `sliceCap`.
+- Nuevos `CONTRIBUTING.md`, `docs/AUDIT-2026-11-01.md` y
+  `docs/RELEASE-2.4.1.md`.
+
 ## [2.4.0] - 2026-11-01
 
 ### Benchmark de modelos y tareas (2026-11-01)

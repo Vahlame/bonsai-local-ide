@@ -1567,7 +1567,7 @@
       "repo": "",
       "derivadoLocal": {
         "original": "qwen38-27b",
-        "receta": "C:/Users/user/.local/opt/bonsai-inference/llama.cpp-qwen38/scripts/qwen38_mixed_quant.py",
+        "receta": "%USERPROFILE%/.local/opt/bonsai-inference/llama.cpp-qwen38/scripts/qwen38_mixed_quant.py",
         "commit": "86db764",
         "minimoBits": 4
       }

@@ -5,13 +5,14 @@
 const fs = require("fs");
 const http = require("http");
 const path = require("path");
-const { chromium } = require("C:/Users/user/Documents/prject_local_AI/chat/node_modules/playwright-core");
+const { loadPlaywright, browserPath } = require("./lib/playwright.cjs");
+const { chromium } = loadPlaywright();
 
 const task = process.argv[2] || "app";
 const html = path.resolve(process.argv[3] || "");
 const png = path.resolve(process.argv[4] || "task-check.png");
 const root = path.dirname(html);
-const edge = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe";
+const edge = browserPath();
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml" };
 
 function serve() {

@@ -1,6 +1,7 @@
 """Run one isolated agent task through the managed IDE and keep the SSE evidence."""
 import argparse
 import json
+import os
 import pathlib
 import sys
 import time
@@ -16,10 +17,11 @@ parser.add_argument("--workspace", required=True)
 parser.add_argument("--prompt", required=True)
 parser.add_argument("--followup", default="")
 parser.add_argument("--timeout", type=float, default=600)
+parser.add_argument("--base", default=os.environ.get("BONSAI_UI", "http://127.0.0.1:8787"))
 args = parser.parse_args()
 OUT = ROOT / "reports" / "2026-11-01-qwen38" / (args.label + ".json")
 OUT.parent.mkdir(parents=True, exist_ok=True)
-BASE = "http://127.0.0.1:8787"
+BASE = args.base.rstrip("/")
 if OUT.exists():
     raise FileExistsError(OUT)
 

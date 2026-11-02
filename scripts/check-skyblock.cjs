@@ -3,11 +3,12 @@
  * guarda una captura. Uso: node scripts/check-skyblock.cjs <html> <png>
  */
 const path = require("path");
-const { chromium } = require("C:/Users/user/Documents/prject_local_AI/chat/node_modules/playwright-core");
+const { loadPlaywright, browserPath } = require("./lib/playwright.cjs");
+const { chromium } = loadPlaywright();
 
 const html = path.resolve(process.argv[2] || "");
 const png = path.resolve(process.argv[3] || "skyblock-check.png");
-const edge = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe";
+const edge = browserPath();
 
 (async () => {
   const browser = await chromium.launch({

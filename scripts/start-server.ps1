@@ -135,14 +135,14 @@ if ($Pensar -eq -2) {
     if (Test-Path $ajustesPath) {
         try {
             $ajustes = Get-Content $ajustesPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ($ajustes.pensar) { $Pensar = [int]$ajustes.pensar }
+            if ($null -ne $ajustes.pensar) { $Pensar = [int]$ajustes.pensar }
         } catch {
             Write-Host "Aviso: chat\ui-settings.json no se puede leer; se arranca sin razonamiento." -ForegroundColor Yellow
         }
     }
 }
 if ($pensarCompatible -and $Pensar -eq -2) { $Pensar = [int]$pensarCat.presupuesto; Write-Host "Razonamiento activo con el presupuesto del modelo: $Pensar tokens." }
-if ($Pensar -gt 0 -and -not $pensarCompatible) {
+if (-not $pensarCompatible -and $Pensar -ne 0) {
     Write-Host ("Aviso: {0} no admite el modo razonamiento (ver chat\modelo.json); se arranca sin el." -f $(if ($claveModelo) { $claveModelo } else { $ModelFile })) -ForegroundColor Yellow
     $Pensar = 0
 }

@@ -2,11 +2,13 @@
  * Smoke visual de la UI 2.4: carga, paneles, Hub y Ajustes.
  * Uso: node scripts/check-ui.cjs [http://127.0.0.1:8787]
  */
-const { chromium } = require("C:/Users/user/Documents/prject_local_AI/chat/node_modules/playwright-core");
+const path = require("path");
+const { loadPlaywright, browserPath } = require("./lib/playwright.cjs");
+const { chromium } = loadPlaywright();
 
-const url = process.argv[2] || "http://127.0.0.1:8787";
-const edge = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe";
-const out = "C:/Users/user/Documents/prject_local_AI/docs/graficos";
+const url = process.argv[2] || process.env.BONSAI_UI || "http://127.0.0.1:8787";
+const edge = browserPath();
+const out = path.join(__dirname, "..", "docs", "graficos");
 
 (async () => {
   const browser = await chromium.launch({

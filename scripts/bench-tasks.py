@@ -13,12 +13,14 @@ import sys
 import time
 import urllib.request
 
-ROOT = pathlib.Path(r"C:\Users\user\Documents\prject_local_AI")
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 BASE = "http://127.0.0.1:8787"
 TASK_HELPER = ROOT / "scripts" / "qwen38_ide_agent_task.py"
 REPORTS = ROOT / "reports" / "2026-11-01-qwen38"
 PROMPTS = ROOT / "docs" / "qwen38" / "prompts"
 VENDOR = ROOT / "trabajo" / "gptoss-skyblock" / "vendor" / "three.min.js"
+if not VENDOR.exists():
+    VENDOR = ROOT / "docs" / "vendor" / "three.min.js"
 CHECKER = ROOT / "scripts" / "check-task.cjs"
 OUT_JSON = ROOT / "docs" / "qwen38" / "task-benchmark-results.json"
 SHOTS = ROOT / "docs" / "qwen38" / "task-benchmark-shots"
@@ -76,6 +78,11 @@ def prepare_workspace(task, model):
     (ws / "vendor").mkdir(parents=True)
     shutil.copy2(prompt_for(task), ws / "PROMPT.md")
     if task == "skyblock":
+        if not VENDOR.exists():
+            raise FileNotFoundError(
+                f"Falta {VENDOR}. Guarda Three.js r149 clásico como vendor/three.min.js "
+                "o en docs/vendor/three.min.js."
+            )
         shutil.copy2(VENDOR, ws / "vendor" / "three.min.js")
     return ws
 
