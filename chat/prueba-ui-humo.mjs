@@ -347,7 +347,7 @@ try {
   await ajustesDialogo.getByRole("button",{name:"Revisar y editar…",exact:true}).click();
   const memoriaDialogo=pagina.locator(".dialogo").last();
   await memoriaDialogo.getByRole("heading",{name:"Memoria global entre chats",exact:true}).waitFor({timeout:15000});
-  check("Ajustes abre el editor de memoria global",(await memoriaDialogo.textContent()).includes("presupuesto"));
+  check("Ajustes abre el editor de memoria global",/presupuesto/i.test(await memoriaDialogo.textContent()));
   await memoriaDialogo.getByRole("button",{name:"Cerrar",exact:true}).click();
   const temas=ajustesDialogo.getByRole("combobox",{name:"Tema visual",exact:true});
   for(const tema of ['ocean','forest','sand','light','dark','slate']) {

@@ -646,6 +646,11 @@ import { crearApi } from "./core/api.mjs";
       ]);
       estado.catalogo = cat;
       estado.trabajos = jobs.trabajos || [];
+      // Sin modelos instalados, abrir "Instalados" deja una pantalla vacía y
+      // parece que el Hub no cargó. Se enseña el catálogo recomendado la primera vez.
+      if (primera && estado.pestana === "instalados" && !(cat.instalados || []).length) {
+        estado.pestana = "recomendados";
+      }
       // Detecta el paso a "listo" para avisar y refrescar el selector de modelos.
       let cambioListo = false;
       for (const t of estado.trabajos) {

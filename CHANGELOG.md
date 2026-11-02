@@ -4,6 +4,17 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.9] - 2026-11-02
+
+### Corregido
+
+- **Smoke de navegador en CI.** En GitHub no hay modelos instalados y el Model
+  Hub abría la pestaña `Instalados` vacía; ahora, si esa pestaña está vacía la
+  primera vez, abre `Recomendados`. El smoke vuelve a encontrar tarjetas.
+- La comprobación del editor de memoria global no depende de mayúsculas.
+- `v2.4.8` no se movió: este patch corrige el CI publicado y deja una versión
+  nueva para los usuarios.
+
 ## [2.4.8] - 2026-11-02
 
 ### Arquitectura
