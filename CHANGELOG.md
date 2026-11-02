@@ -4,6 +4,16 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.11] - 2026-11-02
+
+### Corregido
+
+- **Invariante correcto del 409 en el smoke.** Si el editor no tenía cambios
+  sin guardar, recargar el contenido externo es correcto; la prueba ya no exige
+  conservar el texto viejo. Verifica que el disco no se pisa y que la propuesta
+  de Ctrl+K nunca se aplica sobre el cambio externo.
+- `v2.4.10` no se movió; este patch deja el CI estable en `main` y `master`.
+
 ## [2.4.10] - 2026-11-02
 
 ### Corregido

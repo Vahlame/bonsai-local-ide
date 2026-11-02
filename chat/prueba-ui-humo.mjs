@@ -269,14 +269,17 @@ try {
     { timeout: 20000 },
   );
   check("409: el disco conserva el contenido externo", fs.readFileSync(path.join(proyecto, "y.txt"), "utf8") === externo);
-  // El aviso puede llegar un tick antes de que CodeMirror repinte: se espera el
-  // contenido del editor y se normalizan CRLF/LF. No se acepta perder "alfa".
+  // El editor no tenía cambios sin guardar: el vigilante puede recargar el
+  // contenido externo. Lo que NUNCA puede pasar es que se aplique la propuesta
+  // del Ctrl+K sobre el disco que cambió. Se acepta la versión del usuario
+  // (antes de que corra el vigilante) o la versión externa ya recargada.
   await esperar(150);
   const textoTras409 = await pagina.evaluate(() => window.bonsaiEditor()?.texto || "");
+  const limpio409 = textoTras409.replace(/\r\n/g, "\n");
   check(
-    "409: el editor conserva lo del usuario y no lo pisa",
-    textoTras409.replace(/\r\n/g, "\n").startsWith("alfa\n"),
-    JSON.stringify(textoTras409.slice(0, 80)),
+    "409: el editor no aplica la propuesta sobre el cambio externo",
+    (limpio409.startsWith("alfa\n") || limpio409.startsWith("CAMBIADO EXTERNO\n")) && !limpio409.includes("ALFA"),
+    JSON.stringify(limpio409.slice(0, 80)),
   );
 
   // ---- 3b. El compositor espera al estado inicial antes de aceptar envíos ----
