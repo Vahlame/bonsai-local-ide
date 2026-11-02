@@ -1311,8 +1311,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   box-shadow: 0 -12px 24px rgba(0,0,0,.18);
 }
 .tabs:empty::before { content: "Sin archivo"; padding: 0 12px; color: var(--muted); font: 12px/32px var(--sans); }
-/* Permisos: fila superior, entre paneles y herramientas; se ocultan solo en ventanas muy estrechas. */
-.top > .panes[aria-label="Permiso de comandos"] { grid-column: 3; grid-row: 1; justify-self: end; margin-left: 0; }
+/* Permisos: fila superior, entre paneles y herramientas; se ocultan solo en ventanas muy estrechas.
+   justify-self:start evita que el grupo (240 px) desborde hacia la izquierda sobre Paneles
+   cuando la columna flexible mide menos que su contenido. */
+.top > .panes[aria-label="Permiso de comandos"] { grid-column: 3; grid-row: 1; justify-self: start; margin-left: 0; }
 @media (max-width: 1180px) {
   .top > .panes[aria-label="Permiso de comandos"] { display: none; }
 }
@@ -1320,9 +1322,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   .top > .panes[aria-label="Permiso de comandos"] { display: flex; }
 }
 
-/* 2.3 - cabecera compacta: en 1280-1360 se retiran los chips secundarios y el
-   permiso de comandos para que la fila del servidor no se parta en dos. */
-@media (max-width: 1360px) {
+/* 2.3 - cabecera compacta: hasta 1500 px se retiran los chips secundarios y el
+   permiso de comandos para que la fila de acciones no desborde por la derecha. */
+@media (max-width: 1500px) {
   .top > .panes[aria-label="Permiso de comandos"] { display: none; }
   .top #contexto-chip,
   .top #reglas-chip,

@@ -4,6 +4,26 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.4] - 2026-11-02
+
+### Corregido
+
+- **Cabecera sin solapes.** El grupo `Preguntar / Ejecutar todo` desbordaba
+  hacia la izquierda sobre `Navegación / Editor` cuando la columna flexible
+  medía menos que su contenido. `justify-self: start` lo deja después del grupo
+  de paneles y la cabecera compacta se activa hasta 1500 px (antes 1360), así
+  que a 1440/1366 tampoco se desbordan las acciones por la derecha.
+- **Contexto en la barra inferior.** El chip `contexto 32K · hist. 26K` pasa
+  del grupo de acciones al `statusbar`: sigue visible a 1440/1366 sin robar
+  ancho a la cabecera y el test de humo vuelve a encontrarlo.
+- **Diálogo de inicio actualizado.** Ordenaba por los benchmarks antiguos de
+  coding/web app y marcaba GPT-OSS como recomendado. Ahora usa
+  `modeloRecomendado` y `benchmarkTareas`: Qwen3.6 35B-A3B sale primero con
+  **90/100 tareas** y GPT-OSS muestra **41/100**. También se distingue
+  `% proyecto` de `% web app`.
+- **Regresión de datos.** `chat/modelo.mjs` comprueba que Qwen3.6 es el
+  recomendado y que el benchmark de tareas lo pone por delante de GPT-OSS.
+
 ## [2.4.3] - 2026-11-02
 
 ### Corregido

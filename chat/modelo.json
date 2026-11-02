@@ -1,6 +1,16 @@
 {
   "_nota": "Fuente única de los datos del modelo. La leen chat/modelo.mjs y scripts/start-server.ps1. Los números de arquitectura salen del encabezado del GGUF; el muestreo, de las fichas de PrismML (ver 'fuente').",
   "modeloPredeterminado": "ornith9b",
+  "modeloRecomendado": "qwen36-35b-a3b",
+  "benchmarkTareas": {
+    "_nota": "Puntuacion 0-100 del benchmark de 4 tareas (2026-11-01). Se muestra en el dialogo de inicio.",
+    "qwen36-35b-a3b": 90,
+    "qwen3-coder-30b-a3b": 89,
+    "qwen3-30b-a3b-2507": 87,
+    "qwen35-9b": 75,
+    "qwen3-8b": 43,
+    "gpt-oss-20b": 41
+  },
   "modelo": {
     "archivo": "Ternary-Bonsai-2-27B-PTQ1_0-abliterated-Override6.gguf",
     "bytes": 5946648928,

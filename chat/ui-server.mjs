@@ -595,7 +595,7 @@ function guardarModeloActivo(item) {
 
 /**
  * Catálogo de modelos de `chat/modelo.json`, con si el GGUF está entero en disco.
- * @returns {Array<{clave: string, nombre: string, archivo: string, bytes: number, esperado: number, rol: string, uso: string, existe: boolean, predeterminado: boolean}>}
+ * @returns {Array<{clave: string, nombre: string, archivo: string, bytes: number, esperado: number, rol: string, uso: string, existe: boolean, predeterminado: boolean, recomendado: boolean, tareas: number}>}
  */
 function catalogoModelos() {
   fusionarCatalogo();
@@ -625,6 +625,8 @@ function catalogoModelos() {
       gpuCompleta: row.servidor?.tipo === "gpu-completa" || row.servidor?.tipo === "moe-hibrido" || row.servidor?.tipo === "gpu-parcial",
       margenObjetivoMiB: Number(row.servidor?.margenObjetivoMiB) || 0,
       predeterminado: clave === MODELO.modeloPredeterminado,
+      recomendado: clave === MODELO.modeloRecomendado,
+      tareas: Number(MODELO.benchmarkTareas?.[clave]) || 0,
       fuente: typeof row.fuente === "string" ? row.fuente : "curado",
       origen: typeof row.origen === "string" ? row.origen : "",
       licencia: typeof row.licencia === "string" ? row.licencia : "",
@@ -645,6 +647,8 @@ function catalogoModelos() {
   // Relevancia para coding/web app primero; auxiliares (borradores) al final.
   out.sort((a, b) =>
     (a.oculto ? 1 : 0) - (b.oculto ? 1 : 0) ||
+    (Number(b.recomendado) || 0) - (Number(a.recomendado) || 0) ||
+    (Number(b.tareas) || 0) - (Number(a.tareas) || 0) ||
     (Number(b.pruebas?.coding?.global) || 0) - (Number(a.pruebas?.coding?.global) || 0) ||
     (Number(b.pruebas?.webapp?.global) || 0) - (Number(a.pruebas?.webapp?.global) || 0) ||
     String(a.nombre).localeCompare(String(b.nombre), "es"));
@@ -1638,7 +1642,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const UI_VERSION = "2.4.3";
+  const UI_VERSION = "2.4.4";
   // El lanzador de escritorio elige el perfil de agente. `optimized` era el
   // nombre histórico del perfil de coding; hoy el único perfil con el harness
   // nuevo es `small-local-coder`. Los ajustes guardados siguen mandando.

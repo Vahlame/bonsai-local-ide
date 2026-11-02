@@ -2319,7 +2319,7 @@
   }
 
   // ================================================================== modelos
-  /** @type {{actual: string, modelos: Array<{clave: string, nombre: string, archivo?: string, rol: string, uso?: string, bytes: number, existe: boolean, predeterminado: boolean}>}} */
+  /** @type {{actual: string, modelos: Array<{clave: string, nombre: string, archivo?: string, rol: string, uso?: string, bytes: number, existe: boolean, predeterminado: boolean, recomendado?: boolean, tareas?: number}>}} */
   let estadoModelos = { actual: "", modelos: [] };
   /** Nombre del modelo que se está cargando ("" si no hay cambio en curso). */
   let cargandoModelo = "";
@@ -2404,6 +2404,8 @@
     const candidatos = (lista?.modelos || [])
       .filter((m) => m.existe && m.gpuCompleta && !m.oculto)
       .sort((a, b) =>
+        (Number(b.recomendado) || 0) - (Number(a.recomendado) || 0) ||
+        (Number(b.tareas) || 0) - (Number(a.tareas) || 0) ||
         (Number(b.pruebas?.coding?.global) || 0) - (Number(a.pruebas?.coding?.global) || 0) ||
         (Number(b.pruebas?.webapp?.global) || 0) - (Number(a.pruebas?.webapp?.global) || 0) ||
         (b.predeterminado ? 1 : 0) - (a.predeterminado ? 1 : 0) ||
@@ -2449,11 +2451,13 @@
         const texto = el("span", "inicio-modelo-texto");
         const titulo = el("span", "inicio-modelo-titulo");
         titulo.append(el("strong", "", m.nombre || m.clave));
-        if (indice === 0) titulo.append(el("span", "inicio-modelo-badge recom", "Recomendado"));
+        if (m.recomendado) titulo.append(el("span", "inicio-modelo-badge recom", "Recomendado"));
+        else if (indice === 0) titulo.append(el("span", "inicio-modelo-badge", "Mejor disponible"));
         if (m.clave === guardado) titulo.append(el("span", "inicio-modelo-badge", "Último usado"));
         texto.append(titulo);
         const datos = [];
-        if (Number(m.pruebas?.coding?.global)) datos.push(`${m.pruebas.coding.global}% coding`);
+        if (Number(m.tareas)) datos.push(`${m.tareas}/100 tareas`);
+        if (Number(m.pruebas?.coding?.global)) datos.push(`${m.pruebas.coding.global}% proyecto`);
         if (Number(m.pruebas?.webapp?.global)) datos.push(`${m.pruebas.webapp.global}% web app`);
         const ctx = Number(m.plan?.contexto || m.contextoPorDefecto);
         if (ctx) datos.push(`${Math.round(ctx / 1024)}k de contexto`);
@@ -2700,8 +2704,14 @@
     contexto.hidden = true;
     contexto.title = "Presupuesto real de contexto";
     contexto.addEventListener("click", () => abrirAjustes());
+    // El contexto es información de estado, no una acción: vive en la barra
+    // inferior. Así no compite por el ancho de la cabecera y sigue visible en
+    // 1440/1366, donde el resto de chips se compacta.
+    const barraEstado = document.querySelector(".statusbar");
     const destino = document.querySelector(".top-acciones") || barra;
-    destino.prepend(modelo, contexto, vision, reglas, git);
+    if (barraEstado) barraEstado.append(contexto);
+    else destino.prepend(contexto);
+    destino.prepend(modelo, vision, reglas, git);
   }
 
   /** Enciende el chip de visión si el servidor la tiene. */

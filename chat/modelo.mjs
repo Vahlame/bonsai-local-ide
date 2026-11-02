@@ -336,6 +336,7 @@ export function selfTest() {
   check("Override-6 puede razonar y bolding_v1 no", pensarDe("override6").compatible && pensarDe("override6").presupuesto > 0 && !pensarDe("bolding_v1").compatible);
   check("un modelo sin declararlo no razona", !pensarDe("no-existe").compatible && presupuestoPensar("no-existe", 2048) === 0);
   check("el razonamiento pedido solo se aplica si el modelo lo admite", presupuestoPensar("override6", 2048) === 2048 && presupuestoPensar("bolding_v1", 2048) === 0 && presupuestoPensar("override6", 0) === 0);
+  check("Qwen3.6 es el recomendado y gana el benchmark de tareas", MODELO.modeloRecomendado === "qwen36-35b-a3b" && MODELO.benchmarkTareas?.[MODELO.modeloRecomendado] === 90 && MODELO.benchmarkTareas?.["gpt-oss-20b"] === 41);
 
   return failures;
 }
