@@ -15,8 +15,8 @@ versionado semántico.
   `existe`) sin exigir que los modelos esten instalados.
 - GitHub Actions usa `checkout@v7`, `setup-node@v7` y `setup-python@v7`; se
   elimina el aviso de Node 20.
-- Verificacion con los GGUF de Ornith y su proyector ausentes: 51/51 tests y
-  `-DryRun` en verde.
+- Verificacion con los GGUF de Ornith y su proyector ausentes: 51/51 tests
+  aislados, 9/9 suites de navegador y `-DryRun` en verde.
 - `scripts/check-ui.cjs` deriva el nombre de las capturas de la version real de
   la UI (`ui-2.4.2-*.png`); README y auditoria apuntan a las nuevas.
 

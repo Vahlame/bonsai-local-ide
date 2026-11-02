@@ -13,6 +13,7 @@ Actions y cualquier clon nuevo tengan una señal real desde el primer minuto.
 | --- | --- |
 | Pruebas aisladas en CI | **51/51 OK** |
 | Pruebas con Ornith y su proyector ausentes | **51/51 OK** |
+| Suites de navegador (Edge/Chrome headless) | **9/9 OK** |
 | `start-gpu-model.ps1 -DryRun` sin pesos | **OK** (plan y línea de comandos) |
 | Arranque real | sigue exigiendo GGUF y tamaño exactos |
 | UI real con Qwen3.6 | **0 errores de consola**, `IA lista`, 32768 |

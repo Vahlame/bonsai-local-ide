@@ -392,12 +392,12 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 
 ```powershell
 npm test                  # 51 suites aisladas, sin GPU ni modelo real
-npm run test:navegador    # 7 suites con Edge/Chrome headless
+npm run test:navegador    # 9 suites con Edge/Chrome headless
 npm run docs:links        # enlaces relativos de la documentación
 npm run build:ui-vendor   # reconstruye editor.js, terminal.js y xterm.css
 ```
 
-Cobertura de esta release: 51/51 aisladas, 7/7 navegador, ciclo de vida real
+Cobertura de esta release: 51/51 aisladas, 9/9 navegador, ciclo de vida real
 (Detener/Cerrar) y `docs:links` sin enlaces rotos. La suite aislada corre en CI
 sin GGUF instalados.
 
