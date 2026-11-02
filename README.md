@@ -8,7 +8,7 @@ navegador controlado y visión, todo contra tu propia GPU. Sin nube, sin
 telemetría y sin claves de API.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.4.2-8fb8ff">
+  <img alt="version" src="https://img.shields.io/badge/version-2.4.3-8fb8ff">
   <img alt="CI" src="https://github.com/Vahlame/bonsai-local-ide/actions/workflows/ci.yml/badge.svg">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
@@ -16,18 +16,18 @@ telemetría y sin claves de API.
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.4.2 - CI verde y arranque reproducible en clon limpio.** La suite
-> aislada pasa **51/51** sin GGUF instalados, la UI carga Qwen3.6 con **0
-> errores de consola** y GitHub Actions valida enlaces y tests en Windows. La
-> release corrige el `-DryRun` del lanzador y las comprobaciones que depend�an
-> de pesos locales. Notas: [RELEASE-2.4.2](docs/RELEASE-2.4.2.md).
+> **v2.4.3 - Acceso directo y razonamiento sin límite.** El lanzador del
+> escritorio vuelve a abrir la UI y su ventana de Edge: `ui-server.mjs` acepta
+> `--think -1` y ya no usa un PowerShell detached que fallaba en silencio. Se
+> mantienen **51/51 tests**, **9/9 navegador**, 0 errores de consola y CI verde.
+> Notas: [RELEASE-2.4.3](docs/RELEASE-2.4.3.md).
 
 > **Modelo principal: Qwen3.6 35B-A3B (MoE).** Es el mejor equilibrio
 > calidad/velocidad del benchmark 2026-11-01 (90/100, 35–40 tok/s) y el que
 > usa el IDE para el agente. GPT-OSS 20B sigue disponible como alternativa
 > Harmony para proyectos desde cero.
 
-![Bonsai IDE 2.4: explorador, agente, vista previa de la app generada y métricas de GPU](docs/graficos/ui-2.4.2-main.png)
+![Bonsai IDE 2.4: explorador, agente, vista previa de la app generada y métricas de GPU](docs/graficos/ui-2.4.3-main.png)
 
 ---
 
@@ -64,7 +64,7 @@ telemetría y sin claves de API.
 
 | Diff/merge en Ctrl+K | Ajustes 2.4 | Estado vacío |
 |---|---|---|
-| ![Diff](docs/graficos/ui-2.3-diff.png) | ![Ajustes](docs/graficos/ui-2.4.2-settings.png) | ![Inicio](docs/graficos/ui-2.3-vacio.png) |
+| ![Diff](docs/graficos/ui-2.3-diff.png) | ![Ajustes](docs/graficos/ui-2.4.3-settings.png) | ![Inicio](docs/graficos/ui-2.3-vacio.png) |
 
 ---
 
@@ -375,6 +375,7 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 |---|---|
 | [AUDIT-2026-11-01](docs/AUDIT-2026-11-01.md) | Inventario, sintaxis, enlaces, UI, runtime y límites |
 | [CONTRIBUTING](CONTRIBUTING.md) | Setup, pruebas, estilo, modelos y releases |
+| [RELEASE-2.4.3](docs/RELEASE-2.4.3.md) | Acceso directo, `--think -1` y verificación 2.4.3 |
 | [RELEASE-2.4.2](docs/RELEASE-2.4.2.md) | CI verde, `-DryRun` sin GGUF y arranque reproducible |
 | [RELEASE-2.4.1](docs/RELEASE-2.4.1.md) | Auditoría completa, CI, portabilidad y 51/51 tests |
 | [RELEASE-2.4.0](docs/RELEASE-2.4.0.md) | Benchmark de 7 modelos × 4 tareas, MoE, UI verificada y release 2.4.0 |

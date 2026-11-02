@@ -37,7 +37,7 @@ function Get-OptBinary {
 
 function Show-Banner {
     Write-Host "================================================================" -ForegroundColor Cyan
-    Write-Host "  Bonsai IDE 2.3 - RTX 4060 8 GB (llama.cpp + CodeMirror)" -ForegroundColor Cyan
+    Write-Host "  Bonsai IDE 2.4.3 - RTX 4060 8 GB (llama.cpp + CodeMirror)" -ForegroundColor Cyan
     Write-Host "  Perfiles medidos, editor moderno y API OpenAI local       " -ForegroundColor Cyan
     Write-Host "================================================================" -ForegroundColor Cyan
 }

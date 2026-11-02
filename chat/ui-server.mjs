@@ -360,7 +360,8 @@ function parseArgs(argv) {
     else if (arg === "--open") out.open = true;
     else throw new Error(`Argumento desconocido: ${arg}`);
   }
-  if (!Number.isInteger(out.think) || out.think < 0) throw new Error("--think es un presupuesto en tokens (0 = apagado)");
+  // -1 es "sin limite" (Qwen3.6 free thinking); 0 apaga el razonamiento.
+  if (!Number.isInteger(out.think) || out.think < -1) throw new Error("--think es un presupuesto en tokens (-1 = sin limite, 0 = apagado)");
   muestreo(out.perfil);
   return out;
 }
@@ -1103,7 +1104,11 @@ function openBrowser(url) {
     const launcher = path.join(PROJECT, "scripts", "open-ide.ps1");
     const port = new URL(url).port || "8787";
     if (process.platform === "win32" && fs.existsSync(launcher)) {
-      const child = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", launcher, "-Port", port], { detached: true, stdio: "ignore", windowsHide: true });
+      // Sin `detached`: en Windows, un PowerShell detached + stdio ignore no puede
+      // crear la ventana de Edge y falla en silencio (el acceso directo abría la UI
+      // pero no el navegador). El proceso lanzador termina enseguida; no hace falta
+      // desacoplarlo para que sobreviva.
+      const child = spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", launcher, "-Port", port], { stdio: "ignore", windowsHide: true });
       child.unref();
       return;
     }
@@ -1633,7 +1638,7 @@ async function main(args) {
   }
 
   const SETTINGS_FILE = path.join(STATE, "ui-settings.json");
-  const UI_VERSION = "2.4.2";
+  const UI_VERSION = "2.4.3";
   // El lanzador de escritorio elige el perfil de agente. `optimized` era el
   // nombre histórico del perfil de coding; hoy el único perfil con el harness
   // nuevo es `small-local-coder`. Los ajustes guardados siguen mandando.

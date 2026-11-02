@@ -87,7 +87,7 @@ await new Promise((r) => hueco.listen(0, "127.0.0.1", r));
 const puertoUi = hueco.address().port;
 await new Promise((r) => hueco.close(r));
 let log = "";
-const hijo = spawn(process.execPath, [path.join(HERE, "ui-server.mjs"), "--port", String(puertoUi), "--llama-port", String(puertoLlama)], {
+const hijo = spawn(process.execPath, [path.join(HERE, "ui-server.mjs"), "--port", String(puertoUi), "--llama-port", String(puertoLlama), "--think", "-1"], {
   cwd: PROJECT,
   env: { ...process.env, BONSAI_STATE: estado, BONSAI_SALIDA: path.join(base, "salida") },
   stdio: ["ignore", "pipe", "pipe"],
@@ -166,6 +166,10 @@ try {
   // ---------- 16: presupuesto real expuesto ----------
   const pres = est.presupuesto || {};
   check("16: /api/state expone ventana, solicitado, efectivo y reserva de salida", Number.isFinite(pres.ventana) && Number.isFinite(pres.solicitado) && Number.isFinite(pres.efectivo) && Number.isFinite(pres.reservaSalida), JSON.stringify(pres));
+
+  // ---------- 17: el lanzador puede pedir razonamiento sin limite ----------
+  const ajustes = JSON.parse((await pedir("GET", "/api/settings")).body);
+  check("17: --think -1 llega a la UI como razonamiento sin limite", ajustes.pensar === -1 && ajustes.pensarInfo?.efectivo === -1, JSON.stringify({ pensar: ajustes.pensar, info: ajustes.pensarInfo }));
 
   // ---------- 6: reglas que no siguen enlaces ----------
   const reglas = JSON.parse((await pedir("GET", "/api/rules")).body);

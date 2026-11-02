@@ -4,7 +4,17 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
-## [Unreleased]
+## [2.4.3] - 2026-11-02
+
+### Corregido
+
+- El acceso directo del escritorio vuelve a abrir la UI. `ui-server.mjs` acepta
+  `--think -1` (razonamiento sin límite); antes el lanzador pasaba `-1` y Node
+  abortaba con el error de presupuesto de tokens antes de escuchar en 8787.
+- La ventana de Edge también vuelve a abrirse: `openBrowser()` ya no usa
+  PowerShell `detached` + `stdio: "ignore"`, que fallaba en silencio en Windows.
+- Regresión de `--think -1` cubierta por `chat/prueba-servidor-estado.mjs`
+  (check 17); el arranque real del `.lnk` se verificó con UI y Edge abiertos.
 
 ### Documentación
 
