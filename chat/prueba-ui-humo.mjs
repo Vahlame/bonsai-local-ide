@@ -355,6 +355,16 @@ try {
   await ajustesDialogo.getByRole("button",{name:"Revisar y editar…",exact:true}).click();
   const memoriaDialogo=pagina.locator(".dialogo").last();
   await memoriaDialogo.getByRole("heading",{name:"Memoria global entre chats",exact:true}).waitFor({timeout:15000});
+  // El diálogo se pinta antes de que llegue /api/memoria; el resumen con
+  // "presupuesto" aparece cuando termina esa petición.
+  await pagina.waitForFunction(
+    () => {
+      const dialogos = [...document.querySelectorAll(".dialogo")];
+      return /presupuesto/i.test(dialogos[dialogos.length - 1]?.textContent || "");
+    },
+    null,
+    { timeout: 15000 },
+  );
   check("Ajustes abre el editor de memoria global",/presupuesto/i.test(await memoriaDialogo.textContent()));
   await memoriaDialogo.getByRole("button",{name:"Cerrar",exact:true}).click();
   const temas=ajustesDialogo.getByRole("combobox",{name:"Tema visual",exact:true});

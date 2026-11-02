@@ -4,6 +4,15 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.12] - 2026-11-02
+
+### Corregido
+
+- **Espera del resumen de memoria global en el smoke.** El diálogo se abre antes
+  de que responda `/api/memoria`; en CI el texto con “presupuesto” llegaba
+  después. La prueba espera el resumen antes de comprobarlo.
+- `v2.4.11` no se movió; este patch deja el CI estable en `main` y `master`.
+
 ## [2.4.11] - 2026-11-02
 
 ### Corregido
