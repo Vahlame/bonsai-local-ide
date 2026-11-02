@@ -1158,7 +1158,7 @@
       "clave": "gpt-oss-20b",
       "nombre": "GPT-OSS 20B",
       "repo": "ggml-org/gpt-oss-20b-GGUF",
-      "archivo": "gpt-oss-20b-MXFP4.gguf",
+      "archivo": "gpt-oss-20b-gpt-oss-20b-MXFP4.gguf",
       "bytes": 12109566624,
       "revision": "15dcfc7e7c608c6161507211ed43c5b590801b4b",
       "kvF16BytesPorToken": 49152,
@@ -1169,8 +1169,9 @@
       "toolcalls": "nativo gpt-oss-json",
       "pensar": {
         "compatible": true,
-        "presupuesto": 2048,
-        "nivel": "medium"
+        "presupuesto": -1,
+        "nivel": "high",
+        "nota": "Sin límite de tokens de pensamiento; GPT-OSS usa reasoning_effort high."
       },
       "muestreo": {
         "codigo": {
@@ -1212,7 +1213,78 @@
         131072
       ],
       "contextoMaximo": 131072,
-      "contextoPorDefecto": 65536
+      "contextoPorDefecto": 65536,
+      "servidor": {
+        "tipo": "moe-hibrido",
+        "contexto": 65536,
+        "capasAtencionCompleta": 24,
+        "cabezasKV": 8,
+        "dimCabeza": 64,
+        "kvF16BytesPorToken": 49152,
+        "kvFijoF16Bytes": 0,
+        "moe": {
+          "activo": true,
+          "expertos": 32,
+          "capas": 24,
+          "capasGpu": 12,
+          "nCpuMoe": 12,
+          "expertosMiB": 9683,
+          "bytes": 10152345600,
+          "densosMiB": 1867,
+          "gpuExpertosMiB": 4848,
+          "expertosRamMiB": 4848,
+          "porCapa": [
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400,
+            423014400
+          ],
+          "loadMode": "none",
+          "ctxTope": 65536,
+          "motivo": "12/24 capas de expertos en VRAM (4848 MiB); 12 en RAM (4848 MiB); medido a 64K."
+        },
+        "reservaMiB": 850,
+        "margenObjetivoMiB": 7600,
+        "batch": 1024,
+        "ubatch": 512,
+        "threads": 8,
+        "cacheRamMiB": 0,
+        "noPreserveThinking": true,
+        "binario": "optimized-sm89-user",
+        "nota": "MoE híbrido medido: 12 capas de expertos en RAM, 8 hilos, 64K, KV q8_0, build RTX4060-Opt-sm89. Sin MTP."
+      },
+      "plan": {
+        "contexto": 65536,
+        "kv": "q8_0",
+        "vision": false,
+        "mmprojCPU": false,
+        "totalMiB": 7309,
+        "draftMiB": 0,
+        "libreMiB": 7956,
+        "reservaMiB": 850,
+        "margenMiB": 647,
+        "medido": true
+      }
     },
     {
       "clave": "nemotron3-nano-30b",
@@ -1258,6 +1330,400 @@
       "vision": null,
       "capas": 52,
       "moe": true
+    },
+    {
+      "clave": "qwen38-27b",
+      "nombre": "Qwen3.8 27B",
+      "repo": "unsloth/Qwen3.8-27B-GGUF",
+      "archivo": "qwen38-27b-Qwen3.8-27B-UD-IQ4_XS.gguf",
+      "bytes": 14252845984,
+      "revision": "4ca720788d1e01f1bff70c033e0d0028fd02e502",
+      "kvF16BytesPorToken": 65536,
+      "ctxNativo": 262144,
+      "rol": "código + agente",
+      "uso": "Denso híbrido de 27B (DeltaNet + atención completa), visión y MTP. IQ4_XS dinámico de Unsloth: 4 bits reales en 13,3 GiB para repartir entre 8 GB de VRAM y 16 GB de RAM.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": -1,
+        "nivel": "xhigh",
+        "nota": "Sin límite de tokens de pensamiento; el tope total de salida del turno sigue aplicándose."
+      },
+      "agente": {
+        "saltos": 48,
+        "avisos": 3
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.0,
+          "presence_penalty": 0.0,
+          "repeat_penalty": 1.0
+        },
+        "razonar": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0,
+          "presence_penalty": 0.0,
+          "repeat_penalty": 1.0
+        }
+      },
+      "etiquetas": [
+        "recomendado",
+        "27B",
+        "Qwen3.8",
+        "agente",
+        "MTP"
+      ],
+      "vision": null,
+      "servidor": {
+        "tipo": "gpu-parcial",
+        "contexto": 32768,
+        "capas": 65,
+        "ngl": 27,
+        "pesosGpuEstandarMiB": 6200,
+        "perLayerMiB": 190,
+        "kvF16BytesPorToken": 65536,
+        "capasAtencionCompleta": 16,
+        "cabezasKV": 4,
+        "dimCabeza": 256,
+        "kvFijoF16Bytes": 0,
+        "reservaMiB": 300,
+        "margenObjetivoMiB": 7600,
+        "threads": 16,
+        "batch": 512,
+        "ubatch": 256,
+        "mtp": true,
+        "specDraftNMax": 2,
+        "specDraftPMin": 0.0,
+        "noPreserveThinking": true,
+        "cacheRamMiB": 512,
+        "binario": "qwen38-sm89",
+        "loadMode": "mmap",
+        "nota": "Medido 2026-11-01: ngl=27, KV q8_0 32k, MTP n-max 2, 16 hilos, cache-ram 512; 7.505 MiB de VRAM y 4,3-5,0 tok/s."
+      },
+      "plan": {
+        "contexto": 32768,
+        "kv": "q8_0",
+        "vision": false,
+        "mmprojCPU": false,
+        "totalMiB": 7505,
+        "draftMiB": 0,
+        "libreMiB": 7956,
+        "reservaMiB": 300,
+        "margenMiB": 200,
+        "calculado": "2026-11-01T10:18:58.804651+00:00",
+        "medido": true
+      }
+    },
+    {
+      "clave": "qwen38-27b-q4ks",
+      "nombre": "Qwen3.8 27B · Q4_K_S (prueba)",
+      "repo": "unsloth/Qwen3.8-27B-GGUF",
+      "archivo": "Qwen3.8-27B-UD-Q4_K_S.gguf",
+      "bytes": 15358213024,
+      "revision": "4ca720788d1e01f1bff70c033e0d0028fd02e502",
+      "kvF16BytesPorToken": 65536,
+      "ctxNativo": 262144,
+      "rol": "prueba de kernels",
+      "uso": "Candidato K-quant para comparar el decode en CPU con IQ4_XS.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": 4096,
+        "nivel": "medium"
+      },
+      "agente": {
+        "saltos": 48,
+        "avisos": 3
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.0,
+          "presence_penalty": 0.0,
+          "repeat_penalty": 1.0
+        },
+        "razonar": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.0,
+          "presence_penalty": 0.0,
+          "repeat_penalty": 1.0
+        }
+      },
+      "etiquetas": [
+        "prueba"
+      ],
+      "oculto": true,
+      "vision": null
+    },
+    {
+      "clave": "qwen38-27b-perf-iq4",
+      "archivo": "qwen38-27b-perf-iq4_xs-floor4.gguf",
+      "nombre": "Qwen3.8 27B - Optimizado local",
+      "bytes": 15167175584,
+      "ctxNativo": 262144,
+      "rol": "código + agente",
+      "uso": "Variante local medida para agente de desarrollo. Se conserva el GGUF original; se puede reconstruir con la receta fijada.",
+      "toolcalls": "nativo",
+      "agente": {
+        "saltos": 48,
+        "avisos": 3
+      },
+      "pensar": {
+        "compatible": true,
+        "presupuesto": -1,
+        "nivel": "xhigh",
+        "nota": "Sin límite de tokens de pensamiento; el tope total de salida del turno sigue aplicándose."
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "origen": "local:qwen38-27b-perf-iq4_xs-floor4.gguf",
+      "revision": "local-86db764",
+      "licencia": "Apache-2.0",
+      "fuente": "hub",
+      "arquitectura": "qwen35",
+      "capas": 65,
+      "kvF16BytesPorToken": 65536,
+      "kvFijoF16Bytes": 0,
+      "ventanaDeslizante": 0,
+      "servidor": {
+        "tipo": "gpu-parcial",
+        "contexto": 32768,
+        "capas": 65,
+        "ngl": 27,
+        "pesosGpuEstandarMiB": 6232,
+        "perLayerMiB": 190,
+        "kvF16BytesPorToken": 65536,
+        "capasAtencionCompleta": 16,
+        "cabezasKV": 4,
+        "dimCabeza": 256,
+        "kvFijoF16Bytes": 0,
+        "reservaMiB": 300,
+        "margenObjetivoMiB": 7600,
+        "threads": 16,
+        "batch": 512,
+        "ubatch": 256,
+        "mtp": true,
+        "specDraftNMax": 2,
+        "specDraftPMin": 0.0,
+        "noPreserveThinking": true,
+        "cacheRamMiB": 512,
+        "binario": "qwen38-sm89",
+        "loadMode": "mmap",
+        "nota": "Validado localmente: IQ4 CPU con suelo de cuatro bits, MTP 2, cache recurrente parcial 512 MiB. Original disponible como rollback.",
+        "cacheRecurrentPrefix": true,
+        "mmapTrimGpu": true
+      },
+      "plan": {
+        "contexto": 32768,
+        "kv": "q8_0",
+        "vision": false,
+        "mmprojCPU": false,
+        "totalMiB": 7505,
+        "draftMiB": 0,
+        "libreMiB": 7956,
+        "reservaMiB": 300,
+        "margenMiB": 200,
+        "calculado": "2026-11-01T10:18:58.804651+00:00",
+        "medido": true
+      },
+      "chat_template": "{%- set image_count = namespace(value=0) %}\n{%- set video_count = namespace(value=0) %}\n{%- macro render_content(content, do_vision_count, is_system_content=false) %}\n    {%- if content is string %}\n        {{- content }}\n    {%- elif content is iterable and content is not mapping %}\n        {%- for item in content %}\n            {%- if 'image' in item or 'image_url' in item or item.type == 'image' %}\n                {%- if is_system_content %}\n                    {{- raise_exception('System message cannot contain images.') }}\n                {%- endif %}\n                {%- if do_vision_count %}\n                    {%- set image_count.value = image_count.value + 1 %}\n                {%- endif %}\n                {%- if add_vision_id %}\n                    {{- 'Picture ' ~ image_count.value ~ ': ' }}\n                {%- endif %}\n                {{- '<|vision_start|><|image_pad|><|vision_end|>' }}\n            {%- elif 'video' in item or item.type == 'video' %}\n                {%- if is_system_content %}\n                    {{- raise_exception('System message cannot contain videos.') }}\n                {%- endif %}\n                {%- if do_vision_count %}\n                    {%- set video_count.value = video_count.value + 1 %}\n                {%- endif %}\n                {%- if add_vision_id %}\n                    {{- 'Video ' ~ video_count.value ~ ': ' }}\n                {%- endif %}\n                {{- '<|vision_start|><|video_pad|><|vision_end|>' }}\n            {%- elif 'text' in item %}\n                {{- item.text }}\n            {%- else %}\n                {{- raise_exception('Unexpected item type in content.') }}\n            {%- endif %}\n        {%- endfor %}\n    {%- elif content is none or content is undefined %}\n        {{- '' }}\n    {%- else %}\n        {{- raise_exception('Unexpected content type.') }}\n    {%- endif %}\n{%- endmacro %}\n{%- if not messages %}\n    {{- raise_exception('No messages provided.') }}\n{%- endif %}\n{%- set sysns = namespace(count=0, text='') %}\n{%- for message in messages %}\n    {%- if sysns.count == loop.index0 and (message.role == 'system' or message.role == 'developer') %}\n        {%- set sys_content = render_content(message.content, false, true)|trim %}\n        {%- if sys_content %}\n            {%- set sysns.text = sysns.text + ('\\n' if sysns.text else '') + sys_content %}\n        {%- endif %}\n        {%- set sysns.count = sysns.count + 1 %}\n    {%- endif %}\n{%- endfor %}\n{%- set num_sys = sysns.count %}\n{%- set merged_system = sysns.text %}\n{%- set reasoning_instructions = '' %}\n{%- if enable_thinking is undefined or enable_thinking is true %}\n    {%- set resolved_reasoning_effort = reasoning_effort|default('xhigh') %}\n    {%- if resolved_reasoning_effort == 'high' %}\n        {%- set resolved_reasoning_effort = 'xhigh' %}\n    {%- endif %}\n    {%- if resolved_reasoning_effort not in ('xhigh', 'medium', 'low') %}\n        {{- raise_exception('Unexpected reasoning effort ' ~ reasoning_effort ~ '. Supported types are xhigh (default), medium, and low.') }}\n    {%- endif %}\n    {%- if resolved_reasoning_effort == 'xhigh' %}\n        {%- set reasoning_instructions = 'Reasoning effort is set to xhigh. Please think carefully through the task, validate key assumptions, consider plausible alternatives, and prioritize correctness, consistency, and clarity in the final answer.' %}\n    {%- elif resolved_reasoning_effort == 'low' %}\n        {%- set reasoning_instructions = 'Reasoning effort is set to low. Keep your thinking brief and focused, moving directly to the conclusion without unnecessary elaboration.' %}\n    {%- endif %}\n{%- endif %}\n{%- if tools and tools is iterable and tools is not mapping %}\n    {{- '<|im_start|>system\\n' }}\n    {%- if reasoning_instructions %}\n        {{- reasoning_instructions + '\\n\\n' }}\n    {%- endif %}\n    {{- \"# Tools\\n\\nYou have access to the following functions:\\n\\n<tools>\" }}\n    {%- for tool in tools %}\n        {{- \"\\n\" }}\n        {{- tool | tojson }}\n    {%- endfor %}\n    {{- \"\\n</tools>\" }}\n    {{- '\\n\\nIf you choose to call a function ONLY reply in the following format with NO suffix:\\n\\n<tool_call>\\n<function=example_function_name>\\n<parameter=example_parameter_1>\\nvalue_1\\n</parameter>\\n<parameter=example_parameter_2>\\nThis is the value for the second parameter\\nthat can span\\nmultiple lines\\n</parameter>\\n</function>\\n</tool_call>\\n\\n<IMPORTANT>\\nReminder:\\n- Function calls MUST follow the specified format: an inner <function=...></function> block must be nested within <tool_call></tool_call> XML tags\\n- Required parameters MUST be specified\\n- You may provide optional reasoning for your function call in natural language BEFORE the function call, but NOT after\\n- If there is no function call available, answer the question like normal with your current knowledge and do not tell the user about function calls\\n</IMPORTANT>' }}\n    {%- if merged_system %}\n        {{- '\\n\\n' + merged_system }}\n    {%- endif %}\n    {{- '<|im_end|>\\n' }}\n{%- else %}\n    {%- if merged_system %}\n        {{- '<|im_start|>system\\n' + (reasoning_instructions + '\\n\\n' if reasoning_instructions else '')  + merged_system + '<|im_end|>\\n' }}\n    {%- elif reasoning_instructions %}\n        {{- '<|im_start|>system\\n' + reasoning_instructions + '<|im_end|>\\n' }}\n    {%- endif %}\n{%- endif %}\n{%- set ns = namespace(multi_step_tool=true, last_query_index=messages|length - 1) %}\n{%- for message in messages[::-1] %}\n    {%- set index = (messages|length - 1) - loop.index0 %}\n    {%- if ns.multi_step_tool and message.role == \"user\" %}\n        {%- set content = render_content(message.content, false)|trim %}\n        {%- if not(content.startswith('<tool_response>') and content.endswith('</tool_response>')) %}\n            {%- set ns.multi_step_tool = false %}\n            {%- set ns.last_query_index = index %}\n        {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- for message in messages %}\n    {%- if loop.index0 >= num_sys %}\n    {%- set content = render_content(message.content, true)|trim %}\n    {%- if message.role == \"system\" or message.role == \"developer\" %}\n        {{- raise_exception('System message must be at the beginning.') }}\n    {%- elif message.role == \"user\" %}\n        {{- '<|im_start|>' + message.role + '\\n' + content + '<|im_end|>' + '\\n' }}\n    {%- elif message.role == \"assistant\" %}\n        {%- set reasoning_content = '' %}\n        {%- if message.reasoning_content is string %}\n            {%- set reasoning_content = message.reasoning_content %}\n        {%- endif %}\n        {%- set reasoning_content = reasoning_content|trim %}\n        {%- if preserve_thinking is undefined or preserve_thinking is true or loop.index0 > ns.last_query_index %}\n            {{- '<|im_start|>' + message.role + '\\n<think>\\n' + reasoning_content + '\\n</think>\\n\\n' + content }}\n        {%- else %}\n            {{- '<|im_start|>' + message.role + '\\n' + content }}\n        {%- endif %}\n        {%- if message.tool_calls and message.tool_calls is iterable and message.tool_calls is not mapping %}\n            {%- for tool_call in message.tool_calls %}\n                {%- if tool_call.function is defined %}\n                    {%- set tool_call = tool_call.function %}\n                {%- endif %}\n                {%- if tool_call.name is not defined or tool_call.name is none %}\n                    {{- raise_exception('Tool call is missing a function name.') }}\n                {%- endif %}\n                {%- if loop.first %}\n                    {%- if content|trim %}\n                        {{- '\\n\\n<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                    {%- else %}\n                        {{- '<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                    {%- endif %}\n                {%- else %}\n                    {{- '\\n<tool_call>\\n<function=' + tool_call.name + '>\\n' }}\n                {%- endif %}\n                {%- if tool_call.arguments is mapping %}\n                    {%- for args_name, args_value in tool_call.arguments|items %}\n                        {{- '<parameter=' + args_name + '>\\n' }}\n                        {%- set args_value = args_value | string if args_value is string else args_value | tojson | safe %}\n                        {{- args_value }}\n                        {{- '\\n</parameter>\\n' }}\n                    {%- endfor %}\n                {%- elif tool_call.arguments is string %}\n                    {%- if tool_call.arguments|trim %}\n                        {{- raise_exception('Tool call arguments for function \"' + (tool_call.name | string) + '\" were passed as a JSON string. Parse them into an object before calling apply_chat_template.') }}\n                    {%- endif %}\n                {%- elif tool_call.arguments is defined and tool_call.arguments is not none %}\n                    {{- raise_exception('Tool call arguments for function \"' + (tool_call.name | string) + '\" must be an object/mapping or a JSON string.') }}\n                {%- endif %}\n                {{- '</function>\\n</tool_call>' }}\n            {%- endfor %}\n        {%- endif %}\n        {{- '<|im_end|>\\n' }}\n    {%- elif message.role == \"tool\" %}\n        {%- if loop.previtem and loop.previtem.role != \"tool\" %}\n            {{- '<|im_start|>user' }}\n        {%- endif %}\n        {{- '\\n<tool_response>\\n' }}\n        {{- content }}\n        {{- '\\n</tool_response>' }}\n        {%- if not loop.last and loop.nextitem.role != \"tool\" %}\n            {{- '<|im_end|>\\n' }}\n        {%- elif loop.last %}\n            {{- '<|im_end|>\\n' }}\n        {%- endif %}\n    {%- else %}\n        {{- raise_exception('Unexpected message role.') }}\n    {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '<|im_start|>assistant\\n' }}\n    {%- if enable_thinking is defined and enable_thinking is false %}\n        {{- '<think>\\n\\n</think>\\n\\n' }}\n    {%- else %}\n        {{- '<think>\\n' }}\n    {%- endif %}\n{%- endif %}\n{#- Unsloth fixes - developer role, merged system messages, tool calling #}",
+      "instalado": "2026-11-01T09:32:05.750Z",
+      "gguf": {
+        "version": 3,
+        "tensorCount": 866,
+        "headerBytes": 10996621,
+        "arquitectura": "qwen35",
+        "capas": 65,
+        "ctxNativo": 262144,
+        "kvF16BytesPorToken": 65536
+      },
+      "repo": "",
+      "derivadoLocal": {
+        "original": "qwen38-27b",
+        "receta": "C:/Users/user/.local/opt/bonsai-inference/llama.cpp-qwen38/scripts/qwen38_mixed_quant.py",
+        "commit": "86db764",
+        "minimoBits": 4
+      }
+    },
+    {
+      "clave": "qwen3-8b",
+      "nombre": "Qwen3 8B",
+      "repo": "unsloth/Qwen3-8B-GGUF",
+      "archivo": "Qwen3-8B-Q4_K_M.gguf",
+      "bytes": 5027784512,
+      "revision": "a6adef130ffb23ddaf1a62fec9dced968c9bc482",
+      "ctxNativo": 131072,
+      "rol": "denso rápido",
+      "uso": "Denso 8B de Qwen3: cabe casi entero en 8 GB con KV q8_0; bueno para tareas rápidas de código.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": -1,
+        "nivel": "xhigh"
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "denso",
+        "8B"
+      ],
+      "vision": null,
+      "capas": 36,
+      "moe": false,
+      "contextos": [
+        32768,
+        65536,
+        131072
+      ],
+      "contextoMaximo": 131072,
+      "contextoPorDefecto": 32768
+    },
+    {
+      "clave": "deepseek-coder-v2-lite",
+      "nombre": "DeepSeek Coder V2 Lite",
+      "repo": "bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF",
+      "archivo": "DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf",
+      "bytes": 10364416768,
+      "revision": "8f248fa2072348f77a8bc37754e470de1f61866e",
+      "ctxNativo": 131072,
+      "rol": "MoE código",
+      "uso": "MoE de 16B con 2.4B activos: especialista en código que puede correr con expertos en RAM.",
+      "licencia": "other",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": -1,
+        "nivel": "high"
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.3,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.3,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "MoE",
+        "16B",
+        "código"
+      ],
+      "vision": null,
+      "capas": 27,
+      "moe": true,
+      "contextos": [
+        32768,
+        65536,
+        131072
+      ],
+      "contextoMaximo": 131072,
+      "contextoPorDefecto": 32768
+    },
+    {
+      "clave": "qwen3-coder-30b-a3b",
+      "nombre": "Qwen3 Coder 30B-A3B",
+      "repo": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",
+      "archivo": "Qwen3-Coder-30B-A3B-Instruct-UD-Q4_K_XL.gguf",
+      "bytes": 17665334432,
+      "revision": "b17cb02dd882d5b6ab62fc777ad2995f19668350",
+      "ctxNativo": 262144,
+      "rol": "MoE código",
+      "uso": "MoE de 30B con 3B activos, especialista en código; los expertos viven en RAM y la atención en la GPU.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": -1,
+        "nivel": "xhigh"
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0.05,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "MoE",
+        "30B",
+        "código"
+      ],
+      "vision": null,
+      "capas": 48,
+      "moe": true,
+      "contextos": [
+        32768,
+        65536,
+        131072,
+        262144
+      ],
+      "contextoMaximo": 262144,
+      "contextoPorDefecto": 65536
     }
   ]
 }

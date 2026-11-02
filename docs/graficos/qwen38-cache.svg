@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="620" viewBox="0 0 1100 620" role="img" aria-label="Qwen3.8-27B recurrent prefix cache: cold prefill, cached TTFT and agent wall time">
+  <rect width="1100" height="620" fill="#ffffff"/>
+  <text x="24" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#17212b">Qwen3.8-27B: caché de prefijo recurrente</text>
+  <text x="24" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#5b6773">RTX 4060 Laptop 8 GB · IQ4_XS mixto · 32K · MTP 2 · 16 hilos · 3 repeticiones medidas tras warmup</text>
+
+  <text x="70" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#17212b">Prefill frío (s)</text>
+  <line x1="70" y1="400" x2="470" y2="400" stroke="#17212b" stroke-width="1.2"/>
+  <line x1="70" y1="120" x2="70" y2="400" stroke="#17212b" stroke-width="1.2"/>
+  <line x1="70" y1="400" x2="470" y2="400" stroke="#dfe5ea" stroke-width="0.8"/>
+  <line x1="70" y1="330" x2="470" y2="330" stroke="#dfe5ea" stroke-width="0.8"/>
+  <text x="60" y="334" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#5b6773" text-anchor="end">32,5</text>
+  <line x1="70" y1="260" x2="470" y2="260" stroke="#dfe5ea" stroke-width="0.8"/>
+  <text x="60" y="264" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#5b6773" text-anchor="end">65</text>
+  <line x1="70" y1="190" x2="470" y2="190" stroke="#dfe5ea" stroke-width="0.8"/>
+  <text x="60" y="194" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#5b6773" text-anchor="end">97,5</text>
+  <line x1="70" y1="120" x2="470" y2="120" stroke="#dfe5ea" stroke-width="0.8"/>
+  <text x="60" y="124" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#5b6773" text-anchor="end">130</text>
+
+  <rect x="90" y="336" width="60" height="64" fill="#94a3b8" rx="4"/>
+  <text x="120" y="326" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="middle">29,7 s</text>
+  <text x="120" y="420" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#5b6773" text-anchor="middle">6K</text>
+
+  <rect x="190" y="275" width="60" height="125" fill="#94a3b8" rx="4"/>
+  <text x="220" y="265" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="middle">58,1 s</text>
+  <text x="220" y="420" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#5b6773" text-anchor="middle">12K</text>
+
+  <rect x="290" y="137" width="60" height="263" fill="#94a3b8" rx="4"/>
+  <text x="320" y="127" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="middle">122,3 s</text>
+  <text x="320" y="420" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#5b6773" text-anchor="middle">25K</text>
+
+  <text x="600" y="100" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#17212b">TTFT con prefijo en caché (ms)</text>
+  <line x1="600" y1="400" x2="1000" y2="400" stroke="#17212b" stroke-width="1.2"/>
+  <line x1="600" y1="120" x2="600" y2="400" stroke="#17212b" stroke-width="1.2"/>
+  <line x1="600" y1="400" x2="1000" y2="400" stroke="#dfe5ea" stroke-width="0.8"/>
+  <line x1="600" y1="330" x2="1000" y2="330" stroke="#dfe5ea" stroke-width="0.8"/>
+  <text x="590" y="334" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#5b6773" text-anchor="end">125</text>
+  <line x1="600" y1="260" x2="1000" y2="260" stroke="#dfe5ea" stroke-width="0.8"/>
+  <text x="590" y="264" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#5b6773" text-anchor="end">250</text>
+  <line x1="600" y1="190" x2="1000" y2="190" stroke="#dfe5ea" stroke-width="0.8"/>
+  <text x="590" y="194" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#5b6773" text-anchor="end">375</text>
+  <line x1="600" y1="120" x2="1000" y2="120" stroke="#dfe5ea" stroke-width="0.8"/>
+  <text x="590" y="124" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#5b6773" text-anchor="end">500</text>
+
+  <rect x="620" y="174" width="60" height="226" fill="#2f7d32" rx="4"/>
+  <text x="650" y="164" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="middle">361-422</text>
+  <text x="650" y="420" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#5b6773" text-anchor="middle">6K</text>
+  <text x="650" y="436" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#2f7d32" text-anchor="middle">5.997 reutilizados</text>
+
+  <rect x="720" y="150" width="60" height="250" fill="#2f7d32" rx="4"/>
+  <text x="750" y="140" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="middle">404-443</text>
+  <text x="750" y="420" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#5b6773" text-anchor="middle">12K</text>
+  <text x="750" y="436" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#2f7d32" text-anchor="middle">11.997 reutilizados</text>
+
+  <rect x="820" y="138" width="60" height="262" fill="#2f7d32" rx="4"/>
+  <text x="850" y="128" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b" text-anchor="middle">423-446</text>
+  <text x="850" y="420" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#5b6773" text-anchor="middle">25K</text>
+  <text x="850" y="436" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#2f7d32" text-anchor="middle">24.997 reutilizados</text>
+
+  <text x="70" y="490" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#17212b">Pared del turno de agente (s)</text>
+  <text x="70" y="520" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#5b6773">Segundo paso</text>
+  <rect x="260" y="506" width="180" height="18" fill="#cbd5e1" rx="3"/>
+  <text x="450" y="520" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b">142,5 s antes</text>
+  <rect x="570" y="506" width="114" height="18" fill="#2563eb" rx="3"/>
+  <text x="694" y="520" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b">90,1 s después</text>
+
+  <text x="70" y="555" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#5b6773">Follow-up nuevo</text>
+  <rect x="260" y="541" width="145" height="18" fill="#cbd5e1" rx="3"/>
+  <text x="415" y="555" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b">114,7 s antes</text>
+  <rect x="570" y="541" width="52" height="18" fill="#2563eb" rx="3"/>
+  <text x="632" y="555" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#17212b">41,0 s después</text>
+
+  <text x="24" y="600" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="#5b6773">Prefijo repetido/residente, no cualquier turno con herramientas. El ancla estable reutiliza el sistema y las tools entre turnos; el tope total de salida sigue aplicándose.</text>
+</svg>

@@ -15,7 +15,7 @@ param (
     [ValidateSet("auto", "f16", "q8_0", "q4_0")][string]$KVCacheType = "auto",
     [int]$Pensar = -1,            # -1 = auto (ajuste "Modo razonamiento" de la interfaz, solo si el modelo lo admite). 0 = apagado. N>0 = tope de N tokens
     [ValidateSet("", "legacy", "small-local-coder")][string]$AgentProfile = "",
-    [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG", "CUSTOM")][string]$EnginePreset = "",
+    [string]$EnginePreset = "",
     [switch]$SinVision,           # por defecto la vision se enciende sola si el proyector esta descargado
     [switch]$NoBrowser
 )
@@ -53,6 +53,12 @@ if (-not $EnginePreset -and $SavedSettings -and $SavedSettings.enginePreset) {
         $EnginePreset = [string]$SavedPreset
     }
 }
+if ($EnginePreset -and $EnginePreset -notin @('CUSTOM', 'AUTO')) {
+    $KnownPresets = Get-PresetTabla
+    if (-not $KnownPresets.ContainsKey($EnginePreset)) { throw "El perfil de motor '$EnginePreset' no existe" }
+}
+# AUTO es una eleccion de la interfaz: el lanzador de servidor debe decidir con el plan del modelo.
+$ServerEnginePreset = if ($EnginePreset -eq 'AUTO') { '' } else { $EnginePreset }
 $SavedContext = 0
 $SavedHistorial = 0
 if ($SavedSettings) {
@@ -117,7 +123,7 @@ if ($EnginePreset -eq 'CUSTOM' -and -not $SinVision -and $SavedSettings -and $Sa
 $VisionArgs = if ($VisionFlags.Count -gt 0) { " " + ($VisionFlags -join " ") } else { "" }
 if ($SinVision) { $VisionArgs = ' -SinVision' }
 $PensarArgs = if ($Pensar -ge 0) { " -Pensar $Pensar" } else { "" }
-$EngineArgs = if ($EnginePreset) { " -EnginePreset $EnginePreset" } else { "" }
+$EngineArgs = if ($ServerEnginePreset) { " -EnginePreset $ServerEnginePreset" } else { "" }
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Error "No esta node en el PATH."
@@ -140,7 +146,7 @@ $serverState = & "$RootDir\scripts\stop-managed-server.ps1" -Port $Port -CheckOn
 if ($serverState -eq 'managed' -and $EnginePreset) {
     $CurrentMarker = Get-Content -LiteralPath (Join-Path $RootDir "logs\servidor-administrado-$Port.json") -Raw | ConvertFrom-Json
     $IncompatibleCustom = $EnginePreset -eq 'CUSTOM' -and (($ContextSize -ne 'auto' -and [int]$CurrentMarker.contexto -ne [int]$ContextSize) -or ($KVCacheType -ne 'auto' -and $CurrentMarker.kv -ne $KVCacheType) -or ([bool]$CurrentMarker.vision -ne ($VisionFlags.Count -gt 0)))
-    if ($CurrentMarker.enginePreset -ne $EnginePreset -or ($Pensar -ge 0 -and $CurrentMarker.pensar -ne $Pensar) -or $IncompatibleCustom) {
+    if ($CurrentMarker.enginePreset -ne $ServerEnginePreset -or ($Pensar -ge 0 -and $CurrentMarker.pensar -ne $Pensar) -or $IncompatibleCustom) {
         & "$RootDir\scripts\stop-managed-server.ps1" -Port $Port
         if ($LASTEXITCODE -ne 0) { throw 'No se pudo detener el servidor administrado anterior.' }
         $serverState = 'empty'
@@ -174,7 +180,7 @@ if ($serverState -eq "empty") {
         # OJO: @VisionFlags es splatting de ARRAY y pasa los elementos como POSICIONALES: `-Vision`
         # acababa siendo el valor de `-HostIP` (verificado en PowerShell 5.1), así que la
         # precomprobacion de VRAM medía una configuración distinta de la que luego se lanza.
-        & "$RootDir\scripts\start-server.ps1" -ContextSize $ContextSize -KVCacheType $KVCacheType -Port $Port -Pensar $Pensar -DryRun -Vision:($VisionFlags.Count -gt 0) -EnginePreset $EnginePreset
+        & "$RootDir\scripts\start-server.ps1" -ContextSize $ContextSize -KVCacheType $KVCacheType -Port $Port -Pensar $Pensar -DryRun -Vision:($VisionFlags.Count -gt 0) -EnginePreset $ServerEnginePreset
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         # El DryRun acaba de persistir el perfil elegido: se muestra para que el usuario sepa que
         # contexto/KV se va a cargar (y que no se vuelve en silencio a 16K/f16).

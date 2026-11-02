@@ -1,0 +1,2783 @@
+diff --git a/common/arg.cpp b/common/arg.cpp
+index e3ab084..3e30194 100644
+--- a/common/arg.cpp
++++ b/common/arg.cpp
+@@ -1644,6 +1644,13 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
+             params.swa_full = true;
+         }
+     ).set_env("LLAMA_ARG_SWA_FULL"));
++    add_opt(common_arg(
++        {"--cache-recurrent-prefix"},
++        "cache one recurrent prompt prefix per slot within --cache-ram; keep full-attention KV resident",
++        [](common_params & params) {
++            params.cache_recurrent_prefix = true;
++        }
++    ).set_env("LLAMA_ARG_CACHE_RECURRENT_PREFIX").set_examples({LLAMA_EXAMPLE_SERVER}));
+     add_opt(common_arg(
+         {"-ctxcp", "--ctx-checkpoints", "--swa-checkpoints"}, "N",
+         string_format("max number of context checkpoints to create per slot (default: %d)"
+diff --git a/common/chat.h b/common/chat.h
+index ebfc80f..684779f 100644
+--- a/common/chat.h
++++ b/common/chat.h
+@@ -199,6 +199,15 @@ struct common_chat_msg_spans {
+         }
+         return -1;
+     }
++
++    int32_t first_user_message_pos() const {
++        for (auto it = spans.begin(); it != spans.end(); ++it) {
++            if (it->role == COMMON_CHAT_ROLE_USER) {
++                return (int32_t) it->pos;
++            }
++        }
++        return -1;
++    }
+ };
+ 
+ struct common_chat_msg_delimiter {
+diff --git a/common/common.h b/common/common.h
+index d0e33fb..d8482fd 100644
+--- a/common/common.h
++++ b/common/common.h
+@@ -638,6 +638,7 @@ struct common_params {
+     int32_t n_cache_reuse       = 0;     // min chunk size to reuse from the cache via KV shifting
+     bool    cache_prompt        = true;  // whether to enable prompt caching
+     bool    cache_idle_slots    = true;  // save and clear idle slots upon starting a new task
++    bool    cache_recurrent_prefix = false; // keep one budgeted recurrent checkpoint with resident KV
+     int32_t n_ctx_checkpoints   = 32;    // max number of context checkpoints per slot
+     int32_t kv_unified_per_slot = 0;     // max context per parallel slot; 0 = unset
+     int32_t checkpoint_min_step = 8192;  // minimum spacing between context checkpoints
+@@ -1294,6 +1295,9 @@ struct common_prompt_checkpoint {
+     // (optional) id of the task that created the checkpoint
+     int id_task = -1;
+ 
++    // keep this checkpoint across budget evictions (stable prefix anchor)
++    bool stable = false;
++
+     llama_pos pos_min;
+     llama_pos pos_max;
+ 
+diff --git a/ggml/src/CMakeLists.txt b/ggml/src/CMakeLists.txt
+index fe001a0..62057e4 100644
+--- a/ggml/src/CMakeLists.txt
++++ b/ggml/src/CMakeLists.txt
+@@ -216,6 +216,9 @@ set_target_properties(ggml-base PROPERTIES
+ configure_file(ggml-version.h.in ${CMAKE_CURRENT_BINARY_DIR}/ggml-version.h @ONLY)
+ 
+ target_include_directories(ggml-base PRIVATE . ${CMAKE_CURRENT_BINARY_DIR})
++if (WIN32)
++    target_link_libraries(ggml-base PRIVATE advapi32)
++endif()
+ if (GGML_BACKEND_DL)
+     target_compile_definitions(ggml-base PUBLIC GGML_BACKEND_DL)
+ endif()
+diff --git a/ggml/src/ggml-backend.cpp b/ggml/src/ggml-backend.cpp
+index 3520b43..51ed770 100644
+--- a/ggml/src/ggml-backend.cpp
++++ b/ggml/src/ggml-backend.cpp
+@@ -10,6 +10,7 @@
+ 
+ #include "ggml-backend.h"
+ #include "ggml-backend-impl.h"
++#include "ggml-perf.h"
+ #include "ggml-alloc.h"
+ #include "ggml-impl.h"
+ 
+@@ -20,6 +21,8 @@
+ #include <stdlib.h>
+ #include <string.h>
+ #include <algorithm>
++#include <memory>
++#include <mutex>
+ #include <unordered_map>
+ #include <vector>
+ 
+@@ -2127,11 +2130,13 @@ static enum ggml_status ggml_backend_sched_compute_splits(ggml_backend_sched_t s
+     struct ggml_backend_sched_split * splits = sched->splits;
+ 
+     int prev_backend_id = -1;
++    const auto perf = std::unique_ptr<FILE, decltype(&fclose)>(ggml_perf_open("scheduler"), fclose);
+ 
+     for (int split_id = 0; split_id < sched->n_splits; split_id++) {
+         struct ggml_backend_sched_split * split = &splits[split_id];
+         int split_backend_id = split->backend_id;
+         ggml_backend_t split_backend = sched->backends[split_backend_id];
++        const int64_t perf_start = perf ? ggml_time_us() : 0;
+ 
+         // ensure the previous split's async work has completed before we start
+         // this split, the allocator may have reused buffer regions across splits
+@@ -2156,6 +2161,12 @@ static enum ggml_status ggml_backend_sched_compute_splits(ggml_backend_sched_t s
+             }
+         }
+ 
++        const int64_t perf_compute = perf ? ggml_time_us() : 0;
++        if (perf && split->graph.n_nodes > 0) {
++            ggml_perf_row(perf.get(), "copy_wait", ggml_backend_name(split_backend), split->graph.nodes[0],
++                    0, split->n_inputs, perf_start, perf_compute - perf_start, 0, 0);
++        }
++
+         if (!sched->callback_eval) {
+             enum ggml_status ec = ggml_backend_graph_compute_async(split_backend, &split->graph);
+             if (ec != GGML_STATUS_SUCCESS) {
+@@ -2195,6 +2206,12 @@ static enum ggml_status ggml_backend_sched_compute_splits(ggml_backend_sched_t s
+             }
+         }
+ 
++        if (perf && split->graph.n_nodes > 0) {
++            ggml_backend_synchronize(split_backend);
++            ggml_perf_row(perf.get(), "compute_sync", ggml_backend_name(split_backend), split->graph.nodes[0],
++                    0, split->graph.n_nodes, perf_compute, ggml_time_us() - perf_compute, 0, 0);
++        }
++
+         // record the event of this split
+         if (sched->events[split_backend_id][sched->cur_copy] != NULL) {
+             ggml_backend_event_record(sched->events[split_backend_id][sched->cur_copy], split_backend);
+@@ -2726,6 +2743,120 @@ bool ggml_backend_compare_graph_backend(ggml_backend_t backend1, ggml_backend_t
+ 
+ // CPU backend - buffer
+ 
++#ifdef _WIN32
++static std::mutex ggml_win_lock_mutex;
++static std::unordered_map<void *, size_t> ggml_win_locked_buffers;
++static SIZE_T ggml_win_locked_bytes = 0;
++static SIZE_T ggml_win_base_minimum = 0;
++static SIZE_T ggml_win_base_maximum = 0;
++
++static void ggml_backend_cpu_buffer_free_virtual(ggml_backend_buffer_t buffer) {
++    const std::lock_guard<std::mutex> lock(ggml_win_lock_mutex);
++    const auto found = ggml_win_locked_buffers.find(buffer->context);
++    if (found != ggml_win_locked_buffers.end()) {
++        VirtualUnlock(buffer->context, found->second);
++        ggml_win_locked_bytes -= found->second;
++        ggml_win_locked_buffers.erase(found);
++        SetProcessWorkingSetSize(GetCurrentProcess(), ggml_win_base_minimum + ggml_win_locked_bytes,
++                                ggml_win_base_maximum + ggml_win_locked_bytes);
++    }
++    VirtualFree(buffer->context, 0, MEM_RELEASE);
++}
++
++static void * ggml_backend_cpu_alloc_windows(size_t size) {
++    static const int mode = [] {
++        const char * value = getenv("GGML_WIN32_ALLOCATOR");
++        if (value && strcmp(value, "normal") == 0) { return -1; }
++        if (value && strcmp(value, "large") == 0) { return 1; }
++        if (value && strcmp(value, "lock") == 0) { return 2; }
++        return 0;
++    }();
++    if (!mode) {
++        return nullptr;
++    }
++    if (mode < 0) {
++        fprintf(stderr, "%s: normal CPU allocation requested %zu bytes\n", __func__, size);
++        return nullptr;
++    }
++    const SIZE_T page = GetLargePageMinimum();
++    if (!page || size < page || size > SIZE_MAX - (page - 1)) {
++        return nullptr;
++    }
++    const SIZE_T rounded = (size + page - 1) / page * page;
++    MEMORYSTATUSEX memory = {};
++    memory.dwLength = sizeof(memory);
++    if (GlobalMemoryStatusEx(&memory) &&
++            (memory.ullAvailPhys < rounded || memory.ullAvailPhys - rounded < 512ull * 1024 * 1024)) {
++        GGML_LOG_WARN("%s: insufficient physical headroom for %zu bytes, using pageable memory\n", __func__, rounded);
++        return nullptr;
++    }
++    if (mode == 2) {
++        void * data = VirtualAlloc(nullptr, rounded, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
++        if (!data) {
++            return nullptr;
++        }
++        const std::lock_guard<std::mutex> lock(ggml_win_lock_mutex);
++        if (ggml_win_locked_buffers.empty()) {
++            GetProcessWorkingSetSize(GetCurrentProcess(), &ggml_win_base_minimum, &ggml_win_base_maximum);
++        }
++        const bool budget_ok = ggml_win_locked_bytes <= SIZE_MAX - rounded &&
++            ggml_win_base_maximum <= SIZE_MAX - ggml_win_locked_bytes - rounded &&
++            ggml_win_base_minimum <= SIZE_MAX - ggml_win_locked_bytes - rounded;
++        if (!budget_ok) {
++            return data;
++        }
++        SetProcessWorkingSetSize(GetCurrentProcess(), ggml_win_base_minimum + ggml_win_locked_bytes + rounded,
++                                ggml_win_base_maximum + ggml_win_locked_bytes + rounded);
++        if (!VirtualLock(data, rounded)) {
++            fprintf(stderr, "%s: VirtualLock failed (%lu), retaining pageable allocation\n", __func__, GetLastError());
++            SetProcessWorkingSetSize(GetCurrentProcess(), ggml_win_base_minimum + ggml_win_locked_bytes,
++                                    ggml_win_base_maximum + ggml_win_locked_bytes);
++        } else {
++            try {
++                ggml_win_locked_buffers.emplace(data, rounded);
++            } catch (const std::bad_alloc &) {
++                VirtualUnlock(data, rounded);
++                SetProcessWorkingSetSize(GetCurrentProcess(), ggml_win_base_minimum + ggml_win_locked_bytes,
++                                        ggml_win_base_maximum + ggml_win_locked_bytes);
++                return data;
++            }
++            ggml_win_locked_bytes += rounded;
++            fprintf(stderr, "%s: VirtualLock secured %zu bytes\n", __func__, rounded);
++        }
++        return data;
++    }
++    static std::mutex privilege_mutex;
++    const std::lock_guard<std::mutex> lock(privilege_mutex);
++    HANDLE token = nullptr;
++    TOKEN_PRIVILEGES requested = {}, previous = {};
++    DWORD previous_size = sizeof(previous);
++    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) {
++        return nullptr;
++    }
++    requested.PrivilegeCount = 1;
++    requested.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
++    void * data = nullptr;
++    if (LookupPrivilegeValueW(nullptr, L"SeLockMemoryPrivilege", &requested.Privileges[0].Luid)) {
++        SetLastError(ERROR_SUCCESS);
++        const BOOL changed = AdjustTokenPrivileges(token, FALSE, &requested, sizeof(previous), &previous, &previous_size);
++        if (changed && GetLastError() == ERROR_SUCCESS) {
++            data = VirtualAlloc(nullptr, rounded, MEM_RESERVE | MEM_COMMIT | MEM_LARGE_PAGES, PAGE_READWRITE);
++            const DWORD error = GetLastError();
++            AdjustTokenPrivileges(token, FALSE, &previous, 0, nullptr, nullptr);
++            if (data) {
++                fprintf(stderr, "%s: large pages secured %zu bytes (page size %zu)\n", __func__, rounded, page);
++            } else {
++                fprintf(stderr, "%s: large pages failed for %zu bytes (%lu), using pageable memory\n", __func__, rounded, error);
++            }
++        } else {
++            fprintf(stderr, "%s: SeLockMemoryPrivilege unavailable, using pageable memory\n", __func__);
++        }
++    }
++    CloseHandle(token);
++    return data;
++}
++#endif
++
+ static void * ggml_backend_cpu_buffer_get_base(ggml_backend_buffer_t buffer) {
+     GGML_ASSERT(buffer);
+     uintptr_t data = (uintptr_t)buffer->context;
+@@ -2825,6 +2956,13 @@ static const char * ggml_backend_cpu_buffer_type_get_name(ggml_backend_buffer_ty
+ }
+ 
+ static ggml_backend_buffer_t ggml_backend_cpu_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
++#ifdef _WIN32
++    if (void * data = ggml_backend_cpu_alloc_windows(size)) {
++        ggml_backend_buffer_i iface = ggml_backend_cpu_buffer_i;
++        iface.free_buffer = ggml_backend_cpu_buffer_free_virtual;
++        return ggml_backend_buffer_init(buft, iface, data, size);
++    }
++#endif
+     void * data = ggml_aligned_malloc(size);
+ 
+     if (data == NULL) {
+diff --git a/ggml/src/ggml-cpu/CMakeLists.txt b/ggml/src/ggml-cpu/CMakeLists.txt
+index 8327c52..97703ff 100644
+--- a/ggml/src/ggml-cpu/CMakeLists.txt
++++ b/ggml/src/ggml-cpu/CMakeLists.txt
+@@ -282,6 +282,7 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
+         message(STATUS "x86 detected")
+         list(APPEND GGML_CPU_SOURCES
+             ggml-cpu/arch/x86/quants.c
++            ggml-cpu/arch/x86/iq4-mtp.cpp
+             ggml-cpu/arch/x86/repack.cpp
+             )
+ 
+diff --git a/ggml/src/ggml-cpu/arch/x86/iq4-mtp.cpp b/ggml/src/ggml-cpu/arch/x86/iq4-mtp.cpp
+new file mode 100644
+index 0000000..f567b22
+--- /dev/null
++++ b/ggml/src/ggml-cpu/arch/x86/iq4-mtp.cpp
+@@ -0,0 +1,101 @@
++#include "../../quants.h"
++#include "../../ggml-cpu-impl.h"
++#include "../../simd-mappings.h"
++
++#define GGML_COMMON_IMPL_CPP
++#include "ggml-common.h"
++
++#include <cassert>
++#include <cstdlib>
++
++#if defined(__AVX512F__) && (defined(__AVX512VNNI__) || defined(_MSC_VER))
++#include <immintrin.h>
++#if defined(_MSC_VER)
++#include <intrin.h>
++#endif
++
++bool ggml_cpu_iq4_mtp_vnni(void) {
++    static const bool enabled = [] {
++        const char * env = std::getenv("GGML_CPU_IQ4_MTP");
++        if (env && std::atoi(env) == 0) {
++            return false;
++        }
++#if defined(_MSC_VER)
++        int regs[4];
++        __cpuidex(regs, 7, 0);
++        return (regs[2] & (1 << 11)) != 0;
++#else
++        return true;
++#endif
++    }();
++    return enabled;
++}
++
++template <int NC>
++static void iq4_mtp_dot(int n, float * s, const block_iq4_xs * x, const char * activations, size_t stride) {
++    const __m128i mask = _mm_set1_epi8(15);
++    const __m128i lut = _mm_loadu_si128((const __m128i *) kvalues_iq4nl);
++    __m256 result[NC];
++    for (int col = 0; col < NC; ++col) {
++        result[col] = _mm256_setzero_ps();
++    }
++    for (int block = 0; block < n / QK_K; ++block) {
++        __m512i sums[NC];
++        for (int col = 0; col < NC; ++col) {
++            sums[col] = _mm512_setzero_si512();
++        }
++        for (int pair = 0; pair < 4; ++pair) {
++            const int lo = ((x[block].scales_l[pair] & 15) | (((x[block].scales_h >> (4 * pair)) & 3) << 4)) - 32;
++            const int hi = ((x[block].scales_l[pair] >> 4) | (((x[block].scales_h >> (4 * pair + 2)) & 3) << 4)) - 32;
++            const __m128i p0 = _mm_loadu_si128((const __m128i *) (x[block].qs + pair * 32));
++            const __m128i p1 = _mm_loadu_si128((const __m128i *) (x[block].qs + pair * 32 + 16));
++            const __m256i q0 = _mm256_set_m128i(_mm_shuffle_epi8(lut, _mm_and_si128(_mm_srli_epi16(p0, 4), mask)), _mm_shuffle_epi8(lut, _mm_and_si128(p0, mask)));
++            const __m256i q1 = _mm256_set_m128i(_mm_shuffle_epi8(lut, _mm_and_si128(_mm_srli_epi16(p1, 4), mask)), _mm_shuffle_epi8(lut, _mm_and_si128(p1, mask)));
++            const __m512i q = _mm512_inserti64x4(_mm512_castsi256_si512(q0), q1, 1);
++            const __m512i magnitude = _mm512_abs_epi8(q);
++            const __mmask64 negative = _mm512_movepi8_mask(q);
++            const __m512i scale = _mm512_inserti64x4(_mm512_castsi256_si512(_mm256_set1_epi32(lo)), _mm256_set1_epi32(hi), 1);
++            for (int col = 0; col < NC; ++col) {
++                const auto * y = (const block_q8_K *) (activations + col * stride);
++                const __m512i a = _mm512_loadu_si512((const void *) (y[block].qs + pair * 64));
++                const __m512i signed_a = _mm512_mask_sub_epi8(a, negative, _mm512_setzero_si512(), a);
++                const __m512i dot = _mm512_dpbusd_epi32(_mm512_setzero_si512(), magnitude, signed_a);
++                sums[col] = _mm512_add_epi32(sums[col], _mm512_mullo_epi32(dot, scale));
++            }
++        }
++        for (int col = 0; col < NC; ++col) {
++            const auto * y = (const block_q8_K *) (activations + col * stride);
++            const __m256i value = _mm256_add_epi32(_mm512_castsi512_si256(sums[col]), _mm512_extracti64x4_epi64(sums[col], 1));
++            const float d = GGML_CPU_FP16_TO_FP32(x[block].d) * y[block].d;
++            result[col] = _mm256_fmadd_ps(_mm256_set1_ps(d), _mm256_cvtepi32_ps(value), result[col]);
++        }
++    }
++    for (int col = 0; col < NC; ++col) {
++        __m128 sum = _mm_add_ps(_mm256_extractf128_ps(result[col], 1), _mm256_castps256_ps128(result[col]));
++        sum = _mm_add_ps(sum, _mm_movehl_ps(sum, sum));
++        sum = _mm_add_ss(sum, _mm_movehdup_ps(sum));
++        s[col] = _mm_cvtss_f32(sum);
++    }
++}
++
++void ggml_vec_dot_iq4_xs_q8_K_mtp(int n, float * s, const void * vx, const void * vy, size_t by, int ncols) {
++    assert(n % QK_K == 0 && ncols >= 1 && ncols <= 3);
++    const auto * x = (const block_iq4_xs *) vx;
++    const auto * y = (const char *) vy;
++    switch (ncols) {
++        case 1: iq4_mtp_dot<1>(n, s, x, y, by); break;
++        case 2: iq4_mtp_dot<2>(n, s, x, y, by); break;
++        case 3: iq4_mtp_dot<3>(n, s, x, y, by); break;
++    }
++}
++#else
++bool ggml_cpu_iq4_mtp_vnni(void) {
++    return false;
++}
++
++void ggml_vec_dot_iq4_xs_q8_K_mtp(int n, float * s, const void * vx, const void * vy, size_t by, int ncols) {
++    for (int col = 0; col < ncols; ++col) {
++        ggml_vec_dot_iq4_xs_q8_K(n, s + col, 0, vx, 0, (const char *) vy + col * by, 0, 1);
++    }
++}
++#endif
+diff --git a/ggml/src/ggml-cpu/ggml-cpu.c b/ggml/src/ggml-cpu/ggml-cpu.c
+index f4eaea5..c4c167e 100644
+--- a/ggml/src/ggml-cpu/ggml-cpu.c
++++ b/ggml/src/ggml-cpu/ggml-cpu.c
+@@ -15,6 +15,7 @@
+ #include "ggml.h"
+ #include "common.h"
+ #include "tiled/tiled.h"
++#include "ggml-perf.h"
+ 
+ #if defined(_MSC_VER) || defined(__MINGW32__)
+ #include <malloc.h> // using malloc.h with MSC/MINGW
+@@ -1214,6 +1215,21 @@ static void ggml_compute_forward_mul_mat_one_chunk(
+ 
+     const size_t src1_col_stride = src1_cont || src1->type != vec_dot_type ? row_size : nb11;
+ 
++#if defined(__AVX512F__) && (defined(__AVX512VNNI__) || defined(_MSC_VER))
++    if (type == GGML_TYPE_IQ4_XS && ne02 == 1 && ne03 == 1 && ne12 == 1 && ne13 == 1 &&
++            ne11 <= 3 && ggml_cpu_iq4_mtp_vnni()) {
++        for (int64_t row = ir0_start; row < ir0_end; ++row) {
++            float values[3];
++            ggml_vec_dot_iq4_xs_q8_K_mtp(ne00, values, (const char *) src0->data + row * nb01,
++                    (const char *) wdata + ir1_start * src1_col_stride, src1_col_stride, (int) (ir1_end - ir1_start));
++            for (int64_t col = ir1_start; col < ir1_end; ++col) {
++                *(float *) ((char *) dst->data + row * nb0 + col * nb1) = values[col - ir1_start];
++            }
++        }
++        return;
++    }
++#endif
++
+     // attempt to reduce false-sharing (does not seem to make a difference)
+     // 16 * 2, accounting for mmla kernels
+     float tmp[32];
+@@ -3145,6 +3161,8 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
+     GGML_PRINT_DEBUG("thread #%d compute-start cplan %p last-graph %d\n", state->ith, (const void *)cplan, state->last_graph);
+ #endif
+ 
++    FILE * perf = state->ith == 0 ? ggml_perf_open("cpu") : NULL;
++
+     for (int node_n = 0; node_n < cgraph->n_nodes && atomic_load_explicit(&tp->abort, memory_order_relaxed) != node_n; node_n++) {
+         struct ggml_tensor * node = cgraph->nodes[node_n];
+ 
+@@ -3159,6 +3177,8 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
+ 
+         // TODO: move fused-op detection into ggml_graph_plan so fusion decisions are made once at planning time
+         // Try fused ops, fall back to normal compute
++        const int64_t perf_start = perf ? ggml_time_us() : 0;
++        const uint64_t perf_cycles = perf ? ggml_perf_cycles() : 0;
+         const int n_fused = ggml_cpu_try_fuse_ops(cgraph, node_n, &params, cplan);
+         if (n_fused > 0) {
+             node_n += n_fused;
+@@ -3172,9 +3192,16 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
+             tp->ec    = GGML_STATUS_ABORTED;
+         }
+ 
++        const int64_t perf_barrier = perf ? ggml_time_us() : 0;
+         if (node_n + 1 < cgraph->n_nodes) {
+             ggml_barrier(state->threadpool);
+         }
++        if (perf) {
++            const int64_t end = ggml_time_us();
++            const uint64_t cycles = ggml_perf_cycles() - perf_cycles;
++            ggml_perf_row(perf, "kernel", "CPU", node, params.nth, n_fused, perf_start,
++                    end - perf_start, end - perf_barrier, cycles);
++        }
+     }
+ 
+ #ifdef GGML_USE_OPENMP
+@@ -3185,6 +3212,10 @@ static thread_ret_t ggml_graph_compute_thread(void * data) {
+ 
+     ggml_barrier(state->threadpool);
+ 
++    if (perf) {
++        fclose(perf);
++    }
++
+ #ifdef GGML_USE_CPU_RISCV64_SPACEMIT
+     ggml_backend_cpu_riscv64_spacemit_clear_numa_thread_affinity_threaded(state->ith);
+ #endif
+diff --git a/ggml/src/ggml-cpu/quants.h b/ggml/src/ggml-cpu/quants.h
+index f04be52..32ea55d 100644
+--- a/ggml/src/ggml-cpu/quants.h
++++ b/ggml/src/ggml-cpu/quants.h
+@@ -39,6 +39,8 @@ void quantize_row_iq4_nl (const float * GGML_RESTRICT x, void * GGML_RESTRICT y,
+ void quantize_row_iq4_xs (const float * GGML_RESTRICT x, void * GGML_RESTRICT y, int64_t k);
+ 
+ // Dot product
++bool ggml_cpu_iq4_mtp_vnni(void);
++void ggml_vec_dot_iq4_xs_q8_K_mtp(int n, float * s, const void * vx, const void * vy, size_t by, int ncols);
+ void ggml_vec_dot_q1_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+ void ggml_vec_dot_q2_0_q8_0(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+ void ggml_vec_dot_f8_e4m3_f32(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc);
+diff --git a/ggml/src/ggml-perf.h b/ggml/src/ggml-perf.h
+new file mode 100644
+index 0000000..1abbc15
+--- /dev/null
++++ b/ggml/src/ggml-perf.h
+@@ -0,0 +1,58 @@
++#pragma once
++
++#include "ggml.h"
++
++#include <inttypes.h>
++#include <stdio.h>
++#include <stdlib.h>
++
++#if defined(_WIN32)
++#ifndef NOMINMAX
++#define NOMINMAX
++#endif
++#ifndef WIN32_LEAN_AND_MEAN
++#define WIN32_LEAN_AND_MEAN
++#endif
++#include <windows.h>
++#endif
++
++// Opt-in experiment trace. No backend synchronization is added when disabled.
++static inline FILE * ggml_perf_open(const char * suffix) {
++    const char * prefix = getenv("GGML_PERF_CSV");
++    if (!prefix || !prefix[0]) {
++        return NULL;
++    }
++    char path[4096];
++    int n = snprintf(path, sizeof(path), "%s.%s.csv", prefix, suffix);
++    if (n < 0 || (size_t) n >= sizeof(path)) {
++        return NULL;
++    }
++    FILE * file = fopen(path, "ab+");
++    if (file) {
++        fseek(file, 0, SEEK_END);
++    }
++    if (file && ftell(file) == 0) {
++        fprintf(file, "start_us,stage,backend,node,op,weight_type,ne0,ne1,ne2,ne3,weight_bytes,threads,fused,elapsed_us,barrier_us,coordinator_cycles,instructions,ipc,stalls,frequency_mhz\n");
++    }
++    return file;
++}
++
++static inline uint64_t ggml_perf_cycles(void) {
++#if defined(_WIN32)
++    ULONG64 cycles = 0;
++    QueryThreadCycleTime(GetCurrentThread(), &cycles);
++    return cycles;
++#else
++    return 0;
++#endif
++}
++
++static inline void ggml_perf_row(FILE * file, const char * stage, const char * backend,
++        const struct ggml_tensor * node, int threads, int fused, int64_t start,
++        int64_t elapsed, int64_t barrier, uint64_t cycles) {
++    const struct ggml_tensor * weight = node->src[0];
++    fprintf(file, "%" PRId64 ",%s,%s,\"%s\",%s,%s,%" PRId64 ",%" PRId64 ",%" PRId64 ",%" PRId64 ",%zu,%d,%d,%" PRId64 ",%" PRId64 ",%" PRIu64 ",NA,NA,NA,NA\n",
++            start, stage, backend, node->name, ggml_op_name(node->op), weight ? ggml_type_name(weight->type) : "none",
++            node->ne[0], node->ne[1], node->ne[2], node->ne[3], weight ? ggml_nbytes(weight) : 0,
++            threads, fused, elapsed, barrier, cycles);
++}
+diff --git a/scripts/qwen38-bench.py b/scripts/qwen38-bench.py
+new file mode 100644
+index 0000000..24e826e
+--- /dev/null
++++ b/scripts/qwen38-bench.py
+@@ -0,0 +1,95 @@
++"""Deterministic server benchmark. Store every output and timing, including warmup."""
++import argparse
++import hashlib
++import json
++import pathlib
++import statistics
++import time
++import urllib.request
++
++
++def post(base, endpoint, data):
++    request = urllib.request.Request(base + endpoint, json.dumps(data).encode(), {"Content-Type": "application/json"})
++    return urllib.request.urlopen(request, timeout=1200)
++
++
++def main():
++    parser = argparse.ArgumentParser()
++    parser.add_argument("--base", default="http://127.0.0.1:8080")
++    parser.add_argument("--out", required=True)
++    parser.add_argument("--label", required=True)
++    parser.add_argument("--tokens", type=int, default=96)
++    parser.add_argument("--prompt-tokens", type=int, default=256)
++    parser.add_argument("--repetitions", type=int, default=3)
++    parser.add_argument("--cache", action="store_true")
++    parser.add_argument("--salt", default="")
++    parser.add_argument("--workload", choices=("repeat", "code", "prose"), default="repeat")
++    args = parser.parse_args()
++    output = pathlib.Path(args.out)
++    if output.exists():
++        raise FileExistsError(output)
++    deadline = time.monotonic() + 180
++    while True:
++        try:
++            with urllib.request.urlopen(args.base + "/health", timeout=3) as response:
++                if json.load(response).get("status") == "ok":
++                    break
++        except (OSError, ValueError):
++            pass
++        if time.monotonic() > deadline:
++            raise TimeoutError("Server was not ready within 180 seconds")
++        time.sleep(1)
++    corpus = args.salt + "// Implement a stable merge sort in Python with type hints. Explain complexity.\n" * 12000
++    if args.workload != "repeat":
++        prompts = {
++            "code": "Write a stable merge_sort(values: list[int]) -> list[int] in Python. Do not call sorted or list.sort. Include assertions for empty input, negative numbers, and duplicates. Explain its time and space complexity after the code.",
++            "prose": "Explica en espa├▒ol c├│mo ayuda un ├¡ndice B-tree a buscar filas en una base de datos. Usa una analog├¡a con una biblioteca, desarrolla un ejemplo concreto y explica los costes de lectura, escritura y memoria. Escribe una explicaci├│n extensa y clara."
++        }
++        with post(args.base, "/apply-template", {"messages": [{"role": "user", "content": prompts[args.workload]}],
++                                                "chat_template_kwargs": {"enable_thinking": False}, "add_generation_prompt": True}) as response:
++            corpus = json.load(response)["prompt"]
++    with post(args.base, "/tokenize", {"content": corpus, "add_special": True}) as response:
++        tokens = json.load(response)["tokens"]
++        if args.workload == "repeat":
++            tokens = tokens[:args.prompt_tokens]
++    report = {"label": args.label, "command": vars(args), "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
++              "prompt_sha256": hashlib.sha256(json.dumps(tokens).encode()).hexdigest(), "prompt_actual_n": len(tokens), "prompt": tokens, "samples": []}
++    for repetition in range(args.repetitions + 1):
++        body = {"prompt": tokens, "n_predict": args.tokens, "temperature": 0, "seed": 42,
++                "cache_prompt": args.cache, "ignore_eos": True, "stream": True}
++        start = time.perf_counter()
++        first = None
++        content = ""
++        final = None
++        with post(args.base, "/completion", body) as response:
++            for raw in response:
++                if not raw.startswith(b"data: "):
++                    continue
++                if raw[6:].strip() == b"[DONE]":
++                    continue
++                event = json.loads(raw[6:])
++                if event.get("content"):
++                    if first is None:
++                        first = time.perf_counter()
++                    content += event["content"]
++                if "timings" in event:
++                    final = event
++        if final is None or final["timings"]["predicted_n"] < args.tokens:
++            raise RuntimeError(f"Incomplete generation: {final}")
++        sample = {"repetition": repetition, "warmup": repetition == 0, "ttft_ms": (first - start) * 1000 if first else None,
++                  "start_monotonic": start,
++                  "wall_ms": (time.perf_counter() - start) * 1000, "content": content, "final": final}
++        report["samples"].append(sample)
++        measured = report["samples"][1:]
++        if measured:
++            rates = [s["final"]["timings"]["predicted_per_second"] for s in measured]
++            report["summary"] = {"decode_median_tps": statistics.median(rates), "decode_min_tps": min(rates),
++                                 "decode_max_tps": max(rates), "decode_stdev_tps": statistics.stdev(rates) if len(rates) > 1 else 0,
++                                 "ttft_median_ms": statistics.median(s["ttft_ms"] for s in measured)}
++        output.parent.mkdir(parents=True, exist_ok=True)
++        output.write_text(json.dumps(report, indent=2), encoding="utf-8")
++        print(json.dumps({"rep": repetition, "ttft_ms": sample["ttft_ms"], "timings": final["timings"]}), flush=True)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/qwen38-build.ps1 b/scripts/qwen38-build.ps1
+new file mode 100644
+index 0000000..d262186
+--- /dev/null
++++ b/scripts/qwen38-build.ps1
+@@ -0,0 +1,37 @@
++param([int]$Jobs = 4, [switch]$Tests, [switch]$Symbols, [string[]]$Targets = @('llama-server', 'llama-bench', 'llama-perplexity', 'llama-quantize'))
++$ErrorActionPreference = 'Stop'
++$project = 'C:\Users\user\Documents\prject_local_AI'
++$tools = Get-Content -LiteralPath (Join-Path $project 'config\inference-toolchain.local.json') -Raw | ConvertFrom-Json
++$build = Join-Path $tools.installRoot 'build-Qwen38-sm89'
++$dev = & $env:ComSpec /d /s /c "`"$($tools.vcvars)`" >nul && set"
++if ($LASTEXITCODE -ne 0) { throw 'MSVC environment failed' }
++foreach ($line in $dev) {
++    if ($line -match '^(Path|INCLUDE|LIB|LIBPATH|VCToolsInstallDir|WindowsSdkDir|WindowsSDKVersion)=(.*)$') {
++        [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process')
++    }
++}
++$env:CUDA_PATH = $tools.cudaRoot
++if ($Symbols) {
++    & $tools.cmake -S (Split-Path -Parent $PSScriptRoot) -B $build `
++        '-DCMAKE_C_FLAGS_RELEASE=/O2 /Ob2 /DNDEBUG /Zi' `
++        '-DCMAKE_CXX_FLAGS_RELEASE=/O2 /Ob2 /DNDEBUG /Zi' `
++        '-DCMAKE_SHARED_LINKER_FLAGS_RELEASE=/DEBUG:FULL /OPT:REF /OPT:ICF' `
++        '-DCMAKE_EXE_LINKER_FLAGS_RELEASE=/DEBUG:FULL /OPT:REF /OPT:ICF'
++    if ($LASTEXITCODE -ne 0) { throw 'Symbol configuration failed' }
++}
++if ($Tests) {
++    & $tools.cmake -S (Split-Path -Parent $PSScriptRoot) -B $build -DLLAMA_BUILD_TESTS=ON
++    if ($LASTEXITCODE -ne 0) { throw 'Test configuration failed' }
++    $Targets += 'test-backend-ops'
++}
++& $tools.cmake --build $build --target @Targets --parallel $Jobs
++if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
++$sourceRoot = Split-Path -Parent $PSScriptRoot
++$provenance = @{
++    createdUtc = [DateTime]::UtcNow.ToString('o')
++    commit = ((& git -C $sourceRoot rev-parse HEAD) -join "`n")
++    runtimeDiff = ((& git -C $sourceRoot diff HEAD -- common ggml src tools) -join "`n")
++    targets = $Targets
++    jobs = $Jobs
++}
++$provenance | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $build 'bin/qwen38-build.json') -Encoding utf8
+diff --git a/scripts/qwen38-etw/.gitignore b/scripts/qwen38-etw/.gitignore
+new file mode 100644
+index 0000000..4ded7c4
+--- /dev/null
++++ b/scripts/qwen38-etw/.gitignore
+@@ -0,0 +1,2 @@
++/bin/
++/obj/
+diff --git a/scripts/qwen38-etw/Program.cs b/scripts/qwen38-etw/Program.cs
+new file mode 100644
+index 0000000..7790ef7
+--- /dev/null
++++ b/scripts/qwen38-etw/Program.cs
+@@ -0,0 +1,95 @@
++using System;
++using System.Collections.Generic;
++using System.Globalization;
++using System.IO;
++using System.Linq;
++using System.Text.Json;
++using Microsoft.Diagnostics.Symbols;
++using Microsoft.Diagnostics.Tracing;
++using Microsoft.Diagnostics.Tracing.Etlx;
++using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
++
++if (args.Length < 2) {
++    Console.Error.WriteLine("usage: qwen38-etw trace.etl output-prefix [after-ms]");
++    return 1;
++}
++double after = args.Length > 2 ? double.Parse(args[2], CultureInfo.InvariantCulture) : 0;
++using var log = TraceLog.OpenOrConvert(args[0]);
++string symbolCache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Qwen38Symbols");
++string symbolPath = Environment.GetEnvironmentVariable("_NT_SYMBOL_PATH") ??
++    "srv*" + symbolCache + "*https://msdl.microsoft.com/download/symbols";
++if (args.Length > 3) {
++    symbolPath = Path.GetFullPath(args[3]) + ";" + symbolPath;
++}
++using var symbols = new SymbolReader(Console.Error, symbolPath);
++bool memoryOnly = args.Length > 4 && args[4] == "memory";
++foreach (var module in log.ModuleFiles) {
++    if (!memoryOnly && (module.Name.StartsWith("ggml") || module.Name.StartsWith("llama") ||
++        module.Name.StartsWith("ntdll") || module.Name.StartsWith("ntoskrnl") || module.Name.StartsWith("vcruntime"))) {
++        log.CodeAddresses.LookupSymbolsForModule(symbols, module);
++    }
++}
++var counts = new Dictionary<(string Function, string Source), long>();
++var eventNames = new Dictionary<string, long>();
++var sources = new Dictionary<string, string>();
++var hardFaults = new List<object>();
++var faultEvents = new Dictionary<string, long>();
++long timer = 0;
++foreach (var data in log.Events) {
++    string name = data.EventName;
++    if (name.Contains("PMC", StringComparison.OrdinalIgnoreCase) || name.Contains("Collection")) {
++        eventNames[name] = eventNames.GetValueOrDefault(name) + 1;
++        if (sources.Count < 12 && name.Contains("Collection")) {
++            sources[name + sources.Count] = data.ToString();
++        }
++    }
++    if (!data.ProcessName.Equals("llama-server", StringComparison.OrdinalIgnoreCase) || data.TimeStampRelativeMSec < after) {
++        continue;
++    }
++    if (data is MemoryPageFaultTraceData) {
++        faultEvents[name] = faultEvents.GetValueOrDefault(name) + 1;
++    }
++    if (data is MemoryHardFaultTraceData hard) {
++        var process = log.Processes.GetProcess(data.ProcessID, data.TimeStampRelativeMSec);
++        object? virtualAddress = data.PayloadByName("VirtualAddress");
++        var module = virtualAddress == null ? null :
++            process?.LoadedModules.GetModuleContainingAddress(Convert.ToUInt64(virtualAddress), data.TimeStampRelativeMSec);
++        hardFaults.Add(new { time_ms = data.TimeStampRelativeMSec, module = module?.ModuleFile.FilePath,
++                            file_name = hard.FileName, bytes = hard.ByteCount, payload = data.ToString() });
++    }
++    bool pmc = name.Contains("PMCSample", StringComparison.OrdinalIgnoreCase);
++    bool sample = name.Equals("PerfInfo/Sample", StringComparison.OrdinalIgnoreCase);
++    if (!pmc && !sample) {
++        continue;
++    }
++    object? pointer = data.PayloadByName("InstructionPointer");
++    if (pointer == null) {
++        continue;
++    }
++    var address = data is SampledProfileTraceData sampled ? sampled.IntructionPointerCodeAddress() :
++                  data is PMCCounterProfTraceData counter ? counter.IntructionPointerCodeAddress() : data.CallStack()?.CodeAddress;
++    string function = address?.FullMethodName ?? "";
++    if (string.IsNullOrEmpty(function)) {
++        function = address?.ToString() ?? "unknown";
++    }
++    string source = pmc ? Convert.ToString(data.PayloadByName("ProfileSource")) ?? "unknown-pmc" : "timer";
++    counts[(function, source)] = counts.GetValueOrDefault((function, source)) + 1;
++    if (sample) {
++        ++timer;
++    }
++}
++static string Csv(string text) => "\"" + text.Replace("\"", "\"\"") + "\"";
++using (var csv = new StreamWriter(args[1] + ".functions.csv")) {
++    csv.WriteLine("function,source,samples,percent_of_timer_samples");
++    foreach (var item in counts.OrderByDescending(kv => kv.Value)) {
++        double percent = item.Key.Source == "timer" && timer > 0 ? 100.0 * item.Value / timer : 0;
++        csv.WriteLine($"{Csv(item.Key.Function)},{Csv(item.Key.Source)},{item.Value},{percent.ToString("F6", CultureInfo.InvariantCulture)}");
++    }
++}
++File.WriteAllText(args[1] + ".metadata.json", JsonSerializer.Serialize(new {
++    after_ms = after, timer_samples = timer, event_names = eventNames, source_examples = sources,
++    hard_fault_count = hardFaults.Count, hard_faults = hardFaults, page_fault_events = faultEvents,
++    limitation = "PMC sample counts require validated source IDs and sampling intervals before deriving IPC or stall ratios. Timer percentages are exclusive samples across all server threads."
++}, new JsonSerializerOptions { WriteIndented = true }));
++Console.WriteLine($"Timer samples: {timer}; hard faults: {hardFaults.Count}; groups: {counts.Count}");
++return 0;
+diff --git a/scripts/qwen38-etw/build.ps1 b/scripts/qwen38-etw/build.ps1
+new file mode 100644
+index 0000000..d35186c
+--- /dev/null
++++ b/scripts/qwen38-etw/build.ps1
+@@ -0,0 +1,24 @@
++$ErrorActionPreference = 'Stop'
++$csc = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/2022/BuildTools/MSBuild/Current/Bin/Roslyn/csc.exe'
++$runtime = Join-Path $env:ProgramFiles 'dotnet/shared/Microsoft.NETCore.App/8.0.14'
++$package = Join-Path $env:USERPROFILE '.nuget/packages/microsoft.diagnostics.tracing.traceevent/3.1.16'
++$output = Join-Path $PSScriptRoot 'bin'
++New-Item -ItemType Directory -Force -Path $output | Out-Null
++$references = @(Get-ChildItem -LiteralPath $runtime -Filter '*.dll' | ForEach-Object {
++    try {
++        [Reflection.AssemblyName]::GetAssemblyName($_.FullName) | Out-Null
++        '/r:"' + $_.FullName + '"'
++    } catch [System.BadImageFormatException] { }
++})
++$references += '/r:"' + (Join-Path $package 'lib/netstandard2.0/Microsoft.Diagnostics.Tracing.TraceEvent.dll') + '"'
++$references += '/r:"' + (Join-Path $package 'lib/netstandard2.0/Microsoft.Diagnostics.FastSerialization.dll') + '"'
++$rsp = Join-Path $output 'compile.rsp'
++@('/nostdlib+', '/langversion:latest', '/nullable:enable', '/target:exe', '/platform:x64',
++  ('/out:"' + (Join-Path $output 'qwen38-etw.dll') + '"'), ('"' + (Join-Path $PSScriptRoot 'Program.cs') + '"')) + $references |
++    Set-Content -LiteralPath $rsp -Encoding utf8
++& $csc /noconfig ('@' + $rsp)
++if ($LASTEXITCODE -ne 0) { throw 'ETW consumer build failed' }
++Copy-Item -Path (Join-Path $package 'lib/netstandard2.0/*.dll') -Destination $output
++Copy-Item -LiteralPath (Join-Path $package 'build/native/amd64') -Destination $output -Recurse -Force
++'{"runtimeOptions":{"tfm":"net8.0","framework":{"name":"Microsoft.NETCore.App","version":"8.0.14"}}}' |
++    Set-Content -LiteralPath (Join-Path $output 'qwen38-etw.runtimeconfig.json') -Encoding utf8
+diff --git a/scripts/qwen38-etw/qwen38-etw.csproj b/scripts/qwen38-etw/qwen38-etw.csproj
+new file mode 100644
+index 0000000..4e7ddd1
+--- /dev/null
++++ b/scripts/qwen38-etw/qwen38-etw.csproj
+@@ -0,0 +1,12 @@
++<Project Sdk="Microsoft.NET.Sdk">
++  <PropertyGroup>
++    <OutputType>Exe</OutputType>
++    <TargetFramework>net8.0-windows</TargetFramework>
++    <ImplicitUsings>enable</ImplicitUsings>
++    <Nullable>enable</Nullable>
++    <PlatformTarget>x64</PlatformTarget>
++  </PropertyGroup>
++  <ItemGroup>
++    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16"/>
++  </ItemGroup>
++</Project>
+diff --git a/scripts/qwen38-memory.wprp b/scripts/qwen38-memory.wprp
+new file mode 100644
+index 0000000..450c18d
+--- /dev/null
++++ b/scripts/qwen38-memory.wprp
+@@ -0,0 +1,27 @@
++<?xml version="1.0" encoding="utf-8"?>
++<WindowsPerformanceRecorder Version="1.0">
++  <Profiles>
++    <SystemCollector Id="Collector" Name="Qwen38Memory">
++      <BufferSize Value="1024"/>
++      <Buffers Value="64"/>
++    </SystemCollector>
++    <SystemProvider Id="Kernel">
++      <Keywords>
++        <Keyword Value="ProcessThread"/>
++        <Keyword Value="Loader"/>
++        <Keyword Value="AllFaults"/>
++        <Keyword Value="HardFaults"/>
++        <Keyword Value="FileIO"/>
++        <Keyword Value="FileIOInit"/>
++        <Keyword Value="Filename"/>
++        <Keyword Value="MemoryInfo"/>
++        <Keyword Value="MemoryInfoWS"/>
++      </Keywords>
++    </SystemProvider>
++    <Profile Id="QwenMemory.Verbose.File" Name="QwenMemory" Description="Hard and soft faults, file names and memory pressure" LoggingMode="File" DetailLevel="Verbose">
++      <Collectors>
++        <SystemCollectorId Value="Collector"><SystemProviderId Value="Kernel"/></SystemCollectorId>
++      </Collectors>
++    </Profile>
++  </Profiles>
++</WindowsPerformanceRecorder>
+diff --git a/scripts/qwen38-pmc.wprp b/scripts/qwen38-pmc.wprp
+new file mode 100644
+index 0000000..53840f8
+--- /dev/null
++++ b/scripts/qwen38-pmc.wprp
+@@ -0,0 +1,49 @@
++<?xml version="1.0" encoding="utf-8"?>
++<WindowsPerformanceRecorder Version="1.0">
++  <Profiles>
++    <SystemCollector Id="Collector" Name="Qwen38PMC">
++      <BufferSize Value="1024"/>
++      <Buffers Value="128"/>
++    </SystemCollector>
++    <SystemProvider Id="Kernel">
++      <Keywords>
++        <Keyword Value="ProcessThread"/>
++        <Keyword Value="Loader"/>
++        <Keyword Value="SampledProfile"/>
++        <Keyword Value="PmcProfile"/>
++        <Keyword Value="CSwitch"/>
++        <Keyword Value="HardFaults"/>
++        <Keyword Value="DiskIO"/>
++        <Keyword Value="DiskIOInit"/>
++      </Keywords>
++      <Stacks>
++        <Stack Value="SampledProfile"/>
++        <Stack Value="PmcInterrupt"/>
++      </Stacks>
++    </SystemProvider>
++    <MicroArchitecturalConfig Id="Phoenix">
++      <ProfileSources Architecture="AMD" Family="25" Model="116" Stepping="1">
++        <ProfileSource Name="Qwen38Cycles" Event="0x76" Unit="0x00" Interval="1000003" AllowsHalt="false" Persist="false"/>
++        <ProfileSource Name="Qwen38FpSchedulerStalls" Event="0xae" Unit="0x40" Interval="1000003" AllowsHalt="false" Persist="false"/>
++        <ProfileSource Name="Qwen38LoadQueueStalls" Event="0xae" Unit="0x02" Interval="1000003" AllowsHalt="false" Persist="false"/>
++      </ProfileSources>
++    </MicroArchitecturalConfig>
++    <HardwareCounter Id="Counters" Strict="true">
++      <MicroArchitecturalConfigId Value="Phoenix"/>
++      <SampledCounters>
++        <SampledCounter Value="Qwen38Cycles" Interval="10000019"/>
++        <SampledCounter Value="FRRetiredx86Instructions" Interval="10000019"/>
++        <SampledCounter Value="Qwen38FpSchedulerStalls" Interval="10000019"/>
++        <SampledCounter Value="Qwen38LoadQueueStalls" Interval="10000019"/>
++      </SampledCounters>
++    </HardwareCounter>
++    <Profile Id="Qwen38.Verbose.File" Name="Qwen38" Description="Phoenix CPU sampling, PMCs and hard faults" LoggingMode="File" DetailLevel="Verbose">
++      <Collectors>
++        <SystemCollectorId Value="Collector">
++          <SystemProviderId Value="Kernel"/>
++          <HardwareCounterId Value="Counters"/>
++        </SystemCollectorId>
++      </Collectors>
++    </Profile>
++  </Profiles>
++</WindowsPerformanceRecorder>
+diff --git a/scripts/qwen38_browser_pressure.mjs b/scripts/qwen38_browser_pressure.mjs
+new file mode 100644
+index 0000000..4998295
+--- /dev/null
++++ b/scripts/qwen38_browser_pressure.mjs
+@@ -0,0 +1,49 @@
++// Controlled browser-residency experiment; owns and closes only its own context.
++import { createRequire } from 'node:module';
++import { spawn } from 'node:child_process';
++import { fileURLToPath } from 'node:url';
++import path from 'node:path';
++import fs from 'node:fs';
++
++const project = 'C:/Users/user/Documents/prject_local_AI';
++const require = createRequire(`${project}/chat/package.json`);
++const { chromium } = require('playwright');
++const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
++const label = process.argv[2] || 'windows-browser-512m';
++const metadata = path.join(root, 'reports/2026-11-01-qwen38', `${label}.browser.json`);
++if (fs.existsSync(metadata)) throw new Error(`Refusing to overwrite ${metadata}`);
++const browserCandidates = [
++    path.join(process.env.ProgramFiles || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
++    path.join(process.env['ProgramFiles(x86)'] || '', 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
++    path.join(process.env.ProgramFiles || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
++    path.join(process.env['ProgramFiles(x86)'] || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
++    path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
++].filter((candidate) => candidate && fs.existsSync(candidate));
++if (!browserCandidates.length) throw new Error('No Edge or Chrome executable found');
++const browser = await chromium.launch({ headless: true, executablePath: browserCandidates[0], args: ['--disable-gpu'] });
++try {
++    const page = await browser.newPage();
++    await page.setContent('<!doctype html><title>Controlled RAM workload</title><p>512 MiB retained.</p>');
++    const allocated = await page.evaluate(() => {
++        globalThis.resident = new Uint8Array(512 * 1024 * 1024);
++        for (let i = 0; i < resident.length; i += 4096) resident[i] = 123;
++        globalThis.touch = setInterval(() => {
++            for (let i = 0; i < resident.length; i += 4096) resident[i] ^= 1;
++        }, 5000);
++        return resident.byteLength;
++    });
++    fs.writeFileSync(metadata, JSON.stringify({ created_utc: new Date().toISOString(),
++        browser_version: browser.version(), allocated_bytes: allocated, headless: true,
++        gpu_disabled: true, note: 'Synthetic local Chromium page, one retained 512 MiB typed array; no user browser session is modified.' }, null, 2));
++    const child = spawn('python', ['scripts/qwen38_experiment.py', '--label', label,
++        '--model', `${project}/models/qwen38-27b-perf-iq4_xs-floor4.gguf`,
++        '--env', 'LLAMA_MMAP_TRIM_GPU=1', '--env', 'LLAMA_ARG_CACHE_RECURRENT_PREFIX=1'],
++        { cwd: root, windowsHide: true, stdio: 'inherit' });
++    const code = await new Promise((resolve, reject) => {
++        child.once('error', reject);
++        child.once('exit', resolve);
++    });
++    if (code !== 0) throw new Error(`Benchmark exited ${code}`);
++} finally {
++    await browser.close();
++}
+diff --git a/scripts/qwen38_cache_budget_test.py b/scripts/qwen38_cache_budget_test.py
+new file mode 100644
+index 0000000..204538f
+--- /dev/null
++++ b/scripts/qwen38_cache_budget_test.py
+@@ -0,0 +1,67 @@
++"""Two-request cache-budget check against a running server."""
++import json
++import sys
++import urllib.request
++
++BASE = "http://127.0.0.1:8080"
++filler = ("La arquitectura hibrida combina capas DeltaNet y atencion completa. " * 260)
++system = "Eres un asistente breve. " + filler
++tools = [{
++    "type": "function",
++    "function": {
++        "name": "leer",
++        "description": "Lee un archivo",
++        "parameters": {
++            "type": "object",
++            "properties": {"ruta": {"type": "string"}},
++            "required": ["ruta"],
++            "additionalProperties": False,
++        },
++        "strict": True,
++    },
++}]
++a = [
++    {"role": "system", "content": system},
++    {"role": "user", "content": "Responde solo con la palabra OK."},
++]
++b = a + [
++    {"role": "assistant", "content": "", "tool_calls": [{
++        "id": "call_1", "type": "function",
++        "function": {"name": "leer", "arguments": "{\"ruta\":\"x.txt\"}"},
++    }]},
++    {"role": "tool", "tool_call_id": "call_1", "content": "contenido del archivo"},
++    {"role": "user", "content": "Responde solo con la palabra LISTO."},
++]
++
++
++def post(messages):
++    body = {
++        "model": "x", "messages": messages, "stream": False, "cache_prompt": True,
++        "max_tokens": 1, "temperature": 0, "tools": tools, "tool_choice": "auto",
++        "parallel_tool_calls": True,
++    }
++    req = urllib.request.Request(BASE + "/v1/chat/completions", data=json.dumps(body).encode(),
++                                 headers={"Content-Type": "application/json"})
++    with urllib.request.urlopen(req, timeout=300) as response:
++        return json.load(response)
++
++
++def row(name, data):
++    timings = data.get("timings", {})
++    print(json.dumps({
++        "name": name,
++        "cache_n": timings.get("cache_n"),
++        "prompt_n": timings.get("prompt_n"),
++        "prompt_ms": timings.get("prompt_ms"),
++        "content": data.get("choices", [{}])[0].get("message", {}).get("content", "")[:20],
++    }, ensure_ascii=False), flush=True)
++
++
++try:
++    row("first", post(a))
++    row("second", post(b))
++    with urllib.request.urlopen(BASE + "/health", timeout=10) as health:
++        print(json.dumps({"health": json.load(health)}, ensure_ascii=False), flush=True)
++except Exception as exc:
++    print(json.dumps({"error": str(exc)}), flush=True)
++    sys.exit(1)
+diff --git a/scripts/qwen38_cache_compare.py b/scripts/qwen38_cache_compare.py
+new file mode 100644
+index 0000000..2eb09d3
+--- /dev/null
++++ b/scripts/qwen38_cache_compare.py
+@@ -0,0 +1,36 @@
++import argparse
++import json
++import pathlib
++import statistics
++
++parser = argparse.ArgumentParser()
++parser.add_argument("reference", type=pathlib.Path)
++parser.add_argument("candidate", type=pathlib.Path)
++parser.add_argument("--tail", type=int, default=4)
++parser.add_argument("--allow-binary-change", action="store_true")
++args = parser.parse_args()
++reference_manifest = json.loads((args.reference / "manifest.json").read_text())
++candidate_manifest = json.loads((args.candidate / "manifest.json").read_text())
++same_binary = reference_manifest["binary_sha256"] == candidate_manifest["binary_sha256"]
++assert same_binary or args.allow_binary_change
++results = []
++for n in (6000, 12000, 25000):
++    ref = json.loads((args.reference / f"cache-{n}.json").read_text())
++    cur = json.loads((args.candidate / f"cache-{n}.json").read_text())
++    assert ref["prompt_sha256"] == cur["prompt_sha256"]
++    baseline_ms = ref["summary"]["ttft_median_ms"]
++    candidate_ms = cur["summary"]["ttft_median_ms"]
++    result = {"context": n, "reference_ttft_ms": baseline_ms, "candidate_ttft_ms": candidate_ms,
++              "candidate_range_ms": [min(s["ttft_ms"] for s in cur["samples"][1:]), max(s["ttft_ms"] for s in cur["samples"][1:])],
++              "speedup": baseline_ms / candidate_ms, "cache_n": [s["final"]["timings"]["cache_n"] for s in cur["samples"][1:]],
++              "same_output": all(s["content"] == ref["samples"][0]["content"] for s in cur["samples"])}
++    results.append(result)
++report = {"same_binary": same_binary, "tail_tokens": args.tail, "results": results, "checkpoint_mib": 149.626,
++          "passed": all(r["same_output"] and r["speedup"] > 10 and min(r["cache_n"]) == r["context"] - args.tail for r in results),
++          "decision": "retain resident-KV recurrent prefix cache", "next_experiment": "GPU-upload page retirement and native Windows large-page allocations"}
++for label, directory in (("reference", args.reference), ("candidate", args.candidate)):
++    memory = json.loads((directory / "memory.json").read_text())
++    report[label + "_peak_working_set_mib"] = max(s["working_set"] for s in memory) / 1048576
++args.candidate.with_name(args.candidate.name + "-comparison.json").write_text(json.dumps(report, indent=2))
++print(json.dumps(report, indent=2))
++assert report["passed"]
+diff --git a/scripts/qwen38_compare.py b/scripts/qwen38_compare.py
+new file mode 100644
+index 0000000..4ad8509
+--- /dev/null
++++ b/scripts/qwen38_compare.py
+@@ -0,0 +1,21 @@
++import argparse
++import json
++import pathlib
++
++parser = argparse.ArgumentParser()
++parser.add_argument("baseline", type=pathlib.Path)
++parser.add_argument("candidate", type=pathlib.Path)
++parser.add_argument("--decision", required=True)
++parser.add_argument("--next", required=True)
++args = parser.parse_args()
++baseline = json.loads(args.baseline.read_text())
++candidate = json.loads(args.candidate.read_text())
++assert baseline["prompt_sha256"] == candidate["prompt_sha256"]
++assert baseline["command"]["tokens"] == candidate["command"]["tokens"]
++reference = baseline["summary"]["decode_median_tps"]
++result = {"baseline": str(args.baseline), "candidate": str(args.candidate), "baseline_summary": baseline["summary"],
++          "candidate_summary": candidate["summary"], "change_percent": (candidate["summary"]["decode_median_tps"] / reference - 1) * 100,
++          "same_greedy_output": all(sample["content"] == baseline["samples"][0]["content"] for sample in candidate["samples"]),
++          "decision": args.decision, "next_experiment": args.next}
++args.candidate.with_name("comparison.json").write_text(json.dumps(result, indent=2))
++print(json.dumps(result, indent=2))
+diff --git a/scripts/qwen38_cuda_experiment.py b/scripts/qwen38_cuda_experiment.py
+new file mode 100644
+index 0000000..22c3b41
+--- /dev/null
++++ b/scripts/qwen38_cuda_experiment.py
+@@ -0,0 +1,48 @@
++"""Rebuild one CUDA geometry variable, then run isolated speed/quality checks."""
++import argparse
++import json
++import pathlib
++import subprocess
++import sys
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++REPORT = ROOT / "reports/2026-11-01-qwen38"
++MODEL = r"C:\Users\user\Documents\prject_local_AI\models\qwen38-27b-perf-iq4_xs-floor4.gguf"
++parser = argparse.ArgumentParser()
++parser.add_argument("--variant", required=True, choices=("mmvq2", "mmvq2-verify", "mmvq2-iq4", "mmvq4"))
++parser.add_argument("--build-only", action="store_true")
++args = parser.parse_args()
++label = "cuda-" + args.variant
++build_log = REPORT / (label + ".build.log")
++if build_log.exists():
++    raise FileExistsError(build_log)
++relative = "ggml/src/ggml-cuda/mmvq.cu"
++source = subprocess.check_output(["git", "show", "dde879b:" + relative], cwd=ROOT).decode()
++begin = source.index("static constexpr __host__ __device__ int calc_nwarps(")
++end = source.index("} else if (table_id == MMVQ_PARAMETERS_GCN)", begin)
++section = source[begin:end]
++assert section.count("return 4;") == 1
++replacement = {"mmvq2": "return 2;", "mmvq2-verify": "return ncols_dst == 3 ? 2 : 4;",
++               "mmvq2-iq4": "return type == GGML_TYPE_IQ4_XS ? 2 : 4;", "mmvq4": "return 4;"}[args.variant]
++section = section.replace("return 4;", replacement)
++(ROOT / relative).write_text(source[:begin] + section + source[end:], encoding="utf-8")
++diff = subprocess.check_output(["git", "diff", "HEAD", "--", "ggml/src/ggml-cuda"], cwd=ROOT, text=True)
++(REPORT / (label + ".source.patch")).write_text(diff)
++command = ["pwsh", "-NoProfile", "-File", str(ROOT / "scripts/qwen38-build.ps1"), "-Jobs", "4"]
++(REPORT / (label + ".build.json")).write_text(json.dumps({"command": command, "variant": args.variant}, indent=2))
++with build_log.open("w") as stream:
++    subprocess.run(command, cwd=ROOT, stdout=stream, stderr=stream, check=True)
++print("Built", args.variant, flush=True)
++if not args.build_only:
++    base = [sys.executable, str(ROOT / "scripts/qwen38_experiment.py"), "--model", MODEL,
++            "--env", "LLAMA_MMAP_TRIM_GPU=1"]
++    subprocess.run(base + ["--label", label], cwd=ROOT, check=True)
++    subprocess.run(base + ["--label", label + "-quality", "--quality-task"], cwd=ROOT, check=True)
++    # Record the strict comparison even when it fails; the variant must then be rejected.
++    comparison = subprocess.run([sys.executable, str(ROOT / "scripts/qwen38_quality_compare.py"),
++                    str(REPORT / "quant-iq4xs-quality/quality.json"),
++                    str(REPORT / (label + "-quality/quality.json"))], cwd=ROOT)
++    subprocess.run([sys.executable, str(ROOT / "scripts/qwen38_ppl.py"), "--label", label + "-ppl",
++                    "--model", MODEL, "--context", "64", "--batch", "3", "--ubatch", "3"], cwd=ROOT, check=True)
++    if comparison.returncode:
++        raise SystemExit("Strict logits gate failed; retain measured rejection and restore/control the next design")
+diff --git a/scripts/qwen38_etw_profile.py b/scripts/qwen38_etw_profile.py
+new file mode 100644
+index 0000000..41e3473
+--- /dev/null
++++ b/scripts/qwen38_etw_profile.py
+@@ -0,0 +1,50 @@
++"""Record an isolated experiment with ETW PMCs; never use profiled timings as A/B results."""
++import argparse
++import hashlib
++import json
++import pathlib
++import shutil
++import subprocess
++import sys
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++parser = argparse.ArgumentParser()
++parser.add_argument("--label", required=True)
++parser.add_argument("--model", required=True)
++parser.add_argument("--env", action="append", default=[])
++parser.add_argument("--after-ms", type=int, default=25000)
++args = parser.parse_args()
++report_root = ROOT / "reports/2026-11-01-qwen38"
++prefix = report_root / args.label
++symbol_dir = report_root / (args.label + ".symbols")
++symbol_dir.mkdir()
++for pdb in (ROOT.parent / "build-Qwen38-sm89/bin").glob("*.pdb"):
++    shutil.copy2(pdb, symbol_dir / pdb.name)
++status = subprocess.check_output(["wpr", "-status"], text=True)
++if "WPR is not recording" not in status:
++    raise RuntimeError("Another WPR session is active; refusing to interfere")
++profile = ROOT / "scripts/qwen38-pmc.wprp"
++command = [sys.executable, str(ROOT / "scripts/qwen38_experiment.py"), "--label", args.label,
++           "--model", args.model, "--env", "LLAMA_MMAP_TRIM_GPU=1"]
++for entry in args.env:
++    command.extend(["--env", entry])
++start = ["wpr", "-start", str(profile) + "!Qwen38", "-filemode"]
++stop = ["wpr", "-stop", str(prefix) + ".etl", args.label]
++metadata = {"start_command": start, "experiment_command": command, "stop_command": stop,
++            "profile_sha256": hashlib.sha256(profile.read_bytes()).hexdigest(),
++            "sources": ["https://learn.microsoft.com/en-us/windows-hardware/test/wpt/recording-pmu-events",
++                        "https://github.com/amd/ZenDNN/blob/main/benchdnn/doc/perf_counters.md"],
++            "warning": "ETW sampling adds overhead. Use separate unprofiled experiments for performance decisions."}
++subprocess.run(start, check=True)
++try:
++    inventory = subprocess.check_output(["wpr", "-pmcsources"], text=True)
++    prefix.with_suffix(".pmcsources.txt").write_text(inventory)
++    subprocess.run(command, check=True)
++finally:
++    subprocess.run(stop, check=True)
++    prefix.with_suffix(".capture.json").write_text(json.dumps(metadata, indent=2))
++consumer = ROOT / "scripts/qwen38-etw/bin/qwen38-etw.dll"
++with prefix.with_suffix(".export.log").open("w") as log:
++    subprocess.run(["dotnet", str(consumer), str(prefix) + ".etl", str(prefix), str(args.after_ms),
++                    str(symbol_dir)],
++                   stdout=log, stderr=log, check=True)
+diff --git a/scripts/qwen38_experiment.py b/scripts/qwen38_experiment.py
+new file mode 100644
+index 0000000..d0c520c
+--- /dev/null
++++ b/scripts/qwen38_experiment.py
+@@ -0,0 +1,194 @@
++"""Launch one isolated variant with the fixed reference server configuration."""
++import argparse
++import ctypes
++import hashlib
++import json
++import os
++import pathlib
++import socket
++import subprocess
++import sys
++import threading
++import time
++from ctypes import wintypes
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++PROJECT = pathlib.Path(r"C:\Users\user\Documents\prject_local_AI")
++
++
++class MemoryCounters(ctypes.Structure):
++    _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD)] + [
++        (key, ctypes.c_size_t) for key in ("PeakWorkingSetSize", "WorkingSetSize", "QuotaPeakPagedPoolUsage",
++        "QuotaPagedPoolUsage", "QuotaPeakNonPagedPoolUsage", "QuotaNonPagedPoolUsage", "PagefileUsage",
++        "PeakPagefileUsage", "PrivateUsage")]
++
++
++class MemoryStatus(ctypes.Structure):
++    _fields_ = [("length", wintypes.DWORD), ("load", wintypes.DWORD)] + [
++        (key, ctypes.c_ulonglong) for key in ("total_phys", "avail_phys", "total_pagefile",
++        "avail_pagefile", "total_virtual", "avail_virtual", "avail_extended_virtual")]
++
++
++class GpuMemory(ctypes.Structure):
++    _fields_ = [(key, ctypes.c_ulonglong) for key in ("total", "free", "used")]
++
++
++def monitor(process, samples, stop):
++    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
++    kernel.OpenProcess.restype = wintypes.HANDLE
++    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
++    psapi = ctypes.WinDLL("psapi", use_last_error=True)
++    psapi.GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(MemoryCounters), wintypes.DWORD]
++    nvml = None
++    gpu = ctypes.c_void_p()
++    try:
++        nvml = ctypes.WinDLL("nvml.dll")
++        nvml.nvmlInit_v2()
++        if nvml.nvmlDeviceGetHandleByIndex_v2(0, ctypes.byref(gpu)):
++            nvml = None
++    except OSError:
++        pass
++    handle = kernel.OpenProcess(0x410, False, process.pid)
++    try:
++        while not stop.is_set():
++            counters = MemoryCounters()
++            counters.cb = ctypes.sizeof(counters)
++            if handle and psapi.GetProcessMemoryInfo(handle, ctypes.byref(counters), counters.cb):
++                sample = {"monotonic": time.monotonic(), "working_set": counters.WorkingSetSize,
++                          "private": counters.PrivateUsage, "page_faults_total": counters.PageFaultCount}
++                memory = MemoryStatus()
++                memory.length = ctypes.sizeof(memory)
++                if kernel.GlobalMemoryStatusEx(ctypes.byref(memory)):
++                    sample.update(physical_available=memory.avail_phys, memory_load_percent=memory.load)
++                gpu_memory = GpuMemory()
++                if nvml and not nvml.nvmlDeviceGetMemoryInfo(gpu, ctypes.byref(gpu_memory)):
++                    sample.update(gpu_used=gpu_memory.used, gpu_free=gpu_memory.free)
++                samples.append(sample)
++            stop.wait(1)
++    finally:
++        if handle:
++            kernel.CloseHandle(handle)
++        if nvml:
++            nvml.nvmlShutdown()
++
++
++def main():
++    parser = argparse.ArgumentParser()
++    parser.add_argument("--label", required=True)
++    parser.add_argument("--binary", default=r"C:\Users\user\.local\opt\bonsai-inference\build-Qwen38-sm89\bin\llama-server.exe")
++    parser.add_argument("--env", action="append", default=[])
++    parser.add_argument("--tokens", type=int, default=96)
++    parser.add_argument("--prompt-tokens", type=int, default=256)
++    parser.add_argument("--cache", action="store_true")
++    parser.add_argument("--quality-only", action="store_true")
++    parser.add_argument("--quality-task", action="store_true")
++    parser.add_argument("--cache-contexts", action="store_true")
++    parser.add_argument("--server-arg", action="append", default=[])
++    parser.add_argument("--allocator-weights", action="store_true")
++    parser.add_argument("--gpu-layers", type=int, default=27)
++    parser.add_argument("--cache-ram", type=int, default=512)
++    parser.add_argument("--draft-max", type=int, default=2)
++    parser.add_argument("--draft-p-min", type=float, default=0.0)
++    parser.add_argument("--priority", choices=("normal", "above", "high"), default="high")
++    parser.add_argument("--real-workloads", action="store_true")
++    parser.add_argument("--model", default=str(PROJECT / "models/qwen38-27b-Qwen3.8-27B-UD-IQ4_XS.gguf"))
++    args = parser.parse_args()
++    try:
++        connection = socket.create_connection(("127.0.0.1", 8080), timeout=1)
++    except OSError:
++        pass
++    else:
++        connection.close()
++        raise RuntimeError("Port 8080 is already occupied; refusing to benchmark another server")
++    out = ROOT / "reports/2026-11-01-qwen38" / args.label
++    out.mkdir()
++    env = os.environ.copy()
++    env.pop("GGML_PERF_CSV", None)
++    for entry in args.env:
++        key, value = entry.split("=", 1)
++        env[key] = value
++    command = [args.binary, "-m", args.model,
++               "-ngl", str(args.gpu_layers), "-c", "32768", "-ctk", "q8_0", "-ctv", "q8_0", "-fa", "on",
++               "-b", "512", "-ub", "256", "-t", "16", "--fit", "off", "--load-mode", "mmap",
++               "--cache-ram", str(args.cache_ram), "--spec-type", "draft-mtp", "--spec-draft-n-max", str(args.draft_max),
++               "--spec-draft-p-min", str(args.draft_p_min), "--parallel", "1", "--jinja", "--metrics",
++               "--no-context-shift", "--ctx-checkpoints", "0", "--no-reasoning-preserve",
++               "--host", "127.0.0.1", "--port", "8080"]
++    command.extend(args.server_arg)
++    if args.allocator_weights:
++        command[command.index("--load-mode") + 1] = "none"
++        command.extend(["--no-host", "--no-repack", "--override-tensor",
++                        r"^blk\.([0-9]|[12][0-9]|3[0-8])\..*=CPU,^token_embd\.weight$=CPU"])
++    manifest = {"command": command, "env": args.env, "priority": args.priority,
++                "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()}
++    public_perf_prefixes = ("GGML_CPU_", "GGML_CUDA_", "GGML_WIN32_", "GGML_PERF_", "LLAMA_MMAP_")
++    public_perf_keys = {"LLAMA_DEVICE_FROM_PROJECTION", "LLAMA_ARG_CACHE_RECURRENT_PREFIX", "LLAMA_ARG_CACHE_REUSE"}
++    manifest["effective_performance_env"] = {key: value for key, value in env.items()
++        if key.startswith(public_perf_prefixes) or key in public_perf_keys}
++    manifest["source_diff"] = subprocess.check_output(["git", "diff", "HEAD", "--", "ggml", "src", "tools"], cwd=ROOT, text=True)
++    binary_dir = pathlib.Path(args.binary).parent
++    build_record = binary_dir / "qwen38-build.json"
++    if build_record.exists():
++        manifest["build_provenance"] = json.loads(build_record.read_text(encoding="utf-8-sig"))
++    else:
++        manifest["build_provenance_note"] = "Build snapshot predates provenance helper; binary hashes identify the executable code. Working-tree diff may include unbuilt experiments."
++    binary_files = [pathlib.Path(args.binary)] + sorted(binary_dir.glob("*.dll"))
++    manifest["binary_sha256"] = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in binary_files}
++    (out / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
++    stop = threading.Event()
++    samples = []
++    with (out / "stdout.log").open("w") as stdout, (out / "stderr.log").open("w") as stderr:
++        priority = {"normal": subprocess.NORMAL_PRIORITY_CLASS, "above": subprocess.ABOVE_NORMAL_PRIORITY_CLASS,
++                    "high": subprocess.HIGH_PRIORITY_CLASS}[args.priority]
++        process = subprocess.Popen(command, stdout=stdout, stderr=stderr, env=env,
++                                   creationflags=subprocess.CREATE_NO_WINDOW | priority)
++        manifest["server_pid"] = process.pid
++        (out / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
++        thread = threading.Thread(target=monitor, args=(process, samples, stop), daemon=True)
++        thread.start()
++        try:
++            import urllib.request
++            deadline = time.monotonic() + 180
++            while True:
++                if process.poll() is not None:
++                    raise RuntimeError(f"Server exited during startup: {process.returncode}; see {out / 'stderr.log'}")
++                try:
++                    with urllib.request.urlopen("http://127.0.0.1:8080/health", timeout=3) as health:
++                        if json.load(health).get("status") == "ok":
++                            break
++                except OSError:
++                    pass
++                if time.monotonic() > deadline:
++                    raise TimeoutError("Server not ready")
++                time.sleep(1)
++            bench = [sys.executable, str(ROOT / "scripts/qwen38-bench.py"), "--label", args.label, "--out", str(out / "benchmark.json"),
++                     "--tokens", str(args.tokens), "--prompt-tokens", str(args.prompt_tokens)]
++            if args.cache:
++                bench.append("--cache")
++            if args.real_workloads:
++                for workload in ("code", "prose"):
++                    subprocess.run([sys.executable, str(ROOT / "scripts/qwen38-bench.py"), "--label", args.label,
++                                    "--out", str(out / f"{workload}.json"), "--workload", workload, "--tokens", str(args.tokens)], check=True)
++            elif args.cache_contexts:
++                for context in (6000, 12000, 25000):
++                    subprocess.run([sys.executable, str(ROOT / "scripts/qwen38-bench.py"), "--label", args.label,
++                                    "--out", str(out / f"cache-{context}.json"), "--prompt-tokens", str(context), "--tokens", "24",
++                                    "--cache", "--salt", f"// Cache scenario {context}\n"], check=True)
++            elif not (args.quality_only or args.quality_task):
++                subprocess.run(bench, check=True)
++            else:
++                quality = [sys.executable, str(ROOT / "scripts/qwen38_quality.py"), "--out", str(out / "quality.json")]
++                if args.quality_task:
++                    quality.append("--task")
++                subprocess.run(quality, check=True)
++        finally:
++            stop.set()
++            thread.join()
++            if process.poll() is None:
++                process.terminate()
++                process.wait(timeout=30)
++            (out / "memory.json").write_text(json.dumps(samples, indent=2), encoding="utf-8")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/qwen38_fault_summary.py b/scripts/qwen38_fault_summary.py
+new file mode 100644
+index 0000000..2ccb471
+--- /dev/null
++++ b/scripts/qwen38_fault_summary.py
+@@ -0,0 +1,62 @@
++"""Summarize the ETW hard-fault metadata without committing the raw JSON."""
++import argparse
++import collections
++import json
++import pathlib
++
++parser = argparse.ArgumentParser()
++parser.add_argument("--metadata", required=True)
++parser.add_argument("--out", required=True)
++args = parser.parse_args()
++source = pathlib.Path(args.metadata)
++data = json.loads(source.read_text(encoding="utf-8"))
++faults = data.get("hard_faults", [])
++by_file = collections.Counter()
++bytes_by_file = collections.Counter()
++first_last = {}
++by_bucket = collections.Counter()
++model_faults = []
++for fault in faults:
++    name = str(fault.get("file_name") or fault.get("module") or "unknown")
++    base = name.replace("\\", "/").split("/")[-1]
++    by_file[base] += 1
++    try:
++        bytes_by_file[base] += int(str(fault.get("bytes", 0)).replace(",", ""))
++    except ValueError:
++        pass
++    t = float(fault.get("time_ms", 0)) / 1000.0
++    first_last.setdefault(base, [t, t])
++    first_last[base][0] = min(first_last[base][0], t)
++    first_last[base][1] = max(first_last[base][1], t)
++    bucket = "0-10" if t < 10 else "10-30" if t < 30 else "30-60" if t < 60 else "60-120" if t < 120 else "120+"
++    by_bucket[bucket] += 1
++    low = name.lower()
++    if low.endswith(".gguf") or "qwen38" in low and "gguf" in low:
++        model_faults.append(fault)
++summary = {
++    "source": str(source),
++    "after_ms": data.get("after_ms"),
++    "hard_fault_count": data.get("hard_fault_count", len(faults)),
++    "page_fault_events": data.get("page_fault_events", {}),
++    "by_time_bucket": dict(sorted(by_bucket.items())),
++    "top_files": [
++        {"file": name, "count": count, "bytes": bytes_by_file[name],
++         "first_s": round(first_last[name][0], 3), "last_s": round(first_last[name][1], 3)}
++        for name, count in by_file.most_common(20)
++    ],
++    "model_gguf": {
++        "count": len(model_faults),
++        "bytes": sum(int(str(f.get("bytes", 0)).replace(",", "")) for f in model_faults),
++        "first_s": round(min((float(f.get("time_ms", 0)) / 1000.0 for f in model_faults), default=0), 3),
++        "last_s": round(max((float(f.get("time_ms", 0)) / 1000.0 for f in model_faults), default=0), 3),
++    },
++    "pagefile": {
++        "count": by_file.get("pagefile.sys", 0),
++        "bytes": bytes_by_file.get("pagefile.sys", 0),
++    },
++    "limitations": "Hard faults include module loads during startup. The model GGUF count is separated; time buckets are trace-relative, not server-phase labels.",
++}
++out = pathlib.Path(args.out)
++out.write_text(json.dumps(summary, indent=2), encoding="utf-8")
++print(json.dumps({k: summary[k] for k in ("hard_fault_count", "page_fault_events", "by_time_bucket", "model_gguf", "pagefile")}, indent=2))
++print(json.dumps(summary["top_files"][:12], indent=2))
+diff --git a/scripts/qwen38_ide_agent_task.py b/scripts/qwen38_ide_agent_task.py
+new file mode 100644
+index 0000000..ef2b95e
+--- /dev/null
++++ b/scripts/qwen38_ide_agent_task.py
+@@ -0,0 +1,87 @@
++"""Run one isolated agent task through the managed IDE and keep the SSE evidence."""
++import argparse
++import json
++import pathlib
++import time
++import urllib.request
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++parser = argparse.ArgumentParser()
++parser.add_argument("--label", required=True)
++parser.add_argument("--workspace", required=True)
++parser.add_argument("--prompt", required=True)
++parser.add_argument("--followup", default="")
++parser.add_argument("--timeout", type=float, default=600)
++args = parser.parse_args()
++OUT = ROOT / "reports/2026-11-01-qwen38" / (args.label + ".json")
++BASE = "http://127.0.0.1:8787"
++if OUT.exists():
++    raise FileExistsError(OUT)
++
++
++def request(path, body=None):
++    data = json.dumps(body).encode() if body is not None else None
++    req = urllib.request.Request(BASE + path, data=data, headers={"Content-Type": "application/json"})
++    return urllib.request.urlopen(req, timeout=args.timeout)
++
++
++def api(path, body=None):
++    with request(path, body) as response:
++        return json.load(response)
++
++
++def run_turn(prompt, events):
++    start = time.perf_counter()
++    with request("/api/chat", {"text": prompt, "modo": "agente"}) as response:
++        for line in response:
++            elapsed = (time.perf_counter() - start) * 1000
++            if elapsed > args.timeout * 1000:
++                raise TimeoutError("turn exceeded timeout")
++            if not line.startswith(b"data: "):
++                continue
++            event = json.loads(line[6:])
++            events.append({"elapsed_ms": elapsed, **event})
++            if event.get("type") in ("action", "speed", "error", "done", "tool_progress"):
++                print(json.dumps({"elapsed_ms": elapsed, **event}, ensure_ascii=False), flush=True)
++            if event.get("type") == "done":
++                break
++    return (time.perf_counter() - start) * 1000
++
++
++before = api("/api/chats")["active"]
++workspace_before = api("/api/workspace")["root"]
++workspace_expected = str(pathlib.Path(args.workspace).resolve())
++api("/api/workspace", {"path": workspace_expected})
++active = api("/api/chats", {"op": "new"})["active"]
++report = {
++    "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
++    "scope": "One isolated agent task through the managed IDE; not a general quality benchmark.",
++    "workspace": workspace_expected,
++    "prompt": args.prompt,
++    "followup": args.followup,
++    "turns": [],
++}
++try:
++    events = []
++    wall = run_turn(args.prompt, events)
++    report["turns"].append({"prompt": args.prompt, "wall_ms": wall, "events": events})
++    if args.followup:
++        events2 = []
++        wall2 = run_turn(args.followup, events2)
++        report["turns"].append({"prompt": args.followup, "wall_ms": wall2, "events": events2})
++except Exception as exc:
++    report["error"] = str(exc)
++finally:
++    try:
++        api("/api/workspace", {"path": workspace_before})
++        report["previous_workspace_restored"] = True
++    except Exception as exc:
++        report["previous_workspace_restore_error"] = str(exc)
++    if before != active:
++        try:
++            api("/api/chats", {"op": "open", "id": before})
++            report["previous_chat_restored"] = True
++        except Exception as exc:
++            report["previous_chat_restore_error"] = str(exc)
++    OUT.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
++print(json.dumps({k: v for k, v in report.items() if k != "turns"}, ensure_ascii=False), flush=True)
+diff --git a/scripts/qwen38_ide_cancel.py b/scripts/qwen38_ide_cancel.py
+new file mode 100644
+index 0000000..388e1bf
+--- /dev/null
++++ b/scripts/qwen38_ide_cancel.py
+@@ -0,0 +1,146 @@
++"""Cancel one managed-IDE turn and verify the next turn still works."""
++import argparse
++import json
++import pathlib
++import subprocess
++import threading
++import time
++import urllib.request
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++PROJECT = pathlib.Path(r"C:\Users\user\Documents\prject_local_AI")
++BASE = "http://127.0.0.1:8787"
++
++parser = argparse.ArgumentParser()
++parser.add_argument("--label", required=True)
++parser.add_argument("--mode", choices=("generation", "command"), required=True)
++parser.add_argument("--cancel-after", type=float, default=8.0)
++parser.add_argument("--workspace", default=str(PROJECT / "trabajo/qwen38-cancel"))
++parser.add_argument("--timeout", type=float, default=300)
++args = parser.parse_args()
++OUT = ROOT / "reports/2026-11-01-qwen38" / (args.label + ".json")
++if OUT.exists():
++    raise FileExistsError(OUT)
++WORKSPACE = pathlib.Path(args.workspace).resolve()
++WORKSPACE.mkdir(parents=True, exist_ok=True)
++
++
++def request(path, body=None, timeout=None):
++    data = json.dumps(body).encode() if body is not None else None
++    req = urllib.request.Request(BASE + path, data=data, headers={"Content-Type": "application/json"})
++    return urllib.request.urlopen(req, timeout=timeout or args.timeout)
++
++
++def api(path, body=None):
++    with request(path, body) as response:
++        return json.load(response)
++
++
++def python_pids():
++    try:
++        out = subprocess.check_output(
++            ["powershell.exe", "-NoProfile", "-Command",
++             "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | "
++             "Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress"],
++            text=True, timeout=15, stderr=subprocess.DEVNULL)
++        data = json.loads(out) if out.strip() else []
++        return data if isinstance(data, list) else [data]
++    except Exception:
++        return []
++
++
++def run_chat(prompt, events, done, cancel_event, mode=None):
++    start = time.perf_counter()
++    try:
++        with request("/api/chat", {"text": prompt, "modo": mode or ("agente" if args.mode == "command" else "consulta")}) as response:
++            for line in response:
++                elapsed = (time.perf_counter() - start) * 1000
++                if not line.startswith(b"data: "):
++                    continue
++                event = json.loads(line[6:])
++                events.append({"elapsed_ms": elapsed, **event})
++                if event.get("type") in ("action", "speed", "error", "done", "replace", "status"):
++                    print(json.dumps({"elapsed_ms": elapsed, **event}, ensure_ascii=False)[:1200], flush=True)
++                if event.get("type") in ("action", "status") and args.mode == "command":
++                    text = json.dumps(event, ensure_ascii=False)
++                    if "sleep(120)" in text or "sleep(120" in text:
++                        cancel_event.set()
++                if event.get("type") == "done":
++                    break
++    except Exception as exc:
++        events.append({"type": "client_error", "error": str(exc)})
++    finally:
++        done.set()
++
++
++before_chat = api("/api/chats")["active"]
++before_workspace = api("/api/workspace")["root"]
++before_python = python_pids()
++api("/api/workspace", {"path": str(WORKSPACE)})
++active = api("/api/chats", {"op": "new"})["active"]
++prompt = (
++    "Ejecuta exactamente este comando con la herramienta ejecutar y espera a que termine: "
++    'python -c "import time; time.sleep(120)". No hagas nada m├ís.'
++    if args.mode == "command" else
++    "Escribe un texto largo de al menos 1500 palabras sobre la historia de la computaci├│n. "
++    "No uses herramientas, no crees archivos y no termines antes de tiempo."
++)
++report = {
++    "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
++    "scope": "One managed-IDE cancellation test plus one follow-up request.",
++    "mode": args.mode,
++    "workspace": str(WORKSPACE),
++    "prompt": prompt,
++    "events": [],
++    "before_python": before_python,
++}
++try:
++    events, done, cancel_event = [], threading.Event(), threading.Event()
++    thread = threading.Thread(target=run_chat, args=(prompt, events, done, cancel_event), daemon=True)
++    start = time.perf_counter()
++    thread.start()
++    cancelled = False
++    while time.perf_counter() - start < args.timeout:
++        if cancel_event.wait(0.2):
++            time.sleep(1.0)
++            break
++        if done.is_set():
++            break
++        if args.mode == "generation" and time.perf_counter() - start >= args.cancel_after:
++            break
++    if not done.is_set():
++        api("/api/stop", {})
++        cancelled = True
++    done.wait(30)
++    thread.join(10)
++    report["cancelled"] = cancelled
++    report["events"] = events
++    report["busy_after_stop"] = bool(api("/api/state").get("busy"))
++    report["python_after_stop"] = python_pids()
++    follow = []
++    follow_done = threading.Event()
++    run_chat("Responde solo con la palabra OK. No uses herramientas.", follow, follow_done, threading.Event(), mode="consulta")
++    report["followup_events"] = follow
++    report["followup_text"] = "".join(
++        e.get("text", "") for e in follow if e.get("type") in ("token", "replace")
++    )[-500:]
++    report["passed"] = bool(
++        cancelled
++        and not report["busy_after_stop"]
++        and any(e.get("type") == "done" for e in follow)
++        and "OK" in report["followup_text"].upper()
++    )
++finally:
++    try:
++        api("/api/workspace", {"path": before_workspace})
++        report["previous_workspace_restored"] = True
++    except Exception as exc:
++        report["previous_workspace_restore_error"] = str(exc)
++    if before_chat != active:
++        try:
++            api("/api/chats", {"op": "open", "id": before_chat})
++            report["previous_chat_restored"] = True
++        except Exception as exc:
++            report["previous_chat_restore_error"] = str(exc)
++    OUT.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
++print(json.dumps({k: v for k, v in report.items() if k not in ("events", "followup_events")}, ensure_ascii=False), flush=True)
+diff --git a/scripts/qwen38_ide_read_smoke.py b/scripts/qwen38_ide_read_smoke.py
+new file mode 100644
+index 0000000..fbbec51
+--- /dev/null
++++ b/scripts/qwen38_ide_read_smoke.py
+@@ -0,0 +1,86 @@
++"""Read-only end-to-end check against the running managed IDE, preserving its active chat."""
++import argparse
++import json
++import pathlib
++import time
++import urllib.request
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++parser = argparse.ArgumentParser()
++parser.add_argument("--label", default="handoff-ide-read-smoke")
++args = parser.parse_args()
++OUT = ROOT / "reports/2026-11-01-qwen38" / (args.label + ".json")
++BASE = "http://127.0.0.1:8787"
++if OUT.exists():
++    raise FileExistsError(OUT)
++
++
++def request(path, body=None):
++    data = json.dumps(body).encode() if body is not None else None
++    req = urllib.request.Request(BASE + path, data=data, headers={"Content-Type": "application/json"})
++    return urllib.request.urlopen(req, timeout=180)
++
++
++def api(path, body=None):
++    with request(path, body) as response:
++        return json.load(response)
++
++
++before = api("/api/chats")["active"]
++workspace_before = api("/api/workspace")["root"]
++workspace_expected = r"C:\Users\user\Documents\prject_local_AI"
++api("/api/workspace", {"path": workspace_expected})
++active = api("/api/chats", {"op": "new"})["active"]
++report = {"created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "events": [],
++          "scope": "One real read-only agent task. This does not validate editing, cancellation, all failure paths or general quality.",
++          "workspace": workspace_expected,
++          "first_reasoning_ms": None, "first_text_ms": None, "first_action_ms": None}
++prompt = ("Lee docs/QWEN38-27B.md con la herramienta de lectura y responde cu├íl es el flag que activa MTP. "
++          "Esta tarea es de solo lectura: no modifiques archivos ni ejecutes comandos.")
++start = time.perf_counter()
++try:
++    with request("/api/chat", {"text": prompt, "modo": "agente"}) as response:
++        for line in response:
++            elapsed = (time.perf_counter() - start) * 1000
++            if elapsed > 300000:
++                raise TimeoutError("Read-only agent smoke exceeded 300 seconds; closing only this request")
++            if not line.startswith(b"data: "):
++                continue
++            event = json.loads(line[6:])
++            report["events"].append({"elapsed_ms": elapsed, **event})
++            kind = event.get("type")
++            if kind in ("reasoning", "token") and event.get("text"):
++                key = "first_reasoning_ms" if kind == "reasoning" else "first_text_ms"
++                if report[key] is None:
++                    report[key] = elapsed
++            if kind == "action" and report["first_action_ms"] is None:
++                report["first_action_ms"] = elapsed
++            if kind in ("action", "speed", "error", "done"):
++                print(json.dumps({"elapsed_ms": elapsed, **event}), flush=True)
++            OUT.write_text(json.dumps(report, indent=2), encoding="utf-8")
++    done = next((e for e in reversed(report["events"]) if e.get("type") == "done"), {})
++    text = "".join(e.get("text", "") for e in report["events"] if e.get("type") == "token")
++    replacements = [e.get("text", "") for e in report["events"] if e.get("type") == "replace"]
++    if replacements:
++        text = replacements[-1]
++    read = any(e.get("type") == "action" and e.get("kind") == "read" and e.get("state") == "done"
++               and e.get("title") in ("leer", "buscar_codigo") and "no existe" not in e.get("detail", "").lower()
++               for e in report["events"])
++    report.update(wall_ms=(time.perf_counter() - start) * 1000, final_text=text, read_tool_completed=read,
++                  passed=bool(done and not done.get("incompleto") and read and "draft-mtp" in text and report["first_reasoning_ms"] is not None))
++except Exception as exc:
++    report.update(passed=False, error=str(exc), wall_ms=(time.perf_counter() - start) * 1000)
++finally:
++    try:
++        api("/api/workspace", {"path": workspace_before})
++        report["previous_workspace_restored"] = True
++    except Exception as exc:
++        report["previous_workspace_restore_error"] = str(exc)
++    if before != active:
++        try:
++            api("/api/chats", {"op": "open", "id": before})
++            report["previous_chat_restored"] = True
++        except Exception as exc:
++            report["previous_chat_restore_error"] = str(exc)
++    OUT.write_text(json.dumps(report, indent=2), encoding="utf-8")
++print(json.dumps({key: value for key, value in report.items() if key != "events"}), flush=True)
+diff --git a/scripts/qwen38_memory_profile.py b/scripts/qwen38_memory_profile.py
+new file mode 100644
+index 0000000..85abd1b
+--- /dev/null
++++ b/scripts/qwen38_memory_profile.py
+@@ -0,0 +1,45 @@
++"""Lightweight ETW fault capture around an isolated benchmark, with file attribution."""
++import argparse
++import json
++import pathlib
++import subprocess
++import sys
++import time
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++parser = argparse.ArgumentParser()
++parser.add_argument("--label", required=True)
++parser.add_argument("--model", required=True)
++parser.add_argument("--env", action="append", default=[])
++parser.add_argument("--allocator-weights", action="store_true")
++parser.add_argument("--cache-contexts", action="store_true")
++parser.add_argument("--cache", action="store_true")
++parser.add_argument("--after-ms", type=int, default=25000)
++args = parser.parse_args()
++prefix = ROOT / "reports/2026-11-01-qwen38" / args.label
++if "WPR is not recording" not in subprocess.check_output(["wpr", "-status"], text=True):
++    raise RuntimeError("Another WPR session is active")
++command = [sys.executable, str(ROOT / "scripts/qwen38_experiment.py"), "--label", args.label,
++           "--model", args.model]
++if args.allocator_weights:
++    command.append("--allocator-weights")
++if args.cache_contexts:
++    command.append("--cache-contexts")
++if args.cache:
++    command.append("--cache")
++for entry in args.env:
++    command.extend(["--env", entry])
++start = ["wpr", "-start", str(ROOT / "scripts/qwen38-memory.wprp") + "!QwenMemory", "-filemode"]
++stop = ["wpr", "-stop", str(prefix) + ".etl", args.label]
++prefix.with_suffix(".capture.json").write_text(json.dumps({"start": start, "experiment": command,
++    "stop": stop, "start_command_monotonic": time.monotonic(),
++    "note": "AllFaults and FileIO tracing is used for fault attribution, not speed decisions."}, indent=2))
++subprocess.run(start, check=True)
++try:
++    subprocess.run(command, check=True)
++finally:
++    subprocess.run(stop, check=True)
++with prefix.with_suffix(".export.log").open("w") as stream:
++    subprocess.run(["dotnet", str(ROOT / "scripts/qwen38-etw/bin/qwen38-etw.dll"), str(prefix) + ".etl",
++                    str(prefix), str(args.after_ms), str(ROOT.parent / "build-Qwen38-sm89/bin"), "memory"],
++                    stdout=stream, stderr=stream, check=True)
+diff --git a/scripts/qwen38_mixed_quant.py b/scripts/qwen38_mixed_quant.py
+new file mode 100644
+index 0000000..7caf56d
+--- /dev/null
++++ b/scripts/qwen38_mixed_quant.py
+@@ -0,0 +1,109 @@
++"""Build a selective requantization plan with a four-bit floor and protected high-precision tensors."""
++import argparse
++import json
++import math
++import pathlib
++import re
++import struct
++import subprocess
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++PROJECT = pathlib.Path(r"C:\Users\user\Documents\prject_local_AI")
++TYPES = {0: ("f32", 1, 4), 1: ("f16", 1, 2), 2: ("q4_0", 32, 18), 3: ("q4_1", 32, 20),
++         6: ("q5_0", 32, 22), 7: ("q5_1", 32, 24), 8: ("q8_0", 32, 34),
++         10: ("q2_K", 256, 84), 11: ("q3_K", 256, 110), 12: ("q4_K", 256, 144),
++         13: ("q5_K", 256, 176), 14: ("q6_K", 256, 210), 16: ("iq2_xxs", 256, 66),
++         17: ("iq2_xs", 256, 74), 18: ("iq3_xxs", 256, 98), 20: ("iq4_nl", 32, 18),
++         21: ("iq3_s", 256, 110), 22: ("iq2_s", 256, 82), 23: ("iq4_xs", 256, 136), 30: ("bf16", 1, 2)}
++BY_NAME = {value[0]: key for key, value in TYPES.items()}
++
++
++def tensors(path):
++    with path.open("rb") as stream:
++        def number(fmt):
++            return struct.unpack("<" + fmt, stream.read(struct.calcsize(fmt)))[0]
++        def string():
++            return stream.read(number("Q")).decode("utf-8")
++        formats = {0: "B", 1: "b", 2: "H", 3: "h", 4: "I", 5: "i", 6: "f", 7: "?", 10: "Q", 11: "q", 12: "d"}
++        def skip(kind):
++            if kind == 8:
++                stream.seek(number("Q"), 1)
++            elif kind == 9:
++                element, count = number("I"), number("Q")
++                if element in formats:
++                    stream.seek(count * struct.calcsize(formats[element]), 1)
++                else:
++                    for _ in range(count):
++                        skip(element)
++            else:
++                stream.seek(struct.calcsize(formats[kind]), 1)
++        if stream.read(4) != b"GGUF" or number("I") != 3:
++            raise ValueError("Expected GGUF v3")
++        count, metadata = number("Q"), number("Q")
++        for _ in range(metadata):
++            string()
++            skip(number("I"))
++        result = []
++        for _ in range(count):
++            name = string()
++            shape = [number("Q") for _ in range(number("I"))]
++            kind, offset = number("I"), number("Q")
++            result.append({"name": name, "shape": shape, "type_id": kind, "offset": offset})
++        return result
++
++
++def main():
++    parser = argparse.ArgumentParser()
++    parser.add_argument("--cpu-type", choices=("q4_0", "q4_K", "iq4_xs"), required=True)
++    parser.add_argument("--cpu-layers", type=int)
++    parser.add_argument("--gpu-layers", type=int, default=27)
++    parser.add_argument("--execute", action="store_true")
++    args = parser.parse_args()
++    source = PROJECT / "models/qwen38-27b-Qwen3.8-27B-UD-IQ4_XS.gguf"
++    target = PROJECT / f"models/qwen38-27b-perf-{args.cpu_type.lower()}-floor4.gguf"
++    quantize = pathlib.Path(r"C:\Users\user\.local\opt\bonsai-inference\build-Qwen38-sm89\bin\llama-quantize.exe")
++    command = [str(quantize), "--allow-requantize"]
++    tensor_options = []
++    plan = []
++    estimates = {"cpu": 0, "gpu": 0}
++    source_tensors = tensors(source)
++    layer_ids = [int(m[1]) for t in source_tensors if (m := re.match(r"blk\.(\d+)\.", t["name"]))]
++    cpu_layers = args.cpu_layers if args.cpu_layers is not None else max(0, max(layer_ids) + 2 - args.gpu_layers)
++    for tensor in source_tensors:
++        name = tensor["name"]
++        original, block, block_bytes = TYPES[tensor["type_id"]]
++        match = re.match(r"blk\.(\d+)\.", name)
++        cpu = name == "token_embd.weight" or (match and int(match[1]) < cpu_layers)
++        chosen = original
++        if len(tensor["shape"]) >= 2 and block > 1:
++            if cpu and name != "token_embd.weight" and block_bytes * 8 / block <= 4.5:
++                chosen = args.cpu_type
++            elif block_bytes * 8 / block < 4:
++                chosen = "iq4_xs"
++            tensor_options.append("^" + re.escape(name) + "$=" + chosen)
++        _, out_block, out_bytes = TYPES[BY_NAME[chosen]]
++        nbytes = math.prod(tensor["shape"]) // out_block * out_bytes
++        estimates["cpu" if cpu else "gpu"] += nbytes
++        plan.append({"name": name, "original": original, "chosen": chosen, "cpu": bool(cpu), "estimated_bytes": nbytes})
++    types_file = ROOT / f"reports/2026-11-01-qwen38/quant-{args.cpu_type.lower()}.tensor-types.txt"
++    types_file.write_text("\n".join(tensor_options) + "\n")
++    command.extend(["--tensor-type-file", str(types_file), str(source), str(target), "IQ4_XS", "16"])
++    output = ROOT / f"reports/2026-11-01-qwen38/quant-{args.cpu_type.lower()}.json"
++    report = {"command": command, "source": str(source), "target": str(target), "policy": "Never create tensors below four bits; preserve existing types above 4.5 bpw. Source is already quantized; this is requantization, not recovery of lost precision.",
++              "estimated_weights_mib": {k: v / 1048576 for k, v in estimates.items()}, "tensors": plan}
++    output.write_text(json.dumps(report, indent=2))
++    print(json.dumps(report["estimated_weights_mib"]))
++    if args.execute:
++        if target.exists():
++            raise FileExistsError(target)
++        with output.with_suffix(".log").open("w") as log:
++            subprocess.run(command, stdout=log, stderr=log, check=True)
++        result = tensors(target)
++        assert all(TYPES[t["type_id"]][2] * 8 / TYPES[t["type_id"]][1] >= 4 for t in result)
++        report["validated_four_bit_floor"] = True
++        report["output_bytes"] = target.stat().st_size
++        output.write_text(json.dumps(report, indent=2))
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/qwen38_nsys.py b/scripts/qwen38_nsys.py
+new file mode 100644
+index 0000000..3f50333
+--- /dev/null
++++ b/scripts/qwen38_nsys.py
+@@ -0,0 +1,23 @@
++"""Capture CUDA execution separately from all unprofiled A/B runs."""
++import json
++import pathlib
++import subprocess
++import sys
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++PROJECT = pathlib.Path(r"C:\Users\user\Documents\prject_local_AI")
++config = json.loads((PROJECT / "config/inference-toolchain.local.json").read_text())
++out = ROOT / "reports/2026-11-01-qwen38/nsys-cuda"
++command = [config["nsys"], "profile", "--trace=cuda,nvtx", "--sample=none", "--cpuctxsw=none",
++           "--cuda-trace-scope=process-tree", "--cuda-graph-trace=node", "--delay=20", "--duration=60",
++           "--stop-on-exit=true", "--output=" + str(out),
++           sys.executable, str(ROOT / "scripts/qwen38_experiment.py"), "--label", "nsys-cuda-server",
++           "--model", str(PROJECT / "models/qwen38-27b-perf-iq4_xs-floor4.gguf"),
++           "--env", "LLAMA_MMAP_TRIM_GPU=1"]
++out.with_suffix(".command.json").write_text(json.dumps({"command": command,
++    "limitation": "CUDA graph node tracing adds overhead; throughput here is not an A/B result."}, indent=2))
++subprocess.run(command, check=True, cwd=ROOT)
++stats = [config["nsys"], "stats", "--report", "cuda_gpu_kern_sum,cuda_api_sum,cuda_gpu_mem_time_sum",
++         "--format", "csv", str(out) + ".nsys-rep"]
++with out.with_suffix(".stats.csv").open("w") as stream:
++    subprocess.run(stats, stdout=stream, stderr=stream, check=True)
+diff --git a/scripts/qwen38_placement.py b/scripts/qwen38_placement.py
+new file mode 100644
+index 0000000..e87b03f
+--- /dev/null
++++ b/scripts/qwen38_placement.py
+@@ -0,0 +1,80 @@
++"""Generate noncontiguous weight placement and an exact byte budget for the current GGUF."""
++import argparse
++import json
++import math
++import pathlib
++import re
++import subprocess
++import sys
++from qwen38_mixed_quant import TYPES, tensors, ROOT, PROJECT
++
++parser = argparse.ArgumentParser()
++parser.add_argument("--policy", required=True, choices=("attention-gpu", "attention-balanced", "delta-gpu", "delta-projections-gpu"))
++parser.add_argument("--gpu-weight-budget-mib", type=int, default=5500)
++parser.add_argument("--execute", action="store_true")
++parser.add_argument("--quality-task", action="store_true")
++args = parser.parse_args()
++source = PROJECT / "models/qwen38-27b-Qwen3.8-27B-UD-IQ4_XS.gguf"
++overrides = []
++totals = {"CPU": 0, "CUDA0": 0}
++assignments = []
++source_tensors = tensors(source)
++extra_delta_layers = set()
++if args.policy == "attention-balanced":
++    layer_bytes = {}
++    fixed = 0
++    for tensor in source_tensors:
++        _, block, size = TYPES[tensor["type_id"]]
++        size = math.prod(tensor["shape"]) // block * size
++        match = re.match(r"blk\.(\d+)\.", tensor["name"])
++        if match and int(match[1]) < 64 and int(match[1]) % 4 != 3:
++            layer = int(match[1])
++            layer_bytes[layer] = layer_bytes.get(layer, 0) + size
++        elif tensor["name"] != "token_embd.weight":
++            fixed += size
++    # Spread the additional recurrent layers to measure noncontiguous transitions.
++    candidates = sorted(layer_bytes, key=lambda layer: (layer % 3, layer))
++    for layer in candidates:
++        if fixed + layer_bytes[layer] <= args.gpu_weight_budget_mib * 1048576:
++            fixed += layer_bytes[layer]
++            extra_delta_layers.add(layer)
++for tensor in source_tensors:
++    name = tensor["name"]
++    match = re.match(r"blk\.(\d+)\.", name)
++    device = "CUDA0"
++    if name == "token_embd.weight":
++        device = "CPU"
++    if match:
++        layer = int(match[1])
++        if layer < 64:
++            attention = layer % 4 == 3
++            if args.policy in ("attention-gpu", "attention-balanced"):
++                device = "CUDA0" if attention or layer in extra_delta_layers else "CPU"
++            elif args.policy == "delta-gpu":
++                device = "CPU" if attention else "CUDA0"
++            else:
++                device = "CUDA0" if not attention and ".ffn_" not in name else "CPU"
++    _, block, size = TYPES[tensor["type_id"]]
++    size = math.prod(tensor["shape"]) // block * size
++    totals[device] += size
++    assignments.append({"name": name, "device": device, "bytes": size})
++    if device == "CPU":
++        overrides.append("^" + re.escape(name) + "$=CPU")
++label = "placement-" + args.policy + ("-quality" if args.quality_task else "")
++command = [sys.executable, str(ROOT / "scripts/qwen38_experiment.py"), "--label", label,
++           "--env", "LLAMA_DEVICE_FROM_PROJECTION=1", "--env", "LLAMA_MMAP_TRIM_GPU=1",
++           "--gpu-layers", "99"]
++if args.quality_task:
++    command.append("--quality-task")
++command.extend(["--server-arg=--override-tensor", "--server-arg=" + ",".join(overrides)])
++report = {"policy": args.policy, "weights_mib": {k: v / 1048576 for k, v in totals.items()}, "command": command,
++          "gpu_weights_fit_physical_vram": totals["CUDA0"] <= 8188 * 1048576,
++          "extra_delta_layers": sorted(extra_delta_layers),
++          "assignments": assignments, "note": "The state device follows the attention/SSM output projection when LLAMA_DEVICE_FROM_PROJECTION=1. Full-KV and recurrent-state allocations still require separate budget."}
++path = ROOT / f"reports/2026-11-01-qwen38/placement-plan-{args.policy}.json"
++path.write_text(json.dumps(report, indent=2))
++print(json.dumps(report["weights_mib"]))
++if args.execute:
++    if totals["CUDA0"] > 8188 * 1048576:
++        raise RuntimeError("Rejected before allocation: GPU weights alone exceed the physical VRAM; try attention-balanced")
++    subprocess.run(command, check=True)
+diff --git a/scripts/qwen38_pmc_summary.py b/scripts/qwen38_pmc_summary.py
+new file mode 100644
+index 0000000..cc847e7
+--- /dev/null
++++ b/scripts/qwen38_pmc_summary.py
+@@ -0,0 +1,59 @@
++"""Derive sampled, per-function PMC estimates after checking source IDs and intervals."""
++import argparse
++import collections
++import csv
++import json
++import pathlib
++import re
++
++parser = argparse.ArgumentParser()
++parser.add_argument("prefix", type=pathlib.Path)
++args = parser.parse_args()
++prefix = str(args.prefix)
++inventory = pathlib.Path(prefix + ".pmcsources.txt").read_text()
++ids = {name: key for key, name in re.findall(r"^\s*(\d+)\s+(\w+)\s+\d+", inventory, re.M)}
++metadata = json.loads(pathlib.Path(prefix + ".metadata.json").read_text())
++intervals = {}
++for event in metadata["source_examples"].values():
++    if 'EventName="PerfInfo/CollectionStart"' not in event:
++        continue
++    match = re.search(r'SampleSource="(\d+)" NewInterval="([\d,]+)"', event)
++    if match:
++        intervals[match[1]] = int(match[2].replace(",", ""))
++names = ("FRRetiredx86Instructions", "Qwen38Cycles", "Qwen38FpSchedulerStalls", "Qwen38LoadQueueStalls")
++for name in names:
++    if name not in ids or ids[name] not in intervals:
++        raise RuntimeError(f"Missing hardware source/interval: {name}")
++functions = collections.defaultdict(collections.Counter)
++with pathlib.Path(prefix + ".functions.csv").open(newline="") as stream:
++    for row in csv.DictReader(stream):
++        functions[row["function"]][row["source"]] += int(row["samples"])
++timer_interval_ms = intervals.get("0", 10000) / 10000
++table = []
++for function, counts in functions.items():
++    samples = counts["timer"]
++    events = {name: counts[ids[name]] * intervals[ids[name]] for name in names}
++    cycles = events["Qwen38Cycles"]
++    enough = counts[ids["Qwen38Cycles"]] >= 30
++    table.append({"function": function, "exclusive_ms_estimate": samples * timer_interval_ms,
++                  "percent": samples * 100 / metadata["timer_samples"] if metadata["timer_samples"] else 0,
++                  "timer_samples": samples, "pmc_samples": {name: counts[ids[name]] for name in names},
++                  "cycles_estimate": cycles, "instructions_estimate": events["FRRetiredx86Instructions"],
++                  "ipc_estimate": events["FRRetiredx86Instructions"] / cycles if enough else None,
++                  "fp_scheduler_stalls_per_cycle_estimate": events["Qwen38FpSchedulerStalls"] / cycles if enough else None,
++                  "load_queue_stalls_per_cycle_estimate": events["Qwen38LoadQueueStalls"] / cycles if enough else None,
++                  "frequency_mhz_estimate": cycles / (samples * timer_interval_ms * 1000) if enough and samples >= 30 else None})
++table.sort(key=lambda row: row["percent"], reverse=True)
++report = {"function_table": table, "hard_fault_count": metadata["hard_fault_count"],
++          "intervals": intervals, "source_ids": {name: ids[name] for name in names},
++          "limitations": ["PMC estimates use overflow sample counts multiplied by measured sampling intervals, with skid and sampling uncertainty.",
++                          "IPC and stall ratios below 30 cycle samples are omitted. Stall events may overlap and are not additive percentages of runtime.",
++                          "Frequency is estimated from unhalted-cycle samples divided by timer-sampled CPU time, not an instantaneous clock measurement.",
++                          "Only exclusive samples in llama-server after the requested cutoff are included; profiled throughput is not an A/B result."]}
++pathlib.Path(prefix + ".summary.json").write_text(json.dumps(report, indent=2))
++with pathlib.Path(prefix + ".summary.csv").open("w", newline="") as stream:
++    fields = [key for key in table[0] if key != "pmc_samples"] if table else ["function"]
++    writer = csv.DictWriter(stream, fieldnames=fields, extrasaction="ignore")
++    writer.writeheader()
++    writer.writerows(table)
++print(json.dumps({"top_functions": table[:12], "hard_fault_count": metadata["hard_fault_count"]}, indent=2))
+diff --git a/scripts/qwen38_ppl.py b/scripts/qwen38_ppl.py
+new file mode 100644
+index 0000000..f7cca9e
+--- /dev/null
++++ b/scripts/qwen38_ppl.py
+@@ -0,0 +1,65 @@
++"""Small, fixed held-out perplexity comparison, with complete commands and logs."""
++import argparse
++import hashlib
++import json
++import os
++import pathlib
++import re
++import statistics
++import subprocess
++import time
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++parser = argparse.ArgumentParser()
++parser.add_argument("--label", required=True)
++parser.add_argument("--model", required=True)
++parser.add_argument("--binary", default=r"C:\Users\user\.local\opt\bonsai-inference\build-Qwen38-sm89\bin\llama-perplexity.exe")
++parser.add_argument("--repetitions", type=int, default=3)
++parser.add_argument("--save-logits")
++parser.add_argument("--kl-baseline")
++parser.add_argument("--context", type=int, default=512)
++parser.add_argument("--batch", type=int, default=512)
++parser.add_argument("--ubatch", type=int, default=256)
++parser.add_argument("--env", action="append", default=[])
++args = parser.parse_args()
++out = ROOT / "reports/2026-11-01-qwen38" / args.label
++out.mkdir()
++corpus = out.parent / "quality-corpus.txt"
++binary = pathlib.Path(args.binary)
++command = [str(binary), "-m", args.model, "-f", str(corpus), "--chunks", "3", "-c", str(args.context),
++           "-b", str(args.batch), "-ub", str(args.ubatch), "-t", "16", "-ngl", "27", "-fa", "on",
++           "-ctk", "q8_0", "-ctv", "q8_0", "--fit", "off", "--seed", "42"]
++if args.save_logits:
++    command.extend(["--save-all-logits", args.save_logits])
++if args.kl_baseline:
++    command.extend(["--kl-divergence", "--kl-divergence-base", args.kl_baseline])
++env = os.environ.copy()
++env["LLAMA_MMAP_TRIM_GPU"] = "1"
++for entry in args.env:
++    key, value = entry.split("=", 1)
++    env[key] = value
++report = {"command": command, "env": {"LLAMA_MMAP_TRIM_GPU": "1", **dict(e.split("=", 1) for e in args.env)},
++          "corpus_sha256": hashlib.sha256(corpus.read_bytes()).hexdigest(),
++          "binary_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in [binary] + sorted(binary.parent.glob('*.dll'))}, "samples": [],
++          "scored_tokens": 3 * (args.context - args.context // 2 - 1),
++          "small_batch_dot_requested": args.ubatch <= 3,
++          "limitation": "Three fixed project-documentation chunks, not broad language quality. Only ubatch <= 3 exercises the fused small-batch IQ4 dot."}
++for repetition in range(args.repetitions):
++    start = time.perf_counter()
++    with (out / f"run-{repetition}.log").open("w") as log:
++        result = subprocess.run(command, env=env, stdout=log, stderr=log,
++                                creationflags=subprocess.CREATE_NO_WINDOW | subprocess.HIGH_PRIORITY_CLASS)
++    text = (out / f"run-{repetition}.log").read_text(errors="replace")
++    match = re.search(r"Final estimate: PPL = ([0-9.]+) \+/- ([0-9.]+)", text)
++    if args.kl_baseline:
++        match = re.search(r"Mean PPL\(Q\)\s*:\s*([0-9.]+) . ([0-9.]+)", text)
++    if result.returncode or not match:
++        raise RuntimeError(f"Perplexity failed; see {out}")
++    sample = {"repetition": repetition, "ppl": float(match[1]), "uncertainty": float(match[2]),
++              "wall_s": time.perf_counter() - start}
++    if args.kl_baseline:
++        sample["kl_metrics"] = [line for line in text.splitlines() if " : " in line or "     :" in line]
++    report["samples"].append(sample)
++    report["median_ppl"] = statistics.median(s["ppl"] for s in report["samples"])
++    (out / "result.json").write_text(json.dumps(report, indent=2))
++    print(json.dumps(sample), flush=True)
+diff --git a/scripts/qwen38_profile_summary.py b/scripts/qwen38_profile_summary.py
+new file mode 100644
+index 0000000..f32ecef
+--- /dev/null
++++ b/scripts/qwen38_profile_summary.py
+@@ -0,0 +1,68 @@
++"""Summarize opt-in traces. Scheduler sync spans include profiling overhead."""
++import argparse
++import bisect
++import collections
++import csv
++import json
++import pathlib
++import re
++
++parser = argparse.ArgumentParser()
++parser.add_argument("prefix", type=pathlib.Path)
++parser.add_argument("--after-us", type=int, required=True)
++args = parser.parse_args()
++
++
++def read(suffix):
++    with pathlib.Path(str(args.prefix) + suffix).open(newline="") as stream:
++        return [r for r in csv.DictReader(stream) if r["start_us"].isdigit() and int(r["start_us"]) >= args.after_us]
++
++
++spans = [r for r in read(".scheduler.csv") if r["stage"] == "compute_sync" and r["backend"] == "CPU"]
++starts = [int(r["start_us"]) for r in spans]
++ops = collections.Counter()
++functions = collections.Counter()
++layers = collections.Counter()
++layer_types = collections.Counter()
++barrier = 0
++last_layer = -1
++for row in read(".cpu.csv"):
++    index = bisect.bisect_right(starts, int(row["start_us"])) - 1
++    if index < 0:
++        continue
++    span = spans[index]
++    # MTP target verification has 1-3 columns. Exclude prefill and initialization.
++    if int(span["ne1"]) > 3 or int(row["start_us"]) > starts[index] + int(span["elapsed_us"]):
++        continue
++    match = re.search(r"-(\d+)(?:$| )", row["node"])
++    if match:
++        last_layer = int(match[1])
++    elapsed = int(row["elapsed_us"])
++    ops[(row["op"], row["weight_type"]) ] += elapsed
++    functions[(re.sub(r"-\d+", "-L", row["node"]), row["op"], row["weight_type"]) ] += elapsed
++    layers[last_layer] += elapsed
++    kind = "attention" if last_layer % 4 == 3 else "deltanet"
++    if not 0 <= last_layer < 64:
++        kind = "other"
++    layer_types[kind] += elapsed
++    barrier += int(row["barrier_us"])
++
++
++def table(counter):
++    total = sum(counter.values())
++    return [{"key": key, "seconds": value / 1e6, "percent": value * 100 / total} for key, value in counter.most_common()]
++
++
++sched = collections.Counter()
++for row in read(".scheduler.csv"):
++    if int(row["ne1"]) <= 3:
++        sched[(row["stage"], row["backend"]) ] += int(row["elapsed_us"])
++result = {"after_us": args.after_us, "cpu_operations_decode": table(ops), "cpu_functions_decode": table(functions),
++          "cpu_layers_decode": table(layers), "cpu_layer_types_decode": table(layer_types), "scheduler_decode": table(sched),
++          "coordinator_barrier_seconds": barrier / 1e6,
++          "limitations": ["Layer attribution follows named graph nodes; anonymous nodes inherit the preceding layer.",
++                          "QueryThreadCycleTime measures the coordinator, not all worker cycles.",
++                          "Instructions, IPC, stalls and frequency are NA without hardware counters.",
++                          "Profiling forces backend synchronization; use unprofiled runs for performance decisions."]}
++pathlib.Path(str(args.prefix) + ".summary.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
++print(json.dumps({k: v[:12] if isinstance(v, list) else v for k, v in result.items() if "layers_decode" not in k}, indent=2))
+diff --git a/scripts/qwen38_quality.py b/scripts/qwen38_quality.py
+new file mode 100644
+index 0000000..e6c527d
+--- /dev/null
++++ b/scripts/qwen38_quality.py
+@@ -0,0 +1,93 @@
++"""Capture token probabilities and native tool round trips against a running server."""
++import argparse
++import ast
++import json
++import pathlib
++import re
++import subprocess
++import sys
++import urllib.request
++
++parser = argparse.ArgumentParser()
++parser.add_argument("--out", type=pathlib.Path, required=True)
++parser.add_argument("--base", default="http://127.0.0.1:8080")
++parser.add_argument("--task", action="store_true")
++args = parser.parse_args()
++
++
++def post(endpoint, body):
++    request = urllib.request.Request(args.base + endpoint, json.dumps(body).encode(), {"Content-Type": "application/json"})
++    with urllib.request.urlopen(request, timeout=600) as response:
++        return json.load(response)
++
++
++report = {"logprobs": [], "tool": {}}
++for prompt in ["def clamp(value, low, high):\n    return", "The prime numbers smaller than twenty are", "La capital de Costa Rica es"]:
++    result = post("/completion", {"prompt": prompt, "n_predict": 24, "n_probs": 10, "temperature": 0,
++                                 "seed": 42, "cache_prompt": False, "ignore_eos": True})
++    report["logprobs"].append({"prompt": prompt, "response": result})
++    args.out.write_text(json.dumps(report, indent=2))
++
++tools = [{"type": "function", "function": {"name": "sum_numbers", "description": "Add two integers.",
++         "parameters": {"type": "object", "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
++                        "required": ["a", "b"], "additionalProperties": False}}}]
++messages = [{"role": "user", "content": "Use sum_numbers to add 17 and 25. Then state the result in one sentence."}]
++body = {"model": "local", "messages": messages, "tools": tools, "temperature": 0, "seed": 42,
++        "max_tokens": 96, "chat_template_kwargs": {"enable_thinking": False}}
++first = post("/v1/chat/completions", body)
++report["tool"]["first"] = first
++message = first["choices"][0]["message"]
++calls = message.get("tool_calls", [])
++report["tool"]["native_tool_called"] = len(calls) == 1 and calls[0]["function"]["name"] == "sum_numbers"
++if report["tool"]["native_tool_called"]:
++    values = json.loads(calls[0]["function"]["arguments"])
++    report["tool"]["arguments_correct"] = values == {"a": 17, "b": 25}
++    messages.append(message)
++    messages.append({"role": "tool", "tool_call_id": calls[0]["id"], "content": json.dumps({"result": values["a"] + values["b"]})})
++    second = post("/v1/chat/completions", body)
++    report["tool"]["second"] = second
++    report["tool"]["answer_correct"] = "42" in (second["choices"][0]["message"].get("content") or "")
++reasoning = post("/v1/chat/completions", {"model": "local", "messages": [{"role": "user", "content": "What is 17 + 25? Give the result."}],
++                 "temperature": 0, "seed": 42, "max_tokens": 128, "chat_template_kwargs": {"enable_thinking": True},
++                 "reasoning_format": "deepseek"})
++report["reasoning"] = reasoning
++if args.task:
++    task = post("/v1/chat/completions", {"model": "local", "messages": [{"role": "user", "content":
++        "Write only Python code, no imports: def encode_runs(text: str) -> list[tuple[str, int]]: "
++        "Return consecutive run-length pairs. Empty input returns []. Example: 'aaabbc' returns "
++        "[('a', 3), ('b', 2), ('c', 1)]. Do not include tests or explanation."}],
++        "temperature": 0, "seed": 42, "max_tokens": 512, "chat_template_kwargs": {"enable_thinking": False}})
++    content = task["choices"][0]["message"].get("content") or ""
++    code = re.sub(r"^```(?:python)?\s*|\s*```$", "", content.strip())
++    report["code_task"] = {"response": task, "code": code, "passed": False}
++    try:
++        tree = ast.parse(code)
++        # Reject imports, reflection, arbitrary attributes and other side effects before execution.
++        allowed = (ast.Module, ast.FunctionDef, ast.arguments, ast.arg, ast.Return, ast.Assign, ast.AnnAssign,
++                   ast.AugAssign, ast.Name, ast.Load, ast.Store, ast.Constant, ast.List, ast.Tuple, ast.Subscript,
++                   ast.Slice, ast.For, ast.If, ast.Compare, ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE,
++                   ast.BoolOp, ast.And, ast.Or, ast.UnaryOp, ast.Not, ast.USub, ast.BinOp, ast.Add, ast.Sub,
++                   ast.Call, ast.Attribute, ast.Expr, ast.Pass, ast.Break, ast.Continue, ast.IfExp)
++        for node in ast.walk(tree):
++            if not isinstance(node, allowed):
++                raise ValueError(f"Unsupported task syntax: {type(node).__name__}")
++            if isinstance(node, ast.Name) and node.id.startswith("_"):
++                raise ValueError("Private names are forbidden")
++            if isinstance(node, ast.Attribute) and node.attr != "append":
++                raise ValueError("Only list.append is permitted")
++            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id not in ("len", "range", "enumerate", "zip", "list", "tuple"):
++                raise ValueError("Unapproved call")
++        tests = "\nassert encode_runs('') == []\nassert encode_runs('a') == [('a',1)]\nassert encode_runs('aaabbc') == [('a',3),('b',2),('c',1)]\nassert encode_runs('ababa') == [('a',1),('b',1),('a',1),('b',1),('a',1)]\nassert encode_runs(chr(233)*17+'x') == [(chr(233),17),('x',1)]\nassert encode_runs('x'*10000) == [('x',10000)]\n"
++        result = subprocess.run([sys.executable, "-I", "-c", code + tests], timeout=5, capture_output=True, text=True)
++        report["code_task"].update(passed=result.returncode == 0, stderr=result.stderr, tested_cases=6)
++    except (ValueError, SyntaxError, subprocess.TimeoutExpired) as error:
++        report["code_task"]["error"] = str(error)
++reasoning_message = reasoning["choices"][0]["message"]
++report["passed"] = all(report["tool"].get(key) for key in ("native_tool_called", "arguments_correct", "answer_correct"))
++report["passed"] = report["passed"] and bool(reasoning_message.get("reasoning_content")) and "42" in (reasoning_message.get("content") or "")
++if args.task:
++    report["passed"] = report["passed"] and report["code_task"]["passed"]
++args.out.write_text(json.dumps(report, indent=2))
++print(json.dumps({"tool_called": report["tool"].get("native_tool_called"), "tool_arguments_correct": report["tool"].get("arguments_correct"),
++                  "tool_answer_correct": report["tool"].get("answer_correct"), "reasoning_message": reasoning["choices"][0]["message"]}))
++assert report["passed"], f"Quality gate failed; see {args.out}"
+diff --git a/scripts/qwen38_quality_compare.py b/scripts/qwen38_quality_compare.py
+new file mode 100644
+index 0000000..5faac41
+--- /dev/null
++++ b/scripts/qwen38_quality_compare.py
+@@ -0,0 +1,33 @@
++import argparse
++import json
++import math
++import pathlib
++
++parser = argparse.ArgumentParser()
++parser.add_argument("reference", type=pathlib.Path)
++parser.add_argument("candidate", type=pathlib.Path)
++args = parser.parse_args()
++reference = json.loads(args.reference.read_text())
++candidate = json.loads(args.candidate.read_text())
++cases = []
++for ref, cur in zip(reference["logprobs"], candidate["logprobs"]):
++    a, b = ref["response"], cur["response"]
++    diffs = []
++    ids_equal = True
++    for x, y in zip(a["completion_probabilities"], b["completion_probabilities"]):
++        ids_equal = ids_equal and x["id"] == y["id"]
++        px = {v["id"]: v["logprob"] for v in x["top_logprobs"]}
++        py = {v["id"]: v["logprob"] for v in y["top_logprobs"]}
++        diffs.extend(abs(math.exp(px[k]) - math.exp(py[k])) for k in px.keys() & py.keys())
++    nll_a = -sum(v["logprob"] for v in a["completion_probabilities"]) / len(a["completion_probabilities"])
++    nll_b = -sum(v["logprob"] for v in b["completion_probabilities"]) / len(b["completion_probabilities"])
++    cases.append({"prompt": ref["prompt"], "same_output": a["content"] == b["content"], "same_token_ids": ids_equal,
++                  "max_top_probability_delta": max(diffs), "reference_generated_nll": nll_a, "candidate_generated_nll": nll_b})
++result = {"cases": cases, "candidate_tool": {k: v for k, v in candidate["tool"].items() if isinstance(v, bool)},
++          "reasoning_output_same": reference["reasoning"]["choices"][0]["message"] == candidate["reasoning"]["choices"][0]["message"],
++          "note": "Generated-token NLL is a logits check, not held-out corpus perplexity."}
++result["passed"] = all(v["same_output"] and v["same_token_ids"] and v["max_top_probability_delta"] < 0.001 for v in cases)
++result["passed"] = result["passed"] and all(result["candidate_tool"].values()) and result["reasoning_output_same"]
++args.candidate.with_name("comparison.json").write_text(json.dumps(result, indent=2))
++print(json.dumps(result, indent=2))
++assert result["passed"]
+diff --git a/scripts/qwen38_uprof.py b/scripts/qwen38_uprof.py
+new file mode 100644
+index 0000000..25c0836
+--- /dev/null
++++ b/scripts/qwen38_uprof.py
+@@ -0,0 +1,48 @@
++"""Cross-check the ETW PMC profile with the official AMD profiler."""
++import json
++import pathlib
++import shutil
++import subprocess
++import sys
++import time
++
++ROOT = pathlib.Path(__file__).resolve().parents[1]
++out = ROOT / "reports/2026-11-01-qwen38/uprof-attached"
++out.mkdir()
++symbols = out / "symbols"
++symbols.mkdir()
++for pdb in (ROOT.parent / "build-Qwen38-sm89/bin").glob("*.pdb"):
++    shutil.copy2(pdb, symbols / pdb.name)
++model = r"C:/Users/user/Documents/prject_local_AI/models/qwen38-27b-perf-iq4_xs-floor4.gguf"
++server_dir = out.parent / "uprof-attached-server"
++harness = [sys.executable, str(ROOT / "scripts/qwen38_experiment.py"), "--label", "uprof-attached-server",
++           "--model", model, "--env", "LLAMA_MMAP_TRIM_GPU=1"]
++runner = subprocess.Popen(harness, cwd=ROOT)
++deadline = time.monotonic() + 30
++try:
++    while True:
++        manifest = server_dir / "manifest.json"
++        if manifest.exists():
++            try:
++                pid = json.loads(manifest.read_text())["server_pid"]
++                break
++            except (KeyError, json.JSONDecodeError):
++                pass
++        if runner.poll() is not None:
++            raise RuntimeError("Server harness exited before publishing its PID")
++        if time.monotonic() > deadline:
++            raise TimeoutError("Server PID not published")
++        time.sleep(0.1)
++    command = [r"C:\Program Files\AMD\AMDuProf\bin\AMDuProfCLI.exe", "profile", "--pid", str(pid),
++           "--config", "assess", "--config", "tbp", "--interval", "10000000",
++           "--start-delay", "25", "--duration", "45", "-o", str(out)]
++    report = {"command": command, "harness_command": harness, "server_pid": pid,
++              "note": "Attach to the actual server PID. Profiled timings are excluded from performance decisions."}
++    (out / "command.json").write_text(json.dumps(report, indent=2))
++    result = subprocess.run(command, cwd=ROOT)
++    report["exit_code"] = result.returncode
++    (out / "command.json").write_text(json.dumps(report, indent=2))
++finally:
++    # The harness owns the server and performs its cleanup after all requests.
++    runner.wait()
++raise SystemExit(result.returncode)
+diff --git a/src/llama-mmap.cpp b/src/llama-mmap.cpp
+index 4d1cd31..2adab1f 100644
+--- a/src/llama-mmap.cpp
++++ b/src/llama-mmap.cpp
+@@ -636,8 +636,30 @@ struct llama_mmap::impl {
+     }
+ 
+     void unmap_fragment(size_t first, size_t last) {
+-        GGML_UNUSED(first);
+-        GGML_UNUSED(last);
++        static const bool trim = [] {
++            const char * value = getenv("LLAMA_MMAP_TRIM_GPU");
++            return value && atoi(value) != 0;
++        }();
++        if (!trim || first >= last || first >= size) {
++            return;
++        }
++        SYSTEM_INFO info;
++        GetSystemInfo(&info);
++        const size_t page = info.dwPageSize;
++        last = std::min(last, size) / page * page;
++        if (first > SIZE_MAX - (page - 1)) {
++            return;
++        }
++        first = (first + page - 1) / page * page;
++        if (first >= last) {
++            return;
++        }
++        // An unlocked mapped range is removed from the working set without invalidating its addresses.
++        if (!VirtualUnlock((char *) addr + first, last - first) && GetLastError() != ERROR_NOT_LOCKED) {
++            LLAMA_LOG_WARN("%s: could not retire GPU upload pages: %s\n", __func__, llama_format_win_err(GetLastError()).c_str());
++        } else {
++            LLAMA_LOG_INFO("%s: retired %.3f MiB of GPU upload pages from the working set\n", __func__, (last - first) / 1048576.0);
++        }
+     }
+ 
+     ~impl() {
+diff --git a/src/llama-model.cpp b/src/llama-model.cpp
+index f45d30c..1c5212c 100644
+--- a/src/llama-model.cpp
++++ b/src/llama-model.cpp
+@@ -2064,6 +2064,7 @@ bool llama_model_base::load_tensors(llama_model_loader & ml) {
+         }
+     }
+ 
++
+     if (use_mmap_buffer) {
+         for (auto & mapping : ml.mappings) {
+             pimpl->mappings.emplace_back(std::move(mapping));
+@@ -2710,6 +2711,22 @@ void llama_model::print_info() const {
+ }
+ 
+ ggml_backend_dev_t llama_model::dev_layer(int il) const {
++    static const bool from_projection = [] {
++        const char * value = getenv("LLAMA_DEVICE_FROM_PROJECTION");
++        return value && atoi(value) != 0;
++    }();
++    if (from_projection && il >= 0 && il < (int) layers.size()) {
++        const auto & layer = layers[il];
++        const ggml_tensor * anchor = layer.ssm_out ? layer.ssm_out : (layer.wq ? layer.wq : layer.wqkv);
++        if (anchor && anchor->buffer) {
++            if (ggml_backend_buffer_is_host(anchor->buffer)) {
++                return ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_CPU);
++            }
++            if (auto * device = ggml_backend_buft_get_device(ggml_backend_buffer_get_type(anchor->buffer))) {
++                return device;
++            }
++        }
++    }
+     return pimpl->dev_layer.at(il).dev;
+ }
+ 
+diff --git a/tools/server/README.md b/tools/server/README.md
+index 66a34ff..59dabba 100644
+--- a/tools/server/README.md
++++ b/tools/server/README.md
+@@ -163,6 +163,7 @@ For the full list of features, please refer to [server's changelog](https://gith
+ | `-lcs, --lookup-cache-static FNAME` | path to static lookup cache to use for lookup decoding (not updated by generation) |
+ | `-lcd, --lookup-cache-dynamic FNAME` | path to dynamic lookup cache to use for lookup decoding (updated by generation) |
+ | `--kv-unified-per-slot N` | context limit per parallel slot (default: unset, behavior unchanged).<br/>when set without -c/--ctx-size, the shared KV pool is sized to n_parallel*N<br/>(env: LLAMA_ARG_KV_UNIFIED_PER_SLOT) |
++| `--cache-recurrent-prefix` | keep one recurrent prefix checkpoint per slot, bounded by `--cache-ram / --parallel`, while full-attention KV remains resident. Disables full KV prompt snapshots. Works with `--ctx-checkpoints 0`; text-only prefixes are restored through the existing partial-state API. (env: LLAMA_ARG_CACHE_RECURRENT_PREFIX) |
+ | `-ctxcp, --ctx-checkpoints, --swa-checkpoints N` | max number of context checkpoints to create per slot (default: 32)[(more info)](https://github.com/ggml-org/llama.cpp/pull/15293)<br/>(env: LLAMA_ARG_CTX_CHECKPOINTS) |
+ | `-cms, --checkpoint-min-step N` | minimum spacing between context checkpoints in tokens (default: 8192, 0 = no minimum)<br/>(env: LLAMA_ARG_CHECKPOINT_MIN_SPACING_NT) |
+ | `-cram, --cache-ram N` | set the maximum cache size in MiB (default: 8192, 0 for decision models, -1 - no limit, 0 - disable)[(more info)](https://github.com/ggml-org/llama.cpp/pull/16391)<br/>(env: LLAMA_ARG_CACHE_RAM) |
+diff --git a/tools/server/server-context.cpp b/tools/server/server-context.cpp
+index 9377e3c..f7ad06b 100644
+--- a/tools/server/server-context.cpp
++++ b/tools/server/server-context.cpp
+@@ -339,9 +339,10 @@ struct server_slot {
+     slot_state state = SLOT_STATE_IDLE;
+ 
+     server_prompt prompt;
++    bool cache_prefix_only = false;
+ 
+     bool prompt_save(server_prompt_cache & prompt_cache) const {
+-        if (prompt.tokens.size() == 0) {
++        if (prompt.tokens.size() == 0 || cache_prefix_only) {
+             return false;
+         }
+ 
+@@ -1522,6 +1523,8 @@ private:
+             slot.id      = i;
+             slot.ctx_tgt = ctx_tgt;
+             slot.ctx_dft = ctx_dft;
++            slot.cache_prefix_only = params_base.cache_recurrent_prefix && params_base.cache_ram_mib > 0 &&
++                    (ctx_tgt_seq_rm_type == COMMON_CONTEXT_SEQ_RM_TYPE_FULL || ctx_tgt_seq_rm_type == COMMON_CONTEXT_SEQ_RM_TYPE_RS);
+             slot.mem.init(ctx_tgt, ctx_dft);
+             slot.spec    = spec.get();
+             slot.n_ctx   = n_ctx_slot();
+@@ -2721,8 +2724,39 @@ private:
+     }
+ 
+     // n_tokens_cur: the number of tokens added to the batch for the current slot
+-    void create_checkpoint(server_slot & slot, const int64_t n_tokens_cur, llama_pos pos_min, llama_pos pos_max) {
++    void create_checkpoint(server_slot & slot, const int64_t n_tokens_cur, llama_pos pos_min, llama_pos pos_max, bool stable = false) {
+         const int id_task = slot.task->id;
++        const size_t max_checkpoints = slot.cache_prefix_only ? 4 : std::max(0, params_base.n_ctx_checkpoints);
++        if (max_checkpoints == 0) {
++            return;
++        }
++        std::vector<uint8_t> prefix_spec;
++        if (slot.cache_prefix_only) {
++            const uint64_t budget = (uint64_t) params_base.cache_ram_mib * 1024 * 1024 / slots.size();
++            const size_t target = llama_state_seq_get_size_ext(ctx_tgt, slot.id, LLAMA_STATE_SEQ_FLAGS_PARTIAL_ONLY);
++            const size_t draft = ctx_dft ? llama_state_seq_get_size_ext(ctx_dft, slot.id, LLAMA_STATE_SEQ_FLAGS_PARTIAL_ONLY) : 0;
++            common_speculative_get_state(spec.get(), slot.id, prefix_spec);
++            const size_t add = target + draft + prefix_spec.size();
++            if (add > budget) {
++                SLT_WRN(slot, "recurrent prefix exceeds per-slot cache budget %.3f MiB, skipping\n", budget / 1048576.0);
++                return;
++            }
++            size_t used = 0;
++            for (const auto & ckpt : slot.prompt.checkpoints) {
++                used += ckpt.size();
++            }
++            while (used > budget - add) {
++                const auto victim = std::find_if(slot.prompt.checkpoints.begin(), slot.prompt.checkpoints.end(),
++                        [](const auto & ckpt) { return !ckpt.stable; });
++                if (victim == slot.prompt.checkpoints.end()) {
++                    break;
++                }
++                SLT_TRC(slot, "evicting context checkpoint for budget (pos_min = %d, pos_max = %d, n_tokens = %" PRId64 ", size = %.3f MiB)\n",
++                        victim->pos_min, victim->pos_max, victim->n_tokens, (float) victim->size() / 1024 / 1024);
++                used -= victim->size();
++                slot.prompt.checkpoints.erase(victim);
++            }
++        }
+ 
+         // evict checkpoints within min-step of a previous checkpoint, unless they were
+         // created by the current task
+@@ -2731,7 +2765,7 @@ private:
+         for (auto it = slot.prompt.checkpoints.begin();
+                 slot.prompt.checkpoints.size() + 1 >= (size_t) params_base.n_ctx_checkpoints &&
+                 it != slot.prompt.checkpoints.end(); ) {
+-            if (it->id_task != id_task && last >= 0 && it->n_tokens <= last + params_base.checkpoint_min_step) {
++            if (!it->stable && it->id_task != id_task && last >= 0 && it->n_tokens <= last + params_base.checkpoint_min_step) {
+                 SLT_TRC(slot, "erasing context checkpoint too close to an earlier one (pos_min = %d, pos_max = %d, n_tokens = %" PRId64 ", size = %.3f MiB)\n",
+                         it->pos_min, it->pos_max, it->n_tokens, (float) it->size() / 1024 / 1024);
+ 
+@@ -2743,14 +2777,18 @@ private:
+             ++it;
+         }
+ 
+-        while (slot.prompt.checkpoints.size() >= (size_t) params_base.n_ctx_checkpoints) {
++        while (slot.prompt.checkpoints.size() >= max_checkpoints) {
+             // make room for the new checkpoint, if needed
+-            const auto & cur = slot.prompt.checkpoints.front();
++            const auto victim = std::find_if(slot.prompt.checkpoints.begin(), slot.prompt.checkpoints.end(),
++                    [](const auto & ckpt) { return !ckpt.stable; });
++            if (victim == slot.prompt.checkpoints.end()) {
++                break;
++            }
+ 
+             SLT_WRN(slot, "erasing old context checkpoint (pos_min = %d, pos_max = %d, n_tokens = %" PRId64 ", size = %.3f MiB)\n",
+-                    cur.pos_min, cur.pos_max, cur.n_tokens, (float) cur.size() / 1024 / 1024);
++                    victim->pos_min, victim->pos_max, victim->n_tokens, (float) victim->size() / 1024 / 1024);
+ 
+-            slot.prompt.checkpoints.erase(slot.prompt.checkpoints.begin());
++            slot.prompt.checkpoints.erase(victim);
+         }
+ 
+         // replace an existing checkpoint at the same n_tokens instead of appending a duplicate
+@@ -2769,20 +2807,31 @@ private:
+         auto & cur = slot.prompt.checkpoints.emplace_back();
+ 
+         cur.id_task = id_task;
++        cur.stable = stable;
+ 
+         // [TAG_CHECKPOINTS_FIX_POS_MIN]
+         // TODO: here we incorrectly deterimne that the saved checkpoint data covers the [pos_min, pos_max] range
+         //       this is not true for SWA models: https://github.com/ggml-org/llama.cpp/pull/24411#issuecomment-4677983225
+         cur.update_pos(slot.prompt.n_tokens() - n_tokens_cur, pos_min, pos_max);
+ 
+-        cur.update_tgt(ctx_tgt, slot.id, LLAMA_STATE_SEQ_FLAGS_PARTIAL_ONLY);
+-        cur.update_dft(ctx_dft, slot.id, LLAMA_STATE_SEQ_FLAGS_PARTIAL_ONLY);
+-        // stash the draft's speculative state with the checkpoint
+-        common_speculative_get_state(spec.get(), slot.id, cur.data_spec);
++        try {
++            cur.update_tgt(ctx_tgt, slot.id, LLAMA_STATE_SEQ_FLAGS_PARTIAL_ONLY);
++            cur.update_dft(ctx_dft, slot.id, LLAMA_STATE_SEQ_FLAGS_PARTIAL_ONLY);
++            if (slot.cache_prefix_only) {
++                cur.data_spec = std::move(prefix_spec);
++                SLT_INF(slot, "cached resident-KV prefix at %" PRId64 " tokens, recurrent state %.3f MiB\n", cur.n_tokens, cur.size() / 1048576.0);
++            } else {
++                common_speculative_get_state(spec.get(), slot.id, cur.data_spec);
++            }
++        } catch (const std::bad_alloc &) {
++            slot.prompt.checkpoints.pop_back();
++            SLT_WRN(slot, "%s", "checkpoint allocation failed, continuing without prefix cache\n");
++            return;
++        }
+ 
+         SLT_TRC(slot,
+                 "created context checkpoint %d of %d (pos_min = %d, pos_max = %d, n_tokens = %" PRId64 ", size = %.3f MiB)\n",
+-                (int) slot.prompt.checkpoints.size(), params_base.n_ctx_checkpoints, cur.pos_min,
++                (int) slot.prompt.checkpoints.size(), (int) max_checkpoints, cur.pos_min,
+                 cur.pos_max, cur.n_tokens, (float) cur.size() / 1024 / 1024);
+     }
+ 
+@@ -4388,7 +4437,8 @@ private:
+                         alora_disabled_id = enabled_loras[0];
+                     }
+ 
+-                    bool do_checkpoint = params_base.n_ctx_checkpoints > 0;
++                    const bool prefix_cache = slot.cache_prefix_only && slot.task->params.cache_prompt && !slot.task->is_stateless();
++                    bool do_checkpoint = params_base.n_ctx_checkpoints > 0 || prefix_cache;
+ 
+                     // make checkpoints only for completion tasks
+                     do_checkpoint = do_checkpoint && slot.task->type == SERVER_TASK_TYPE_COMPLETION;
+@@ -4519,7 +4569,11 @@ private:
+ 
+                             bool should_break = false;
+                             for (int offset : checkpoint_offsets) {
+-                                const int n_last = std::min(n_batch, offset);
++                                if (prefix_cache && offset != 4) {
++                                    continue;
++                                }
++                                const int tail = prefix_cache ? std::min(3, (int) llama_n_rs_seq(ctx_tgt) + 1) : offset;
++                                const int n_last = std::min(n_batch, tail);
+                                 if (slot.task->n_tokens() == slot.prompt.n_tokens() + n_last) {
+                                     should_break = true;
+                                     break;
+@@ -4584,7 +4638,9 @@ private:
+                     // note: we create the checkpoint before calling llama_decode(), so the current batch is not
+                     //       yet processed and therefore it is not part of the checkpoint.
+                     if (do_checkpoint) {
+-                        create_checkpoint(slot, n_tokens_cur, pos_min, pos_max);
++                        const bool anchor = prefix_cache && is_user_start &&
++                                n_tokens_start == spans.first_user_message_pos();
++                        create_checkpoint(slot, n_tokens_cur, pos_min, pos_max, anchor);
+                     }
+                 }
+ 

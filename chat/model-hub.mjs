@@ -197,6 +197,18 @@ export async function planParaModelo(clave, opciones = {}) {
     ? (Number(entrada.servidor?.draftBytes) || Number(entrada.draft?.bytes) || tamanoArchivo(draftArchivo))
     : 0;
   const vr = await vramInfo();
+  // Un denso más grande que la VRAM no cabe con la cuenta de "todo en GPU".
+  // `gpu-parcial` declara el reparto medido (ngl, MiB en GPU, contexto y KV):
+  // se devuelve tal cual en vez de recalcular un plan que siempre daría 0.
+  if (entrada.servidor?.tipo === "gpu-parcial" && Number(entrada.plan?.contexto) >= 4096) {
+    return {
+      ok: true,
+      clave,
+      entrada,
+      plan: { ...entrada.plan, ok: true, motivo: String(entrada.servidor.nota || "perfil gpu-parcial medido") },
+      vr,
+    };
+  }
   // Por defecto se planifica como si la GPU quedara entera para este modelo:
   // el cambio de modelo apaga el anterior antes de arrancar. `actual` usa la
   // VRAM libre AHORA (útil para saber si cabe sin mover nada).
@@ -270,6 +282,16 @@ export async function registrarArchivo(archivo, opciones = {}) {
   }, {
     libreMiB: opciones.libreMiB || Math.max(4096, vr.totalMiB - 232),
   });
+  // Un perfil medido manda sobre el plan automático. `gpu-parcial` describe un
+  // denso que no cabe en VRAM (ngl y MiB en GPU medidos); sin este merge, volver
+  // a registrar el modelo lo convertiría en `gpu-completa` y el IDE lo rechazaría.
+  try {
+    const curado = leerCurado().modelos.find((m) => m.clave === clave);
+    if (curado?.servidor?.tipo === "gpu-parcial" && Number(curado.plan?.contexto) >= 4096) {
+      entrada.servidor = { ...entrada.servidor, ...curado.servidor };
+      entrada.plan = { ...entrada.plan, ...curado.plan, calculado: new Date().toISOString() };
+    }
+  } catch { /* catálogo curado ausente: se queda el plan automático */ }
   entrada.clave = clave;
   entrada.instalado = new Date().toISOString();
   entrada.gguf = {

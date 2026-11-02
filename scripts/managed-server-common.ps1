@@ -68,8 +68,11 @@ function Start-BonsaiManagedProcess($Metadata) {
         }
         if ($Json) { [Console]::Out.WriteLine((@{ ok = $true; state = 'starting'; port = $Port; wrapperPid = $PID; serverPid = $exec.Id; binId = $Binary.id; exe = $BinPath } | ConvertTo-Json -Compress)) }
         $mutex.ReleaseMutex(); $locked = $false
-        if ($IsMoe) {
-            try { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'win-optimize-process.ps1') -Pid $exec.Id | Out-Null } catch { }
+        if ($IsMoe -or $Metadata.tipo -eq 'gpu-parcial') {
+            # Un denso parcial pasa la mayor parte del decode en CPU: prioridad
+            # alta y sin EcoQoS evita que Windows lo aparque en segundo plano.
+            $cpuPrio = if ($Metadata.tipo -eq 'gpu-parcial') { 'high' } else { 'above' }
+            try { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'win-optimize-process.ps1') -Pid $exec.Id -Cpu $cpuPrio | Out-Null } catch { }
         }
         $exec.WaitForExit()
         if ($null -eq $exec.ExitCode) { return 1 }

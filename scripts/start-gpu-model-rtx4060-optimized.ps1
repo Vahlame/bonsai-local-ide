@@ -126,10 +126,18 @@ if (Test-Path -LiteralPath $HubPath) {
     }
 }
 $Item = $Catalogo.catalogo.$Modelo
-if (-not $Item -or ($Item.servidor.tipo -ne "gpu-completa" -and $Item.servidor.tipo -ne "moe-hibrido")) {
-    throw "Modelo sin perfil de GPU completa ni MoE híbrido: $Modelo"
+if (-not $Item -or ($Item.servidor.tipo -ne "gpu-completa" -and $Item.servidor.tipo -ne "moe-hibrido" -and $Item.servidor.tipo -ne "gpu-parcial")) {
+    throw "Modelo sin perfil de GPU completa, MoE híbrido ni GPU parcial: $Modelo"
 }
 $EsMoe = $Item.servidor.tipo -eq "moe-hibrido"
+# Denso más grande que la VRAM: una parte de las capas vive en RAM. El perfil
+# declara cuántas capas caben (ngl) y cuántos MiB ocupan en la GPU.
+$EsParcial = $Item.servidor.tipo -eq "gpu-parcial"
+$NGpuLayers = 99
+if ($EsParcial) {
+    $NGpuLayers = [int]$Item.servidor.ngl
+    if ($NGpuLayers -le 0 -or $NGpuLayers -ge 512) { throw "Perfil gpu-parcial sin ngl válido: $Modelo" }
+}
 # Measured, machine-specific MoE split table. It is used only for MoE models
 # and only when the file exists; the old estimator remains the fallback.
 $MeasuredMoePath = Join-Path $RootDir "config\measured-moe-profiles.json"
@@ -175,14 +183,25 @@ if ([int64]$Item.bytes -gt 0 -and (Get-Item -LiteralPath $ModelPath).Length -ne 
     throw "El modelo no tiene el tamano verificado; descarga incompleta."
 }
 
-$Binary = Get-BonsaiBinaries | Where-Object { Test-Path -LiteralPath $_.exe } | Select-Object -First 1
+$Binaries = @(Get-BonsaiBinaries | Where-Object { Test-Path -LiteralPath $_.exe })
+# Un modelo puede exigir una build concreta (Qwen3.8 necesita master: DeltaNet
+# CUDA corregido y `--spec-type draft-mtp`). Si no, se mantiene el orden del
+# registro, que conserva el binario optimizado como predeterminado.
+$PreferredBinaryId = if ($Item.servidor.binario) { [string]$Item.servidor.binario } else { "" }
+$Binary = if ($PreferredBinaryId) { $Binaries | Where-Object { $_.id -eq $PreferredBinaryId } | Select-Object -First 1 } else { $null }
+if (-not $Binary) {
+    if ($PreferredBinaryId) { throw "El modelo $Modelo exige el binario '$PreferredBinaryId' y no está disponible" }
+    $Binary = $Binaries | Select-Object -First 1
+}
 if (-not $Binary) { throw "No hay binario llama-server permitido disponible" }
 $BinPath = $Binary.exe
 $UsingOptimized = ($BinPath -like "*build-RTX4060-Opt-sm89*") -or ($BinPath -like "*lab-server-mvq2*")
 $Threads = 4
 # Perfil del modelo (Hub): batch/ubatch/hilos medidos o recomendados. En presets
 # nombrados manda el preset; para CUSTOM/AUTO manda el modelo.
-if (($EnginePreset -eq 'CUSTOM' -or -not $EnginePreset) -and $Item.servidor) {
+if (($EnginePreset -eq 'CUSTOM' -or $EsParcial -or -not $EnginePreset) -and $Item.servidor) {
+    # En `gpu-parcial` el perfil medido manda aunque el IDE haya emparejado un
+    # preset por contexto/KV: 16 hilos son el óptimo medido para este denso.
     if ($Item.servidor.batch) { $Batch = [int]$Item.servidor.batch }
     if ($Item.servidor.ubatch) { $UBatch = [int]$Item.servidor.ubatch }
     if ($Item.servidor.threads) { $Threads = [int]$Item.servidor.threads }
@@ -227,7 +246,12 @@ if ($IsMoe) {
     }
     $WeightsMiB = $DensosMiB
 }
-if (($EngineOptions -or $EnginePreset -eq 'CUSTOM') -and $Item.servidor.pesosGpuEstandarMiB) {
+if ($EsParcial) {
+    # Solo los pesos que de verdad van a la GPU cuentan contra la VRAM; el resto
+    # se queda en RAM (mmap) y no debe reducir el contexto calculado.
+    if (-not $Item.servidor.pesosGpuEstandarMiB) { throw "Perfil gpu-parcial sin pesosGpuEstandarMiB: $Modelo" }
+    $WeightsMiB = [int]$Item.servidor.pesosGpuEstandarMiB
+} elseif (($EngineOptions -or $EnginePreset -eq 'CUSTOM') -and $Item.servidor.pesosGpuEstandarMiB) {
     $WeightsMiB = [int]$Item.servidor.pesosGpuEstandarMiB
 }
 
@@ -295,6 +319,11 @@ if ($Vision) {
     $TechoContexto = [math]::Min($TechoContexto, $TechoVision)
 }
 
+# `gpu-parcial` no usa el default denso de 16k: el plan medido ya fijó 32k.
+# Un contexto pedido explícitamente por el IDE o por el usuario manda igual.
+if ($EsParcial -and -not $PSBoundParameters.ContainsKey('ContextSize') -and -not $ContextoExplicito -and $Item.plan.contexto) {
+    $ContextSize = [string]$Item.plan.contexto
+}
 if ($ContextSize -eq "auto") {
     $ContextTokens = $TechoContexto
     $Found = $false
@@ -429,7 +458,13 @@ if ($Muestreo) {
     if ($null -ne $Muestreo.repeat_penalty) { $Repeat = [double]$Muestreo.repeat_penalty }
 }
 
-$ServerArgs = @("-m", $ModelPath, "--gpu-layers", "99")
+$ServerArgs = @("-m", $ModelPath, "--gpu-layers", "$NGpuLayers")
+if ($EsParcial) {
+    # Denso parcial: las capas que no caben se leen del GGUF con mmap. `--fit
+    # off` impide que el auto-fit cambie el reparto medido en tiempo de carga.
+    $ServerArgs += "--fit", "off"
+    $ServerArgs += "--load-mode", "mmap"
+}
 if ($IsMoe) {
     # Reparto explícito: densos + KV en VRAM, expertos de las N primeras capas
     # en RAM. Si los expertos de CPU caben, `none` evita page faults y duplica
@@ -458,7 +493,16 @@ $ServerArgs += "--host", $HostIP
 $ServerArgs += "--port", "$Port"
 $ServerArgs += "--jinja"
 $ServerArgs += "--metrics"
-if (-not $StableF16 -or $IsMoe) { $ServerArgs += "--cache-ram", "0" }
+if ($EsParcial) {
+    # La caché de prompt es lo que evita re-prefijar 25k tokens en cada turno.
+    # Es un tope, no una reserva: el perfil decide cuántos MiB puede usar.
+    $CacheRam = if ($null -ne $Item.servidor.cacheRamMiB) { [int]$Item.servidor.cacheRamMiB } else { 0 }
+    $ServerArgs += "--cache-ram", "$CacheRam"
+    if ($CacheRam -gt 0 -and $Item.servidor.cacheRecurrentPrefix -eq $true) {
+        $ServerArgs += "--cache-recurrent-prefix"
+    }
+    if ($Item.servidor.mmapTrimGpu -eq $true) { $env:LLAMA_MMAP_TRIM_GPU = '1' }
+} elseif (-not $StableF16 -or $IsMoe) { $ServerArgs += "--cache-ram", "0" }
 $ServerArgs += "-lv", "4"
 $ServerArgs += "--cors-origins", "http://127.0.0.1:$Port,http://localhost:$Port,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:8788,http://localhost:8788"
 $ServerArgs += "--temp", "$Temp"
@@ -467,9 +511,22 @@ $ServerArgs += "--top-k", "$TopK"
 $ServerArgs += "--min-p", "$MinP"
 $ServerArgs += "--presence-penalty", "$Presence"
 $ServerArgs += "--repeat-penalty", "$Repeat"
-$ServerArgs += "--spec-type", "none"
+# MTP (Qwen3.8): la cabeza nextn vive dentro del mismo GGUF. Un solo slot
+# (`--parallel 1`) es obligatorio para que el árbol especulativo sea determinista.
+$Mtp = ($Item.servidor.mtp -eq $true)
+if ($Mtp) {
+    $ServerArgs += "--spec-type", "draft-mtp"
+    $ServerArgs += "--spec-draft-n-max", "$([int]$Item.servidor.specDraftNMax)"
+    if ($null -ne $Item.servidor.specDraftPMin) { $ServerArgs += "--spec-draft-p-min", "$($Item.servidor.specDraftPMin)" }
+    $ServerArgs += "--parallel", "1"
+} elseif (-not $SpeculativeDecoding) {
+    $ServerArgs += "--spec-type", "none"
+}
 $ServerArgs += "--no-context-shift"
 if ($StableF16) { $ServerArgs += "--ctx-checkpoints", "0" }
+# Qwen3.8 conserva el razonamiento histórico por defecto. En un agente eso
+# multiplica los tokens del historial; el perfil lo apaga.
+if ($Item.servidor.noPreserveThinking -eq $true) { $ServerArgs += "--no-reasoning-preserve" }
 
 # Chat template -> file (inline breaks on quotes/newlines)
 $ChatTemplatePath = ""
@@ -492,14 +549,14 @@ if ($Vision) {
     $ServerArgs += "--image-max-tokens", "512"
 }
 
-if ($Pensar -gt 0) {
+if ($Pensar -ne 0) {
     $ServerArgs += "--reasoning-budget", "$Pensar"
     $ServerArgs += "--reasoning-format", "deepseek"
     $Nivel = if ($PensarNivel) { $PensarNivel } elseif ($Item.pensar.nivel) { [string]$Item.pensar.nivel } else { "" }
     if ($Nivel -and $Nivel -ne "default") { $ServerArgs += "--reasoning-effort", $Nivel }
 }
 
-if ($SpeculativeDecoding -and (Test-Path -LiteralPath $DraftModelPath)) {
+if ($SpeculativeDecoding -and -not $Mtp -and (Test-Path -LiteralPath $DraftModelPath)) {
     $ServerArgs += "--spec-type", "draft-simple"
     $ServerArgs += "--spec-draft-model", $DraftModelPath
     $ServerArgs += "--spec-draft-n-max", "$DraftTokensCount"
@@ -545,6 +602,7 @@ $Metadata = [ordered]@{
     enginePreset = $EnginePreset; llamaVersion = "desconocida";
     activeKey = $(if ($Vision -and $VisionProfile) { $VisionProfile.archivo } else { $null });
     speculative = $SpeculativeDecoding; optimized = $UsingOptimized; mmprojCPU = [bool]$ProjectorCPU;
+    tipo = [string]$Item.servidor.tipo;
     moe = [bool]$IsMoe; nCpuMoe = $NCpuMoe; capasMoe = $CapasMoe;
     gpuExpertosMiB = $GpuExpertosMiB; loadMode = $LoadMode
 }

@@ -260,7 +260,7 @@ if ($EngineOptions -or $EnginePreset -eq 'CUSTOM') {
     $ServerArgs += @("--spec-type", $Spec, "--no-context-shift")
     Write-Host "Preset $(if ($EngineOptions) { $EnginePreset } else { 'CUSTOM' }) | pesos $WeightsMiB MiB | computo/runtime $($GpuProfile.reservaMiB) MiB | vision $VisionMiB MiB | margen $SafetyMiB MiB (estimaciones)" -ForegroundColor Cyan
 }
-if ($Pensar -gt 0) { $ServerArgs += @("--reasoning-budget", "$Pensar", "--reasoning-format", "deepseek") }
+if ($Pensar -ne 0) { $ServerArgs += @("--reasoning-budget", "$Pensar", "--reasoning-format", "deepseek") }
 else { $ServerArgs += @("--reasoning", "off") }
 if ($Vision) { $ServerArgs += @("--mmproj", $ProjectorPath, "--mmproj-offload", "--mmproj-device", "CUDA0", "--image-max-tokens", "$($VisionProfile.imageMaxTokens)") }
 if ($DormirSeg -gt 0) { $ServerArgs += @("--sleep-idle-seconds", "$DormirSeg") }

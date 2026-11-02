@@ -1,0 +1,47 @@
+0410c5a docs: close the Qwen38 continuation with measured results and remaining work
+6b99565 test: accept both read-only tools in the final IDE smoke
+1c4a6f1 test: verify the recurrent cache flag on a pure transformer
+b64d606 test: transfer the recurrent prefix cache to Qwen3.8 4B
+f224cc3 test: validate the recurrent prefix cache at 25K with the final GGUF
+a1bc6f4 bench: reject draft backend sampling
+3535a35 test: run the controlled 512 MiB browser pressure benchmark
+418110d test: capture model-load and decode hard faults with the delivery flags
+8960afd test: verify the 64 MiB recurrent cache budget fallback
+d1f3f11 test: verify a two-turn IDE agent task with cache reuse
+d55b644 test: verify IDE cancellation for generation and commands
+f5711c4 docs: add the continuation handoff for the Qwen38 cache and tool work
+1e673cc bench: reject MTP draft p-min 0.1
+ce3dd64 docs: explain the interrupted IDE read smoke and the cache fix
+524097a test: add managed-IDE read and agent smoke helpers
+e94a282 test: validate Qwen native tool calling in the managed IDE
+e209466 bench: reject prefill ubatch 384
+fde05b2 bench: reject IQ4_XS prefill column reuse
+4b612b4 server: keep a stable recurrent prefix anchor
+d26e06a server: keep recurrent prefix checkpoints at user boundaries
+180b041 cuda: restore validated four-warp runtime and verify final candidate
+3825451 cuda: reject IQ4-only two-warp MMVQ and record handoff decision
+011cb8d cuda: reject verification-only two-warp MMVQ after three repetitions
+8d82add cuda: measure generic two-warp MMVQ and reject on strict gate
+ae5db31 sched: measure state-aware noncontiguous layer placement
+76c0f6c quant: measure and reject selective CPU Q4_K variant
+16d7f96 quant: reject measured selective CPU Q4_0 variant
+fc337cf perf: confirm IQ4 CPU hotspot with uProf and capture CUDA kernels
+4d0db33 ggml: measure opt-in Windows large-page and locked allocators
+3ea8e90 cpu: remove unproven explicit IQ4 prefetch after A/B
+2ee45e3 perf: measure IQ4 software prefetch at three distances
+1440c40 cpu: restore the faster OpenMP barrier after three measured alternatives
+4c1a58a perf: measure three custom Windows barrier designs and reject them
+80be569 perf: collect symbolized ETW function and AMD PMC profiles
+2659d74 perf: validate selective IQ4 on prose code and held-out perplexity
+86db764 perf: canonicalize CPU quantized weights with a four-bit floor
+5194ee1 windows: retire completed GPU upload pages from mapped working sets
+0a2a8eb server: align cached recurrent tails with small-batch verification
+087b0fd perf: validate recurrent prefix reuse at 6k 12k and 25k
+98537ed server: budget recurrent prefix checkpoints with resident full KV
+e30c957 cpu: preserve AVX2 accumulation order in fused VNNI verification
+5301802 perf: gate VNNI rollout on strict probability parity
+6e69f29 cpu: fuse IQ4_XS VNNI dot products for small verification batches
+26238dd perf: roll back slower tiled verification variants
+6fafbd1 perf: measure narrow three-column AVX2 verification kernel
+89dc8ab perf: measure and reject padded tiled MTP verification
+be449c4 perf: trace CPU nodes and scheduler splits for hybrid MTP

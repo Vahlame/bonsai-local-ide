@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="460" viewBox="0 0 900 460" role="img" aria-label="Qwen3.6 35B-A3B scorecard">
+<rect width="900" height="460" fill="#ffffff"/>
+<text x="24" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#17212b" text-anchor="start">Qwen3.6 35B-A3B · scorecard</text>
+<text x="24" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#5b6773" text-anchor="start">Mejor equilibrio calidad/velocidad: 35–40 tok/s con expertos en CPU</text>
+<text x="216" y="145" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#17212b" text-anchor="end">Fluidos</text>
+<rect x="230" y="120" width="590" height="28" fill="#eef1f5" rx="6"/>
+<rect x="230" y="120" width="578.2" height="28" fill="#2f7d32" rx="6"/>
+<text x="818.2" y="140" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#17212b" text-anchor="start">98/100</text>
+<text x="216" y="207" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#17212b" text-anchor="end">Juego</text>
+<rect x="230" y="182" width="590" height="28" fill="#eef1f5" rx="6"/>
+<rect x="230" y="182" width="554.6" height="28" fill="#2f7d32" rx="6"/>
+<text x="794.6" y="202" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#17212b" text-anchor="start">94/100</text>
+<text x="216" y="269" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#17212b" text-anchor="end">App</text>
+<rect x="230" y="244" width="590" height="28" fill="#eef1f5" rx="6"/>
+<rect x="230" y="244" width="542.8" height="28" fill="#2f7d32" rx="6"/>
+<text x="782.8" y="264" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#17212b" text-anchor="start">92/100</text>
+<text x="216" y="331" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#17212b" text-anchor="end">Skyblock</text>
+<rect x="230" y="306" width="590" height="28" fill="#eef1f5" rx="6"/>
+<rect x="230" y="306" width="454.3" height="28" fill="#d97706" rx="6"/>
+<text x="694.3" y="326" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#17212b" text-anchor="start">77/100</text>
+<text x="216" y="393" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="600" fill="#17212b" text-anchor="end">Global</text>
+<rect x="230" y="368" width="590" height="28" fill="#eef1f5" rx="6"/>
+<rect x="230" y="368" width="531.0" height="28" fill="#2f7d32" rx="6"/>
+<text x="771.0" y="388" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#17212b" text-anchor="start">90/100</text>
+<text x="24" y="436" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="start">Scorecard basado en las cuatro tareas del benchmark; las repeticiones miden consistencia.</text>
+</svg>

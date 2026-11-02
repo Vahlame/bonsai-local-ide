@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="520" viewBox="0 0 1000 520" role="img" aria-label="Engine optimizations stack">
+<rect width="1000" height="520" fill="#ffffff"/>
+<text x="24" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" fill="#17212b" text-anchor="start">Optimizaciones del motor aplicadas al benchmark</text>
+<text x="24" y="58" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" fill="#5b6773" text-anchor="start">El mismo stack para todos los modelos; lo que cambia es el perfil del modelo</text>
+<rect x="30" y="100" width="940" height="48" fill="#ffffff" stroke="#2f7d32" stroke-width="1.6" rx="8"/>
+<text x="50" y="120" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#2f7d32" text-anchor="start">Pensamiento libre</text>
+<text x="50" y="137" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#5b6773" text-anchor="start">--reasoning-budget -1 · effort high/xhigh</text>
+<rect x="30" y="162" width="940" height="48" fill="#ffffff" stroke="#d97706" stroke-width="1.6" rx="8"/>
+<text x="50" y="182" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#d97706" text-anchor="start">Offload MoE</text>
+<text x="50" y="199" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#5b6773" text-anchor="start">--n-cpu-moe 12/22/36 · load-mode none/mmap</text>
+<rect x="30" y="224" width="940" height="48" fill="#ffffff" stroke="#2563eb" stroke-width="1.6" rx="8"/>
+<text x="50" y="244" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#2563eb" text-anchor="start">KV + atención</text>
+<text x="50" y="261" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#5b6773" text-anchor="start">q8_0 · 32K/64K · flash-attn · batch 1024/512</text>
+<rect x="30" y="286" width="940" height="48" fill="#ffffff" stroke="#2f7d32" stroke-width="1.6" rx="8"/>
+<text x="50" y="306" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#2f7d32" text-anchor="start">Hilos</text>
+<text x="50" y="323" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#5b6773" text-anchor="start">8 hilos físicos · no 12</text>
+<rect x="30" y="348" width="940" height="48" fill="#ffffff" stroke="#2563eb" stroke-width="1.6" rx="8"/>
+<text x="50" y="368" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#2563eb" text-anchor="start">Caché</text>
+<text x="50" y="385" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#5b6773" text-anchor="start">--cache-ram 0 · --ctx-checkpoints 0 · --no-context-shift</text>
+<rect x="30" y="410" width="940" height="48" fill="#ffffff" stroke="#d97706" stroke-width="1.6" rx="8"/>
+<text x="50" y="430" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#d97706" text-anchor="start">Harmony / GPT-OSS</text>
+<text x="50" y="447" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="400" fill="#5b6773" text-anchor="start">--skip-chat-parsing · parser propio</text>
+<text x="24" y="498" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="400" fill="#5b6773" text-anchor="start">Resultado: Qwen3.6 35B-A3B a 35–40 tok/s; Qwen3.5 9B a 45–46; Qwen3.8 27B sigue en 7,2.</text>
+</svg>

@@ -729,7 +729,7 @@
     try {
       const r = await api("/api/modelos", { cuerpo, timeout: 600000 });
       cerrar();
-      avisar(`${r.nombre || nombre || clave} listo · ventana ${r.nCtx} tok${r.pensar ? ` · razona ${r.pensar}` : ""}`, "ok", 7000);
+      avisar(`${r.nombre || nombre || clave} listo · ventana ${r.nCtx} tok${r.pensar === -1 ? " · razona sin límite" : r.pensar ? ` · razona ${r.pensar}` : ""}`, "ok", 7000);
       window.dispatchEvent(new CustomEvent("bonsai:modelos-cambiados"));
       await refrescar();
     } catch (err) {

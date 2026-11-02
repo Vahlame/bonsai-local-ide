@@ -621,7 +621,7 @@ function catalogoModelos() {
       rol: typeof row.rol === "string" ? row.rol : "",
       uso: typeof row.uso === "string" ? row.uso : "",
       existe: bytes > 0 && (esperado === 0 || bytes === esperado),
-      gpuCompleta: row.servidor?.tipo === "gpu-completa" || row.servidor?.tipo === "moe-hibrido",
+      gpuCompleta: row.servidor?.tipo === "gpu-completa" || row.servidor?.tipo === "moe-hibrido" || row.servidor?.tipo === "gpu-parcial",
       margenObjetivoMiB: Number(row.servidor?.margenObjetivoMiB) || 0,
       predeterminado: clave === MODELO.modeloPredeterminado,
       fuente: typeof row.fuente === "string" ? row.fuente : "curado",
@@ -1314,11 +1314,15 @@ async function main(args) {
   });
   async function configuracionAnterior() {
     const state = await lifecycle.inspect();
-    if (state.state === "empty") return null;
-    if (state.state !== "ready") throw new LifecycleError("El servidor no está listo para cambiar de modelo", state, 409);
+    // `state.state` puede ser "error" por un fallo anterior aunque el servidor
+    // real esté vacío; `actualState` es el estado del adaptador. Sin esto, un
+    // solo fallo de arranque deja el cambio de modelo bloqueado hasta reiniciar.
+    const actual = state.actualState || state.state;
+    if (actual === "empty") return null;
+    if (actual !== "ready") throw new LifecycleError("El servidor no está listo para cambiar de modelo", state, 409);
     const previous = configurationFromMarker(state.marker);
     const perfil = MODELO.catalogo?.[previous?.model]?.servidor;
-    if (!previous || previous.model !== modeloActualClave() || !["gpu-completa", "moe-hibrido"].includes(perfil?.tipo) || previous.config.contexto > perfil.contexto) {
+    if (!previous || previous.model !== modeloActualClave() || !["gpu-completa", "moe-hibrido", "gpu-parcial"].includes(perfil?.tipo) || previous.config.contexto > perfil.contexto) {
       return { error: "no se guardó una configuración anterior recuperable" };
     }
     return { clave: previous.model, ...previous.config };
@@ -1713,7 +1717,13 @@ async function main(args) {
     const outTokens = histAuto
       ? Math.min(engine?.coderOutputTokens || 12288, salidaTokens)
       : salidaTokens;
-    chat.coderConfig = { ...CODER_CONFIG, contextTokens: ctxTokens, outputTokens: outTokens, toolResultTokens: Math.max(1000, Math.min(6000, Math.floor(ctxTokens / 10))), thinkingTokens: Number(ajustes.pensar) > 0 ? Number(ajustes.pensar) : 2048, ...(engine?.thinkingTokens ? {thinkingTokens:engine.thinkingTokens} : {}), ...coderOptions(process.env.BONSAI_CODER_OPTIONS), ...(ajustes.coderContextTokens ? { contextTokens: ajustes.coderContextTokens } : {}) };
+    const pedidoPensar = Number(ajustes.pensar);
+    const thinkingTokens = Number.isFinite(pedidoPensar) && pedidoPensar !== 0
+      ? pedidoPensar
+      : (engine?.thinkingTokens || 2048);
+    chat.coderConfig = { ...CODER_CONFIG, contextTokens: ctxTokens, outputTokens: outTokens, toolResultTokens: Math.max(1000, Math.min(6000, Math.floor(ctxTokens / 10))), thinkingTokens, ...coderOptions(process.env.BONSAI_CODER_OPTIONS), ...(ajustes.coderContextTokens ? { contextTokens: ajustes.coderContextTokens } : {}) };
+    const itemRazonamiento = catalogoModelos().find((m) => m.clave === modeloActualClave());
+    chat.razonamientoEsfuerzo = itemRazonamiento?.pensar?.nivel || "";
     chat.imageMaxTokens = Number(MODELO.catalogo?.[modeloActualClave()]?.vision?.imageMaxTokens) || 1024;
     const perfil = typeof ajustes.perfil === "string" ? ajustes.perfil : "";
     if (perfil && MODELO.muestreo[perfil]) chat.perfil = perfil;
@@ -1723,7 +1733,8 @@ async function main(args) {
     // Razonamiento: el que pidió el usuario, pero SOLO si el modelo cargado lo admite
     // (catalogo.<clave>.pensar). Con bolding_v1 se queda apagado aunque esté pedido.
     const capacidadPensar = pensarDe(modeloActualClave());
-    chat.thinkBudget = presupuestoPensar(modeloActualClave(), Number(ajustes.pensar) > 0 ? Number(ajustes.pensar) : capacidadPensar.presupuesto);
+    const pedidoEfectivo = Number.isFinite(pedidoPensar) && pedidoPensar !== 0 ? pedidoPensar : capacidadPensar.presupuesto;
+    chat.thinkBudget = presupuestoPensar(modeloActualClave(), pedidoEfectivo);
     // Tope de pasos del agente y tope de tiempo por comando: configurables con límites sanos.
     const topePasos = Number(ajustes.saltosTope);
     if (Number.isFinite(topePasos)) saltosTope = Math.max(24, Math.min(400, Math.round(topePasos)));
@@ -2684,7 +2695,8 @@ async function main(args) {
           const techo = validarTechoModelo(clave, cfg.contexto, cfg.vision);
           if (!techo.ok) throw new Error(`${techo.motivo}. El cambio se rechaza sin apagar el modelo actual.`);
           const presetProfile = cfg.enginePreset && isNamedEnginePreset(cfg.enginePreset) ? engineProfile(cfg.enginePreset) : null;
-          const pensar = presupuestoPensar(clave, Number(presetProfile?.thinkingTokens ?? (raw.pensar ?? actualAjustes.pensar)));
+          const pedidoPensar = raw.pensar ?? actualAjustes.pensar;
+          const pensar = presupuestoPensar(clave, Number(pedidoPensar ?? presetProfile?.thinkingTokens));
           const solicitado = {
             enginePreset: cfg.enginePreset, contexto: cfg.contexto,
             contextoExplicito: raw.contexto !== undefined || raw.context !== undefined,
@@ -2706,7 +2718,7 @@ async function main(args) {
             historial: cfg.historial,
             engineKv: cfg.kv,
             engineVision: cfg.vision,
-            ...(cfg.thinkingTokens ? { pensar: cfg.thinkingTokens } : {}),
+            pensar,
           };
           aplicarAjustesAlChat(guardarAjustes(nuevosAjustes));
           // Aquí es donde consta que el modelo nuevo contesta: se guarda la elección para
@@ -4275,7 +4287,7 @@ async function main(args) {
                 // de salida y NO desplaza la evidencia leída a la mitad, que era el fallo 16).
                 // Tras escribir/ejecutar lo normal es volver a leer: reserva de lectura.
                 chat.faseSalto = saltosUsados === 0 || accionPaso === "read" ? "plan" : "lectura";
-                chat.pensarEsteSalto = saltosUsados === 0 || ultimoFallo;
+                chat.pensarEsteSalto = chat.thinkBudget < 0 || saltosUsados === 0 || ultimoFallo;
                 // Las imágenes solo viajan en el primer salto del turno.
                 await enviar(siguiente, saltosUsados === 0 ? imagenesData : []);
                 saltosUsados += 1;
@@ -4440,7 +4452,8 @@ async function main(args) {
           }
           // El motivo real de la parada viaja a la interfaz: antes un `done` sin más no
           // distinguía una tarea terminada de una que se quedó sin pasos.
-          const completo = motivoParada === "completed" || motivoParada === "verified";
+          if (ac.signal.aborted) motivoParada = "cancelled";
+          const completo = !ac.signal.aborted && (motivoParada === "completed" || motivoParada === "verified");
           chat.session.lastStop = { motivo: motivoParada, saltos: saltosUsados, completo, ts: Date.now() };
           if (chat.coderTask) { chat.session.taskState = chat.coderTask.state; chat.saveSession(); }
           // Captura conservadora para la memoria global: solo frases del pedido con

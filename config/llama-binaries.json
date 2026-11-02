@@ -3,6 +3,8 @@
     { "id": "lab-server-mvq2", "relative": "bin/builds/lab-server-mvq2/bin/llama-server.exe" },
     { "id": "optimized-sm89", "relative": ".local/opt/bonsai-inference/build-RTX4060-Opt-sm89/bin/llama-server.exe" },
     { "id": "optimized-sm89-user", "relative": "%USERPROFILE%/.local/opt/bonsai-inference/build-RTX4060-Opt-sm89/bin/llama-server.exe" },
+    { "id": "qwen38-sm89", "relative": "%USERPROFILE%/.local/opt/bonsai-inference/build-Qwen38-sm89/bin/llama-server.exe" },
+    { "id": "qwen38-sm89-project", "relative": ".local/opt/bonsai-inference/build-Qwen38-sm89/bin/llama-server.exe" },
     { "id": "legacy-root", "relative": "bin/llama-server.exe" }
   ]
 }

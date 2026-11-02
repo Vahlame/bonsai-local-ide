@@ -20,7 +20,7 @@ param (
     [int]$Pensar = -1,               # -1 = auto: lo del ajuste "Modo razonamiento" de la interfaz SI el modelo lo admite (catalogo.<clave>.pensar). 0 = apagado. N>0 = tope de N tokens
     [int]$Threads = 8,
     [int]$UBatch = 512,
-    [ValidateSet("", "8GB-SAFE", "8GB-BALANCED", "8GB-MAX-SPEED", "8GB-CONTEXT", "8GB-VISION", "8GB-VISION-CONTEXT", "8GB-VISION-QUALITY", "8GB-VISION-LONG", "CUSTOM")][string]$EnginePreset = "",
+    [string]$EnginePreset = "",
     [int]$DormirSeg = 0,             # libera la VRAM tras N s sin peticiones (0 = nunca)
     [string]$Modelo = "",            # clave de un perfil verificado de GPU completa en chat\modelo.json
     [string]$Log = "",               # guarda todo lo que dice este script en ese archivo (lo usa el cambio de modelo)
@@ -145,6 +145,28 @@ if ($Pensar -gt 0 -and -not $pensarCompatible) {
     $Pensar = 0
 }
 
+$tipoServidor = if ($claveModelo) { [string]$M.catalogo.$claveModelo.servidor.tipo } else { "" }
+if ($tipoServidor -eq "gpu-parcial" -or $tipoServidor -eq "moe-hibrido") {
+    # El reparto parcial/MoE lo decide el lanzador optimizado (plan del modelo y preset medido).
+    $opt = Join-Path $PSScriptRoot "start-gpu-model-rtx4060-optimized.ps1"
+    $optArgs = @{
+        Modelo       = $claveModelo
+        ContextSize  = $ContextSize
+        Port         = $Port
+        HostIP       = $HostIP
+        KVCacheType  = $KVCacheType
+        Pensar       = $Pensar
+        DormirSeg    = $DormirSeg
+        EnginePreset = $EnginePreset
+        Vision       = [bool]($Vision -or $VisionGpu)
+        ManagedByIDE = [bool]$ManagedByIDE
+        Json         = [bool]$Json
+        DryRun       = [bool]$DryRun
+    }
+    if ($Log) { $optArgs.Log = $Log }
+    & $opt @optArgs
+    exit $LASTEXITCODE
+}
 if ($claveModelo -and $M.catalogo.$claveModelo.servidor.tipo -eq "gpu-completa") {
     # CUSTOM no tiene preset de referencia: el contexto/KV/vision llegan como parametros.
     if ($EnginePreset -and $EnginePreset -ne 'CUSTOM' -and -not $PSBoundParameters.ContainsKey('Vision') -and -not $PSBoundParameters.ContainsKey('VisionGpu')) {

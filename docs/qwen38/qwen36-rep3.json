@@ -1,0 +1,317 @@
+[
+  {
+    "tarea": "fluid",
+    "modelo": "qwen36-35b-a3b",
+    "contexto": 65536,
+    "nota": "MoE 35B-A3B",
+    "wall_s": 200.5,
+    "helper_code": 0,
+    "report_error": null,
+    "done": {
+      "elapsed_ms": 200288.83239999413,
+      "type": "done",
+      "motivo": "verified",
+      "saltos": 5,
+      "incompleto": false
+    },
+    "decode_tps_med": 39.8,
+    "decode_tps_max": 41.8,
+    "prompt_tps_med": 763.7,
+    "generated_tokens": 5102,
+    "html_exists": true,
+    "html_bytes": 10183,
+    "check": {
+      "task": "fluid",
+      "ok": true,
+      "errors": [],
+      "info": {
+        "canvas": true,
+        "fps": true,
+        "particulas": true,
+        "canvasSize": [
+          1280,
+          800
+        ],
+        "fpsText": "60",
+        "particulasText": "650",
+        "rafFrames": 46,
+        "fpsValue": 60,
+        "particulasValue": 650
+      }
+    },
+    "task_errors": [],
+    "actions": [
+      {
+        "kind": "write",
+        "title": "index.html",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "abrir index.html",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "abrir index.html",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "inspeccionar #c",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "inspeccionar #c",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "captura #hud",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "captura #hud",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "clic #btnAnadir",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "clic #btnAnadir",
+        "state": "done"
+      }
+    ],
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen36-35b-a3b.png"
+  },
+  {
+    "tarea": "game",
+    "modelo": "qwen36-35b-a3b",
+    "contexto": 65536,
+    "nota": "MoE 35B-A3B",
+    "wall_s": 168.9,
+    "helper_code": 0,
+    "report_error": null,
+    "done": {
+      "elapsed_ms": 168764.42289998522,
+      "type": "done",
+      "motivo": "verified",
+      "saltos": 5,
+      "incompleto": false
+    },
+    "decode_tps_med": 38.95,
+    "decode_tps_max": 39.0,
+    "prompt_tps_med": 726.85,
+    "generated_tokens": 3826,
+    "html_exists": true,
+    "html_bytes": 6568,
+    "check": {
+      "task": "game",
+      "ok": true,
+      "errors": [],
+      "info": {
+        "canvas": true,
+        "score": true,
+        "state": true,
+        "canvasSize": [
+          640,
+          480
+        ],
+        "scoreText": "Puntos: 20",
+        "stateText": "Vidas: 2"
+      }
+    },
+    "task_errors": [],
+    "actions": [
+      {
+        "kind": "write",
+        "title": "index.html",
+        "state": "done"
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "run"
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "abrir index.html",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "abrir index.html",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "inspeccionar #c",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "inspeccionar #c",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "evaluar ",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "evaluar ",
+        "state": "done"
+      }
+    ],
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\game-qwen36-35b-a3b.png"
+  },
+  {
+    "tarea": "app",
+    "modelo": "qwen36-35b-a3b",
+    "contexto": 65536,
+    "nota": "MoE 35B-A3B",
+    "wall_s": 168.3,
+    "helper_code": 0,
+    "report_error": null,
+    "done": {
+      "elapsed_ms": 168143.2292999816,
+      "type": "done",
+      "motivo": "verified",
+      "saltos": 5,
+      "incompleto": false
+    },
+    "decode_tps_med": 37.8,
+    "decode_tps_max": 38.2,
+    "prompt_tps_med": 701.95,
+    "generated_tokens": 3535,
+    "html_exists": true,
+    "html_bytes": 6237,
+    "check": {
+      "task": "app",
+      "ok": true,
+      "errors": [],
+      "info": {
+        "input": true,
+        "add": true,
+        "list": true,
+        "before": "Tarea de prueba✏️🗑️",
+        "after": "Tarea de prueba✏️🗑️",
+        "persisted": true,
+        "added": true
+      }
+    },
+    "task_errors": [],
+    "actions": [
+      {
+        "kind": "write",
+        "title": "index.html",
+        "state": "done"
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "run"
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "abrir index.html",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "abrir index.html",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "escribir #nueva-tarea",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "escribir #nueva-tarea",
+        "state": "done"
+      },
+      {
+        "kind": "browser",
+        "title": "clic #agregar",
+        "state": "run"
+      },
+      {
+        "kind": "browser",
+        "title": "clic #agregar",
+        "state": "done"
+      }
+    ],
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\app-qwen36-35b-a3b.png"
+  },
+  {
+    "tarea": "skyblock",
+    "modelo": "qwen36-35b-a3b",
+    "contexto": 65536,
+    "nota": "MoE 35B-A3B",
+    "wall_s": 78.3,
+    "helper_code": 0,
+    "report_error": null,
+    "done": {
+      "elapsed_ms": 78178.67459997069,
+      "type": "done",
+      "motivo": "completed",
+      "saltos": 3,
+      "incompleto": false
+    },
+    "decode_tps_med": 36.0,
+    "decode_tps_max": 36.3,
+    "prompt_tps_med": 674.6,
+    "generated_tokens": 1757,
+    "html_exists": true,
+    "html_bytes": 2560,
+    "check": {
+      "task": "skyblock",
+      "ok": true,
+      "errors": [],
+      "info": {
+        "three": "149",
+        "canvas": true,
+        "canvasWidth": 1280,
+        "canvasHeight": 800,
+        "title": "Skyblock Chill"
+      }
+    },
+    "task_errors": [],
+    "actions": [
+      {
+        "kind": "write",
+        "title": "index.html",
+        "state": "done"
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "run"
+      },
+      {
+        "kind": "read",
+        "title": "leer",
+        "state": "done"
+      }
+    ],
+    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen36-35b-a3b.png"
+  }
+]

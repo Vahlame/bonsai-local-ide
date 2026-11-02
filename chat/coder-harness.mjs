@@ -52,7 +52,7 @@ export function coderOptions(raw = "") {
       if (
         !Number.isInteger(n) ||
         n < 0 ||
-        n > (k === "timeoutMs" ? 1800000 : k === "contextTokens" ? 65536 : 32768)
+        n > (k === "timeoutMs" ? 7200000 : k === "contextTokens" ? 65536 : 32768)
       )
         throw new Error(`Configuración inválida: ${k}`);
       out[k] = n;
