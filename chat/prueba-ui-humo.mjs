@@ -269,9 +269,14 @@ try {
     { timeout: 20000 },
   );
   check("409: el disco conserva el contenido externo", fs.readFileSync(path.join(proyecto, "y.txt"), "utf8") === externo);
+  // El aviso puede llegar un tick antes de que CodeMirror repinte: se espera el
+  // contenido del editor y se normalizan CRLF/LF. No se acepta perder "alfa".
+  await esperar(150);
+  const textoTras409 = await pagina.evaluate(() => window.bonsaiEditor()?.texto || "");
   check(
     "409: el editor conserva lo del usuario y no lo pisa",
-    (await pagina.evaluate(() => window.bonsaiEditor()?.texto || "")).startsWith("alfa\n"),
+    textoTras409.replace(/\r\n/g, "\n").startsWith("alfa\n"),
+    JSON.stringify(textoTras409.slice(0, 80)),
   );
 
   // ---- 3b. El compositor espera al estado inicial antes de aceptar envíos ----

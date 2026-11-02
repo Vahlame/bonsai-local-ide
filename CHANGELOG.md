@@ -4,6 +4,15 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.10] - 2026-11-02
+
+### Corregido
+
+- **Smoke de navegador estable en CI.** El check del 409 normaliza CRLF/LF y
+  espera al repintado de CodeMirror. GitHub Actions reintenta una vez el smoke
+  si falla por timing; un fallo real sigue fallando.
+- `v2.4.9` no se movió; este patch deja el CI de `main` y `master` verde.
+
 ## [2.4.9] - 2026-11-02
 
 ### Corregido

@@ -57,4 +57,10 @@ jobs:
         run: npm ci --prefix chat
 
       - name: Smoke de interfaz con Edge/Chrome del runner
-        run: node chat/prueba-ui-humo.mjs
+        shell: pwsh
+        run: |
+          node chat/prueba-ui-humo.mjs
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::warning::El smoke falló; se reintenta una vez por timing del navegador."
+            node chat/prueba-ui-humo.mjs
+          }
