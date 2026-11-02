@@ -63,6 +63,10 @@ try {
   await assert.rejects(descargarWeb("http://172.16.0.1/"), /Dirección privada\/loopback\/metadatos no permitida/);
   await assert.rejects(descargarWeb("http://169.254.169.254/"), /Endpoint de metadatos de nube no permitido/);
   await assert.rejects(descargarWeb("http://metadata.google.internal/"), /Endpoint de metadatos de nube no permitido/);
+  await assert.rejects(descargarWeb("http://169.254.169.254/", { allowPrivate: true }), /Endpoint de metadatos de nube no permitido/);
+  await assert.rejects(descargarWeb("http://[::1]:9999/"), /IPv6 privada\/loopback/);
+  await assert.rejects(descargarWeb("http://[fd00::1]/"), /IPv6 privada\/loopback/);
+  await assert.rejects(descargarWeb("http://[fe80::1]/"), /IPv6 privada\/loopback/);
   // Con allowPrivate=true se permiten (test usa fixture local)
   const ok = await descargarWeb(`${base}/fuente`, { allowPrivate: true });
   assert.ok(ok.text.includes("Referencia real"));

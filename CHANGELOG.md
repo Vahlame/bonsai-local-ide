@@ -4,6 +4,22 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.4.13] - 2026-11-02
+
+### Seguridad
+
+- **SSRF IPv6.** Se bloquean loopback, unique-local, link-local e IPv4 mapeada
+  cuando `allowPrivate` está desactivado.
+- Los endpoints de metadatos de nube se rechazan siempre, incluso en el camino
+  `allowPrivate` configurado para SearXNG.
+
+### Herramientas
+
+- `scripts/check-ui.cjs` admite `BONSAI_UI_TOKEN` para capturas de una interfaz
+  protegida.
+- El Hub vuelve a `Recomendados` si `Instalados` está vacío.
+- Se mantiene el empujón a `buscar` para pedidos de información actual/externa.
+
 ## [2.4.12] - 2026-11-02
 
 ### Corregido

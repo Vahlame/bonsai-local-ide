@@ -57,6 +57,10 @@ GET {BONSAI_SEARXNG_URL}/search?q=...&format=json&language=es&safesearch=1
 - La URL configurada es de confianza local: solo para ella se permite el acceso a
   loopback/red privada. Las URLs que devuelve el buscador siguen pasando por las
   mismas comprobaciones anti-SSRF y de puertos protegidos.
+- Los metadatos de nube (`169.254.169.254`, `fd00:ec2::254`,
+  `metadata.google.internal`) se bloquean siempre, incluso en el camino de
+  confianza de SearXNG. También se bloquean loopback e IPv6 privadas cuando el
+  acceso privado no está permitido.
 - Los resultados se recortan y se deduplican; el modelo debe leer la fuente con
   `leer_web` antes de citar o aplicar un detalle técnico.
 

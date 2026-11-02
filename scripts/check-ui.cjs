@@ -7,6 +7,14 @@ const { loadPlaywright, browserPath } = require("./lib/playwright.cjs");
 const { chromium } = loadPlaywright();
 
 const url = process.argv[2] || process.env.BONSAI_UI || "http://127.0.0.1:8787";
+const token = process.env.BONSAI_UI_TOKEN || "";
+const authHeaders = token ? { "X-Bonsai-Token": token } : {};
+const pageUrl = (() => {
+  if (!token) return url;
+  const destino = new URL("/", url);
+  destino.searchParams.set("token", token);
+  return destino.href;
+})();
 const edge = browserPath();
 const out = path.join(__dirname, "..", "docs", "graficos");
 
@@ -14,7 +22,7 @@ const out = path.join(__dirname, "..", "docs", "graficos");
   // Las capturas llevan la versión real de la UI, no un número escrito a mano.
   let version = "dev";
   try {
-    const respuesta = await fetch(`${url}/api/settings`);
+    const respuesta = await fetch(`${url}/api/settings`, { headers: authHeaders });
     version = (await respuesta.json()).uiVersion || version;
   } catch {
     /* la UI aún no responde: se usa "dev" y el resto del smoke lo reportará */
@@ -33,7 +41,7 @@ const out = path.join(__dirname, "..", "docs", "graficos");
   });
   page.on("pageerror", (e) => errors.push(String(e)));
 
-  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
   await page.waitForTimeout(3000);
 
   let startup = null;

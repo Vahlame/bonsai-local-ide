@@ -61,14 +61,16 @@ export async function descargarWeb(raw, { signal, fetcher = fetch, maxBytes = 1_
   for (let salto = 0; salto <= 5; salto++) {
     const destino = new URL(url);
     if (protegidos.has(destino.port || (destino.protocol === "https:" ? "443" : "80"))) throw new Error("Ese puerto pertenece al IDE o al modelo; consulta el servidor del proyecto en otro puerto.");
-    // Bloquear rangos privados, loopback, link-local y metadatos de nube salvo allowPrivate.
+    const host = destino.hostname;
+    const hostSin = host.replace(/^\[|\]$/g, "").toLowerCase();
+    // Los metadatos de nube se bloquean SIEMPRE, incluso para SearXNG local o
+    // tests con allowPrivate: no hay ningún caso legítimo para consultarlos.
+    if (hostSin === "metadata.google.internal" || hostSin === "169.254.169.254" || hostSin === "fd00:ec2::254") {
+      throw new Error("Endpoint de metadatos de nube no permitido.");
+    }
+    // Bloquear rangos privados, loopback y link-local salvo allowPrivate.
     if (!allowPrivate) {
-      const host = destino.hostname;
-      // Primero: endpoints de metadatos de nube (incluyen 169.254.169.254)
-      if (host === "metadata.google.internal" || host === "169.254.169.254") {
-        throw new Error("Endpoint de metadatos de nube no permitido. Usa allowPrivate=true solo en tests.");
-      }
-      const ip = host.match(/^(\d{1,3}\.){3}\d{1,3}$/) ? host : null;
+      const ip = hostSin.match(/^(\d{1,3}\.){3}\d{1,3}$/) ? hostSin : null;
       if (ip) {
         const [a, b] = ip.split(".").map(Number);
         const esPrivada = a === 10
@@ -80,6 +82,13 @@ export async function descargarWeb(raw, { signal, fetcher = fetch, maxBytes = 1_
           || a >= 224;
         if (esPrivada) throw new Error(`Dirección privada/loopback/metadatos no permitida: ${ip}. Usa allowPrivate=true solo en tests.`);
       }
+      const ipv6 = hostSin.includes(":") ? hostSin : "";
+      const ipv6Privada = ipv6 === "::1"
+        || ipv6 === "::"
+        || /^f[cd][0-9a-f]{2}:/i.test(ipv6)
+        || /^fe[89ab][0-9a-f]:/i.test(ipv6)
+        || ipv6.startsWith("::ffff:");
+      if (ipv6Privada) throw new Error(`Dirección IPv6 privada/loopback/metadatos no permitida: ${hostSin}. Usa allowPrivate=true solo en tests.`);
     }
     const res = await fetcher(url, { redirect: "manual", signal: combinado, headers: { "User-Agent": "Mozilla/5.0 (compatible; BonsaiLocalIDE/1.0)", Accept: "text/html,text/plain,application/json,application/xml;q=0.9,*/*;q=0.5" } });
     if ([301, 302, 303, 307, 308].includes(res.status)) {
