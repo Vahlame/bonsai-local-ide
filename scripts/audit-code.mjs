@@ -60,6 +60,7 @@ const ENTRY_POINTS = new Set([
   "chat/medir-formato.mjs",
   "chat/medir-stacks.mjs",
   "chat/diagnostics/index-worker.mjs",
+  "eslint.config.mjs",
 ]);
 
 const SOURCE_EXT = new Set([".mjs", ".js", ".cjs"]);

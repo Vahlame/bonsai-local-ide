@@ -106,3 +106,6 @@ reports/*
 # Sondas generadas: no son resúmenes curados.
 reports/context-probe-*.md
 reports/longctx-*.md
+
+# Salida de c8; se regenera con npm run coverage.
+coverage/

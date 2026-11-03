@@ -44,11 +44,17 @@ jobs:
       - name: Sintaxis de todo el código
         run: node scripts/check-syntax.mjs
 
+      - name: Tipos de los módulos de frontera (gradual)
+        run: node chat/node_modules/typescript/bin/tsc -p tsconfig.check.json
+
+      - name: Lint de los módulos de frontera
+        run: node chat/node_modules/eslint/bin/eslint.js chat/rutas-sensibles.mjs chat/retencion.mjs chat/red-segura.mjs chat/server/security-headers.mjs chat/server/observability.mjs
+
       - name: Informes curados (sin ejecuciones crudas)
         run: node scripts/check-reports.mjs
 
-      - name: Tests aislados
-        run: node scripts/run-tests.mjs
+      - name: Tests aislados con cobertura
+        run: npm run coverage
 
   browser-smoke:
     name: Suites de navegador (UI, sin GPU)

@@ -56,7 +56,8 @@ export function crearObservabilidad(opciones = {}) {
    */
   function log(level, event, fields = {}) {
     try {
-      write(JSON.stringify({ ts: new Date(now()).toISOString(), level, event, ...redactar(fields) }));
+      const datos = /** @type {Record<string, unknown>} */ (redactar(fields));
+      write(JSON.stringify({ ts: new Date(now()).toISOString(), level, event, ...datos }));
     } catch {
       /* el diagnóstico nunca debe romper la petición */
     }

@@ -45,10 +45,13 @@
     "test:navegador": "node scripts/run-tests.mjs navegador",
     "test:todo": "node scripts/run-tests.mjs todo",
     "test:listar": "node scripts/run-tests.mjs --listar",
+    "coverage": "node chat/node_modules/c8/bin/c8.js --reporter=text-summary --check-coverage --lines 45 --functions 15 --branches 40 node scripts/run-tests.mjs",
     "audit": "node scripts/audit-code.mjs",
     "audit:strict": "node scripts/audit-code.mjs --strict",
     "check:reports": "node scripts/check-reports.mjs",
     "check:syntax": "node scripts/check-syntax.mjs",
+    "check:types": "node chat/node_modules/typescript/bin/tsc -p tsconfig.check.json",
+    "lint": "node chat/node_modules/eslint/bin/eslint.js chat/rutas-sensibles.mjs chat/retencion.mjs chat/red-segura.mjs chat/server/security-headers.mjs chat/server/observability.mjs",
     "docs:links": "node scripts/check-doc-links.mjs"
   },
   "engines": {

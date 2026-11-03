@@ -54,6 +54,9 @@ senior independiente y convierte la deuda de release en un proceso repetible.
 - `run-tests.mjs` mata el árbol con `taskkill /T /F` en Windows.
 - Workflow `Release` en tags `v*`: verifica, genera SBOM CycloneDX, empaqueta el
   ZIP portable, publica SHA-256 y adjunta todo a la release.
+- `npm run lint` (ESLint gradual sobre los módulos de frontera),
+  `npm run check:types` (tsc `checkJs` sobre los mismos) y
+  `npm run coverage` (c8 con umbral 45/15/40) entran en CI.
 - Dependabot y `CODEOWNERS` para dependencias y zonas de frontera de confianza.
 
 ## Verificación
@@ -64,7 +67,10 @@ Ejecutado en esta sesión (2026-11-02, RTX 4060 8 GB):
 npm test                     # 60/60 suites OK (~155 s)
 npm run test:navegador       # 10/10 suites OK (~70 s)
 npm run audit:strict         # 0 imports rotos, 0 huérfanos, 0 grandes nuevos
-npm run check:syntax         # 262 archivos OK
+npm run check:syntax         # 263 archivos OK
+npm run check:types          # módulos de frontera, sin errores
+npm run lint                 # ESLint gradual, sin errores
+npm run coverage             # 84,99 % líneas · 73,41 % ramas · 60/60 suites
 npm run check:reports        # resúmenes curados (10 antes de añadir el nuevo)
 npm run docs:links           # 87 documentos, 253 enlaces, 0 rotos
 npm audit --prefix chat --omit=dev  # 0 vulnerabilidades
