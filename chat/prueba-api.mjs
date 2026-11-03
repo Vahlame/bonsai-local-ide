@@ -139,6 +139,14 @@ try {
     salud.status === 200 && saludJson.ok === true && typeof saludJson.version === "string" && Boolean(salud.headers["x-request-id"]),
     `${salud.status} ${salud.body.slice(0, 120)}`,
   );
+  const portada = await pedir("GET", "/");
+  const cspPortada = String(portada.headers["content-security-policy"] || "");
+  check(
+    "CSP: estilos inline solo como atributos, no como bloques",
+    portada.status === 200 && /style-src-attr 'unsafe-inline'/.test(cspPortada) && !/style-src 'self' 'unsafe-inline'/.test(cspPortada),
+    cspPortada,
+  );
+  check("index.html no tiene bloques <style> inline", !/<style[\s>]/i.test(portada.body));
   const openapi = await pedir("GET", "/api/openapi.json");
   const spec = openapi.status === 200 ? JSON.parse(openapi.body) : {};
   check(
@@ -260,6 +268,12 @@ try {
   // Antes bastaba un prefijo ("./" o "sub/") para escribir dentro de node_modules o .git.
   check("node_modules pertenece al proyecto y admite texto explícito", (await pedir("POST", "/api/file", { path: "sub/node_modules/malo.js", content: "x", create: true })).status === 200);
   check("no guarda en .git ni con ./ delante", (await pedir("POST", "/api/file", { path: "./.git/config", content: "x", create: true })).status === 403);
+  // Secretos: no se leen, no se sirven y no se borran por la API.
+  fs.writeFileSync(path.join(proyecto, ".env"), "API_KEY=no-sale\n");
+  check("no lee .env por /api/file", (await pedir("GET", "/api/file?path=.env")).status !== 200);
+  check("no sirve .env por /p/", (await pedir("GET", "/p/.env")).status !== 200);
+  check("no escribe .env", (await pedir("POST", "/api/file", { path: ".env", content: "x", create: true })).status === 403);
+  check("no borra .env", (await pedir("POST", "/api/fs", { op: "borrar", path: ".env" })).status === 403);
   fs.mkdirSync(path.join(proyecto, "sub", "models"), { recursive: true });
   check("models es una carpeta normal del proyecto", (await pedir("POST", "/api/fs", { op: "borrar", path: "sub/models" })).status === 200);
 
@@ -301,14 +315,30 @@ try {
   const deshacerBorrado = await pedir("POST", "/api/undo", { id: borrado.undo });
   check("deshacer un borrado lo restaura", deshacerBorrado.status === 200 && fs.readFileSync(path.join(proyecto, "saludo.txt"), "utf8") === antesDeBorrar, `HTTP ${deshacerBorrado.status}`);
 
-  // P1-08: el endpoint no debe prometer una copia que no existe.
+  // P1-08 (revisión 2026-11-02): ahora TODO borrado es reversible (papelera +
+  // renombrado). Los binarios y archivos grandes ya no se pierden sin copia.
   const binario = JSON.parse((await pedir("POST", "/api/fs", { op: "borrar", path: "binario.bin" })).body);
-  check("borrar un binario no promete deshacer", binario.undo === false && !fs.existsSync(path.join(proyecto, "binario.bin")), JSON.stringify(binario));
+  check("borrar un binario deja punto de deshacer", typeof binario.undo === "string" && !fs.existsSync(path.join(proyecto, "binario.bin")), JSON.stringify(binario));
+  const deshacerBinario = await pedir("POST", "/api/undo", { id: binario.undo });
+  check("deshacer restaura el binario", deshacerBinario.status === 200 && fs.existsSync(path.join(proyecto, "binario.bin")));
   const grandeBorrado = JSON.parse((await pedir("POST", "/api/fs", { op: "borrar", path: "grande-borrar.txt" })).body);
-  check("borrar un archivo grande no promete deshacer", grandeBorrado.undo === false && !fs.existsSync(path.join(proyecto, "grande-borrar.txt")), JSON.stringify(grandeBorrado));
+  check("borrar un archivo grande deja punto de deshacer", typeof grandeBorrado.undo === "string" && !fs.existsSync(path.join(proyecto, "grande-borrar.txt")), JSON.stringify(grandeBorrado));
   fs.mkdirSync(path.join(proyecto, "vacia"));
   const carpetaBorrada = JSON.parse((await pedir("POST", "/api/fs", { op: "borrar", path: "vacia" })).body);
-  check("borrar una carpeta no promete deshacer", carpetaBorrada.carpeta === true && carpetaBorrada.undo === false, JSON.stringify(carpetaBorrada));
+  check("borrar una carpeta vacía deja punto de deshacer", carpetaBorrada.carpeta === true && typeof carpetaBorrada.undo === "string", JSON.stringify(carpetaBorrada));
+
+  // Carpeta con contenido: 409 con recuento y, con confirm, papelera reversible.
+  fs.mkdirSync(path.join(proyecto, "con-contenido", "sub"), { recursive: true });
+  fs.writeFileSync(path.join(proyecto, "con-contenido", "a.txt"), "a");
+  fs.writeFileSync(path.join(proyecto, "con-contenido", "sub", "b.txt"), "bb");
+  const sinConfirmarCarpeta = await pedir("POST", "/api/fs", { op: "borrar", path: "con-contenido" });
+  const aviso = sinConfirmarCarpeta.status === 409 ? JSON.parse(sinConfirmarCarpeta.body) : {};
+  check("carpeta con contenido exige confirmación", sinConfirmarCarpeta.status === 409 && aviso.requiereConfirmacion === true && aviso.archivos === 2, sinConfirmarCarpeta.body);
+  check("la carpeta sigue ahí sin confirmar", fs.existsSync(path.join(proyecto, "con-contenido", "a.txt")));
+  const conConfirmacion = JSON.parse((await pedir("POST", "/api/fs", { op: "borrar", path: "con-contenido", confirm: true })).body);
+  check("confirm true mueve la carpeta a la papelera", conConfirmacion.ok === true && typeof conConfirmacion.undo === "string" && conConfirmacion.papelera && fs.existsSync(path.join(proyecto, conConfirmacion.papelera)), JSON.stringify(conConfirmacion));
+  const deshacerCarpeta = await pedir("POST", "/api/undo", { id: conConfirmacion.undo });
+  check("deshacer restaura la carpeta completa", deshacerCarpeta.status === 200 && fs.readFileSync(path.join(proyecto, "con-contenido", "sub", "b.txt"), "utf8") === "bb", `HTTP ${deshacerCarpeta.status}`);
 
   // --- sin escrituras del agente, "revertir el turno" avisa ------------------
   const nadaQueRevertir = await pedir("POST", "/api/undo", { turno: true });

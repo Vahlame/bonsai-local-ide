@@ -5,6 +5,9 @@
     { "id": "optimized-sm89-user", "relative": "%USERPROFILE%/.local/opt/bonsai-inference/build-RTX4060-Opt-sm89/bin/llama-server.exe" },
     { "id": "qwen38-sm89", "relative": "%USERPROFILE%/.local/opt/bonsai-inference/build-Qwen38-sm89/bin/llama-server.exe" },
     { "id": "qwen38-sm89-project", "relative": ".local/opt/bonsai-inference/build-Qwen38-sm89/bin/llama-server.exe" },
+    { "id": "prism-b10822", "relative": ".local/opt/bonsai-inference/prism-b10822/bin/llama-server.exe" },
+    { "id": "prism-b10822-root", "relative": ".local/opt/bonsai-inference/prism-b10822/llama-server.exe" },
+    { "id": "prism-b10822-user", "relative": "%USERPROFILE%/.local/opt/bonsai-inference/prism-b10822/bin/llama-server.exe" },
     { "id": "legacy-root", "relative": "bin/llama-server.exe" }
   ]
 }

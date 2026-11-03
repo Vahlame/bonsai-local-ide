@@ -108,11 +108,76 @@ export function cargarSesion(sessionPath) {
   };
 }
 
+const MAX_TURNOS_SESION = 1200;
+const MAX_BYTES_SESION = 8 * 1024 * 1024;
+const MAX_BYTES_TURNO = 200_000;
+
+/**
+ * Retención de la sesión. Un chat largo no puede crecer sin límite ni reescribir
+ * un JSON de cientos de MB en cada corte: se conservan los turnos más recientes,
+ * se recortan mensajes gigantes y se ajusta `folded` para no descuadrar el índice.
+ * Nunca deja un turno `tool` huérfano al principio.
+ * @param {any} session
+ * @returns {{session: any, descartados: number, recortados: number}}
+ */
+export function podarSesion(session) {
+  if (!session || typeof session !== "object") return { session, descartados: 0, recortados: 0 };
+  const turns = Array.isArray(session.turns) ? session.turns : [];
+  let descartados = 0;
+  let recortados = 0;
+  let inicio = Math.max(0, turns.length - MAX_TURNOS_SESION);
+  descartados = inicio;
+  /** @type {any[]} */
+  let recortadosTurnos = turns.slice(inicio).map((turn) => {
+    if (!turn || typeof turn !== "object") return turn;
+    const copia = { ...turn };
+    if (typeof copia.content === "string" && copia.content.length > MAX_BYTES_TURNO) {
+      copia.content = `${copia.content.slice(0, MAX_BYTES_TURNO)}\n[…recortado por retención de sesión…]`;
+      recortados += 1;
+    }
+    if (typeof copia.reasoning === "string" && copia.reasoning.length > MAX_BYTES_TURNO) {
+      copia.reasoning = copia.reasoning.slice(0, MAX_BYTES_TURNO);
+      recortados += 1;
+    }
+    return copia;
+  });
+  // Un resultado `tool` sin su llamada previa rompe la plantilla del siguiente turno.
+  while (recortadosTurnos.length && recortadosTurnos[0]?.role === "tool") {
+    recortadosTurnos.shift();
+    descartados += 1;
+  }
+  let podada = {
+    ...session,
+    turns: recortadosTurnos,
+    folded: Math.max(0, (Number(session.folded) || 0) - descartados),
+  };
+  // Si aun así no cabe, se van quitando tandas antiguas. El tope es duro para
+  // que `saveSession()` no bloquee el event loop con un JSON desmesurado.
+  let bytes = Buffer.byteLength(JSON.stringify(podada));
+  while (bytes > MAX_BYTES_SESION && podada.turns.length > 1) {
+    const quitar = Math.max(1, Math.ceil(podada.turns.length / 10));
+    podada.turns.splice(0, quitar);
+    descartados += quitar;
+    while (podada.turns.length && podada.turns[0]?.role === "tool") {
+      podada.turns.shift();
+      descartados += 1;
+    }
+    podada.folded = Math.max(0, (Number(session.folded) || 0) - descartados);
+    bytes = Buffer.byteLength(JSON.stringify(podada));
+  }
+  if (descartados > 0 || recortados > 0) {
+    podada.retencion = { descartados, recortados, bytes, fecha: new Date().toISOString() };
+  }
+  return { session: podada, descartados, recortados };
+}
+
 /**
  * Guarda la sesión de forma atómica, con `.bak` de la versión anterior.
  * @param {string} sessionPath
  * @param {unknown} session
  */
 export function guardarSesion(sessionPath, session) {
-  escribirJsonAtomico(sessionPath, session, { copia: true, espacio: 0 });
+  const { session: podada } = podarSesion(session);
+  escribirJsonAtomico(sessionPath, podada, { copia: true, espacio: 0 });
+  // El llamador conserva la sesión viva completa: la poda es solo de disco.
 }

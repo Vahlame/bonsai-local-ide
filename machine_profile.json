@@ -118,7 +118,7 @@
   },
   "software": {
     "python": "3.14.7",
-    "python_executable": "C:\\Users\\user\\Documents\\prject_local_AI\\.venv\\Scripts\\python.exe",
+    "python_executable": "<PROYECTO>\\.venv\\Scripts\\python.exe",
     "node": "v26.0.0",
     "npm": "",
     "git": "git version 2.56.0.windows.1",
@@ -136,8 +136,8 @@
       "cublasLt64_12.dll": "6,14,11,1291"
     },
     "llama_cpp": {
-      "install_root": "C:\\Users\\user\\.local\\opt\\bonsai-inference",
-      "source": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\llama.cpp-rtx4060-opt",
+      "install_root": "<USUARIO>\\.local\\opt\\bonsai-inference",
+      "source": "<USUARIO>\\.local\\opt\\bonsai-inference\\llama.cpp-rtx4060-opt",
       "git": {
         "head": "8642541b255bfb5dc39cd351a178be09013a55d6",
         "describe": "8642541",
@@ -147,8 +147,8 @@
       "builds": [
         {
           "name": "build-Auto-sm89",
-          "path": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-Auto-sm89",
-          "binary": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-Auto-sm89\\bin\\llama-bench.exe",
+          "path": "<USUARIO>\\.local\\opt\\bonsai-inference\\build-Auto-sm89",
+          "binary": "<USUARIO>\\.local\\opt\\bonsai-inference\\build-Auto-sm89\\bin\\llama-bench.exe",
           "cmake": {
             "CMAKE_BUILD_TYPE": "Release",
             "CMAKE_CUDA_ARCHITECTURES": "89-real",
@@ -173,8 +173,8 @@
         },
         {
           "name": "build-RTX4060-Opt-sm89",
-          "path": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89",
-          "binary": "C:\\Users\\user\\.local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89\\bin\\llama-bench.exe",
+          "path": "<USUARIO>\\.local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89",
+          "binary": "<USUARIO>\\.local\\opt\\bonsai-inference\\build-RTX4060-Opt-sm89\\bin\\llama-bench.exe",
           "cmake": {
             "CMAKE_BUILD_TYPE": "Release",
             "CMAKE_CUDA_ARCHITECTURES": "89-real",
@@ -199,8 +199,8 @@
         },
         {
           "name": "lab-base",
-          "path": "C:\\Users\\user\\Documents\\prject_local_AI\\bin\\builds\\lab-base",
-          "binary": "C:\\Users\\user\\Documents\\prject_local_AI\\bin\\builds\\lab-base\\bin\\llama-bench.exe",
+          "path": "<PROYECTO>\\bin\\builds\\lab-base",
+          "binary": "<PROYECTO>\\bin\\builds\\lab-base\\bin\\llama-bench.exe",
           "cmake": {
             "CMAKE_BUILD_TYPE": "Release",
             "CMAKE_CUDA_ARCHITECTURES": "89-real",
@@ -225,7 +225,7 @@
       ]
     },
     "ollama": {
-      "path": "C:\\Users\\user\\AppData\\Local\\Programs\\Ollama\\ollama.EXE",
+      "path": "<USUARIO>\\AppData\\Local\\Programs\\Ollama\\ollama.EXE",
       "version": null
     },
     "python_packages": {

@@ -1724,6 +1724,145 @@
       ],
       "contextoMaximo": 262144,
       "contextoPorDefecto": 65536
+    },
+    {
+      "clave": "qwen38-27b-fable-cold-fusion-low-mtp-iq4-xs",
+      "nombre": "Qwen3.8 27B TURBO Fable Cold Fusion (LOW-MTP IQ4_XS)",
+      "repo": "DavidAU/Qwen3.8-27B-TURBO-Fable-Cold-Fusion-735-882-Heretic-Uncensored-NEO-CODER-MAX-MTP-GGUF",
+      "archivo": "Qwen3.8-27B-TurboFCFusion-735-882-Here-Uncen-NEO-CODER-MAX-LOW-MTP-IQ4_XS.gguf",
+      "bytes": 15309039136,
+      "revision": "b9bce7e859c9b5047aca884e5bff76f8a0443de1",
+      "kvF16BytesPorToken": 65536,
+      "ctxNativo": 262144,
+      "rol": "código + agente (gpu-parcial)",
+      "uso": "Denso híbrido de 27B con MTP y variante LOW-MTP IQ4_XS (15,3 GB). No cabe entero en 8 GB: el perfil gpu-parcial reparte capas entre VRAM y RAM. Se mide antes de recomendarlo; si no supera 20 tok/s se reporta y no se usa como agente principal.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": -1,
+        "nivel": "xhigh"
+      },
+      "agente": {
+        "saltos": 48,
+        "avisos": 3
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "27B",
+        "MTP",
+        "código",
+        "heretic",
+        "gpu-parcial"
+      ],
+      "vision": null,
+      "capas": 64,
+      "contextoPorDefecto": 16384,
+      "servidor": {
+        "tipo": "gpu-parcial",
+        "ngl": 24,
+        "contexto": 16384,
+        "threads": 8,
+        "pesosGpuEstandarMiB": 5741,
+        "reservaMiB": 850,
+        "margenObjetivoMiB": 6500,
+        "cacheRamMiB": 0,
+        "nota": "Perfil inicial gpu-parcial: 24 de 64 capas en VRAM, KV q4_0 a 16k y el resto por mmap. Es una estimación conservadora para 8 GB; se sustituye por la medición real de la sesión 2026-11-02."
+      },
+      "plan": {
+        "contexto": 16384,
+        "kv": "q4_0",
+        "vision": false,
+        "totalMiB": 7179,
+        "reservaMiB": 850,
+        "margenMiB": 300
+      }
+    },
+    {
+      "clave": "ternary-bonsai-2-27b-ptq1-0",
+      "nombre": "Ternary Bonsai 2 27B (PTQ1_0)",
+      "repo": "prism-ml/Ternary-Bonsai-2-27B-gguf",
+      "archivo": "Ternary-Bonsai-2-27B-PTQ1_0.gguf",
+      "bytes": 5946648928,
+      "revision": "94dd51cdbbec5309ed8b76a12f3268bc4fdceb93",
+      "sha256": "53107f530aa52eb00912263ab1ee29bd199261c87cd7b4ad4ca1318c1fe33ee3",
+      "kvF16BytesPorToken": 65536,
+      "ctxNativo": 262144,
+      "rol": "código + agente (GPU completa)",
+      "uso": "Qwen3.8-27B ternario de 2 bits (PTQ1_0, 5,95 GB). Es la variante que deja sitio para KV y buffers en una RTX 4060 de 8 GB; se mide antes de recomendarla. Si baja de 20 tok/s se reporta y no se usa.",
+      "licencia": "Apache-2.0",
+      "toolcalls": "nativo",
+      "pensar": {
+        "compatible": true,
+        "presupuesto": -1,
+        "nivel": "xhigh"
+      },
+      "agente": {
+        "saltos": 48,
+        "avisos": 3
+      },
+      "muestreo": {
+        "codigo": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "razonar": {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        }
+      },
+      "etiquetas": [
+        "27B",
+        "ternario",
+        "2-bit",
+        "GPU completa"
+      ],
+      "vision": null,
+      "capas": 64,
+      "contextoPorDefecto": 24576,
+      "servidor": {
+        "tipo": "gpu-completa",
+        "contexto": 24576,
+        "threads": 8,
+        "reservaMiB": 850,
+        "margenObjetivoMiB": 6500,
+        "ubatch": 256,
+        "binario": "prism-b10822",
+        "nota": "Plan conservador para 8 GB: 5,67 GiB de pesos + KV q8_0 a 24k deja margen para el grafo CUDA. PTQ1_0 exige el fork PrismML (ternary hybrid-attention); el binario stock rechaza el tipo de tensor. La velocidad medida con llama-bench (ngl 99, 8 hilos, q4_0) fue 27,64 tok/s."
+      },
+      "plan": {
+        "contexto": 24576,
+        "kv": "q8_0",
+        "vision": false,
+        "totalMiB": 7638,
+        "reservaMiB": 850,
+        "margenMiB": 300
+      }
     }
   ]
 }

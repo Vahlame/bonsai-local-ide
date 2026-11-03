@@ -35,8 +35,11 @@ jobs:
       - name: Enlaces de documentación
         run: node scripts/check-doc-links.mjs
 
+      - name: Vulnerabilidades de dependencias
+        run: npm audit --prefix chat --omit=dev
+
       - name: Auditoría estructural
-        run: node scripts/audit-code.mjs
+        run: node scripts/audit-code.mjs --strict
 
       - name: Sintaxis de todo el código
         run: node scripts/check-syntax.mjs
@@ -67,9 +70,4 @@ jobs:
 
       - name: Suites de interfaz con Edge/Chrome del runner
         shell: pwsh
-        run: |
-          node scripts/run-tests.mjs navegador
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "::warning::Una suite de navegador falló; se reintenta una vez por timing."
-            node scripts/run-tests.mjs navegador
-          }
+        run: node scripts/run-tests.mjs navegador

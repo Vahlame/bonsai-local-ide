@@ -1,6 +1,6 @@
 {
   "name": "bonsai-local-ide",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "private": true,
   "description": "Bonsai Local IDE: agente de desarrollo local con llama-server para Windows 10 y 11",
   "license": "MIT",
@@ -15,6 +15,7 @@
   "scripts": {
     "benchmark:coder": "node chat/evaluar/coder.mjs",
     "benchmark:engine": "node scripts/benchmark-local-engine.mjs",
+    "benchmark:threshold": "node scripts/bench-threshold.mjs",
     "benchmark:rtx4060": "powershell -ExecutionPolicy Bypass -File scripts/benchmark-rtx4060-matrix.ps1",
     "benchmark:quality": "node scripts/bench-model-quality.mjs",
     "benchmark:sampling": "node scripts/bench-model-quality.mjs --sampling --repeat 2",
@@ -37,7 +38,7 @@
     "probe:context": "powershell -ExecutionPolicy Bypass -File scripts/probe-rtx4060-context.ps1",
     "build:rtx4060": "powershell -ExecutionPolicy Bypass -File scripts/build-rtx4060-optimized.ps1",
     "build:llguidance": "powershell -ExecutionPolicy Bypass -File scripts/build-inference-runtime.ps1 -Llguidance -Jobs 4",
-    "build:ui-vendor": "npx --prefix chat esbuild chat/ui/vendor/editor-entry.js --bundle --format=iife --target=chrome120 --minify --legal-comments=none --outfile=chat/ui/vendor/editor.js && npx --prefix chat esbuild chat/ui/vendor/terminal-entry.js --bundle --format=iife --target=chrome120 --minify --legal-comments=none --outfile=chat/ui/vendor/terminal.js && copy chat\\node_modules\\@xterm\\xterm\\css\\xterm.css chat\\ui\\vendor\\xterm.css",
+    "build:ui-vendor": "npx --prefix chat esbuild chat/ui/vendor/editor-entry.js --bundle --format=iife --target=chrome120 --minify --legal-comments=eof --outfile=chat/ui/vendor/editor.js && npx --prefix chat esbuild chat/ui/vendor/terminal-entry.js --bundle --format=iife --target=chrome120 --minify --legal-comments=eof --outfile=chat/ui/vendor/terminal.js && copy chat\\node_modules\\@xterm\\xterm\\css\\xterm.css chat\\ui\\vendor\\xterm.css",
     "test": "node scripts/run-tests.mjs",
     "test:gpu": "node scripts/run-tests.mjs gpu",
     "test:gpu-exclusiva": "node scripts/run-tests.mjs gpu-exclusiva",

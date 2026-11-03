@@ -78,6 +78,8 @@ const AISLADAS = [
   { archivo: "chat/prueba-server-text.mjs" },
   { archivo: "chat/prueba-servicios-servidor.mjs" },
   { archivo: "chat/prueba-red-segura.mjs" },
+  { archivo: "chat/prueba-endurecimiento.mjs" },
+  { archivo: "chat/prueba-lanzador-comando.mjs" },
   { archivo: "chat/prueba-agente-limites.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-servidor-estado.mjs" },
   { archivo: "chat/prueba-recuperacion-modelo.mjs" },
@@ -192,7 +194,16 @@ function ejecutarSuite(suite) {
     hijo.stderr.on("data", acumular);
     temporizador = setTimeout(() => {
       salida += `\n[run-tests] tiempo agotado (${Math.round(timeout / 1000)} s): se detiene la suite.\n`;
-      hijo.kill();
+      // En Windows `hijo.kill()` mata solo el proceso Node de la suite; sus
+      // nietos (ui-server, navegadores, llama-server) quedan huérfanos y ocupan
+      // puertos. taskkill /T /F mata el árbol completo.
+      if (process.platform === "win32" && hijo.pid) {
+        try {
+          spawn("taskkill", ["/pid", String(hijo.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true }).on("error", () => { try { hijo.kill(); } catch { /* ya terminó */ } });
+        } catch { try { hijo.kill(); } catch { /* ya terminó */ } }
+      } else {
+        try { hijo.kill("SIGKILL"); } catch { /* ya terminó */ }
+      }
     }, timeout);
     hijo.on("error", (error) => {
       clearTimeout(temporizador);

@@ -41,9 +41,8 @@ async function agentLoop(req, res) {
         // Empieza un turno nuevo: los puntos de deshacer del agente se apuntan aquí
         // para poder revertir de golpe todo lo que escriba.
         ctx.undoDelTurno = [];
-        /** Procesos que el agente dejó en segundo plano: se matan al acabar el turno. */
-        /** @type {Array<() => void>} */
-        const procesosFondo = [];
+        // Los procesos en segundo plano viven en ctx.procesosFondoVivos y
+        // sobreviven al turno a propósito; no hay una lista local que matar.
         const session = createSseSession({ req, res, ctx });
         const ac = session.ac;
         const send = session.send;
@@ -417,14 +416,6 @@ async function agentLoop(req, res) {
           ctx.chat.globalMemoryBudget = 0;
           await turn?.navegador?.close().catch(() => {});
           await turn?.playwrightMcp?.close().catch(() => {});
-          // Ningún servidor del agente sobrevive a su turno (ni deja un puerto ocupado).
-          for (const parar of procesosFondo) {
-            try {
-              parar();
-            } catch {
-              /* ya había terminado */
-            }
-          }
           ctx.busy = false;
           session.finish();
         }

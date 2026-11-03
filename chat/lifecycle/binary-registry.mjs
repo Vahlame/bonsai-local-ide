@@ -9,8 +9,15 @@ export function binaryRegistry(root, env = process.env) {
   })) }));
 }
 
-export function selectBinary(root, { legacy = false } = {}) {
+export function selectBinary(root, { legacy = false, preferred = "" } = {}) {
   const entries = binaryRegistry(root);
+  if (preferred) {
+    const entry = entries.find((e) => e.id === preferred);
+    if (!entry || !fs.existsSync(entry.exe)) {
+      throw new Error(`Este modelo exige el binario '${preferred}' y no está disponible; instálalo en la ruta del registro de binarios.`);
+    }
+    return entry;
+  }
   const entry = legacy ? entries.find((e) => e.id === "legacy-root") : entries.find((e) => fs.existsSync(e.exe));
   if (!entry || !fs.existsSync(entry.exe)) throw new Error("No hay un binario llama-server permitido disponible");
   return entry;

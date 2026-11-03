@@ -241,14 +241,14 @@ export async function registrarArchivo(archivo, opciones = {}) {
   }, {
     libreMiB: opciones.libreMiB || Math.max(4096, vr.totalMiB - 232),
   });
-  // Un perfil medido manda sobre el plan automático. `gpu-parcial` describe un
-  // denso que no cabe en VRAM (ngl y MiB en GPU medidos); sin este merge, volver
-  // a registrar el modelo lo convertiría en `gpu-completa` y el IDE lo rechazaría.
+  // Un perfil curado medido manda sobre el plan automático, sea `gpu-parcial`
+  // (denso que no cabe) o `gpu-completa` con contexto/hilos ya medidos. Sin este
+  // merge, volver a registrar el modelo perdía el ajuste conservador de VRAM.
   try {
     const curado = leerCurado().modelos.find((m) => m.clave === clave);
-    if (curado?.servidor?.tipo === "gpu-parcial" && Number(curado.plan?.contexto) >= 4096) {
+    if (curado?.servidor) {
       entrada.servidor = { ...entrada.servidor, ...curado.servidor };
-      entrada.plan = { ...entrada.plan, ...curado.plan, calculado: new Date().toISOString() };
+      if (curado.plan) entrada.plan = { ...entrada.plan, ...curado.plan, calculado: new Date().toISOString() };
     }
   } catch { /* catálogo curado ausente: se queda el plan automático */ }
   entrada.clave = clave;

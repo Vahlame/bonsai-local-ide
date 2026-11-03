@@ -6,11 +6,11 @@ import path from "node:path";
 // el directorio de la app puede contener archivos personales de cualquier tipo o nombre.
 const ARCHIVOS = [
   "actions.mjs", "actions/text.mjs", "actions/edit.mjs", "actions/diff.mjs", "actions/effects.mjs", "actions/files.mjs",
-  "tool-registry.mjs", "adaptadores.mjs", "almacen-json.mjs", "archivos-seguros.mjs", "bonsai-chat.mjs", "session-store.mjs", "llama-client.mjs", "prompting.mjs", "compaction.mjs",
+  "tool-registry.mjs", "adaptadores.mjs", "almacen-json.mjs", "archivos-seguros.mjs", "rutas-sensibles.mjs", "bonsai-chat.mjs", "session-store.mjs", "llama-client.mjs", "prompting.mjs", "compaction.mjs",
   "cambio-modelo.mjs", "context.mjs", "context/prompts.mjs", "context/budget.mjs", "context/history.mjs", "diagnosticos.mjs", "diagnostics/analysis.mjs", "diagnostics/symbols.mjs", "diagnostics/index-worker.mjs", "editar.mjs", "entorno.mjs", "escritura-incremental.mjs", "git-seguro.mjs", "guardia.mjs", "historial.mjs", "lecturas.mjs", "legacy-tool-parser.mjs", "harmony.mjs",
   "code-context.mjs", "coder-harness.mjs", "coder/contracts.mjs", "coder/task.mjs", "coder-profile.json", "project-verification.mjs", "code-intelligence.mjs", "engine-profiles.mjs",
   "model-plan.mjs", "model-plan/gguf.mjs", "model-plan/planner.mjs", "model-hub.mjs", "model-hub/common.mjs", "model-hub/store.mjs", "model-hub/remote.mjs", "model-hub/downloads.mjs", "model-hub/jobs.mjs", "imagenes.mjs", "code-search.mjs",
-  "investigacion.mjs", "mcp-playwright.mjs", "memoria-global.mjs", "registros.mjs", "modelo.mjs", "modelo.json", "navegador.mjs", "ocr.mjs", "procesos.mjs", "sse.mjs", "terminal.mjs", "ui-server.mjs",
+  "investigacion.mjs", "mcp-playwright.mjs", "memoria-global.mjs", "registros.mjs", "retencion.mjs", "modelo.mjs", "modelo.json", "navegador.mjs", "ocr.mjs", "procesos.mjs", "sse.mjs", "terminal.mjs", "ui-server.mjs",
   "lifecycle/managed-server.mjs", "lifecycle/process-adapter.mjs", "lifecycle/binary-registry.mjs", "runtime-facts.mjs", "verify-node-webapp.mjs",
   "server/http.mjs", "server/catalog.mjs", "server/gpu.mjs", "server/browser.mjs", "server/undo.mjs",
   "server/workspace.mjs", "server/text.mjs", "server/agent-loop.mjs",
@@ -24,7 +24,7 @@ const ARCHIVOS = [
   "server/observability.mjs", "server/contracts.mjs", "red-segura.mjs",
   "server/routes/index.mjs", "server/routes/static.mjs", "server/routes/files.mjs",
   "server/routes/git.mjs", "server/routes/models.mjs", "server/routes/settings.mjs", "server/routes/chat.mjs", "server/routes/contracts.mjs",
-  "ui/server-controller.js", "ui/appearance.js", "ui/theme-boot.js", "ui/stats-boot.js", "ui/themes.json", "ui/refresh.css", "ui/app.js", "ui/chat-core.js", "ui/chat-core-live.js", "ui/chat-core-actions.js", "ui/chat-core-chat.js", "ui/chat-core-input.js", "ui/chat-core-turn.js", "ui/chat-core-init.js", "ui/hub.js", "ui/iconos.js", "ui/ide.css", "ui/ide.js", "ui/index.html", "ui/markdown.js", "ui/paneles.js",
+  "ui/server-controller.js", "ui/appearance.js", "ui/theme-boot.js", "ui/stats-boot.js", "ui/themes.json", "ui/refresh.css", "ui/base.css", "ui/drawer.css", "ui/app.js", "ui/chat-core.js", "ui/chat-core-live.js", "ui/chat-core-actions.js", "ui/chat-core-chat.js", "ui/chat-core-input.js", "ui/chat-core-turn.js", "ui/chat-core-init.js", "ui/hub.js", "ui/iconos.js", "ui/ide.css", "ui/ide.js", "ui/index.html", "ui/markdown.js", "ui/paneles.js",
   "ui/core/dom.mjs", "ui/core/api.mjs", "ui/core/state.mjs", "ui/format.mjs", "ui/app-git.mjs", "ui/app-search.mjs", "ui/app-rules.mjs",
   "ui/editor/text.mjs", "ui/workspace/paths.mjs",
   "ui/vendor/editor.js", "ui/vendor/terminal.js", "ui/vendor/xterm.css",

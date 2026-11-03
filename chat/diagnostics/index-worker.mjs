@@ -6,7 +6,8 @@ import { parentPort, workerData } from "node:worker_threads";
 import { indiceSimbolos } from "./symbols.mjs";
 
 try {
-  const indice = indiceSimbolos(workerData.root, workerData.archivos);
+  const archivos = Array.isArray(workerData.archivos) ? workerData.archivos : null;
+  const indice = indiceSimbolos(workerData.root, archivos);
   parentPort?.postMessage({ ok: true, entradas: [...indice.entries()] });
 } catch (err) {
   parentPort?.postMessage({ ok: false, error: err instanceof Error ? err.message : String(err) });

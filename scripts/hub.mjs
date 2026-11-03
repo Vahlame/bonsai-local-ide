@@ -9,7 +9,7 @@
  *   node scripts/hub.mjs repo unsloth/Qwen3-4B-Instruct-2507-GGUF
  *   node scripts/hub.mjs download qwen3-4b-2507
  *   node scripts/hub.mjs download <repo> --file <archivo.gguf> [--vision-file <mmproj.gguf>]
- *   node scripts/hub.mjs download-url <https://...gguf> [--name archivo.gguf] [--sha256 ...]
+ *   node scripts/hub.mjs download-url <https://...gguf | hf://repo/archivo.gguf> [--name archivo.gguf] [--sha256 ...]
  *   node scripts/hub.mjs import C:\ruta\modelo.gguf
  *   node scripts/hub.mjs plan <clave>
  *   node scripts/hub.mjs jobs
@@ -163,12 +163,12 @@ try {
   } else if (comando === "download" || comando === "download-url") {
     let pedido;
     if (comando === "download-url") {
-      const url = resto.find((a) => /^https?:\/\//.test(a)) || "";
-      pedido = { url, nombre: opcion("name"), bytes: Number(opcion("bytes", "0")) || undefined, sha256: opcion("sha256") || undefined };
+      const url = resto.find((a) => /^(https?:\/\/|hf:\/\/)/.test(a)) || "";
+      pedido = { url, nombre: opcion("name"), clave: opcion("clave") || undefined, bytes: Number(opcion("bytes", "0")) || undefined, sha256: opcion("sha256") || undefined };
     } else {
       const objetivo = resto.find((a) => !a.startsWith("--")) || "";
-      if (/^https?:\/\//.test(objetivo)) {
-        pedido = { url: objetivo, nombre: opcion("name"), sha256: opcion("sha256") || undefined };
+      if (/^(https?:\/\/|hf:\/\/)/.test(objetivo)) {
+        pedido = { url: objetivo, nombre: opcion("name"), clave: opcion("clave") || undefined, sha256: opcion("sha256") || undefined };
       } else if (objetivo.includes("/")) {
         pedido = {
           repo: objetivo,

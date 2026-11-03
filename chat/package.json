@@ -1,6 +1,10 @@
 {
   "name": "bonsai-local-ide",
+  "version": "2.5.1",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@ast-grep/napi": "0.51.0",
     "@codemirror/commands": "6.11.1",

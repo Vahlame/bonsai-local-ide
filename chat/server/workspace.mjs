@@ -7,8 +7,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { esRutaSensible } from "../rutas-sensibles.mjs";
 
-export const SKIP_DIR = new Set(["bin", "models", ".git", "node_modules", "dist", "build"]);
+export const SKIP_DIR = new Set(["bin", "models", ".git", "node_modules", "dist", "build", ".bonsai-papelera"]);
 export const SKIP_EXT = new Set([".dll", ".exe", ".gguf", ".zip", ".pdb", ".tmp", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".woff", ".woff2", ".mp3", ".mp4", ".bin"]);
 
 /**
@@ -30,6 +31,7 @@ export function listWorkspace(root, rel, out, depth, limit = 400) {
   for (const entry of entries) {
     if (entry.name.startsWith(".")) continue;
     const child = rel ? `${rel}/${entry.name}` : entry.name;
+    if (esRutaSensible(child)) continue;
     if (entry.isDirectory()) {
       if (!SKIP_DIR.has(entry.name)) listWorkspace(root, child, out, depth + 1, limit);
       continue;
@@ -53,7 +55,7 @@ export function listWorkspace(root, rel, out, depth, limit = 400) {
 const SNAPSHOT_SKIP = new Set([
   ".venv", "node_modules", ".git", "__pycache__",
   "bin", "models", "logs", "reports", "salida", "capturas", "trabajo",
-  "dist", "build", "target", "forks", "kernels",
+  "dist", "build", "target", "forks", "kernels", ".bonsai-papelera",
 ]);
 
 /**
@@ -91,6 +93,18 @@ function cacheDeSnapshot(root) {
 }
 
 /**
+ * Cierra el watcher y descarta la caché de snapshot de una raíz. Al cambiar de
+ * carpeta de trabajo no se debe dejar un `fs.watch` vivo sobre el proyecto anterior.
+ * @param {string} root
+ */
+export function cerrarSnapshotCache(root) {
+  const cache = snapshotCaches.get(root);
+  if (!cache) return;
+  try { cache.watcher?.close(); } catch { /* ya cerrado */ }
+  snapshotCaches.delete(root);
+}
+
+/**
  * @param {string} root
  * @param {{cache?: boolean, force?: boolean, ttlMs?: number}} [opciones]
  * @returns {Map<string, string>}
@@ -122,6 +136,7 @@ export function snapshotFiles(root, opciones = {}) {
       // Un enlace podría apuntar fuera del proyecto; el delta no debe leerlo.
       if (entry.isSymbolicLink()) continue;
       const childRel = rel ? `${rel}/${entry.name}` : entry.name;
+      if (esRutaSensible(childRel)) continue;
       const abs = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(abs, childRel);

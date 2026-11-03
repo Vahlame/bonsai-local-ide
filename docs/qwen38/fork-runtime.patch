@@ -653,7 +653,7 @@ index 0000000..d262186
 @@ -0,0 +1,37 @@
 +param([int]$Jobs = 4, [switch]$Tests, [switch]$Symbols, [string[]]$Targets = @('llama-server', 'llama-bench', 'llama-perplexity', 'llama-quantize'))
 +$ErrorActionPreference = 'Stop'
-+$project = 'C:\Users\user\Documents\prject_local_AI'
++$project = '<PROYECTO>'
 +$tools = Get-Content -LiteralPath (Join-Path $project 'config\inference-toolchain.local.json') -Raw | ConvertFrom-Json
 +$build = Join-Path $tools.installRoot 'build-Qwen38-sm89'
 +$dev = & $env:ComSpec /d /s /c "`"$($tools.vcvars)`" >nul && set"
@@ -946,7 +946,7 @@ index 0000000..4998295
 +import path from 'node:path';
 +import fs from 'node:fs';
 +
-+const project = 'C:/Users/user/Documents/prject_local_AI';
++const project = '<PROYECTO>';
 +const require = createRequire(`${project}/chat/package.json`);
 +const { chromium } = require('playwright');
 +const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -1145,7 +1145,7 @@ index 0000000..22c3b41
 +
 +ROOT = pathlib.Path(__file__).resolve().parents[1]
 +REPORT = ROOT / "reports/2026-11-01-qwen38"
-+MODEL = r"C:\Users\user\Documents\prject_local_AI\models\qwen38-27b-perf-iq4_xs-floor4.gguf"
++MODEL = r"<PROYECTO>\models\qwen38-27b-perf-iq4_xs-floor4.gguf"
 +parser = argparse.ArgumentParser()
 +parser.add_argument("--variant", required=True, choices=("mmvq2", "mmvq2-verify", "mmvq2-iq4", "mmvq4"))
 +parser.add_argument("--build-only", action="store_true")
@@ -1261,7 +1261,7 @@ index 0000000..d0c520c
 +from ctypes import wintypes
 +
 +ROOT = pathlib.Path(__file__).resolve().parents[1]
-+PROJECT = pathlib.Path(r"C:\Users\user\Documents\prject_local_AI")
++PROJECT = pathlib.Path(r"<PROYECTO>")
 +
 +
 +class MemoryCounters(ctypes.Structure):
@@ -1323,7 +1323,7 @@ index 0000000..d0c520c
 +def main():
 +    parser = argparse.ArgumentParser()
 +    parser.add_argument("--label", required=True)
-+    parser.add_argument("--binary", default=r"C:\Users\user\.local\opt\bonsai-inference\build-Qwen38-sm89\bin\llama-server.exe")
++    parser.add_argument("--binary", default=r"<USUARIO>\.local\opt\bonsai-inference\build-Qwen38-sm89\bin\llama-server.exe")
 +    parser.add_argument("--env", action="append", default=[])
 +    parser.add_argument("--tokens", type=int, default=96)
 +    parser.add_argument("--prompt-tokens", type=int, default=256)
@@ -1617,7 +1617,7 @@ index 0000000..388e1bf
 +import urllib.request
 +
 +ROOT = pathlib.Path(__file__).resolve().parents[1]
-+PROJECT = pathlib.Path(r"C:\Users\user\Documents\prject_local_AI")
++PROJECT = pathlib.Path(r"<PROYECTO>")
 +BASE = "http://127.0.0.1:8787"
 +
 +parser = argparse.ArgumentParser()
@@ -1789,7 +1789,7 @@ index 0000000..fbbec51
 +
 +before = api("/api/chats")["active"]
 +workspace_before = api("/api/workspace")["root"]
-+workspace_expected = r"C:\Users\user\Documents\prject_local_AI"
++workspace_expected = r"<PROYECTO>"
 +api("/api/workspace", {"path": workspace_expected})
 +active = api("/api/chats", {"op": "new"})["active"]
 +report = {"created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "events": [],
@@ -1912,7 +1912,7 @@ index 0000000..7caf56d
 +import subprocess
 +
 +ROOT = pathlib.Path(__file__).resolve().parents[1]
-+PROJECT = pathlib.Path(r"C:\Users\user\Documents\prject_local_AI")
++PROJECT = pathlib.Path(r"<PROYECTO>")
 +TYPES = {0: ("f32", 1, 4), 1: ("f16", 1, 2), 2: ("q4_0", 32, 18), 3: ("q4_1", 32, 20),
 +         6: ("q5_0", 32, 22), 7: ("q5_1", 32, 24), 8: ("q8_0", 32, 34),
 +         10: ("q2_K", 256, 84), 11: ("q3_K", 256, 110), 12: ("q4_K", 256, 144),
@@ -1965,7 +1965,7 @@ index 0000000..7caf56d
 +    args = parser.parse_args()
 +    source = PROJECT / "models/qwen38-27b-Qwen3.8-27B-UD-IQ4_XS.gguf"
 +    target = PROJECT / f"models/qwen38-27b-perf-{args.cpu_type.lower()}-floor4.gguf"
-+    quantize = pathlib.Path(r"C:\Users\user\.local\opt\bonsai-inference\build-Qwen38-sm89\bin\llama-quantize.exe")
++    quantize = pathlib.Path(r"<USUARIO>\.local\opt\bonsai-inference\build-Qwen38-sm89\bin\llama-quantize.exe")
 +    command = [str(quantize), "--allow-requantize"]
 +    tensor_options = []
 +    plan = []
@@ -2024,7 +2024,7 @@ index 0000000..3f50333
 +import sys
 +
 +ROOT = pathlib.Path(__file__).resolve().parents[1]
-+PROJECT = pathlib.Path(r"C:\Users\user\Documents\prject_local_AI")
++PROJECT = pathlib.Path(r"<PROYECTO>")
 +config = json.loads((PROJECT / "config/inference-toolchain.local.json").read_text())
 +out = ROOT / "reports/2026-11-01-qwen38/nsys-cuda"
 +command = [config["nsys"], "profile", "--trace=cuda,nvtx", "--sample=none", "--cpuctxsw=none",
@@ -2212,7 +2212,7 @@ index 0000000..f7cca9e
 +parser = argparse.ArgumentParser()
 +parser.add_argument("--label", required=True)
 +parser.add_argument("--model", required=True)
-+parser.add_argument("--binary", default=r"C:\Users\user\.local\opt\bonsai-inference\build-Qwen38-sm89\bin\llama-perplexity.exe")
++parser.add_argument("--binary", default=r"<USUARIO>\.local\opt\bonsai-inference\build-Qwen38-sm89\bin\llama-perplexity.exe")
 +parser.add_argument("--repetitions", type=int, default=3)
 +parser.add_argument("--save-logits")
 +parser.add_argument("--kl-baseline")
@@ -2495,7 +2495,7 @@ index 0000000..25c0836
 +symbols.mkdir()
 +for pdb in (ROOT.parent / "build-Qwen38-sm89/bin").glob("*.pdb"):
 +    shutil.copy2(pdb, symbols / pdb.name)
-+model = r"C:/Users/user/Documents/prject_local_AI/models/qwen38-27b-perf-iq4_xs-floor4.gguf"
++model = r"<PROYECTO>/models/qwen38-27b-perf-iq4_xs-floor4.gguf"
 +server_dir = out.parent / "uprof-attached-server"
 +harness = [sys.executable, str(ROOT / "scripts/qwen38_experiment.py"), "--label", "uprof-attached-server",
 +           "--model", model, "--env", "LLAMA_MMAP_TRIM_GPU=1"]

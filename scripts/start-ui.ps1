@@ -16,6 +16,7 @@ param (
     [int]$Pensar = -2,            # -2 = auto (presupuesto del modelo); -1 = sin límite; 0 = apagado; N>0 = tope de N tokens
     [ValidateSet("", "legacy", "small-local-coder")][string]$AgentProfile = "",
     [string]$EnginePreset = "",
+    [string]$Modelo = "",            # clave del catalogo; vacio = modelo activo/predeterminado
     [switch]$SinVision,           # por defecto la vision se enciende sola si el proyector esta descargado
     [switch]$NoBrowser,
     # LAN: exige el flag y un token de >=16. Sin -UnsafeLan, el servidor sigue en loopback.
@@ -99,23 +100,47 @@ if ($EnginePreset -and $AgentProfile -eq 'small-local-coder') {
     }
 }
 $Server = Join-Path $RootDir "chat\ui-server.mjs"
+$Catalogo = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+# Los modelos descargados viven en models/hub-catalog.json. start-ui.ps1 los
+# necesita para resolver el modelo activo y su proyector; antes solo miraba el
+# catálogo estático y un modelo del Hub se trataba como "desconocido".
+$HubCatalogo = $null
+$HubPath = Join-Path $RootDir "models\hub-catalog.json"
+if (Test-Path -LiteralPath $HubPath) {
+    try { $HubCatalogo = Get-Content -LiteralPath $HubPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $HubCatalogo = $null }
+}
+function Get-EntradaModelo([string]$Clave) {
+    if (-not $Clave) { return $null }
+    $fila = $Catalogo.catalogo.$Clave
+    if ($fila) { return $fila }
+    if ($HubCatalogo -and $HubCatalogo.modelos) { return $HubCatalogo.modelos.$Clave }
+    return $null
+}
+# Clave del modelo activo: -Modelo explicito > modelo-activo.json > predeterminado.
+# Antes se usaba $Modelo sin declararlo (siempre $null) y las comparaciones del
+# marcador y del proyector de vision no resolvian el modelo real.
+$ModeloActivo = [string]$Modelo
+if (-not $ModeloActivo) {
+    $ModeloActivo = [string]$Catalogo.modeloPredeterminado
+    $rutaActivo = Join-Path $RootDir "chat\modelo-activo.json"
+    if (Test-Path -LiteralPath $rutaActivo) {
+        try {
+            $filaActiva = [string](Get-Content -LiteralPath $rutaActivo -Raw | ConvertFrom-Json).clave
+            $entradaActiva = Get-EntradaModelo $filaActiva
+            if ($entradaActiva -and $entradaActiva.archivo -and (Test-Path (Join-Path $RootDir ("models\" + $entradaActiva.archivo)))) {
+                $ModeloActivo = $filaActiva
+            }
+        } catch { }
+    }
+}
 
 # Vision: usa el proyector del modelo activo y solo se activa si esta descargado. El techo
 # de contexto de vision (catalogo.<clave>.vision.contexto) lo aplica start-server.ps1 al
 # buscar el perfil automatico; aqui no se fija ningun contexto.
 $VisionFlags = @()
 if (-not $SinVision) {
-    $modelData = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
-    $activePath = Join-Path $RootDir "chat\modelo-activo.json"
-    $activeKey = [string]$modelData.modeloPredeterminado
-    if (Test-Path $activePath) {
-        try {
-            $guardada = [string](Get-Content $activePath -Raw | ConvertFrom-Json).clave
-            $filaGuardada = if ($guardada) { $modelData.catalogo.$guardada } else { $null }
-            if ($filaGuardada -and $filaGuardada.archivo -and (Test-Path (Join-Path $RootDir ("models\" + $filaGuardada.archivo)))) { $activeKey = $guardada }
-        } catch { }
-    }
-    $visionConfig = $modelData.catalogo.$activeKey.vision
+    $entradaVision = Get-EntradaModelo $ModeloActivo
+    $visionConfig = if ($entradaVision) { $entradaVision.vision } else { $null }
     if (-not $visionConfig -or $visionConfig -eq $false) { $visionConfig = $null }
     $mmproj = [string]$visionConfig.archivo
     if ($mmproj -and (Test-Path (Join-Path $RootDir ("models\" + $mmproj)))) { $VisionFlags = @("-Vision") }
@@ -156,11 +181,11 @@ if ($serverState -eq 'managed' -and $EnginePreset) {
     }
 }
 if ($serverState -eq "empty") {
-    # P2-13: comparar modelo del marcador con el activo; sacar $activeKey del bloque de visión
+    # P2-13: comparar modelo del marcador con el activo; el proyector sale del
+    # MISMO modelo resuelto ($ModeloActivo), no de una variable inexistente.
     $activeKey = $null
     if ($VisionFlags.Count -gt 0) {
-        $Catalogo = Get-Content (Join-Path $RootDir "chat\modelo.json") -Raw -Encoding UTF8 | ConvertFrom-Json
-        $Item = $Catalogo.catalogo.$Modelo
+        $Item = Get-EntradaModelo $ModeloActivo
         if ($Item -and $Item.vision -and $Item.vision.archivo) {
             $activeKey = $Item.vision.archivo
         }
@@ -169,8 +194,8 @@ if ($serverState -eq "empty") {
     if (Test-Path -LiteralPath (Join-Path $RootDir "logs\servidor-administrado-$Port.json")) {
         $CurrentMarker = Get-Content -LiteralPath (Join-Path $RootDir "logs\servidor-administrado-$Port.json") -Raw | ConvertFrom-Json
     }
-    if ($CurrentMarker -and $CurrentMarker.modelo -ne $Modelo) {
-        Write-Host "Marcador modelo ($($CurrentMarker.modelo)) distinto del solicitado ($Modelo): no se reutiliza." -ForegroundColor Yellow
+    if ($CurrentMarker -and $CurrentMarker.modelo -ne $ModeloActivo) {
+        Write-Host "Marcador modelo ($($CurrentMarker.modelo)) distinto del solicitado ($ModeloActivo): no se reutiliza." -ForegroundColor Yellow
         $serverState = 'empty'
         $CurrentMarker = $null
     } elseif ($CurrentMarker -and $activeKey -and $CurrentMarker.activeKey -ne $activeKey) {
@@ -227,8 +252,8 @@ if ($serverState -eq "empty") {
 } else {
     Write-Host "[1/2] llama-server ya esta en ejecucion." -ForegroundColor Yellow
     # P2-13: verificar que el modelo activo coincide con el marcador
-    if ($CurrentMarker -and $CurrentMarker.modelo -ne $Modelo) {
-        Write-Host "Aviso: modelo en marcador ($($CurrentMarker.modelo)) != solicitado ($Modelo)." -ForegroundColor Yellow
+    if ($CurrentMarker -and $CurrentMarker.modelo -ne $ModeloActivo) {
+        Write-Host "Aviso: modelo en marcador ($($CurrentMarker.modelo)) != solicitado ($ModeloActivo)." -ForegroundColor Yellow
     }
 }
 

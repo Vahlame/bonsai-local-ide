@@ -148,8 +148,11 @@ if (-not $pensarCompatible -and $Pensar -ne 0) {
 }
 
 $tipoServidor = if ($claveModelo) { [string]$M.catalogo.$claveModelo.servidor.tipo } else { "" }
-if ($tipoServidor -eq "gpu-parcial" -or $tipoServidor -eq "moe-hibrido") {
-    # El reparto parcial/MoE lo decide el lanzador optimizado (plan del modelo y preset medido).
+$esModeloHub = [bool]($claveModelo -and $M.catalogo.$claveModelo.fuente -eq "hub")
+$exigeBinario = [bool]($claveModelo -and $M.catalogo.$claveModelo.servidor.binario)
+if ($tipoServidor -eq "gpu-parcial" -or $tipoServidor -eq "moe-hibrido" -or $esModeloHub -or $exigeBinario) {
+    # El reparto parcial/MoE, los modelos del Hub y los que exigen un binario
+    # concreto (p. ej. PrismML ternario) los decide el lanzador optimizado.
     $opt = Join-Path $PSScriptRoot "start-gpu-model-rtx4060-optimized.ps1"
     $optArgs = @{
         Modelo       = $claveModelo

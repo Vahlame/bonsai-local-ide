@@ -992,12 +992,20 @@ import { crearReglas } from "./app-rules.mjs";
   async function borrarArchivo(rel) {
     const ok = await confirmar(
       `Borrar «${rel}»`,
-      "Se quita de la carpeta de trabajo. Solo los archivos de texto pequeños se pueden restaurar con el botón Deshacer del aviso; los binarios, los archivos grandes y las carpetas, no.",
+      "Se moverá a la papelera interna del proyecto y podrás restaurarlo con Deshacer. Las carpetas con contenido piden una segunda confirmación con el número de archivos.",
       "Borrar",
     );
     if (!ok) return;
     try {
-      const r = await api("/api/fs", { cuerpo: { op: "borrar", path: rel } });
+      let r;
+      try {
+        r = await api("/api/fs", { cuerpo: { op: "borrar", path: rel } });
+      } catch (err) {
+        if (err.status !== 409) throw err;
+        const segundo = await confirmar("Confirmar borrado de carpeta", err.message, "Mover a la papelera");
+        if (!segundo) return;
+        r = await api("/api/fs", { cuerpo: { op: "borrar", path: rel, confirm: true } });
+      }
       for (let i = pestanas.length - 1; i >= 0; i -= 1) {
         if (pestanas[i].rel === rel || pestanas[i].rel.startsWith(`${rel}/`)) pestanas.splice(i, 1);
       }
@@ -1009,7 +1017,7 @@ import { crearReglas } from "./app-rules.mjs";
       }
       await refreshTree();
       if (r.undo) {
-        avisar(`Borrado ${rel}`, "", 9000, {
+        avisar(`Borrado ${rel} (en la papelera)`, "", 9000, {
           texto: "Deshacer",
           hacer: async () => {
             try {
@@ -1022,7 +1030,7 @@ import { crearReglas } from "./app-rules.mjs";
           },
         });
       } else {
-        avisar(`Borrado ${rel} (no se puede deshacer)`, "", 4000);
+        avisar(`Borrado ${rel}`, "", 4000);
       }
     } catch (err) {
       avisar(`No se pudo borrar: ${err.message}`, "error", 5000);

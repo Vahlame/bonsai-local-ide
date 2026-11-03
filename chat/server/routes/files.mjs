@@ -17,6 +17,59 @@ function etagDe(st) {
 }
 
 /**
+ * Cuenta archivos y bytes de una carpeta antes de borrarla. Se acota para no
+ * recorrer un árbol gigantesco sin límite; el número es orientativo y se marca
+ * `truncado` cuando se alcanza el tope.
+ * @param {string} abs
+ * @param {number} [limite]
+ * @returns {{archivos: number, bytes: number, truncado: boolean}}
+ */
+function contarCarpeta(abs, limite = 20000) {
+  let archivos = 0;
+  let bytes = 0;
+  let truncado = false;
+  /** @param {string} dir */
+  const walk = (dir) => {
+    if (truncado) return;
+    let entradas;
+    try { entradas = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const entrada of entradas) {
+      if (entrada.isSymbolicLink()) continue;
+      const hijo = path.join(dir, entrada.name);
+      if (entrada.isDirectory()) { walk(hijo); if (truncado) return; continue; }
+      try { bytes += fs.statSync(hijo).size; } catch { /* desapareció */ }
+      archivos += 1;
+      if (archivos >= limite) { truncado = true; return; }
+    }
+  };
+  walk(abs);
+  return { archivos, bytes, truncado };
+}
+
+/**
+ * Mueve un archivo o carpeta a una papelera interna con punto de deshacer. No
+ * borra: un rename en el mismo volumen es atómico y reversible.
+ * @param {Record<string, any>} ctx
+ * @param {string} abs
+ * @param {string} rel
+ * @returns {{destinoRel: string, undoId: string}}
+ */
+function moverAPapelera(ctx, abs, rel) {
+  const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const destinoRel = `.bonsai-papelera/${id}/${path.basename(abs)}`;
+  const destinoAbs = path.join(ctx.workspaceRoot, destinoRel);
+  fs.mkdirSync(path.dirname(destinoAbs), { recursive: true });
+  fs.renameSync(abs, destinoAbs);
+  const undoId = ctx.undoStore.guardar({ tipo: "renombrado", rel, destino: destinoRel });
+  if (!undoId) {
+    // Sin punto de deshacer no hay papelera útil: se deja el árbol como estaba.
+    try { fs.renameSync(destinoAbs, abs); } catch { /* se informa abajo */ }
+    throw new Error("no se pudo preparar el punto de deshacer; no se borró nada");
+  }
+  return { destinoRel, undoId };
+}
+
+/**
  * @param {Record<string, any>} ctx
  */
 export function createFilesRoutes(ctx) {
@@ -102,6 +155,10 @@ export function createFilesRoutes(ctx) {
     }
     // ---------------------------------------------------------- guardar archivo
     if (req.method === "POST" && url.pathname === "/api/file") {
+      if (ctx.busy) {
+        res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end("espera a que termine el turno");
+        return true;
+      }
       // El editor puede mandar archivos de hasta 2 MB: el limite por defecto de
       // readBody (200 KB, pensado para mensajes) los cortaria antes de poder
       // contestar un 413 limpio.
@@ -180,6 +237,10 @@ export function createFilesRoutes(ctx) {
     }
     // ------------------------------------------------------------ deshacer
     if (req.method === "POST" && url.pathname === "/api/undo") {
+      if (ctx.busy) {
+        res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end("espera a que termine el turno");
+        return true;
+      }
       const raw = await leerJson(req, "deshacer");
       const forzar = raw.force === true;
       // Revertir TODO lo que escribió el agente en el turno en curso o en el último.
@@ -226,6 +287,10 @@ export function createFilesRoutes(ctx) {
     }
     // ------------------------------------------ nuevo / renombrar / borrar
     if (req.method === "POST" && url.pathname === "/api/fs") {
+      if (ctx.busy) {
+        res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end("espera a que termine el turno");
+        return true;
+      }
       const raw = JSON.parse(await readBody(req));
       const op = raw && typeof raw.op === "string" ? raw.op : "";
       const limpia = (valor) => String(valor || "").trim().replace(/\\/g, "/").replace(/^\/+/, "");
@@ -297,20 +362,26 @@ export function createFilesRoutes(ctx) {
           res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("no existe");
           return true;
         }
-        const carpeta = fs.statSync(abs).isDirectory();
-        let undoId = "";
-        if (!carpeta) {
-          // Se guarda copia solo si es un texto de tamaño razonable: comprobar el tamaño
-          // antes evita leer un archivo enorme para descubrir que no cabe en el undo.
-          const st = fs.statSync(abs);
-          if (st.size <= LIMITE_TEXTO) {
-            const buf = fs.readFileSync(abs);
-            if (!buf.includes(0)) undoId = ctx.undoStore.guardar({ tipo: "texto", rel, antes: buf.toString("utf8"), despues: null });
-          }
+        const st = fs.statSync(abs);
+        const carpeta = st.isDirectory();
+        const cuenta = carpeta ? contarCarpeta(abs) : { archivos: 0, bytes: st.size, truncado: false };
+        const confirmado = raw?.confirm === true || raw?.confirm === "true";
+        if (carpeta && cuenta.archivos > 0 && !confirmado) {
+          res.writeHead(409, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({
+            error: `la carpeta no está vacía (${cuenta.archivos}${cuenta.truncado ? "+" : ""} archivos, ${(cuenta.bytes / 1048576).toFixed(1)} MiB). Envía confirm:true para moverla a la papelera con deshacer.`,
+            requiereConfirmacion: true,
+            archivos: cuenta.archivos,
+            bytes: cuenta.bytes,
+            truncado: cuenta.truncado,
+          }));
+          return true;
         }
-        fs.rmSync(abs, { recursive: true, force: true });
+        // Todo borrado es reversible: se mueve a .bonsai-papelera y se registra
+        // como renombrado, así el mismo botón Deshacer restaura archivos y carpetas.
+        const { undoId, destinoRel } = moverAPapelera(ctx, abs, rel);
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-        res.end(JSON.stringify({ ok: true, op, rel, carpeta, undo: undoId || false }));
+        res.end(JSON.stringify({ ok: true, op, rel, carpeta, undo: undoId, papelera: destinoRel, archivos: cuenta.archivos, bytes: cuenta.bytes }));
         return true;
       }
       res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("operacion desconocida");

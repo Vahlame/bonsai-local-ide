@@ -5,6 +5,7 @@
 import { muestreo } from "../modelo.mjs";
 import { engineProfile, isNamedEnginePreset } from "../engine-profiles.mjs";
 import { rutaSegura } from "../archivos-seguros.mjs";
+import { esRutaSensible } from "../rutas-sensibles.mjs";
 
 /** Hosts que no salen de la máquina. */
 function esLoopback(host) {
@@ -120,5 +121,6 @@ export function readBody(req, limite = 200_000) {
  * @returns {string | null}
  */
 export function fileInside(root, rel) {
+  if (esRutaSensible(rel)) return null;
   return rutaSegura(root, rel);
 }

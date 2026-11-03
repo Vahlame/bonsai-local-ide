@@ -18,7 +18,7 @@ import { catalogoModelos, mmprojDisponible } from "./server/catalog.mjs";
 
 import { openBrowser } from "./server/browser.mjs";
 import { UndoStore } from "./server/undo.mjs";
-import { createWorkspaceTools } from "./server/workspace.mjs";
+import { cerrarSnapshotCache, createWorkspaceTools } from "./server/workspace.mjs";
 import { chatTitle } from "./server/text.mjs";
 import { createRoutes } from "./server/routes/index.mjs";
 import { createAgentLoop } from "./server/agent-loop.mjs";
@@ -28,6 +28,7 @@ import { revisarPeticion } from "./guardia.mjs";
 import { createManagedServer, configurationFromMarker, closeHttpServer, LifecycleError } from "./lifecycle/managed-server.mjs";
 import { createProcessAdapter } from "./lifecycle/process-adapter.mjs";
 import { selectBinary } from "./lifecycle/binary-registry.mjs";
+import { podarEstadoOperativo } from "./retencion.mjs";
 
 import { rutaProyecto, escribirAtomico } from "./archivos-seguros.mjs";
 import { LIMITE_TEXTO, leerTextoAcotado } from "./lecturas.mjs";
@@ -68,6 +69,11 @@ try {
 }
 // BONSAI_STATE aparta chats, sesión, permisos y carpeta de trabajo (pruebas sin tocar los tuyos)
 const STATE = process.env.BONSAI_STATE ? path.resolve(process.env.BONSAI_STATE) : HERE;
+// Retención oportunista: no bloquea el arranque y nunca toca el archivo más
+// reciente de cada carpeta. Los chats personales se conservan 1 año/1000.
+setImmediate(() => {
+  try { podarEstadoOperativo({ stateDir: STATE, logsDir: path.join(PROJECT, "logs") }); } catch { /* sin permisos */ }
+});
 const SALIDA = process.env.BONSAI_SALIDA ? path.resolve(process.env.BONSAI_SALIDA) : path.join(PROJECT, "salida");
 const PAGE = path.join(HERE, "ui", "index.html");
 const WORKSPACE_FILE = path.join(STATE, "ui-workspace.json");
@@ -365,8 +371,11 @@ async function main(args) {
     reglasParaModelo: rulesService.reglasParaModelo,
     workspacePayload: workspace.payload,
     setWorkspace: (value) => {
+      const anterior = workspace.getRoot();
       const root = workspace.setRoot(value);
+      cerrarSnapshotCache(anterior);
       stats.invalidate();
+      symbolIndex.invalidate();
       return root;
     },
     pickFolder: folderPicker.pick,

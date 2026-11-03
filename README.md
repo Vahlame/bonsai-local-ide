@@ -9,7 +9,7 @@ inferencia no usa una API en la nube; las búsquedas web y las descargas del Hub
 son opcionales. Sin telemetría y sin claves de API.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.5.0-8fb8ff">
+  <img alt="version" src="https://img.shields.io/badge/version-2.5.1-8fb8ff">
   <img alt="CI" src="https://github.com/Vahlame/bonsai-local-ide/actions/workflows/ci.yml/badge.svg">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
@@ -17,19 +17,22 @@ son opcionales. Sin telemetría y sin claves de API.
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.5.0 - Red saliente blindada, UI modular y contrato HTTP.**
-> La política SSRF resuelve todas las IPs, bloquea metadatos y **conecta a la IP
-> comprobada** para cerrar el DNS rebinding. La UI tiene CSP estricta, ETag,
-> índice de símbolos en worker, terminal por SSE y módulos de Git/búsqueda/reglas
-> extraídos de `app.js`. Se añaden Zod + `/api/openapi.json`, `/api/health`,
-> `X-Request-Id`, axe-core y una puerta de sintaxis en CI. **58/58 tests**,
-> **10/10 navegador**, 0 violaciones graves de accesibilidad. Notas:
-> [RELEASE-2.5.0](docs/RELEASE-2.5.0.md).
+> **v2.5.1 - Cierre de la frontera de confianza y disciplina de release.**
+> Bloquea `allowPrivate` enviado por el modelo, valida todas las tool calls del
+> perfil PC, elimina el SSRF del fallback de cabeceras del Hub, protege `.env*`,
+> `.git`, credenciales y claves en lectura/escritura/shell, y hace reversible el
+> borrado de carpetas con papelera y confirmación. Además: índice por raíz,
+> snapshot fuera del hilo principal, retención de sesión, comando reproducible
+> fiel al perfil, `audit:strict` con baseline, `npm audit` en CI y workflow de
+> release con SBOM. Notas: [RELEASE-2.5.1](docs/RELEASE-2.5.1.md).
 
 > **Modelo principal: Qwen3.6 35B-A3B (MoE).** Es el mejor equilibrio
 > calidad/velocidad del benchmark 2026-11-01 (90/100, 35–40 tok/s) y el que
 > usa el IDE para el agente. GPT-OSS 20B sigue disponible como alternativa
-> Harmony para proyectos desde cero.
+> Harmony para proyectos desde cero. En un primer arranque **sin**
+> `chat/modelo-activo.json`, el lanzador usa Ornith 9B (GPU completa) para que
+> el IDE abra incluso si el MoE aún no está descargado; el diálogo de inicio
+> propone Qwen3.6 en cuanto está instalado.
 
 ![Bonsai IDE 2.4: explorador, agente, vista previa de la app generada y métricas de GPU](docs/graficos/ui-2.4.13-main.png)
 
@@ -79,7 +82,7 @@ son opcionales. Sin telemetría y sin claves de API.
 | **Agente** | Edita archivos, ejecuta comandos, corre tests, lee y crea archivos, plan persistente y hasta 192 pasos por turno |
 | **Editor** | CodeMirror 6, pestañas, Ctrl+S, Ctrl+K con diff/merge, paleta Ctrl+P, búsqueda y plegado |
 | **Contexto** | Tokenizer real del servidor, historial adaptativo y presupuesto honesto (ventana / solicitado / efectivo / reserva) |
-| **Herramientas** | Terminal persistente con xterm + ConPTY, diagnósticos, esquema, F12 ir a definición y procesos en segundo plano |
+| **Herramientas** | Terminal persistente con xterm (PTY opcional con node-pty; por defecto tuberías), diagnósticos, esquema, F12 ir a definición y procesos en segundo plano |
 | **Búsqueda** | ripgrep con `.gitignore` y búsqueda estructural con ast-grep en JS/TS/TSX/HTML/CSS |
 | **Navegador** | Playwright MCP aislado, evaluación de JS y pruebas de WebGL/workers/HMR |
 | **Visión** | Imágenes pegadas o arrastradas, OCR local opcional y proyector en GPU o CPU |
@@ -157,6 +160,12 @@ rápido (45–46 tok/s) para juego/app/Skyblock, pero su fluido no cumple.
 **Qwen3-Coder 30B-A3B** es el especialista de código a 17–22 tok/s.
 **Qwen3 8B** sirve para tareas simples. **DeepSeek-Coder-V2-Lite** no produjo
 archivos y **GPT-OSS 20B** fue variable en tareas visuales.
+
+> **Nuevos modelos (2026-11-02):** Ternary Bonsai 2 27B PTQ1_0 corre a
+> 27,6 tok/s con el runtime PrismML y pasa 4/5 pruebas; Qwen3.8 27B Fable Cold
+> Fusion LOW-MTP IQ4_XS se queda en 2,62 tok/s con 24/65 capas en una RTX 4060
+> de 8 GB, así que se reporta y no se usa como agente. Detalle y comandos:
+> [reports/bench-nuevos-modelos-2026-11-02.md](reports/bench-nuevos-modelos-2026-11-02.md).
 
 ![Scorecard de Qwen3.6](docs/graficos/bench-best-score.svg)
 
@@ -378,7 +387,9 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 | Documento | Contenido |
 |---|---|
 | [AUDIT-2026-11-01](docs/AUDIT-2026-11-01.md) | Inventario, sintaxis, enlaces, UI, runtime y límites |
+| [RUNTIME-PRISM](docs/RUNTIME-PRISM.md) | Runtime PrismML para Ternary Bonsai PTQ1_0/PQ2_0 |
 | [CONTRIBUTING](CONTRIBUTING.md) | Setup, pruebas, estilo, modelos y releases |
+| [RELEASE-2.5.1](docs/RELEASE-2.5.1.md) | Cierre de SSRF/secretos/borrado, retención y release con SBOM |
 | [RELEASE-2.5.0](docs/RELEASE-2.5.0.md) | SSRF con IP fijada, CSP, SSE, Zod/OpenAPI y axe |
 | [RELEASE-2.4.13](docs/RELEASE-2.4.13.md) | Auditoría final: SSRF IPv6, metadatos y token en check-ui |
 | [RELEASE-2.4.12](docs/RELEASE-2.4.12.md) | Espera al resumen de memoria global |

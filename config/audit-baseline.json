@@ -1,0 +1,30 @@
+{
+  "_nota": "Baseline de archivos >500 líneas ya existentes en 2.5.0. `audit:strict` falla solo cuando aparece uno NUEVO. Al refactorizar, quita la entrada correspondiente.",
+  "grandes": [
+    "chat/ui/app.js",
+    "chat/diagnostics/analysis.mjs",
+    "chat/bonsai-chat.mjs",
+    "chat/server/agent/present.mjs",
+    "chat/prueba-agente.mjs",
+    "chat/prueba-small-coder.mjs",
+    "chat/ui/hub.js",
+    "scripts/bench-model-quality.mjs",
+    "chat/terminal.mjs",
+    "chat/coder/task.mjs",
+    "chat/code-context.mjs",
+    "scripts/benchmark-local-engine.mjs",
+    "chat/server/routes/files.mjs",
+    "scripts/model-lab.mjs",
+    "chat/model-plan/planner.mjs",
+    "chat/ui/chat-core-chat.js",
+    "chat/tool-registry.mjs",
+    "chat/medir-agente.mjs",
+    "scripts/bench-coding.mjs",
+    "chat/memoria-global.mjs",
+    "chat/ui/paneles.js",
+    "chat/diagnostics/symbols.mjs",
+    "chat/prueba-api.mjs",
+    "chat/prueba-ui-humo.mjs"
+  ],
+  "huerfanos": []
+}

@@ -40,6 +40,11 @@ reports/coder-phase3/runs/
 reports/coder-phase3/*.log
 bin/
 models/
+# Runtime local descargado (PrismML, builds de llama.cpp): pesa cientos de MB
+# y se reinstala con docs/RUNTIME-PRISM.md.
+.local/
+# Artefactos del workflow de release.
+dist/
 node_modules/
 
 # Estado local, datos de usuario y artefactos generados por el IDE.

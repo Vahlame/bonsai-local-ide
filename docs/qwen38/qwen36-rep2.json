@@ -112,7 +112,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen36-35b-a3b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen36-35b-a3b.png"
   },
   {
     "tarea": "game",
@@ -146,7 +146,7 @@
     },
     "task_errors": [],
     "actions": [],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\game-qwen36-35b-a3b.png",
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\game-qwen36-35b-a3b.png",
     "harness_error": "'charmap' codec can't encode character '\\U0001f480' in position 5174: character maps to <undefined>",
     "harness_note": "El helper falló al imprimir un emoji; la tarea se completó y el checker la verificó. Corregido a UTF-8."
   },
@@ -180,7 +180,7 @@
     },
     "task_errors": [],
     "actions": [],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\app-qwen36-35b-a3b.png",
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\app-qwen36-35b-a3b.png",
     "harness_error": "'charmap' codec can't encode character '\\U0001f4dd' in position 2438: character maps to <undefined>"
   },
   {
@@ -224,6 +224,6 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen36-35b-a3b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen36-35b-a3b.png"
   }
 ]

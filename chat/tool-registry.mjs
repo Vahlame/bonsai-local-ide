@@ -455,7 +455,12 @@ const EFFECT_HANDLERS = {
   leer_web(s) {
     if (s.cortada) s.note(s.notaCortada("leer_web"));
     else if (!s.args.url) s.note("leer_web necesita url HTTP/HTTPS de la fuente.");
-    else { s.marca(`web:${s.webs.length}`); s.webs.push(s.args); }
+    else {
+      // La política de red NO viaja en los argumentos de la tool: se decide en el
+      // servidor. Un modelo (o una inyección) no puede pedir allowPrivate.
+      s.marca(`web:${s.webs.length}`);
+      s.webs.push({ url: s.args.url, desde: s.args.desde, caracteres: s.args.caracteres });
+    }
   },
   leer(s) {
     const rel = argText(s.args.ruta || s.args.path).replace(/\\/g, "/");

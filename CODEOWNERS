@@ -1,0 +1,13 @@
+# Propietarios de revisión. GitHub pide revisión a estas personas cuando cambia
+# la zona indicada. El propietario por defecto es el mantenedor del repositorio.
+* @Vahlame
+
+# Frontera de confianza: cualquier cambio aquí necesita revisión explícita.
+/chat/red-segura.mjs @Vahlame
+/chat/rutas-sensibles.mjs @Vahlame
+/chat/guardia.mjs @Vahlame
+/chat/server/security-headers.mjs @Vahlame
+/chat/server/agent/ @Vahlame
+/chat/actions/files.mjs @Vahlame
+/chat/server/routes/files.mjs @Vahlame
+/.github/workflows/ @Vahlame

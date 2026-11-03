@@ -87,7 +87,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen36-35b-a3b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen36-35b-a3b.png"
   },
   {
     "tarea": "game",
@@ -122,7 +122,7 @@
     },
     "task_errors": [],
     "actions": [],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\game-qwen36-35b-a3b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\game-qwen36-35b-a3b.png"
   },
   {
     "tarea": "app",
@@ -207,7 +207,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\app-qwen36-35b-a3b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\app-qwen36-35b-a3b.png"
   },
   {
     "tarea": "skyblock",
@@ -260,7 +260,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen36-35b-a3b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen36-35b-a3b.png"
   },
   {
     "tarea": "fluid",
@@ -350,7 +350,7 @@
         "state": "denied"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen35-9b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen35-9b.png"
   },
   {
     "tarea": "game",
@@ -472,7 +472,7 @@
         "state": "denied"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\game-qwen35-9b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\game-qwen35-9b.png"
   },
   {
     "tarea": "app",
@@ -505,7 +505,7 @@
     },
     "task_errors": [],
     "actions": [],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\app-qwen35-9b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\app-qwen35-9b.png"
   },
   {
     "tarea": "skyblock",
@@ -608,7 +608,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen35-9b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen35-9b.png"
   },
   {
     "tarea": "fluid",
@@ -688,7 +688,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen3-30b-a3b-2507.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen3-30b-a3b-2507.png"
   },
   {
     "tarea": "game",
@@ -775,7 +775,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\game-qwen3-30b-a3b-2507.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\game-qwen3-30b-a3b-2507.png"
   },
   {
     "tarea": "app",
@@ -840,7 +840,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\app-qwen3-30b-a3b-2507.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\app-qwen3-30b-a3b-2507.png"
   },
   {
     "tarea": "skyblock",
@@ -883,7 +883,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen3-30b-a3b-2507.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen3-30b-a3b-2507.png"
   },
   {
     "tarea": "fluid",
@@ -953,7 +953,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\fluid-gpt-oss-20b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\fluid-gpt-oss-20b.png"
   },
   {
     "tarea": "game",
@@ -988,7 +988,7 @@
     },
     "task_errors": [],
     "actions": [],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\game-gpt-oss-20b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\game-gpt-oss-20b.png"
   },
   {
     "tarea": "fluid",
@@ -1078,7 +1078,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen3-coder-30b-a3b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen3-coder-30b-a3b.png"
   },
   {
     "tarea": "game",
@@ -1165,7 +1165,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\game-qwen3-coder-30b-a3b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\game-qwen3-coder-30b-a3b.png"
   },
   {
     "tarea": "app",
@@ -1250,7 +1250,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\app-qwen3-coder-30b-a3b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\app-qwen3-coder-30b-a3b.png"
   },
   {
     "tarea": "skyblock",
@@ -1413,7 +1413,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen3-coder-30b-a3b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen3-coder-30b-a3b.png"
   },
   {
     "tarea": "fluid",
@@ -1567,7 +1567,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen3-8b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\fluid-qwen3-8b.png"
   },
   {
     "tarea": "game",
@@ -1614,7 +1614,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\game-qwen3-8b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\game-qwen3-8b.png"
   },
   {
     "tarea": "app",
@@ -1669,7 +1669,7 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\app-qwen3-8b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\app-qwen3-8b.png"
   },
   {
     "tarea": "skyblock",
@@ -1712,6 +1712,6 @@
         "state": "done"
       }
     ],
-    "screenshot": "C:\\Users\\user\\Documents\\prject_local_AI\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen3-8b.png"
+    "screenshot": "<PROYECTO>\\docs\\qwen38\\task-benchmark-shots\\skyblock-qwen3-8b.png"
   }
 ]

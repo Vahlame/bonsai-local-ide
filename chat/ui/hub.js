@@ -540,10 +540,10 @@ import { fmtBytes, fmtEta, kvTexto, planTexto } from "./format.mjs";
 
   function vistaUrl() {
     const caja = el("div", "hub-url");
-    caja.append(el("p", "hub-uso", "Cualquier .gguf por HTTPS. Si no indicas SHA-256, se calcula al terminar y se guarda en el registro. Se rechazan hosts privados."));
+    caja.append(el("p", "hub-uso", "Un .gguf por HTTPS, una URL /resolve|/blob de Hugging Face o una línea hf://repo/archivo.gguf. Si no indicas SHA-256, se calcula al terminar y se guarda en el registro. Se rechazan hosts privados."));
     const url = el("input");
-    url.type = "url";
-    url.placeholder = "https://…/modelo-Q4_K_M.gguf";
+    url.type = "text";
+    url.placeholder = "hf://owner/repo/modelo-Q4_K_M.gguf";
     const nombre = el("input");
     nombre.type = "text";
     nombre.placeholder = "nombre local opcional (debe acabar en .gguf)";

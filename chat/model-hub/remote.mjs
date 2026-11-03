@@ -146,27 +146,78 @@ function comprobarHost(u, permitirPrivado) {
 }
 
 /**
+ * Convierte `hf://owner/repo/archivo.gguf`, una URL de Hugging Face
+ * (`/resolve/` o `/blob/`) o un `repo/archivo` explícito en un pedido de Hub.
+ * No descarga ni valida el destino: eso lo hace `archivoHF` con la política de
+ * red. Devuelve null si el texto no parece un origen de Hugging Face.
+ * @param {string} texto
+ * @returns {{repo: string, archivo: string, revision: string} | null}
+ */
+export function parsearOrigenHf(texto) {
+  const crudo = String(texto || "").trim();
+  if (!crudo) return null;
+  // hf://owner/repo/archivo.gguf  |  hf://owner/repo@revision/archivo.gguf
+  if (/^hf:\/\//i.test(crudo)) {
+    const resto = crudo.replace(/^hf:\/\//i, "");
+    const partes = resto.split("/").filter(Boolean);
+    if (partes.length < 3) return null;
+    let revision = "main";
+    let nombreRepo = partes[1];
+    const conRevision = nombreRepo.match(/^(.+)@([A-Za-z0-9._-]+)$/);
+    if (conRevision) {
+      nombreRepo = conRevision[1];
+      revision = conRevision[2];
+    }
+    const repo = `${partes[0]}/${nombreRepo}`;
+    const archivo = partes.slice(2).join("/");
+    if (!archivo || !/\.gguf$/i.test(archivo)) return null;
+    return { repo, archivo, revision };
+  }
+  let u;
+  try { u = new URL(crudo); } catch { return null; }
+  if (u.hostname !== "huggingface.co" && u.hostname !== "www.huggingface.co") return null;
+  const partes = u.pathname.split("/").filter(Boolean);
+  if (partes.length < 4) return null;
+  const repo = `${partes[0]}/${partes[1]}`;
+  const marcador = partes[2];
+  if (marcador === "resolve" || marcador === "blob") {
+    const revision = partes[3] || "main";
+    const archivo = partes.slice(4).join("/");
+    if (!archivo || !/\.gguf$/i.test(archivo)) return null;
+    return { repo, archivo, revision };
+  }
+  return null;
+}
+
+
+/**
  * Lee tamaño y SHA-256 de un archivo remoto sin descargarlo. HF expone
  * `x-linked-etag` con el SHA-256 del blob; si no, se usa ETag o el valor
  * aportado por el catálogo curado.
+ *
+ * Las opciones (`allowPrivate`, `fetcher`, `resolver`) existen para pruebas y
+ * para el escape explícito del Hub; nunca se reenvían desde una tool call.
  * @param {string} url
+ * @param {{allowPrivate?: boolean, allowHttp?: boolean, fetcher?: typeof fetch, resolver?: (host: string, options: {all: true, verbatim: true}) => Promise<Array<{address: string}>>}} [opciones]
  * @returns {Promise<{bytes: number, sha256: string, aceptaRangos: boolean}>}
  */
-export async function cabeceraRemota(url) {
-  const u = await validarUrlRemota(url, { allowPrivate: ALLOW_PRIVATE, allowHttp: ALLOW_PRIVATE });
+export async function cabeceraRemota(url, opciones = {}) {
+  const permitirPrivado = opciones.allowPrivate ?? ALLOW_PRIVATE;
+  const red = { allowPrivate: permitirPrivado, allowHttp: opciones.allowHttp ?? permitirPrivado, fetcher: opciones.fetcher, resolver: opciones.resolver };
+  const u = await validarUrlRemota(url, red);
   // HF responde 302 hacia su CDN y el SHA-256 del blob viaja en la cabecera
   // `x-linked-etag` DE LA REDIRECCIÓN. Con redirect:"follow" se pierde, así
   // que se pide manualmente y después se completa el tamaño en el destino.
   try {
-    const res = await fetch(u, { method: "HEAD", redirect: "manual", headers: { "user-agent": USER_AGENT }, signal: AbortSignal.timeout(25000) });
+    const res = await (opciones.fetcher || fetch)(u, { method: "HEAD", redirect: "manual", headers: { "user-agent": USER_AGENT }, signal: AbortSignal.timeout(25000) });
     if (res.status >= 300 && res.status < 400) {
       const cab = leerCabecera(res);
       const destino = res.headers.get("location");
       if (destino) {
         try {
           const destinoUrl = new URL(destino, u);
-          await validarUrlRemota(destinoUrl, { allowPrivate: ALLOW_PRIVATE, allowHttp: ALLOW_PRIVATE });
-          const final = await fetchRemoto(destinoUrl, { method: "HEAD", headers: { "user-agent": USER_AGENT }, signal: AbortSignal.timeout(25000) }, { allowPrivate: ALLOW_PRIVATE, allowHttp: ALLOW_PRIVATE });
+          await validarUrlRemota(destinoUrl, red);
+          const final = await fetchRemoto(destinoUrl, { method: "HEAD", headers: { "user-agent": USER_AGENT }, signal: AbortSignal.timeout(25000) }, red);
           if (final.ok) {
             const tam = Number(final.headers.get("content-length") || 0) || 0;
             if (!cab.bytes && tam) cab.bytes = tam;
@@ -180,7 +231,9 @@ export async function cabeceraRemota(url) {
   } catch {
     /* algunos CDN no admiten HEAD; se prueba un GET de 1 byte */
   }
-  const res = await fetch(u, { headers: { "user-agent": USER_AGENT, range: "bytes=0-0" }, redirect: "follow", signal: AbortSignal.timeout(25000) });
+  // También aquí redirect:"manual" + revalidación de cada Location. Un CDN
+  // comprometido no puede convertir el fallback en un SSRF.
+  const res = await fetchRemoto(u, { headers: { "user-agent": USER_AGENT, range: "bytes=0-0" }, signal: AbortSignal.timeout(25000) }, red);
   if (!res.ok && res.status !== 206) throw new Error(`HTTP ${res.status} al inspeccionar ${url}`);
   const cab = leerCabecera(res);
   const rango = String(res.headers.get("content-range") || "");

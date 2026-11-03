@@ -27,6 +27,7 @@ import vm from "node:vm";
 import { spawn, execFileSync, execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { MODELO } from "../chat/modelo.mjs";
+import { selectBinary } from "../chat/lifecycle/binary-registry.mjs";
 import { planParaModelo, leerRegistro, guardarRegistro, listarInstalados, vramInfo } from "../chat/model-hub.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -102,13 +103,20 @@ async function esperarGpuLibre(umbral = 7000) {
  */
 function argumentosServidor(item, plan) {
   const e = item.entrada;
+  const esParcial = e.servidor?.tipo === "gpu-parcial";
+  const ngl = esParcial ? Math.max(1, Math.min(511, Number(e.servidor.ngl) || 0)) : 99;
+  const hilos = Math.max(1, Number(e.servidor?.threads) || (plan.moe?.activo ? 8 : 4));
   const plantilla = path.join(PROJECT, "logs", `chat_template_lab_${PORT}.jinja`);
-  const a = ["-m", path.join(PROJECT, "models", e.archivo), "--gpu-layers", "99", "--flash-attn", "on",
+  const a = ["-m", path.join(PROJECT, "models", e.archivo), "--gpu-layers", String(ngl), "--flash-attn", "on",
     "-c", String(plan.contexto), "-ctk", plan.kv, "-ctv", plan.kv,
-    "-b", String(e.servidor?.batch || 512), "-ub", String(e.servidor?.ubatch || 256), "-t", String(e.servidor?.threads || (plan.moe?.activo ? 8 : 4)),
+    "-b", String(e.servidor?.batch || 512), "-ub", String(e.servidor?.ubatch || 256), "-t", String(hilos),
     "--host", "127.0.0.1", "--port", String(PORT), "--jinja", "--metrics", "-lv", "3",
     "--cors-origins", `http://127.0.0.1:${PORT},http://localhost:${PORT}`,
     "--spec-type", "none", "--no-context-shift", "--ctx-checkpoints", "0"];
+  if (esParcial) {
+    a.push("--fit", "off", "--load-mode", "mmap");
+    a.push("--cache-ram", String(Math.max(0, Number(e.servidor.cacheRamMiB) || 0)));
+  }
   if (plan.moe?.activo) {
     a.push("--fit", "off", "--load-mode", plan.moe.loadMode || "mmap", "--cache-ram", "0");
     if (plan.moe.nCpuMoe >= plan.moe.capas) a.push("--cpu-moe");
@@ -152,8 +160,11 @@ async function iniciar(item, conVision = !SIN_VISION) {
   const out = fs.openSync(`${logBase}.out.log`, "w");
   const err = fs.openSync(`${logBase}.err.log`, "w");
   const a = argumentosServidor(item, plan);
+  const bin = item.entrada.servidor?.binario
+    ? selectBinary(PROJECT, { preferred: String(item.entrada.servidor.binario) }).exe
+    : BIN;
   const inicio = Date.now();
-  const hijo = spawn(BIN, a, { cwd: PROJECT, stdio: ["ignore", out, err], windowsHide: true });
+  const hijo = spawn(bin, a, { cwd: PROJECT, stdio: ["ignore", out, err], windowsHide: true });
   let salida = false;
   hijo.on("exit", () => { salida = true; });
   let pico = 0;

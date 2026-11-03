@@ -124,6 +124,10 @@ export function createChatRoutes(ctx) {
       return true;
     }
     if (req.method === "POST" && url.pathname === "/api/reset") {
+      if (ctx.busy) {
+        res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end("espera a que termine el turno");
+        return true;
+      }
       if (ctx.chat.active) ctx.chat.active.abort();
       ctx.chat.session = { memory: "", folded: 0, turns: [], draft: "", files: [] };
       ctx.chat.tighten = 0;

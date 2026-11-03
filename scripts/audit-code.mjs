@@ -17,6 +17,25 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const STRICT = process.argv.includes("--strict");
 const JSON_OUT = process.argv.includes("--json");
+const BASELINE_FILE = path.join(ROOT, "config", "audit-baseline.json");
+
+/**
+ * Baseline explícito de archivos grandes ya conocidos. `--strict` falla solo
+ * cuando aparece uno NUEVO: convierte la deuda histórica en una puerta real sin
+ * bloquear cada PR por los 23 módulos que ya existían.
+ * @returns {{grandes: string[], huerfanos: string[]}}
+ */
+function leerBaseline() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(BASELINE_FILE, "utf8"));
+    return {
+      grandes: Array.isArray(raw.grandes) ? raw.grandes.map(String) : [],
+      huerfanos: Array.isArray(raw.huerfanos) ? raw.huerfanos.map(String) : [],
+    };
+  } catch {
+    return { grandes: [], huerfanos: [] };
+  }
+}
 
 /** Carpetas que no son código de la aplicación. */
 const SKIP_DIRS = new Set([
@@ -157,6 +176,13 @@ const report = {
   trackedBak,
 };
 
+const baseline = leerBaseline();
+const grandesNuevos = large.filter((row) => !baseline.grandes.includes(row.file));
+const huerfanosNuevos = orphans.filter((file) => !baseline.huerfanos.includes(file));
+report.baseline = { grandes: baseline.grandes.length, huerfanos: baseline.huerfanos.length };
+report.grandesNuevos = grandesNuevos;
+report.huerfanosNuevos = huerfanosNuevos;
+
 if (JSON_OUT) {
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 } else {
@@ -174,8 +200,14 @@ if (JSON_OUT) {
   if (!orphans.length) process.stdout.write("  ninguno\n");
 
   line(`Archivos grandes > ${LARGE_LINES} líneas (${large.length})`);
-  for (const row of large) process.stdout.write(`  ${String(row.lines).padStart(5)}  ${row.file}\n`);
+  for (const row of large) process.stdout.write(`  ${String(row.lines).padStart(5)}  ${row.file}${grandesNuevos.includes(row) ? "  [NUEVO]" : ""}\n`);
   if (!large.length) process.stdout.write("  ninguno\n");
+  if (STRICT) {
+    line(`Fuera del baseline (grandes ${grandesNuevos.length}, huérfanos ${huerfanosNuevos.length})`);
+    for (const row of grandesNuevos) process.stdout.write(`  ${String(row.lines).padStart(5)}  ${row.file}\n`);
+    for (const file of huerfanosNuevos) process.stdout.write(`  ${file}\n`);
+    if (!grandesNuevos.length && !huerfanosNuevos.length) process.stdout.write("  ninguno\n");
+  }
 
   line(`Deuda técnica marcada (${debt.reduce((sum, row) => sum + row.count, 0)})`);
   for (const row of debt.slice(0, 20)) process.stdout.write(`  ${String(row.count).padStart(4)}  ${row.file}\n`);
@@ -186,5 +218,5 @@ if (JSON_OUT) {
   if (!trackedBak.length) process.stdout.write("  ninguna\n");
 }
 
-const hardFailure = unresolved.length > 0 || (STRICT && (orphans.length > 0 || large.length > 0));
+const hardFailure = unresolved.length > 0 || (STRICT && (huerfanosNuevos.length > 0 || grandesNuevos.length > 0));
 process.exitCode = hardFailure ? 1 : 0;

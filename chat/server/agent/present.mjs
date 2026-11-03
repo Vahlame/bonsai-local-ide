@@ -6,7 +6,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileInside } from "../http.mjs";
-import { aplicarReemplazo, commandAllowed, commandKey, inventedToolResult, nativeToolEffects, stripCommands, stripFakeToolText, stripFileBlocks, stripIndex, stripReads, stripSearches, trozoParecido, unifiedDiff, writeNewOutput } from "../../actions.mjs";
+import { aplicarReemplazo, commandAllowed, commandKey, inventedToolResult, nativeToolEffects, PC_TOOLS, stripCommands, stripFakeToolText, stripFileBlocks, stripIndex, stripReads, stripSearches, trozoParecido, unifiedDiff, writeNewOutput } from "../../actions.mjs";
+import { validateToolCall } from "../../tool-registry.mjs";
 import { dialectoDe, llamadasCrudas } from "../../adaptadores.mjs";
 import { MODELO } from "../../modelo.mjs";
 import { estimateTokens } from "../../context.mjs";
@@ -120,10 +121,25 @@ export async function present(turn, current, follow) {
             const crudas = calls.length ? [] : llamadasCrudas(raw, dialectoDe(ctx.modeloActualClave(), MODELO.catalogo));
             const usadas = calls.length ? calls : crudas;
             const coder = ctx.chat.coderTask;
+            // El perfil legacy también valida: una tool call del modelo no puede
+            // colar campos de política (`allowPrivate`) ni tipos que el esquema no
+            // admite. Los extras se descartan ANTES de ejecutar el efecto.
+            const checked = coder ? coder.accept(usadas) : (() => {
+              /** @type {Array<{id: string, name: string, arguments: unknown}>} */
+              const valid = [];
+              /** @type {Array<{id: string, error: string}>} */
+              const errors = [];
+              usadas.forEach((call, index) => {
+                const id = String(call?.id || `call_${index}`);
+                const revision = validateToolCall(call, PC_TOOLS);
+                if (revision.ok) valid.push({ ...call, arguments: revision.args });
+                else errors.push({ id, error: revision.error });
+              });
+              return { valid, errors };
+            })();
             // Solo un cierre con verificación real puede pasar a DONE; un turno sin
             // herramientas ni cambios no demuestra que el pedido esté resuelto.
             let finalVerificationOk = false;
-            const checked = coder ? coder.accept(usadas) : {valid:usadas,errors:[]};
             const specialized = (coder ? checked.valid : usadas).filter(c=>["escribir_partes","consultar_salida","mcp_playwright"].includes(c.name) || (coder && ["leer","indice","buscar_codigo","buscar_estructural","simbolo","git_diff"].includes(c.name)));
             const normal = (coder ? checked.valid : usadas).filter(c=>!specialized.includes(c));
             const effects = normal.length ? nativeToolEffects(normal) : null;
@@ -841,7 +857,7 @@ export async function present(turn, current, follow) {
               ac.signal.throwIfAborted();
               const row = showAction("read", String(argsWeb.url), "run");
               try {
-                const detail = await leerWeb(argsWeb, { signal: ac.signal, blockedPorts: [ctx.args.port, new URL(ctx.chat.base).port], allowPrivate: argsWeb.allowPrivate });
+                const detail = await leerWeb(argsWeb, { signal: ac.signal, blockedPorts: [ctx.args.port, new URL(ctx.chat.base).port], allowPrivate: process.env.BONSAI_WEB_ALLOW_LOCAL === "1" || ctx.chat.webAllowPrivate === true });
                 finishAction(row, "done", detail);
                 poner(`web:${i}`, detail);
                 progresoPaso = true;

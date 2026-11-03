@@ -6,7 +6,17 @@
 export const CSP = [
   "default-src 'self'",
   "script-src 'self'",
-  "style-src 'self' 'unsafe-inline'",
+  // La UI ya no tiene bloques <style>: las hojas viven en /ui/base.css y
+  // /ui/drawer.css. Los atributos `style` que escribe el editor siguen
+  // permitidos con style-src-attr; los <style> inyectados, no.
+  "style-src 'self'",
+  // xterm inyecta hojas <style> propias al montar/cambiar de tema. Se permite
+  // 'unsafe-inline' SOLO en style-src-elem para no romper la terminal; los
+  // bloques <style> propios del IDE ya viven en /ui/base.css y /ui/drawer.css.
+  // La CSP de scripts sigue siendo estricta; migrar xterm a hojas externas es
+  // una deuda separada (xterm 6 no expone una API para desactivar la inyección).
+  "style-src-elem 'self' 'unsafe-inline'",
+  "style-src-attr 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
   "connect-src 'self'",

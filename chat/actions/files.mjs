@@ -6,6 +6,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { rutaSegura, rutaProyecto, escribirAtomico } from "../archivos-seguros.mjs";
 import { BINARY_EXTENSIONS } from "../legacy-tool-parser.mjs";
+import { esComandoSensible, esRutaSensible } from "../rutas-sensibles.mjs";
 
 const BLOCKED_DIRS = new Set([".git"]);
 const MAX_BYTES = 1_500_000;
@@ -25,6 +26,7 @@ export function resolveInside(root, rel) {
   // Windows no distingue mayúsculas (`BIN` ES `bin`) y además ignora el punto final: sin
   // normalizar, `MODELS/x.py`, `.GIT/hooks/x.py` o `bin./x.ps1` se colaban.
   const plano = (part) => part.replace(/[. ]+$/, "").toLowerCase();
+  if (esRutaSensible(cleaned)) throw new Error("ruta protegida: secretos y metadatos de Git no se leen ni se escriben desde el agente");
   if (parts.some((part) => !plano(part) || BLOCKED_DIRS.has(plano(part)))) throw new Error("ruta no permitida");
   const ext = path.extname(parts[parts.length - 1] || "").slice(1).toLowerCase();
   if (BINARY_EXTENSIONS.has(ext)) throw new Error(`archivo binario: usa ejecutar para generar ${ext}`);
@@ -65,6 +67,10 @@ export function partirLectura(clave) {
 export function commandAllowed(command, { trusted = false } = {}) {
   const text = command.trim();
   if (!text || text.includes("\0") || text.length > 32768) return false;
+  // Secretos y metadatos de Git no salen del proyecto ni por un comando: esto se
+  // aplica también al modo autónomo, porque una inyección de prompt no debe
+  // poder exfiltrar .env con `type`, `cat` o un one-liner de Node.
+  if (esComandoSensible(text)) return false;
   // El modo autónomo no confunde rutas, taskkill, scripts o argumentos con ataques.
   // Esta comprobación evita accidentes evidentes; código arbitrario NO se aísla con regex.
   if (trusted) return !/(?:^|[&|;\r\n])\s*(?:shutdown|format|diskpart|bcdedit|(?:reg(?:\.exe)?\s+delete))(?=\s|$)/i.test(text);

@@ -88,7 +88,7 @@ export function nativeToolEffects(calls) {
   }
   if (edits.length > 8) {
     notes.push(`quedaron ${edits.length - 8} ediciones sin lanzar; pídelas en el siguiente paso`);
-    notesIds.push(ids.get(`edit:${edits.length - 9}`) || "");
+    notesIds.push(ids.get("edit:8") || "");
   }
   if (borrados.length > 6) {
     notes.push(`quedaron ${borrados.length - 6} borrados sin lanzar; pídelos en el siguiente paso`);

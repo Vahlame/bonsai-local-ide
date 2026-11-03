@@ -8,13 +8,19 @@ import { MODELO } from "../modelo.mjs";
 import { ALLOW_PRIVATE, HUB_FILE, MAX_PARALELOS, MIB, MODELS_DIR, USER_AGENT, log } from "./common.mjs";
 import { existeArchivo, fusionarCatalogo, guardarRegistro, leerCurado, leerRegistro, registrarArchivo, tamanoArchivo } from "./store.mjs";
 import { fetchRemoto, validarUrlRemota } from "../red-segura.mjs";
-import { archivoHF, archivoUrlDirecta, cabeceraRemota } from "./remote.mjs";
+import { archivoHF, archivoUrlDirecta, cabeceraRemota, parsearOrigenHf } from "./remote.mjs";
 import { abortos, cancelarTrabajo, listarTrabajos, podarTrabajos, publicoTrabajo, trabajos } from "./jobs.mjs";
 
 
 export async function crearTrabajo(pedido = {}) {
   const activos = [...trabajos.values()].filter((t) => t.estado === "descargando" || t.estado === "verificando" || t.estado === "instalando");
   if (activos.length >= MAX_PARALELOS) throw new Error(`ya hay ${activos.length} descargas en curso; espera o cancela una`);
+  // Acepta hf:// y enlaces /resolve|/blob de Hugging Face en el mismo campo que
+  // una URL directa. Así el usuario puede pegar la línea del modelo sin traducirla.
+  const hf = pedido.url ? parsearOrigenHf(pedido.url) : null;
+  if (hf) {
+    pedido = { ...pedido, repo: hf.repo, archivo: hf.archivo, revision: hf.revision, url: "", archivoExacto: true };
+  }
   /** @type {ArchivoDescarga[]} */
   const archivos = [];
   let origen = String(pedido.origen || "");
@@ -63,7 +69,7 @@ export async function crearTrabajo(pedido = {}) {
     } else {
       if (!repo || !pedido.archivo) throw new Error("faltan repo y archivo para descargar");
       const a = await archivoHF(repo, pedido.archivo, revision);
-      const prefijo = String(pedido.clave || repo.split("/").pop() || "modelo");
+      const prefijo = pedido.archivoExacto ? "" : String(pedido.clave || repo.split("/").pop() || "modelo");
       archivos.push({ ...localizar(a, prefijo), bytes: Number(pedido.bytes) || a.bytes, sha256: pedido.sha256 || a.sha256, tipo: "modelo" });
       origen = origen || `https://huggingface.co/${repo}`;
       if (pedido.vision?.archivo) {
@@ -337,7 +343,7 @@ export async function importarArchivo(rutaOriginal, opciones = {}) {
   if (path.resolve(destino) === origen) return registrarArchivo(nombre, { fuente: "local" });
   if (fs.existsSync(destino)) throw new Error(`ya existe models/${nombre}; no se sobrescribe`);
   fs.mkdirSync(MODELS_DIR, { recursive: true });
-  fs.copyFileSync(origen, destino);
+  await fs.promises.copyFile(origen, destino);
   return registrarArchivo(nombre, { fuente: "local" });
 }
 

@@ -27,8 +27,11 @@ export function createSymbolIndex(ctx) {
   /** @type {Map<string, Array<{archivo: string, linea: number, columna: number, tipo: string}>> | null} */
   let cache = null;
   let cacheTs = 0;
+  /** La caché pertenece a UNA raíz: cambiar de proyecto no puede reutilizarla. */
+  let cacheRoot = "";
   /** @type {Promise<Map<string, any>> | null} */
   let enCurso = null;
+  let enCursoRoot = "";
   /** @type {Worker | null} */
   let worker = null;
 
@@ -76,28 +79,40 @@ export function createSymbolIndex(ctx) {
    * @returns {Promise<Map<string, Array<{archivo: string, linea: number, columna: number, tipo: string}>>>}
    */
   async function get() {
-    if (cache && now() - cacheTs < ttlMs) return cache;
-    if (enCurso) return enCurso;
     const root = ctx.getRoot();
-    const archivos = [...snapshot(root).keys()];
+    if (cache && cacheRoot === root && now() - cacheTs < ttlMs) return cache;
+    if (enCurso && enCursoRoot === root) return enCurso;
+    // El worker recibe SOLO la raíz y lista allí: el snapshot del árbol ya no se
+    // ejecuta en el hilo principal (era el bloqueo que quedaba antes del worker).
+    // `ctx.indexar` existe para pruebas de integración y conserva el snapshot
+    // explícito para que el índice inyectado siga recibiendo la misma lista.
+    const archivos = ctx.indexar ? [...snapshot(root).keys()] : null;
+    enCursoRoot = root;
     enCurso = (async () => {
       const indice = ctx.indexar
-        ? indexar(root, archivos)
+        ? indexar(root, archivos || [])
         : await indexarEnWorker(root, archivos);
-      cache = indice;
-      cacheTs = now();
+      // Si la carpeta cambió mientras indexábamos, este resultado ya no vale:
+      // no se publica bajo la raíz nueva.
+      if (ctx.getRoot() === root) {
+        cache = indice;
+        cacheRoot = root;
+        cacheTs = now();
+      }
       return indice;
     })();
     try {
       return await enCurso;
     } finally {
       enCurso = null;
+      enCursoRoot = "";
     }
   }
 
   function invalidate() {
     cache = null;
     cacheTs = 0;
+    cacheRoot = "";
     if (worker) {
       try { void worker.terminate(); } catch { /* ya terminó */ }
       worker = null;

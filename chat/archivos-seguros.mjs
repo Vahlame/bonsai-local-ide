@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { esRutaSensible } from "./rutas-sensibles.mjs";
 
 /**
  * POLITICA DE RUTAS DEL PROYECTO Y ALCANCE REAL DE LA PROTECCION (hallazgo 7)
@@ -39,7 +40,9 @@ import crypto from "node:crypto";
 // The selected root itself may be a link; its descendants may not be.
 export function rutaSegura(root, rel) {
   if (typeof rel !== "string" || !rel || rel.includes("\0") || path.isAbsolute(rel)) return null;
-  const parts = rel.replace(/\\/g, "/").split("/");
+  const normalizada = rel.replace(/\\/g, "/");
+  if (esRutaSensible(normalizada)) return null;
+  const parts = normalizada.split("/");
   if (parts.some((p) => p === ".." || (process.platform === "win32" && (p.includes(":") || (/[. ]$/.test(p) && p !== ".") || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(p))))) return null;
   const base = path.resolve(root);
   const abs = path.resolve(base, rel);

@@ -1,0 +1,21 @@
+    /* Cajón inferior: terminal, problemas y esquema del archivo abierto. */
+    #drawer { display: flex; flex-direction: column; border-top: 1px solid rgba(128,128,128,.28); background: inherit; min-height: 170px; max-height: 40vh; }
+    #drawer[hidden] { display: none; }
+    .drawer-bar { display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-bottom: 1px solid rgba(128,128,128,.2); flex: none; }
+    .drawer-bar .sep { flex: 1; }
+    .drawer-body { flex: 1; min-height: 0; display: flex; }
+    #term-panel, #prob-panel, #outline-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    #term-out { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 0; white-space: normal; }
+    #term-out.term-fallback { padding: 8px; white-space: pre-wrap; font: 12px/1.45 ui-monospace, Consolas, monospace; }
+    #term-out .xterm { height: 100%; padding: 4px 6px; }
+    #term-out .xterm-viewport { background: #0d100b !important; }
+    #term-form { display: flex; gap: 6px; padding: 5px 8px; flex: none; }
+    #term-in { flex: 1; font: 12px/1.4 ui-monospace, Consolas, monospace; }
+    #term-meta { padding: 0 8px 5px; font-size: 11px; opacity: .75; }
+    #prob-list, #outline-list { list-style: none; margin: 0; padding: 4px; overflow: auto; flex: 1; min-height: 0; }
+    #prob-list li, #outline-list li { padding: 3px 7px; cursor: pointer; font: 12px/1.35 ui-monospace, Consolas, monospace; border-bottom: 1px solid rgba(128,128,128,.12); }
+    #prob-list li:hover, #outline-list li:hover { background: rgba(128,128,128,.14); }
+    #prob-list li.err { color: #e06c75; }
+    #prob-list li.warn { color: #d9a441; }
+    .diag-badge { font-size: 10px; opacity: .8; margin-left: 4px; }
+    .meta-drawer { font-size: 11px; opacity: .7; }
