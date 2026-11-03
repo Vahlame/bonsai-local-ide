@@ -349,7 +349,7 @@ migración futura a Rust, en `docs/RUST-MIGRATION.md`.
 | `npm run audit` | 0 imports rotos, 0 huérfanos, 0 `.bak` |
 | `npm run check:syntax` | 258 archivos OK |
 | `npm run check:reports` | 10 resúmenes curados, 45 KB |
-| `npm run docs:links` | 85 documentos, 255 enlaces, 0 rotos |
+| `npm run docs:links` | 85 documentos, 249 enlaces, 0 rotos |
 | `prueba-copia-evaluacion` | OK (la copia aislada arranca sin `node_modules`) |
 | `prueba-accesibilidad` | 0 violaciones graves (axe-core, WCAG 2 A/AA) |
 

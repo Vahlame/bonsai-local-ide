@@ -120,7 +120,8 @@ $env:BONSAI_CODER_CONFIG = "chat/coder-profile-moe.json"
 
 Sin esa variable se usa el perfil histórico `chat/coder-profile.json`. El detalle
 y las ablaciones están en
-[reports/CODER-PIPELINE-2026-10-31.md](../reports/CODER-PIPELINE-2026-10-31.md).
+[reports/CODER-PIPELINE-2026-10-31.md](../reports/CODER-PIPELINE-2026-10-31.md),
+uno de los resúmenes curados que sí se versionan.
 
 El prefijo conserva sistema, herramientas, entorno y reglas del proyecto. El estado
 variable queda después. Se mantienen el pedido original íntegro y hasta cuatro
@@ -177,8 +178,8 @@ reutilizan la evidencia sin repetir ese coste. Los perfiles anteriores conservan
 su límite de 512 tokens de pensamiento. Para salidas pequeñas se conservan dos
 tercios para responder; para salidas mayores se protegen 2.048 tokens. La ventana
 es compartida: LONG admite hasta 30.592 tokens de historial sin imágenes; los
-adjuntos descuentan su presupuesto antes del empaquetado. Ver los resultados en
-[la fase 3](../reports/coder-phase3/RESUMEN.md).
+adjuntos descuentan su presupuesto antes del empaquetado. Los resultados de la
+fase 3 están en `reports/coder-phase3/RESUMEN.md` (local, no versionado).
 
 En Ajustes → Motor, elegir un perfil y pulsar **Aplicar perfil** reinicia el servidor
 administrado, verifica su salud y guarda la selección. También ajusta el historial
@@ -244,9 +245,10 @@ los mapas de 600 y 1.800 tokens; los fixtures originales eran demasiado pequeño
 permite comparar pensamiento con el mismo presupuesto de salida. El proxy conserva
 el número de caracteres de razonamiento, sin almacenar su contenido.
 
-Ver [mediciones iniciales](../reports/coder-2026-10-28/RESUMEN.md) y
-[continuación con CUDA, LSP y contexto](../reports/coder-phase2/RESUMEN.md).
-Son tareas sintéticas, no una garantía sobre repositorios arbitrarios. El LSP
+Las mediciones iniciales están en `reports/coder-2026-10-28/RESUMEN.md` y la
+continuación con CUDA, LSP y contexto en `reports/coder-phase2/RESUMEN.md`
+(ambas locales, no versionadas). Son tareas sintéticas, no una garantía sobre
+repositorios arbitrarios. El LSP
 semántico cubre JS/TS; en otros lenguajes las referencias siguen siendo léxicas.
 No se evaluaron otras cuantizaciones de pesos ni monorepos grandes. Los comandos
 de verificación explícitos permiten integrar otros compiladores y suites.

@@ -181,10 +181,11 @@ nueva sin sobrescribir la evidencia anterior. `chat/prueba-lifecycle-adapter.mjs
 regresiones del contrato de parámetros, cancelación tras error de handshake y PID vivo
 con fecha de creación distinta; estas pruebas no cargan modelos.
 
-Las [evidencias](../reports/lifecycle-2026-11-01/) conservan resultados de las suites,
-[snapshots del E2E](../reports/lifecycle-2026-11-01/e2e-evidence.json) y
-[fallos inducidos en GPU](../reports/lifecycle-2026-11-01/faults-evidence.json).
-El parche 2.3.6 ya pasaba el E2E habitual al comenzar este trabajo; no se atribuye al
-refactor la reproducción de un fallo histórico que ya estaba corregido.
-La [validación final](../reports/lifecycle-2026-11-01/VALIDATION.md) separa suites aisladas,
-navegador, GPU real, intentos fallidos y límites del entorno.
+Las evidencias de la validación (resultados de suites, snapshots del E2E y fallos
+inducidos en GPU) se conservan en local bajo `reports/lifecycle-2026-11-01/`; ya
+no viajan en Git. El parche 2.3.6 ya pasaba el E2E habitual al comenzar este
+trabajo; no se atribuye al refactor la reproducción de un fallo histórico que ya
+estaba corregido. La validación final está en
+`reports/lifecycle-2026-11-01/VALIDATION.md` (local) y separa suites aisladas,
+navegador, GPU real, intentos fallidos y límites del entorno. El índice de
+informes versionados está en [reports/README.md](../reports/README.md).

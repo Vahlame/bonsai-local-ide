@@ -66,7 +66,7 @@ fáciles de mantener.
 | Sintaxis | **258 archivos OK** |
 | Informes curados | **10 archivos, 45 KB** |
 | Auditoría estructural | **0 imports rotos, 0 huérfanos** |
-| Enlaces de documentación | **85 documentos, 255 enlaces, 0 rotos** |
+| Enlaces de documentación | **85 documentos, 249 enlaces, 0 rotos** |
 
 ## Enlaces
 
