@@ -41,7 +41,7 @@ jobs:
         run: |
           npm sbom --prefix chat --sbom-format cyclonedx --omit dev | Out-File -Encoding utf8 sbom.cdx.json
 
-      - name: Paquete portable
+      - name: Paquete de código (runtime y modelos aparte)
         shell: pwsh
         run: |
           $destino = "dist/bonsai-local-ide-${{ github.ref_name }}"

@@ -52,10 +52,10 @@ senior independiente y convierte la deuda de release en un proceso repetible.
 - CI ejecuta `npm audit --prefix chat --omit=dev`; el job de navegador ya no
   reintenta la suite completa y oculta flakes.
 - `run-tests.mjs` mata el árbol con `taskkill /T /F` en Windows.
-- Workflow `Release` en tags `v*`: verifica, genera SBOM CycloneDX, empaqueta el
-  ZIP portable, publica SHA-256 y adjunta todo a la release. La firma
-  Authenticode queda pendiente de un certificado de firma; el workflow no finge
-  firmar lo que no puede.
+- Workflow `Release` en tags `v*`: verifica, genera SBOM CycloneDX, empaqueta un
+  ZIP de código (sin `models/` ni `bin/`, que se instalan aparte), publica
+  SHA-256 y adjunta todo a la release. La firma Authenticode queda pendiente de
+  un certificado de firma; el workflow no finge firmar lo que no puede.
 - `npm run lint` (ESLint gradual sobre los módulos de frontera),
   `npm run check:types` (tsc `checkJs` sobre los mismos) y
   `npm run coverage` (c8 con umbral 45/15/40) entran en CI.
