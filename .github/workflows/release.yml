@@ -13,6 +13,9 @@ jobs:
     name: Artefacto, SBOM y release
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      SIGN_PFX_BASE64: ${{ secrets.SIGN_PFX_BASE64 }}
+      SIGN_PFX_PASSWORD: ${{ secrets.SIGN_PFX_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -57,6 +60,16 @@ jobs:
           & $robocopy.Source @argumentos | Out-Null
           if ($LASTEXITCODE -ge 8) { throw "robocopy falló: $LASTEXITCODE" }
           Copy-Item sbom.cdx.json $destino
+          if ($env:SIGN_PFX_BASE64) {
+            $pfx = Join-Path $env:RUNNER_TEMP "bonsai-sign.pfx"
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGN_PFX_BASE64))
+            $pe = @(Get-ChildItem $destino -File -Recurse | Where-Object { $_.Extension -in '.exe', '.msi' })
+            if ($pe.Count) {
+              ./scripts/sign-release.ps1 -Path $pe.FullName -PfxPath $pfx -PfxPassword $env:SIGN_PFX_PASSWORD -Verify
+            } else {
+              Write-Host "::notice::No hay .exe/.msi en el paquete; añade un instalador para firmarlo con Authenticode."
+            }
+          }
           Compress-Archive -Path "$destino/*" -DestinationPath "dist/bonsai-local-ide-${{ github.ref_name }}.zip" -Force
           Get-FileHash "dist/bonsai-local-ide-${{ github.ref_name }}.zip" -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash)  bonsai-local-ide-${{ github.ref_name }}.zip" } |

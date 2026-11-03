@@ -388,6 +388,7 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 |---|---|
 | [AUDIT-2026-11-01](docs/AUDIT-2026-11-01.md) | Inventario, sintaxis, enlaces, UI, runtime y límites |
 | [RUNTIME-PRISM](docs/RUNTIME-PRISM.md) | Runtime PrismML para Ternary Bonsai PTQ1_0/PQ2_0 |
+| [FIRMA](docs/FIRMA.md) | Firma Authenticode: certificados, PFX, CI y verificación |
 | [CONTRIBUTING](CONTRIBUTING.md) | Setup, pruebas, estilo, modelos y releases |
 | [RELEASE-2.5.1](docs/RELEASE-2.5.1.md) | Cierre de SSRF/secretos/borrado, retención y release con SBOM |
 | [RELEASE-2.5.0](docs/RELEASE-2.5.0.md) | SSRF con IP fijada, CSP, SSE, Zod/OpenAPI y axe |
