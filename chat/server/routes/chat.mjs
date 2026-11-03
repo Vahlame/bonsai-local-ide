@@ -197,6 +197,74 @@ export function createChatRoutes(ctx) {
       return true;
     }
     // ------------------------------------------ terminal integrado (panel inferior)
+    // SSE: la UI deja de sondear cada 700 ms y recibe la salida en cuanto llega.
+    if (url.pathname === "/api/terminal/stream" && req.method === "GET") {
+      const id = url.searchParams.get("id") || "";
+      const t = ctx.sesionesTerminal();
+      const desde = Number(req.headers["last-event-id"] || url.searchParams.get("desde") || 0) || 0;
+      let inicial;
+      try {
+        inicial = t.leer(id, desde);
+      } catch {
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }).end("terminal no encontrado");
+        return true;
+      }
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-store",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+      let cerrado = false;
+      const enviar = (payload) => {
+        if (cerrado || res.writableEnded) return;
+        res.write(`id: ${payload.siguiente}\ndata: ${JSON.stringify(payload)}\n\n`);
+      };
+      enviar(inicial);
+      if (!inicial.vivo) {
+        res.end();
+        return true;
+      }
+      let ultimo = inicial.siguiente;
+      /** @type {NodeJS.Timeout} */
+      let latido;
+      const limpiar = () => {
+        if (cerrado) return;
+        cerrado = true;
+        clearInterval(latido);
+        t.off("salida", alSalida);
+        t.off("fin", alFin);
+      };
+      const alSalida = ({ id: sid }) => {
+        if (sid !== id || cerrado) return;
+        try {
+          const leido = t.leer(id, ultimo);
+          ultimo = leido.siguiente;
+          enviar(leido);
+        } catch {
+          limpiar();
+          try { res.end(); } catch { /* ya cerrado */ }
+        }
+      };
+      const alFin = ({ id: sid }) => {
+        if (sid !== id || cerrado) return;
+        try {
+          const leido = t.leer(id, ultimo);
+          enviar(leido);
+        } catch { /* la sesión ya se borró */ }
+        limpiar();
+        try { res.end(); } catch { /* ya cerrado */ }
+      };
+      t.on("salida", alSalida);
+      t.on("fin", alFin);
+      latido = setInterval(() => {
+        if (!cerrado && !res.writableEnded) res.write(": ping\n\n");
+      }, 15000);
+      latido.unref?.();
+      res.once("close", limpiar);
+      req.once("aborted", limpiar);
+      return true;
+    }
     if (url.pathname === "/api/terminal" && (req.method === "GET" || req.method === "POST")) {
       try {
         const t = ctx.sesionesTerminal();

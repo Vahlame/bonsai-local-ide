@@ -1,6 +1,0 @@
-AssertionError [ERR_ASSERTION]: La interfaz solicitada no está disponible: GET / devolvió 404. Sirve también el HTML y sus recursos; pasar los tests de la API no comprueba la interfaz.
-
-404 !== 200
-
-    at file:///C:/Users/user/Documents/prject_local_AI/chat/verify-node-webapp.mjs:17:10
-    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)

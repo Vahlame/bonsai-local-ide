@@ -35,13 +35,22 @@ jobs:
       - name: Enlaces de documentación
         run: node scripts/check-doc-links.mjs
 
+      - name: Auditoría estructural
+        run: node scripts/audit-code.mjs
+
+      - name: Sintaxis de todo el código
+        run: node scripts/check-syntax.mjs
+
+      - name: Informes curados (sin ejecuciones crudas)
+        run: node scripts/check-reports.mjs
+
       - name: Tests aislados
         run: node scripts/run-tests.mjs
 
   browser-smoke:
-    name: Smoke de navegador (UI, sin GPU)
+    name: Suites de navegador (UI, sin GPU)
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -56,11 +65,11 @@ jobs:
       - name: Dependencias del IDE
         run: npm ci --prefix chat
 
-      - name: Smoke de interfaz con Edge/Chrome del runner
+      - name: Suites de interfaz con Edge/Chrome del runner
         shell: pwsh
         run: |
-          node chat/prueba-ui-humo.mjs
+          node scripts/run-tests.mjs navegador
           if ($LASTEXITCODE -ne 0) {
-            Write-Host "::warning::El smoke falló; se reintenta una vez por timing del navegador."
-            node chat/prueba-ui-humo.mjs
+            Write-Host "::warning::Una suite de navegador falló; se reintenta una vez por timing."
+            node scripts/run-tests.mjs navegador
           }

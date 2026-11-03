@@ -1,8 +1,0 @@
-OK: no se detiene el servidor ajeno del puerto solicitado
-OK: puerto libre identificado
-OK: un marcador con PIDs ajenos no autoriza a cerrar un servidor que no es de llama-server.exe
-OK: un marcador de otro puerto no autoriza a cerrar el puerto solicitado
-OK: marcador rancio del formato nuevo se borra
-OK: marcador rancio del formato antiguo (pid del lanzador) se borra
-OK: marcador antiguo con lanzador vivo se respeta (starting, sin matar)
-OK: marcador nuevo con lanzador vivo se respeta (starting, sin matar)

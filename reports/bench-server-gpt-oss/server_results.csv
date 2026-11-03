@@ -1,9 +1,0 @@
-suite,run_id,model_key,model,quant,context,kv,prompt_target,prompt_tokens,n_predict,predicted_n,ttft_ms,prefill_tok_s,decode_tok_s,itl_median_ms,itl_p95_ms,cache_prompt,cache_n,load_ms,vram_idle_mib,vram_model_mib,vram_peak_mib,ram_peak_mib,cpu_util_avg,power_avg_w,power_max_w,temp_max_c,wall_ms,run,note,response_chars
-server,server-gpt-oss-20261031,gpt-oss-20b,GPT-OSS,MXFP4,65536,q8_0,512,395,128,128,745.75,533.54,30.61,32.61,35.403,False,0,8414.9,0,5671,5689,7811,45.32,21.18,39.36,56.0,4895.5,1,,756
-server,server-gpt-oss-20261031,gpt-oss-20b,GPT-OSS,MXFP4,65536,q8_0,512,395,128,128,780.92,510.87,30.57,32.448,35.329,False,0,8414.9,0,5671,5707,7831,55.24,21.73,39.36,62.0,4935.2,2,,436
-server,server-gpt-oss-20261031,gpt-oss-20b,GPT-OSS,MXFP4,65536,q8_0,2048,1529,128,128,2052.39,751.99,30.34,32.796,34.889,False,0,8414.9,0,5671,5709,7843,59.33,29.52,46.27,62.0,6239.3,1,,779
-server,server-gpt-oss-20261031,gpt-oss-20b,GPT-OSS,MXFP4,65536,q8_0,2048,1529,128,128,2045.12,755.23,30.36,32.808,34.686,False,0,8414.9,0,5671,5709,7869,61.28,31.75,47.17,62.0,6228.1,2,,774
-server,server-gpt-oss-20261031,gpt-oss-20b,GPT-OSS,MXFP4,65536,q8_0,8192,6056,128,71,7409.16,823.74,30.11,33.072,34.599,False,0,8414.9,0,5671,5709,7896,57.44,38.62,48.84,62.0,9734.5,1,,382
-server,server-gpt-oss-20261031,gpt-oss-20b,GPT-OSS,MXFP4,65536,q8_0,8192,6056,128,71,7411.77,824.29,29.96,33.281,34.782,False,0,8414.9,0,5671,5709,7978,54.58,40.56,49.03,65.0,9749.1,2,,382
-server-cache,server-gpt-oss-20261031,gpt-oss-20b,GPT-OSS,MXFP4,65536,q8_0,4096,3034,64,64,3814.3,804.92,30.6,32.48,34.574,False,0,8414.9,0,5671,5709,8061,55.64,40.49,49.03,65.0,5873.57,1,cache-cold,285
-server-cache,server-gpt-oss-20261031,gpt-oss-20b,GPT-OSS,MXFP4,65536,q8_0,4096,3034,64,64,72.18,21.79,28.62,33.919,37.023,True,3033,8414.9,0,5671,5709,8061,55.64,40.49,49.03,65.0,2274.16,1,cache-warm,379

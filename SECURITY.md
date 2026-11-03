@@ -37,11 +37,20 @@ Se acusará recibo y se coordinará la corrección y la divulgación.
   no son un sandbox del sistema operativo.
 - Las herramientas de archivos rechazan rutas fuera del proyecto, enlaces y junctions.
   Las escrituras usan temporales y comprobación de cambios previos.
+- Todo acceso saliente (búsqueda web, Model Hub y descargas) pasa por
+  `chat/red-segura.mjs`: resuelve todas las IPs, rechaza rangos privados/reservados,
+  bloquea metadatos de nube, revalida cada redirección y **conecta a la IP ya
+  comprobada** (Host/SNI originales) para cerrar el DNS rebinding. MCP puede abrir
+  URLs locales a propósito para probar la aplicación, pero nunca metadatos de nube.
+- La UI se sirve con CSP estricta (`script-src 'self'`), `X-Frame-Options:
+  SAMEORIGIN`, `Referrer-Policy: no-referrer` y `nosniff`; no hay scripts inline.
 - El navegador MCP usa un perfil efímero, bloquea los puertos del IDE y del modelo y no
   habilita evaluación arbitraria de código.
 - La memoria global y los chats se guardan en el estado local, fuera de Git. No se
   publican con el repositorio.
 - Los logs pueden contener rutas y fragmentos de código: revísalos antes de compartirlos.
+  El log de peticiones lentas/5xx usa `request-id`, omite la query y redacta secretos
+  y rutas absolutas; `/api/health` no lee el modelo ni el disco.
 
 ## Alcance
 

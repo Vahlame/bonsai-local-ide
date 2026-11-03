@@ -19,6 +19,10 @@ import { crearApi } from "./core/api.mjs";
 import { crearEstadoUI } from "./core/state.mjs";
 import { analizarSaltos, normalizarSaltos, restaurarSaltos } from "./editor/text.mjs";
 import { rutaLimpia } from "./workspace/paths.mjs";
+import { estimateTokensUi, formatoTokens } from "./format.mjs";
+import { crearPanelGit } from "./app-git.mjs";
+import { crearBuscador } from "./app-search.mjs";
+import { crearReglas } from "./app-rules.mjs";
 
 (() => {
   "use strict";
@@ -28,6 +32,11 @@ import { rutaLimpia } from "./workspace/paths.mjs";
   const api = crearApi({
     timeoutDeRuta: (ruta) => ruta === "/api/modelos" || ruta === "/api/servidor" || ruta.startsWith("/api/server/") ? 300000 : ruta === "/api/edit" ? 180000 : 15000,
   });
+  // Panel de Git extraído a un módulo; recibe las dependencias de la UI para no
+  // compartir estado global implícito.
+  const panelGit = crearPanelGit({ api, avisar, el, $, menu, preguntar, accesibilizarDialogo });
+  const buscador = crearBuscador({ api, el, abrirArchivo });
+  const reglasUI = crearReglas({ api, el, $, accesibilizarDialogo });
 
   // =========================================================== avisos emergentes
   // Un solo contenedor: index.html ya trae #avisos. Antes se creaba un segundo
@@ -592,7 +601,7 @@ import { rutaLimpia } from "./workspace/paths.mjs";
       // Dos clics mientras carga no deben abrir dos copias del mismo documento.
       const existente = pestanas.findIndex((p) => p.rel === rel);
       if (existente >= 0) { mostrarPestana(existente); return; }
-      pestanas.push({ rel, texto, guardado: texto, original: crudo, eol: saltos.eol, truncado, bytes: Number(res.headers.get("X-Bonsai-Bytes")) || texto.length, cursor });
+      pestanas.push({ rel, texto, guardado: texto, original: crudo, eol: saltos.eol, truncado, bytes: Number(res.headers.get("X-Bonsai-Bytes")) || texto.length, cursor, etag: res.headers.get("ETag") || "" });
       mostrarPestana(pestanas.length - 1);
     } catch (err) {
       avisar(`No se pudo abrir ${rel}: ${err.message}`, "error");
@@ -626,6 +635,7 @@ import { rutaLimpia } from "./workspace/paths.mjs";
       // Si se siguió escribiendo durante la petición, lo nuevo sigue sin guardar.
       p.guardado = enviado;
       p.original = contenido;
+      p.etag = "";
       if (pestanas[activa] === p) pintarNota(p);
       pintarPestanas();
       if (!silencioso) avisar(`Guardado ${p.rel}`, "ok", 2200);
@@ -716,8 +726,11 @@ import { rutaLimpia } from "./workspace/paths.mjs";
     if (!p || comprobando || document.hidden || p.truncado || p.guardando) return;
     comprobando = true;
     try {
-      const res = await fetch(`/api/file?path=${encodeURIComponent(p.rel)}`, { cache: "no-store" });
+      const headers = p.etag ? { "If-None-Match": p.etag } : undefined;
+      const res = await fetch(`/api/file?path=${encodeURIComponent(p.rel)}`, { cache: "no-store", headers });
+      if (res.status === 304) return;
       if (!res.ok) return;
+      p.etag = res.headers.get("ETag") || "";
       const crudo = await res.text();
       const saltos = analizarSaltos(crudo);
       const texto = normalizarSaltos(crudo);
@@ -768,11 +781,11 @@ import { rutaLimpia } from "./workspace/paths.mjs";
       { tipo: "comando", texto: "Nuevo archivo", ico: "archivoNuevo", hacer: () => void nuevoArchivo() },
       { tipo: "comando", texto: "Nueva carpeta", ico: "carpeta", hacer: () => void nuevaCarpeta() },
       { tipo: "comando", texto: "Guardar el archivo activo", ico: "guardar", detalle: "Ctrl+S", hacer: () => guardarActiva() },
-      { tipo: "comando", texto: "Buscar en todo el proyecto", ico: "buscar", detalle: "Ctrl+Shift+F", hacer: () => abrirBusqueda() },
+      { tipo: "comando", texto: "Buscar en todo el proyecto", ico: "buscar", detalle: "Ctrl+Shift+F", hacer: () => buscador.abrirBusqueda() },
       ...TEMAS.map(([tema,nombre])=>({tipo:"comando",texto:`Tema: ${nombre}`,ico:"sol",hacer:()=>guardarAjustes({tema})})),
       { tipo: "comando", texto: "Ajustes", ico: "ajustes", hacer: () => abrirAjustes() },
-      { tipo: "comando", texto: "Estado de git / hacer commit", ico: "rama", hacer: () => menuGit() },
-      { tipo: "comando", texto: "Reglas del proyecto", ico: "reglas", hacer: () => verReglas() },
+      { tipo: "comando", texto: "Estado de git / hacer commit", ico: "rama", hacer: () => panelGit.menuGit() },
+      { tipo: "comando", texto: "Reglas del proyecto", ico: "reglas", hacer: () => reglasUI.verReglas() },
       { tipo: "comando", texto: "Restablecer distribucion de paneles", ico: "panelIzq", hacer: () => window.bonsaiResetLayout?.() },
       { tipo: "comando", texto: "Cerrar todas las pestañas", ico: "cerrar", hacer: () => cerrarTodas() },
       { tipo: "comando", texto: "Nueva conversación", ico: "mas", hacer: () => $("#nuevo")?.click() },
@@ -905,240 +918,6 @@ import { rutaLimpia } from "./workspace/paths.mjs";
     });
     pintar();
     input.focus();
-  }
-
-  // ======================================================= búsqueda en proyecto
-  function abrirBusqueda() {
-    const fondo = el("div", "paleta-fondo");
-    const caja = el("div", "paleta");
-    const input = el("input");
-    input.type = "search";
-    input.placeholder = "Buscar en todo el proyecto (mínimo 2 caracteres)";
-    const lista = el("ul");
-    caja.append(input, lista);
-    fondo.append(caja);
-    document.body.append(fondo);
-
-    let temporizador = 0;
-    async function buscar() {
-      const q = input.value.trim();
-      lista.replaceChildren();
-      if (q.length < 2) return;
-      lista.append(el("li", "p-grupo", "Buscando…"));
-      try {
-        const datos = await api(`/api/search?q=${encodeURIComponent(q)}&limit=80`);
-        lista.replaceChildren();
-        if (!datos.resultados.length) {
-          lista.append(el("li", "p-grupo", "Sin coincidencias"));
-          return;
-        }
-        const porArchivo = new Map();
-        for (const r of datos.resultados) {
-          if (!porArchivo.has(r.rel)) porArchivo.set(r.rel, []);
-          porArchivo.get(r.rel).push(r);
-        }
-        for (const [rel, coincidencias] of porArchivo) {
-          lista.append(el("li", "p-grupo", `${rel} · ${coincidencias.length}`));
-          for (const c of coincidencias) {
-            const li = el("li");
-            li.append(el("span", "p-hint", `${c.linea}`));
-            li.append(el("span", "p-txt", c.texto));
-            li.addEventListener("click", () => {
-              cerrar();
-              abrirArchivo(rel, 0);
-            });
-            lista.append(li);
-          }
-        }
-      } catch (err) {
-        lista.replaceChildren(el("li", "p-grupo", `Error: ${err.message}`));
-      }
-    }
-
-    function cerrar() {
-      fondo.remove();
-      document.removeEventListener("keydown", tecla, true);
-    }
-    /** @param {KeyboardEvent} e */
-    const tecla = (e) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        cerrar();
-      }
-    };
-    input.addEventListener("input", () => {
-      clearTimeout(temporizador);
-      temporizador = window.setTimeout(buscar, 220);
-    });
-    document.addEventListener("keydown", tecla, true);
-    fondo.addEventListener("click", (e) => {
-      if (e.target === fondo) cerrar();
-    });
-    input.focus();
-  }
-
-  // ====================================================================== git
-  /** @type {{repo: boolean, rama?: string, archivos?: {estado: string, rel: string}[], ultimo?: {hash: string, asunto: string, cuando: string}}} */
-  let estadoGit = { repo: false };
-
-  let gitEnCurso = false;
-  async function refrescarGit() {
-    if (gitEnCurso || document.hidden) return;
-    gitEnCurso = true;
-    try {
-      estadoGit = await api("/api/git");
-      pintarChipGit();
-    } catch {
-      estadoGit = { repo: false };
-      pintarChipGit();
-    } finally {
-      gitEnCurso = false;
-    }
-  }
-
-  function pintarChipGit() {
-    const chip = $("#git-chip");
-    if (!chip) return;
-    if (!estadoGit.repo) {
-      chip.hidden = true;
-      return;
-    }
-    chip.hidden = false;
-    const n = estadoGit.archivos?.length || 0;
-    chip.className = `pill${n ? " warn" : ""}`;
-    chip.innerHTML = "";
-    chip.append(el("i", "dot"));
-    chip.append(el("span", "", `${estadoGit.rama}${n ? ` · ${n}` : ""}`));
-    chip.title = n ? `${n} archivo(s) con cambios` : "Sin cambios pendientes";
-  }
-
-  function menuGit() {
-    if (!estadoGit.repo) {
-      avisar("Esta carpeta no es un repositorio git.", "warn");
-      return;
-    }
-    const chip = $("#git-chip");
-    const r = chip?.getBoundingClientRect();
-    const items = [
-      { texto: `Rama: ${estadoGit.rama}`, ico: "rama" },
-      estadoGit.ultimo ? { texto: `${estadoGit.ultimo.hash} ${estadoGit.ultimo.asunto}`.slice(0, 60), ico: "commit" } : null,
-      null,
-      {
-        texto: `Elegir archivos para commit (${estadoGit.archivos?.length || 0})`,
-        ico: "commit",
-        hacer: async () => {
-          const n = estadoGit.archivos?.length || 0;
-          if (!n) {
-            avisar("No hay cambios que commitear.", "", 2200);
-            return;
-          }
-          const archivos = await elegirArchivosCommit(estadoGit.archivos);
-          if (!archivos?.length) return;
-          let sugerido = "cambios desde la interfaz";
-          try {
-            sugerido = `bonsai: ${archivos.slice(0, 3).join(", ")}`.slice(0, 72);
-          } catch {
-            /* se queda el generico */
-          }
-          const mensaje = await preguntar({
-            titulo: "Commit",
-            texto: `Se confirmarán únicamente los ${archivos.length} archivo(s) elegidos, con su contenido actual.`,
-            valor: sugerido,
-            ok: "Commit",
-          });
-          if (!mensaje) return;
-          try {
-            const r2 = await api("/api/git", { cuerpo: { op: "commit", mensaje, archivos } });
-            avisar(r2.ok ? "Commit hecho." : `Git dijo: ${r2.salida.slice(0, 120)}`, r2.ok ? "ok" : "warn", 5000);
-            refrescarGit();
-          } catch (err) {
-            avisar(`No se pudo commitear: ${err.message}`, "error");
-          }
-        },
-      },
-      { texto: "Ver cambios pendientes", ico: "diff", hacer: () => verCambiosGit() },
-      null,
-      { texto: "Actualizar estado", ico: "recargar", hacer: () => refrescarGit() },
-    ];
-    menu(r?.left || 100, (r?.bottom || 40) + 4, items);
-  }
-
-  /** El usuario elige nombres concretos; ningún archivo queda marcado automáticamente. */
-  function elegirArchivosCommit(archivos) {
-    return new Promise((resolve) => {
-      const fondo = el("div", "dialogo-fondo");
-      const caja = el("div", "dialogo");
-      caja.style.width = "min(680px, 94vw)";
-      const h = el("h3", "", "Elegir archivos para el commit");
-      caja.append(h);
-      caja.append(el("p", "", "Marca solo los archivos que quieres incluir. Revisa especialmente los que contienen datos privados."));
-      const lista = el("div");
-      lista.style.cssText = "max-height:50vh;overflow:auto;font:12px/1.7 var(--mono);margin-bottom:16px";
-      const checks = [];
-      for (const a of archivos || []) {
-        const fila = el("label");
-        fila.style.cssText = "display:flex;align-items:center;gap:8px;padding:3px 0;overflow-wrap:anywhere";
-        const check = document.createElement("input");
-        check.type = "checkbox";
-        check.value = a.rel;
-        checks.push(check);
-        fila.append(check, el("span", "", `${a.estado} ${a.rel}${a.anterior ? ` ← ${a.anterior}` : ""}`));
-        lista.append(fila);
-      }
-      caja.append(lista);
-      const botones = el("div", "d-botones");
-      const cancelar = el("button", "", "Cancelar");
-      const elegir = el("button", "primary", "Continuar");
-      cancelar.type = elegir.type = "button";
-      const cerrar = (resultado) => { document.removeEventListener("keydown", tecla, true); fondo.remove(); resolve(resultado); };
-      const tecla = (event) => { if (event.key === "Escape") { event.preventDefault(); cerrar(null); } };
-      cancelar.addEventListener("click", () => cerrar(null));
-      elegir.addEventListener("click", () => {
-        const elegidos = checks.filter((c) => c.checked).map((c) => c.value);
-        if (!elegidos.length) { avisar("Selecciona al menos un archivo.", "warn"); return; }
-        cerrar(elegidos);
-      });
-      fondo.addEventListener("click", (event) => { if (event.target === fondo) cerrar(null); });
-      document.addEventListener("keydown", tecla, true);
-      botones.append(cancelar, elegir);
-      caja.append(botones); fondo.append(caja); document.body.append(fondo);
-      accesibilizarDialogo(fondo, caja, h);
-      cancelar.focus();
-    });
-  }
-
-  function verCambiosGit() {
-    const n = estadoGit.archivos?.length || 0;
-    if (!n) {
-      avisar("Sin cambios pendientes.", "ok", 2200);
-      return;
-    }
-    const fondo = el("div", "dialogo-fondo");
-    const caja = el("div", "dialogo");
-    caja.classList.add("settings-dialog");
-    caja.style.width = "min(620px, 94vw)";
-    const h = el("h3", "", "Cambios pendientes");
-    caja.append(h);
-    const lista = el("div");
-    lista.style.cssText = "max-height:50vh;overflow:auto;font:12px/1.7 var(--mono);margin-bottom:16px";
-    for (const a of estadoGit.archivos) {
-      const fila = el("div");
-      const clase = a.estado.includes("?") ? "git-q" : a.estado.includes("A") ? "git-a" : "git-m";
-      const b = el("span", `badge ${clase}`, a.estado);
-      fila.append(b, el("span", "", ` ${a.rel}`));
-      lista.append(fila);
-    }
-    caja.append(lista);
-    const botones = el("div", "d-botones");
-    const cerrar = el("button", "primary", "Cerrar");
-    cerrar.type = "button";
-    cerrar.addEventListener("click", cerrarAjustes);
-    botones.append(cerrar);
-    caja.append(botones);
-    fondo.append(caja);
-    document.body.append(fondo);
-    accesibilizarDialogo(fondo, caja, h, { onEscape: cerrarAjustes });
-    h.focus();
   }
 
   // ============================== archivos: crear, renombrar y borrar
@@ -1292,74 +1071,12 @@ import { rutaLimpia } from "./workspace/paths.mjs";
     });
   }
 
-  // =================================================================== reglas
-  async function verReglas() {
-    let datos = { fuentes: [], texto: "" };
-    try {
-      datos = await api("/api/rules");
-    } catch {
-      /* sin reglas */
-    }
-    const fondo = el("div", "dialogo-fondo");
-    const caja = el("div", "dialogo");
-    caja.style.width = "min(680px, 94vw)";
-    const h = el("h3", "", "Convenios del proyecto");
-    caja.append(h);
-    caja.append(
-      el(
-        "p",
-        "",
-        datos.fuentes.length
-          ? `Se están aplicando ${datos.fuentes.length} archivo(s): ${datos.fuentes.join(", ")}. Son datos de convención del proyecto (no instrucciones nuevas) que se inyectan como referencia.`
-          : "No hay ninguna. Crea BONSAI.md, AGENTS.md o .cursor/rules/*.mdc en la carpeta de trabajo y se usarán como referencia.",
-      ),
-    );
-    if (datos.texto) {
-      const pre = el("pre");
-      pre.style.cssText = "max-height:46vh;overflow:auto;font:12px/1.6 var(--mono);background:var(--ink);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;margin:0 0 16px";
-      pre.textContent = datos.texto.slice(0, 6000);
-      caja.append(pre);
-    }
-    const botones = el("div", "d-botones");
-    const cerrar = el("button", "primary", "Cerrar");
-    cerrar.type = "button";
-    cerrar.addEventListener("click", () => fondo.remove());
-    botones.append(cerrar);
-    caja.append(botones);
-    fondo.append(caja);
-    document.body.append(fondo);
-    accesibilizarDialogo(fondo, caja, h, { onEscape: () => fondo.remove() });
-    cerrar.focus();
-  }
-
-  function pintarChipReglas() {
-    const chip = $("#reglas-chip");
-    if (!chip) return;
-    api("/api/rules")
-      .then((d) => {
-        if (!d.fuentes?.length) {
-          chip.hidden = true;
-          return;
-        }
-        chip.hidden = false;
-        chip.className = `pill${d.aplicado === false ? " warn" : ""}`;
-        chip.innerHTML = "";
-        chip.append(el("i", "dot"));
-        chip.append(el("span", "", d.aplicado === false ? `Reglas: ${d.fuentes.length} (apagadas)` : `Reglas: ${d.fuentes.length}`));
-        chip.title = `${d.fuentes.join("\n")}\n\n${d.aplicado === false ? "No se están aplicando: el ajuste está desactivado." : `Son datos de convención inyectados como referencia (tope ${d.topeTokens} tokens).`}`;
-      })
-      .catch(() => {
-        chip.hidden = true;
-      });
-  }
-
   // ======================================== presupuesto real de contexto (finding 16)
   /**
    * Formatea un número de tokens para enseñarlo (— si no es un número).
    * @param {unknown} n
    * @returns {string}
    */
-  const formatoTokens = (n) => (Number.isFinite(Number(n)) ? Number(n).toLocaleString("es-ES") : "—");
 
   /**
    * Pide a /api/state el presupuesto REAL: ventana del servidor, historial pedido,
@@ -1670,7 +1387,6 @@ import { rutaLimpia } from "./workspace/paths.mjs";
   }
 
   /** Estimación local para mostrar el tamaño de una nota (3 caracteres ≈ 1 token). */
-  const estimateTokensUi = (texto) => Math.ceil(String(texto || "").length / 3);
 
   // ================================================================== ajustes
   function abrirAjustes() {
@@ -2250,6 +1966,7 @@ import { rutaLimpia } from "./workspace/paths.mjs";
       const textoGuardado = normalizarSaltos(r.texto);
       p.guardado = textoGuardado;
       p.original = r.texto;
+      p.etag = "";
       if (seguiaIgual) p.texto = textoGuardado;
       if (pestanas[activa] === p) mostrarPestana(activa);
       else pintarPestanas();
@@ -2581,7 +2298,7 @@ import { rutaLimpia } from "./workspace/paths.mjs";
     }
     if (k === "f" && e.shiftKey) {
       e.preventDefault();
-      abrirBusqueda();
+      buscador.abrirBusqueda();
       return;
     }
     if (k === "k") {
@@ -2624,12 +2341,12 @@ import { rutaLimpia } from "./workspace/paths.mjs";
     git.id = "git-chip";
     git.type = "button";
     git.hidden = true;
-    git.addEventListener("click", () => menuGit());
+    git.addEventListener("click", () => panelGit.menuGit());
     const reglas = el("button", "pill");
     reglas.id = "reglas-chip";
     reglas.type = "button";
     reglas.hidden = true;
-    reglas.addEventListener("click", () => verReglas());
+    reglas.addEventListener("click", () => reglasUI.verReglas());
     // Visión: solo aparece si el servidor arrancó con -Vision (mmproj).
     const vision = el("button", "pill");
     vision.id = "vision-chip";
@@ -2759,13 +2476,13 @@ import { rutaLimpia } from "./workspace/paths.mjs";
     registrarComandos();
     await cargarAjustes();
     aplicarTema(ajustes.tema);
-    pintarChipReglas();
+    reglasUI.pintarChipReglas();
     void pintarChipVision();
     await refrescarModelos();
     void actualizarChipPresupuesto();
     void preguntarModeloInicio();
-    refrescarGit();
-    setInterval(refrescarGit, 15000);
+    panelGit.refrescarGit();
+    setInterval(() => panelGit.refrescarGit(), 15000);
     // El modelo también puede cambiar por fuera de la app (start-server.ps1 -Modelo, otra
     // pestaña): el chip se refresca solo para no enseñar uno que ya no está cargado.
     setInterval(() => void refrescarModelos(), 15000);
@@ -2776,7 +2493,7 @@ import { rutaLimpia } from "./workspace/paths.mjs";
       if (document.hidden) return;
       void servidor.refresh();
       void refrescarModelos();
-      refrescarGit();
+      panelGit.refrescarGit();
       void comprobarCambiosExternos();
     });
     pintarVacio();

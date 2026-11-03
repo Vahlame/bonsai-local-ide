@@ -608,6 +608,32 @@ try {
   await new Promise((r) => setTimeout(r, 1800));
   const leido = JSON.parse((await pedir("POST", "/api/terminal", { accion: "leer", id: abierto.id, desde: 0 })).body);
   check("el terminal devuelve la salida del comando", /panel-terminal/.test(String(leido.salida)), String(leido.salida).slice(0, 200));
+  const sse = await new Promise((resolve) => {
+    let hecho = false;
+    let texto = "";
+    const terminar = (estado) => {
+      if (hecho) return;
+      hecho = true;
+      resolve({ estado, texto });
+    };
+    const peticion = http.get(
+      { host: "127.0.0.1", port: PUERTO, path: `/api/terminal/stream?id=${encodeURIComponent(abierto.id)}&desde=0` },
+      (res) => {
+        res.setEncoding("utf8");
+        res.on("data", (trozo) => {
+          texto += trozo;
+          if (texto.includes("panel-terminal")) {
+            peticion.destroy();
+            terminar(res.statusCode || 0);
+          }
+        });
+        res.on("end", () => terminar(res.statusCode || 0));
+      },
+    );
+    peticion.on("error", () => terminar(0));
+    setTimeout(() => { peticion.destroy(); terminar(0); }, 2000).unref();
+  });
+  check("el terminal ofrece SSE con la salida ya existente", sse.estado === 200 && /panel-terminal/.test(sse.texto), `status=${sse.estado}`);
   await pedir("POST", "/api/terminal", { accion: "cerrar", id: abierto.id });
   fs.writeFileSync(path.join(proyecto, "roto.js"), "function foo() {\n");
   const diagRoto = JSON.parse((await pedir("GET", `/api/diag?path=${encodeURIComponent("roto.js")}`)).body);

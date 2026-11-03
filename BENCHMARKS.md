@@ -9,8 +9,9 @@ Todo lo que aparece aquí se midió en **este** equipo:
 - llama.cpp `8642541b255bfb5dc39cd351a178be09013a55d6` (v0.8.0), CUDA 12.9.1, MSVC 19.44
 - VRAM medida: **244.2–245.0 GB/s** de lectura (dos ejecuciones del probe; 244.2 se usa como denominador conservador); PCIe 4.0 x8, ~13.3 GB/s H2D/D2H pinned
 
-Los datos crudos, comandos y telemetría están en `reports/bench-*`. Los CSV
-maestros se regeneran con `bench/merge_results.py`.
+Los datos crudos, comandos y telemetría están en `reports/bench-*` (en local:
+esas ejecuciones están excluidas de Git; solo se versionan los resúmenes de
+`reports/*.md`). Los CSV maestros se regeneran con `bench/merge_results.py`.
 
 ---
 

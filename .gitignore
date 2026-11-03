@@ -92,3 +92,12 @@ reports/profile-*/*.sqlite
 reports/profile-*/*.ncu-rep
 forks/llama.cpp-4060/
 bin/builds/
+
+# Informes crudos: se quedan en local (o en un release aparte). Solo se versionan
+# los resúmenes curados de la raíz de reports/ y su índice.
+reports/*
+!reports/*.md
+!reports/README.md
+# Sondas generadas: no son resúmenes curados.
+reports/context-probe-*.md
+reports/longctx-*.md

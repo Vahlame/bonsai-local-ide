@@ -29,8 +29,10 @@ try {
   assert.deepEqual(listado, ["nota.txt", "src/app.js"], "solo archivos visibles y soportados");
   assert.ok(SKIP_DIR.has("node_modules") && SKIP_EXT.has(".gguf"));
 
+  fs.mkdirSync(path.join(root, "bin"), { recursive: true });
+  fs.writeFileSync(path.join(root, "bin", "x.js"), "no\n", "utf8");
   const antes = snapshotFiles(root);
-  assert.ok(antes.has("nota.txt") && !antes.has("node_modules/x/index.js"));
+  assert.ok(antes.has("nota.txt") && !antes.has("node_modules/x/index.js") && !antes.has("bin/x.js"));
   fs.writeFileSync(path.join(root, "nota.txt"), "hola nota cambiada\n", "utf8");
   fs.writeFileSync(path.join(root, "nuevo.txt"), "nuevo\n", "utf8");
   fs.rmSync(path.join(root, "src", "app.js"));
@@ -38,6 +40,16 @@ try {
   assert.match(delta, /modificado nota\.txt/);
   assert.match(delta, /nuevo nuevo\.txt/);
   assert.match(delta, /borrado src\/app\.js/);
+
+  // La caché del snapshot solo se usa antes de un comando; el posterior fuerza
+  // una lectura nueva para no perder cambios del comando.
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const cacheA = snapshotFiles(root, { cache: true });
+  const cacheB = snapshotFiles(root, { cache: true });
+  assert.equal(cacheA, cacheB, "la caché reutiliza el snapshot");
+  fs.writeFileSync(path.join(root, "nuevo.txt"), "nuevo cambiado\n", "utf8");
+  const fresco = snapshotFiles(root, { force: true });
+  assert.notEqual(fresco.get("nuevo.txt"), cacheA.get("nuevo.txt"), "force relee el archivo");
 
   let raizActiva = root;
   const tools = createWorkspaceTools({

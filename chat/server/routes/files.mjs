@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { readBody, fileInside } from "../http.mjs";
+import { leerJson } from "../contracts.mjs";
 import { LIMITE_TEXTO, decodificarRecorteUtf8, leerPrimerosBytes } from "../../lecturas.mjs";
 import { aplicarRespuesta, construirMensajes, contarLineas, recorteLineas } from "../../editar.mjs";
 import { unifiedDiff } from "../../actions.mjs";
@@ -9,6 +10,11 @@ import { buscarEstructural, buscarTexto } from "../../code-search.mjs";
 import { buscarDefinicion, diagnosticarArchivo, diagnosticarTexto, simbolos } from "../../diagnosticos.mjs";
 import { escribirAtomico } from "../../archivos-seguros.mjs";
 import { clipText } from "../text.mjs";
+
+/** ETag barato para el polling del editor: tamaño + mtime, sin hashear. */
+function etagDe(st) {
+  return `"${st.size.toString(16)}-${Math.round(st.mtimeMs).toString(16)}"`;
+}
 
 /**
  * @param {Record<string, any>} ctx
@@ -31,9 +37,9 @@ export function createFilesRoutes(ctx) {
         res.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" }).end("espera a que termine el turno");
         return true;
       }
-      const raw = JSON.parse(await readBody(req));
-      const pick = raw && typeof raw === "object" && raw.pick === true;
-      const given = raw && typeof raw === "object" && typeof raw.path === "string" ? raw.path.trim() : "";
+      const raw = await leerJson(req, "trabajo");
+      const pick = raw.pick === true;
+      const given = typeof raw.path === "string" ? raw.path.trim() : "";
       let next = given;
       if (pick) {
         next = await ctx.pickFolder(ctx.workspaceRoot);
@@ -69,6 +75,12 @@ export function createFilesRoutes(ctx) {
         res.writeHead(404).end("no está");
         return true;
       }
+      const etag = etagDe(st);
+      if (req.headers["if-none-match"] === etag) {
+        res.writeHead(304, { ETag: etag, "Cache-Control": "no-store" });
+        res.end();
+        return true;
+      }
       // stat ANTES de leer: antes se hacía readFileSync de un archivo enorme para
       // recortarlo a 2 MB después, bloqueando el event loop. Ahora solo se leen los
       // primeros 2 MB (y se recorta en un límite UTF-8 válido).
@@ -81,6 +93,7 @@ export function createFilesRoutes(ctx) {
       res.writeHead(200, {
         "Content-Type": "text/plain; charset=utf-8",
         "Cache-Control": "no-store",
+        ETag: etag,
         "X-Bonsai-Bytes": String(st.size),
         "X-Bonsai-Truncado": cortado ? "1" : "0",
       });
@@ -92,10 +105,10 @@ export function createFilesRoutes(ctx) {
       // El editor puede mandar archivos de hasta 2 MB: el limite por defecto de
       // readBody (200 KB, pensado para mensajes) los cortaria antes de poder
       // contestar un 413 limpio.
-      const raw = JSON.parse(await readBody(req, 2_500_000));
-      const rel = raw && typeof raw.path === "string" ? raw.path : "";
-      const contenido = raw && typeof raw.content === "string" ? raw.content : null;
-      const crear = Boolean(raw && raw.create);
+      const raw = await leerJson(req, "archivo", 2_500_000);
+      const rel = raw.path;
+      const contenido = raw.content;
+      const crear = raw.create === true;
       if (!rel || contenido === null) {
         res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("faltan path o content");
         return true;
@@ -159,14 +172,16 @@ export function createFilesRoutes(ctx) {
         ctx.undoStore.descartar(undoId);
         throw err;
       }
-      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      let etag = "";
+      try { etag = etagDe(fs.statSync(abs)); } catch { /* el archivo se acaba de escribir */ }
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", ...(etag ? { ETag: etag } : {}) });
       res.end(JSON.stringify({ ok: true, rel, bytes, undo: undoId }));
       return true;
     }
     // ------------------------------------------------------------ deshacer
     if (req.method === "POST" && url.pathname === "/api/undo") {
-      const raw = JSON.parse(await readBody(req));
-      const forzar = Boolean(raw && raw.force);
+      const raw = await leerJson(req, "deshacer");
+      const forzar = raw.force === true;
       // Revertir TODO lo que escribió el agente en el turno en curso o en el último.
       if (raw && raw.turno === true) {
         if (!ctx.undoDelTurno.length) {
@@ -498,10 +513,11 @@ export function createFilesRoutes(ctx) {
       return true;
     }
     if (req.method === "POST" && url.pathname === "/api/definir") {
-      const raw = JSON.parse(await readBody(req));
-      const palabra = String(raw && raw.palabra ? raw.palabra : "").trim().slice(0, 200);
-      const rel = String(raw && raw.path ? raw.path : "").trim().replace(/\\/g, "/");
-      const definicion = palabra ? buscarDefinicion(palabra, ctx.indiceProyecto(), rel) : null;
+      const raw = await leerJson(req, "definir");
+      const palabra = String(raw.palabra || "").trim().slice(0, 200);
+      const rel = String(raw.path || "").trim().replace(/\\/g, "/");
+      const indice = palabra ? await ctx.indiceProyecto() : null;
+      const definicion = indice ? buscarDefinicion(palabra, indice, rel) : null;
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
       res.end(JSON.stringify({ definicion }));
       return true;

@@ -132,6 +132,22 @@ async function esperar() {
 
 try {
   check("el servidor arranca", await esperar());
+  const salud = await pedir("GET", "/api/health");
+  const saludJson = salud.status === 200 ? JSON.parse(salud.body) : {};
+  check(
+    "health: responde ok, versión y request-id",
+    salud.status === 200 && saludJson.ok === true && typeof saludJson.version === "string" && Boolean(salud.headers["x-request-id"]),
+    `${salud.status} ${salud.body.slice(0, 120)}`,
+  );
+  const openapi = await pedir("GET", "/api/openapi.json");
+  const spec = openapi.status === 200 ? JSON.parse(openapi.body) : {};
+  check(
+    "openapi: publica el contrato de los endpoints de escritura",
+    openapi.status === 200 && spec.openapi === "3.1.0" && Boolean(spec.paths?.["/api/file"]?.post?.requestBody) && Boolean(spec.paths?.["/api/undo"]?.post),
+    `${openapi.status} ${openapi.body.slice(0, 160)}`,
+  );
+  const cuerpoInvalido = await pedir("POST", "/api/file", { path: 123, content: "x" });
+  check("contrato: rechaza un path que no es string", cuerpoInvalido.status === 400, `${cuerpoInvalido.status} ${cuerpoInvalido.body}`);
   const ws = await pedir("POST", "/api/workspace", { path: proyecto });
   check("fija la carpeta de trabajo", ws.status === 200, `HTTP ${ws.status}`);
 

@@ -230,4 +230,6 @@ if (fallos.length) {
   process.exit(1);
 }
 process.stdout.write("\nprueba model hub ok\n");
-process.exit(0);
+// Dejar que Node cierre los sockets keep-alive de `fetch` antes de salir:
+// `process.exit(0)` forzado puede disparar una aserción de libuv en Windows.
+process.exitCode = 0;

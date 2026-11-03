@@ -36,6 +36,7 @@ Para abrir la UI sin navegador automático:
 ```powershell
 node scripts/check-doc-links.mjs
 node scripts/run-tests.mjs
+node scripts/audit-code.mjs      # estructura: imports rotos y huérfanos
 node scripts/check-ui.cjs        # con IDE y modelo cargados
 ```
 

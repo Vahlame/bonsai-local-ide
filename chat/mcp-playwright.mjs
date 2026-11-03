@@ -2,6 +2,7 @@ import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { esHostMetadata } from "./red-segura.mjs";
 
 const modules = process.env.BONSAI_MCP_NODE_MODULES || fileURLToPath(new URL("./node_modules", import.meta.url));
 const cli = path.join(modules,"@playwright","mcp","cli.js");
@@ -44,6 +45,7 @@ export class McpPlaywright {
     if (a.accion === "abrir") {
       const url = new URL(a.url || "");
       if (!["http:","https:"].includes(url.protocol) || url.username || url.password) throw new Error("Usa una URL HTTP/HTTPS sin credenciales");
+      if (esHostMetadata(url.hostname)) throw new Error("Endpoint de metadatos de nube no permitido");
       if (["localhost","127.0.0.1","[::1]"].includes(url.hostname) && this.blockedPorts.includes(url.port || (url.protocol === "https:" ? "443" : "80"))) throw new Error("El puerto pertenece al IDE o al modelo");
       args = {url:url.href};
     } else if (a.accion === "clic") args = {target:a.selector || ""};

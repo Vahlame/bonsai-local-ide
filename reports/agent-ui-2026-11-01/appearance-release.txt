@@ -1,2 +1,0 @@
-Apariencia: 12 temas, navegación por pestañas sin desplazar el editor, divisores accesibles y persistentes, tamaños 560–1600, chat adaptable y movimiento reducido OK.
-Capturas: C:\Users\user\Documents\prject_local_AI\reports\agent-ui-2026-11-01\appearance-release

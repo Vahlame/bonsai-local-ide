@@ -31,12 +31,16 @@ import {
   turnoInterno,
 } from "./context.mjs";
 import { PC_TOOLS, stripFakeToolText } from "./actions.mjs";
-import { escribirJsonAtomico, leerJson } from "./almacen-json.mjs";
 import { leerSSE } from "./sse.mjs";
 import { MODELO, muestreo } from "./modelo.mjs";
 import { CODER_CONFIG, CODER_SYSTEM, CODER_TOOLS } from "./coder-harness.mjs";
 import { contextoEntorno } from "./entorno.mjs";
 import { parseHarmony, createHarmonyProgress } from "./harmony.mjs";
+import { cargarSesion, guardarSesion } from "./session-store.mjs";
+import { ApiError, isContextError, LlamaClient } from "./llama-client.mjs";
+import { PromptPolicy } from "./prompting.mjs";
+import { Compactor } from "./compaction.mjs";
+export { metadatosSesion } from "./session-store.mjs";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const SESSION_PATH = path.join(ROOT, "session.json");
@@ -62,14 +66,6 @@ export const RESERVA_POR_FASE = Object.freeze({
 // El resumidor es el MISMO modelo que hace la tarea y, con la transcripción delante, tendía a
 // seguir con ella («Creo test_api.py: ```python…»). De ahí que se le diga qué NO hacer y que
 // la transcripción vaya entre marcas: es material para archivar, no un pedido.
-const SUMMARY_RULES =
-  "Eres el compactador de contexto de una sesion de programacion (estilo Claude/DeepSeek). " +
-  "Devuelve SOLO vinetas, agrupadas con estos encabezados cuando tengan contenido: " +
-  "OBJETIVO, DECISIONES, ARCHIVOS (ruta + para que), COMANDOS Y PRUEBAS (resultado), " +
-  "ERRORES ABIERTOS, PENDIENTE, HECHOS CLAVE. " +
-  "Conserva literales los nombres de archivos, funciones, clases, rutas, comandos y numeros. " +
-  "No inventes, no escribas codigo, no repitas lo obvio, no sigas la tarea y no des nada por cumplido. " +
-  "Fusiona con las notas anteriores sin duplicar. Lo importante primero. Maximo 700 palabras.";
 
 /**
  * @param {string[]} argv
@@ -106,76 +102,7 @@ function parseArgs(argv) {
   return out;
 }
 
-/**
- * @param {unknown} data
- * @returns {number | null}
- */
-function readTokenCount(data) {
-  if (typeof data === "number") return data;
-  if (!data || typeof data !== "object") return null;
-  const row = /** @type {Record<string, unknown>} */ (data);
-  if (typeof row.input_tokens === "number") return row.input_tokens;
-  if (typeof row.prompt_tokens === "number") return row.prompt_tokens;
-  if (typeof row.n_tokens === "number") return row.n_tokens;
-  const usage = row.usage;
-  if (usage && typeof usage === "object" && typeof /** @type {{prompt_tokens?: unknown}} */ (usage).prompt_tokens === "number") {
-    return /** @type {{prompt_tokens: number}} */ (usage).prompt_tokens;
-  }
-  if (Array.isArray(row.tokens)) return row.tokens.length;
-  return null;
-}
-
-/**
- * @param {unknown} props
- * @returns {number | null}
- */
-function readContextSize(props) {
-  if (!props || typeof props !== "object") return null;
-  const row = /** @type {Record<string, unknown>} */ (props);
-  if (typeof row.n_ctx === "number") return row.n_ctx;
-  const settings = row.default_generation_settings;
-  if (settings && typeof settings === "object" && typeof /** @type {{n_ctx?: unknown}} */ (settings).n_ctx === "number") {
-    return /** @type {{n_ctx: number}} */ (settings).n_ctx;
-  }
-  return null;
-}
-
-/**
- * Una sesión válida es un objeto JSON; los turnos se validan uno a uno después (una sesión
- * antigua puede tener turnos con formas distintas, y se conservan los que se entienden).
- * @param {unknown} dato
- * @returns {boolean}
- */
-function sesionValida(dato) {
-  return Boolean(dato) && typeof dato === "object" && !Array.isArray(dato);
-}
-
 /** Huellas de un fallo o de una verificación pendiente: eso no se puede perder al recortar. */
-const HUELLA_FALLO = /\b(?:error(?:es)?|fall(?:a|ó|o|an|as|ando|id[oa])|fail(?:ed|s|ing)?|traceback|exception|pendiente|roto|rota|no (?:pasa|funciona|compila|termina)|no se pudo)/i;
-
-class ApiError extends Error {
-  /**
-   * @param {string} message
-   * @param {number} status
-   * @param {string} code
-   */
-  constructor(message, status, code) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.code = code;
-  }
-}
-
-/**
- * @param {unknown} err
- * @returns {boolean}
- */
-function isContextError(err) {
-  if (!(err instanceof Error)) return false;
-  const code = err instanceof ApiError ? err.code : "";
-  return code === "exceed_context_size_error" || /exceeds the available context size|context size/i.test(err.message);
-}
 
 /**
  * @param {string} msg
@@ -184,27 +111,14 @@ function status(msg) {
   process.stderr.write(`\x1b[90m${msg}\x1b[0m\n`);
 }
 
-/** Estado de la tarea que debe sobrevivir tanto al reinicio como al cambio de chat. */
-export function metadatosSesion(raw) {
-  const meta = {};
-  const plan = raw?.plan;
-  if (plan && Array.isArray(plan.pasos) && plan.pasos.every((s) => typeof s === "string") && Array.isArray(plan.hechos) && plan.hechos.every(Number.isInteger)) {
-    meta.plan = { pasos: [...plan.pasos], hechos: [...plan.hechos], ...(Number.isFinite(plan.ts) ? { ts: plan.ts } : {}) };
-  }
-  const stop = raw?.lastStop;
-  if (stop && typeof stop.motivo === "string" && Number.isInteger(stop.saltos) && typeof stop.completo === "boolean") {
-    meta.lastStop = { motivo: stop.motivo, saltos: stop.saltos, completo: stop.completo, ...(Number.isFinite(stop.ts) ? { ts: stop.ts } : {}) };
-  }
-  if (raw?.taskState && typeof raw.taskState.goal === "string" && typeof raw.taskState.phase === "string") meta.taskState = structuredClone(raw.taskState);
-  return meta;
-}
-
-export class BonsaiChat {
+export class BonsaiChat extends LlamaClient {
   /**
    * @param {{ host: string, port: number, historyCap: number, sessionPath?: string, think?: number, perfil?: string, parallelTools?: boolean, timingsPath?: string | null, faseSalto?: "plan" | "lectura" | "escritura" | "final" | "charla" }} opts
    */
   constructor(opts) {
-    this.base = `http://${opts.host}:${opts.port}`;
+    super(opts);
+    this.promptPolicy = new PromptPolicy(this);
+    this.compactor = new Compactor(this);
     this.configuredCap = opts.historyCap;
     this.sessionPath = opts.sessionPath || SESSION_PATH;
     /**
@@ -241,9 +155,6 @@ export class BonsaiChat {
       : (rawEnv ? path.resolve(rawEnv) : ""));
     /** @type {{cache_n?: number, prompt_n?: number, prompt_per_second?: number, predicted_n?: number, predicted_per_second?: number} | null} */
     this.lastTimings = null;
-    this.nCtx = 0;
-    this.model = "local";
-    this.allowThinkingKw = true;
     this.tighten = 0;
     this.silent = false;
     this.actOnPc = false;
@@ -251,8 +162,6 @@ export class BonsaiChat {
     this.push = null;
     /** @type {{ memory: string, folded: number, turns: Array<{role: "user"|"assistant"|"tool", content: string, toolCallId?: string}>, draft: string, files: Array<{rel: string, bytes: number}> }} */
     this.session = { memory: "", folded: 0, turns: [], draft: "", files: [] };
-    /** @type {AbortController | null} */
-    this.active = null;
     this.livePrompt = 0;
     this.liveGenerated = 0;
     this.usageTick = 0;
@@ -271,15 +180,10 @@ export class BonsaiChat {
     this.globalMemoryIds = [];
     /** Presupuesto de tokens con el que se seleccionó la memoria global. */
     this.globalMemoryBudget = 0;
-    /** Respuesta de /props del servidor (n_ctx, modalities…). */
-    this.props = null;
-    /** ¿El servidor tiene proyector de visión (mmproj)? Sin él no puede ver imágenes. */
-    this.vision = false;
     /** Tope de tokens por imagen (--image-max-tokens); se reserva en la ventana al mandar imágenes. */
     this.imageMaxTokens = 1024;
     this.agentProfile = opts.agentProfile || process.env.BONSAI_AGENT_PROFILE || "legacy";
     this.coderTask = null;
-    this.promptCountCache = new Map();
   }
 
   /**
@@ -519,364 +423,28 @@ export class BonsaiChat {
   }
 
   loadSession() {
-    // Lectura con respaldo `.bak` y apartado de corruptos (chat/almacen-json.mjs): un corte a
-    // mitad de escritura ya no pierde la conversación y el archivo malo se conserva.
-    const leido = leerJson(this.sessionPath, { validar: sesionValida });
-    if (!leido.ok) {
-      if (leido.code === "ENOENT") return;
-      // Mismo mensaje de siempre: sesión ilegible, se aparta y se empieza vacía.
-      this.note(`sesión ilegible (${leido.error}); la aparto como .corrupto y empiezo vacía`);
-      this.session = { memory: "", folded: 0, turns: [], draft: "", files: [] };
-      return;
-    }
-    if (leido.origen !== this.sessionPath) this.note("la sesión estaba ilegible; la recupero del respaldo .bak");
-    const raw = /** @type {any} */ (leido.dato);
-    const turns = Array.isArray(raw.turns) ? raw.turns : [];
-    /** @type {Array<{role: "user"|"assistant"|"tool", content: string, toolCallId?: string, shown?: string, actions?: Array<{id: string, kind: string, title: string, state: string, detail?: string, code?: number}>}>} */
-    const clean = [];
-    for (const turn of turns) {
-      if (!turn || (turn.role !== "user" && turn.role !== "assistant" && turn.role !== "tool")) continue;
-      if (typeof turn.content !== "string") continue;
-      const storedCalls = Array.isArray(turn.toolCalls) ? turn.toolCalls.filter((call) => call && typeof call.name === "string") : [];
-      const storedActions = Array.isArray(turn.actions) ? turn.actions.filter((action) => action && typeof action.title === "string" && typeof action.kind === "string") : [];
-      if (!turn.content && !storedCalls.length && !storedActions.length) continue;
-      /** @type {{role: "user"|"assistant"|"tool", content: string, toolCallId?: string, shown?: string, actions?: Array<{id: string, kind: string, title: string, state: string, detail?: string, code?: number}>, toolCalls?: Array<{id: string, name: string, arguments: unknown}>}} */
-      const kept = { role: turn.role, content: turn.content };
-      if (turn.role === "tool") kept.toolCallId = typeof turn.toolCallId === "string" ? turn.toolCallId : "";
-      if (typeof turn.shown === "string") kept.shown = turn.shown;
-      if (storedActions.length) kept.actions = storedActions;
-      if (storedCalls.length) {
-        kept.toolCalls = storedCalls.map((call) => ({
-          id: typeof call.id === "string" ? call.id : "",
-          name: call.name,
-          arguments: call.arguments,
-        }));
-      }
-      clean.push(kept);
-    }
-    const folded = Number.isInteger(raw.folded) ? Math.min(Math.max(0, raw.folded), clean.length) : 0;
-    const memory = typeof raw.memory === "string" ? raw.memory : "";
-    const draft = typeof raw.draft === "string" ? raw.draft : "";
-    if (draft) clean.push({ role: "assistant", content: draft });
-    /** @type {Array<{rel: string, bytes: number}>} */
-    const files = [];
-    if (Array.isArray(raw.files)) {
-      for (const file of raw.files) {
-        if (!file || typeof file.rel !== "string" || !file.rel) continue;
-        files.push({ rel: file.rel, bytes: Number(file.bytes) || 0 });
-      }
-    }
-    this.session = { memory, folded, turns: clean, draft: "", files, ...metadatosSesion(raw) };
+    // Lectura con respaldo `.bak` y apartado de corruptos: un corte a mitad de
+    // escritura no pierde la conversación y el archivo malo se conserva.
+    const { session, notas } = cargarSesion(this.sessionPath);
+    for (const nota of notas) this.note(nota);
+    this.session = session;
   }
 
   saveSession() {
-    // Escritura atómica (temporal + fsync + rename) con copia `.bak` de la versión anterior:
-    // un corte deja intacta la sesión buena. Si falla, el error sube (no se finge guardar).
-    escribirJsonAtomico(this.sessionPath, this.session, { copia: true, espacio: 0 });
+    // Escritura atómica con copia `.bak` de la versión anterior. Si falla, el
+    // error sube: no se finge que se guardó.
+    guardarSesion(this.sessionPath, this.session);
   }
 
-  /**
-   * @param {string} pathName
-   * @param {RequestInit} [init]
-   * @returns {Promise<Response>}
-   */
-  async request(pathName, init) {
-    let res;
-    // Cancelar tambien debe interrumpir el conteo y los resumenes, no solo los
-    // tokens. Antes podian dejar el turno ocupado durante minutos tras Detener.
-    const signals = [init?.signal, this.active?.signal].filter(Boolean);
-    const signal = signals.length ? AbortSignal.any(signals) : AbortSignal.timeout(15000);
-    try {
-      res = await fetch(`${this.base}${pathName}`, { ...init, signal });
-    } catch (err) {
-      if (signal.aborted) throw signal.reason;
-      const message = err instanceof Error ? err.message : String(err);
-      throw new Error(`No hay servidor en ${this.base}. Arranca con .\\scripts\\start-chat.ps1 (${message})`);
-    }
-    return res;
-  }
-
-  /**
-   * @param {string} pathName
-   * @param {Record<string, unknown>} body
-   * @param {AbortSignal} [signal]
-   * @returns {Promise<unknown>}
-   */
-  async postJson(pathName, body, signal) {
-    const res = await this.request(pathName, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal,
-    });
-    const text = await res.text();
-    /** @type {unknown} */
-    let data = null;
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      data = { raw: text };
-    }
-    if (!res.ok) {
-      const row = data && typeof data === "object" ? /** @type {{error?: {message?: string, type?: string}}} */ (data) : {};
-      const message = row.error?.message || text || res.statusText;
-      const code = row.error?.type || "";
-      throw new ApiError(message, res.status, code);
-    }
-    return data;
-  }
-
-  /**
-   * Sin razonamiento salvo que se pida (`think`) y haya presupuesto. El presupuesto va en la raíz
-   * de la petición: dentro de chat_template_kwargs el servidor lo ignora (KNOWN_ISSUES de prism-ml).
-   * @param {boolean} [think]
-   * @returns {Record<string, unknown>}
-   */
-  templateFields(think = false) {
-    if (!this.allowThinkingKw) return {};
-    const caps = this.props?.chat_template_caps || {};
-    // GPT-OSS/Harmony no usa enable_thinking: su plantilla recibe reasoning_effort.
-    // Enviar enable_thinking a esta plantilla es ruido (y el servidor lo ignora).
-    // Se limita al modelo GPT-OSS para no cambiar la plantilla de otros modelos.
-    const esGptOss = /gpt-oss/i.test(`${this.model || ""} ${this.props?.model_path || ""}`);
-    const harmony = esGptOss && caps.supports_reasoning_effort === true && Array.isArray(caps.reasoning_effort_levels);
-    if (think && this.thinkBudget !== 0) {
-      const esfuerzo = this.razonamientoEsfuerzo || MODELO.razonamiento.esfuerzo;
-      return {
-        chat_template_kwargs: harmony
-          ? { reasoning_effort: esfuerzo }
-          : { enable_thinking: true, reasoning_effort: esfuerzo },
-        thinking_budget_tokens: this.effectiveThinkingBudget(),
-      };
-    }
-    return harmony
-      ? { chat_template_kwargs: { reasoning_effort: "minimal" }, thinking_budget_tokens: 0 }
-      : { chat_template_kwargs: { enable_thinking: false } };
-  }
-
-  thinkingLimit() {
-    const config = this.coderTask?.config || this.coderConfig || CODER_CONFIG;
-    const output = this.reservaSalida();
-    // Keep two thirds for small profiles, up to 2k for an edit/answer on larger ones.
-    return Math.min(config.thinkingTokens ?? 512, Math.max(0, output - Math.min(2048, Math.ceil(output * 2 / 3))));
-  }
-
-  effectiveThinkingBudget() {
-    if (this.thinkBudget < 0) return -1;
-    const taskCap = this.consultation || this.faseSalto === "charla" ? 256
-      : this.coderTask?.state.phase === "REPAIR" ? 4096 : 1024;
-    const editLimit = this.agentProfile === "small-local-coder" ? this.thinkingLimit() : Math.max(0, this.reservaSalida() - 256);
-    return Math.max(0, Math.min(this.thinkBudget, taskCap, editLimit));
-  }
-
-  /**
-   * Muestreo recomendado por el fabricante (modelo.json), en cada petición. El GGUF declara como
-   * muestreo por defecto el del modo thinking (temp 1.0), que no es el de las respuestas sin razonar.
-   * @param {boolean} [think]
-   * @returns {Record<string, number>}
-   */
-  samplingFields(think = false) {
-    const archivo = path.basename(String(this.props?.model_path || this.model || ""));
-    const clave = Object.keys(MODELO.catalogo || {}).find((key) => MODELO.catalogo[key]?.archivo === archivo) || "";
-    return muestreo(think && this.thinkBudget !== 0 ? "razonar" : this.perfil, clave);
-  }
-
-  toolFields(choiceOverride, incluirTools = true) {
-    if (this.consultation || (this.faseSalto === "final" && this.toolChoice === "none")) return { tool_choice: "none" };
-    if (!this.actOnPc) return {};
-    const tools = this.agentProfile === "small-local-coder" ? CODER_TOOLS : PC_TOOLS;
-    const choice = choiceOverride !== undefined
-      ? choiceOverride
-      : (this.toolChoice === "auto" && this.coderTask?.state.phase === "PLAN"
-        ? { type: "function", function: { name: "plan" } }
-        : this.toolChoice);
-    return {
-      ...(incluirTools ? { tools } : {}),
-      tool_choice: choice,
-      parallel_tool_calls: this.parallelTools,
-    };
-  }
-
-  /** ¿Este modelo puede devolver tool calls como JSON de texto si se las pide así? */
-  puedeFallbackTexto() {
-    return /gpt-oss/i.test(`${this.model || ""} ${this.props?.model_path || ""}`);
-  }
-
-  /**
-   * Si llama.cpp rechaza la salida nativa con `peg-native`, se reintenta SIN tools
-   * nativas: el modelo recibe el catálogo como texto y devuelve JSON puro, que
-   * `llamadasCrudas` convierte en las mismas llamadas. Evita que un parser roto
-   * tumbe el turno entero.
-   * @param {Array<Record<string, any>>} messages
-   * @returns {Array<Record<string, any>>}
-   */
-  mensajesSinParser(messages) {
-    const tools = this.toolFields().tools || [];
-    const catalogo = tools.map((t) => ({
-      name: t.function?.name,
-      description: t.function?.description,
-      parameters: t.function?.parameters,
-    }));
-    const instruccion = `\n\nREINTENTO SIN PARSER NATIVO (llama.cpp peg-native).\nNo hay herramientas nativas en esta petición. Si necesitas una herramienta, responde SOLO con un objeto JSON con esta forma: {"name":"<herramienta>","arguments":{...}}. El objeto debe tener SIEMPRE las claves "name" y "arguments"; nunca devuelvas solo los argumentos. No uses markdown, no expliques y no escribas texto antes ni después. Para varias acciones, haz una sola llamada y espera el resultado. Ejemplo exacto: {"name":"archivo","arguments":{"ruta":"a.txt","contenido":"uno"}}\nHerramientas disponibles:\n${JSON.stringify(catalogo)}`;
-    const copia = messages.map((m) => ({ ...m }));
-    if (!copia.length || !["system", "developer"].includes(copia[0].role)) {
-      copia.unshift({ role: "system", content: instruccion.trim() });
-      return copia;
-    }
-    copia[0] = { ...copia[0], content: `${copia[0].content || ""}${instruccion}` };
-    return copia;
-  }
-
-  /** @returns {string} guía compacta con ejemplos para GPT-OSS. */
-  guiaHerramientas() {
-    const tools = this.agentProfile === "small-local-coder" ? CODER_TOOLS : PC_TOOLS;
-    const ejemplos = {
-      archivo: '{"ruta":"src/app.js","contenido":"..."}',
-      leer: '{"ruta":"src/app.js","desde":1,"hasta":80}',
-      reemplazar: '{"ruta":"src/app.js","buscar":"texto viejo","poner":"texto nuevo"}',
-      buscar_codigo: '{"consulta":"TODO","ruta":"src"}',
-      buscar_estructural: '{"patron":"console.log($$$ARGS)","lenguaje":"js"}',
-      ejecutar: '{"comando":"npm test"}',
-      escribir_partes: '{"ruta":"src/app.js","accion":"iniciar","contenido":"..."}',
-      indice: '{"carpeta":"src"}',
-      simbolo: '{"nombre":"createApp"}',
-      plan: '{"pasos":["inspeccionar","editar","probar"]}',
-      borrar: '{"ruta":"archivo.txt"}',
-      mover: '{"origen":"a.txt","destino":"b.txt"}',
-      git_diff: '{"ruta":"src/app.js"}',
-    };
-    const lineas = tools.map((t) => {
-      const f = t.function || {};
-      const req = (f.parameters?.required || []).join(", ") || "sin argumentos obligatorios";
-      return `- ${f.name}: ${f.description} Argumentos: ${req}. Ejemplo: ${ejemplos[f.name] || "{}"}`;
-    });
-    return `GUÍA DE HERRAMIENTAS PARA GPT-OSS:\nCada llamada va en el canal nativo; no escribas la llamada como texto. Puedes hacer varias llamadas independientes en un turno y esperar sus resultados.\n${lineas.join("\n")}`;
-  }
-
-  /**
-   * @param {Array<Record<string, any>>} messages
-   * @returns {Array<Record<string, any>>}
-   */
-  mensajesReintentoNativo(messages) {
-    const instruccion = "\n\nREINTENTO OBLIGATORIO: la petición anterior fue rechazada por el parser nativo de llama.cpp. Haz EXACTAMENTE UNA tool call y nada más. No escribas texto antes ni después y no emitas varias tool calls en el mismo mensaje.";
-    const copia = messages.map((m) => ({ ...m }));
-    if (!copia.length || !["system", "developer"].includes(copia[0].role)) {
-      copia.unshift({ role: "system", content: instruccion.trim() });
-      return copia;
-    }
-    copia[0] = { ...copia[0], content: `${copia[0].content || ""}${instruccion}` };
-    return copia;
-  }
-
-  /**
-   * @param {Record<string, unknown>} body
-   * @param {AbortSignal} [signal]
-   * @returns {Promise<unknown>}
-   */
-  async postChat(body, signal) {
-    try {
-      const fields = this.templateFields(this.thinkBudget > 0);
-      if (typeof fields.thinking_budget_tokens === "number" && Number.isFinite(Number(body.max_tokens)))
-        fields.thinking_budget_tokens = Math.min(fields.thinking_budget_tokens, Math.max(1, Math.floor(Number(body.max_tokens) / 3)));
-      return await this.postJson("/v1/chat/completions", { ...body, ...fields }, signal);
-    } catch (err) {
-      if (this.allowThinkingKw && err instanceof Error && /enable_thinking/i.test(err.message)) {
-        this.allowThinkingKw = false;
-        return this.postJson("/v1/chat/completions", body, signal);
-      }
-      throw err;
-    }
-  }
-
-  async connect() {
-    const health = await this.request("/health");
-    if (!health.ok) {
-      throw new Error(`El servidor aún no está listo (${health.status}). Espera a que cargue el modelo.`);
-    }
-    const props = await (await this.request("/props")).json();
-    /** Respuesta cruda de /props: de ahí salen n_ctx y si hay visión (mmproj). */
-    this.props = props;
-    let nCtx = readContextSize(props);
-    if (!nCtx) {
-      const slots = await (await this.request("/slots")).json();
-      if (Array.isArray(slots) && typeof slots[0]?.n_ctx === "number") nCtx = slots[0].n_ctx;
-    }
-    if (!nCtx || nCtx < 512) throw new Error("No pude leer n_ctx del servidor");
-    this.nCtx = nCtx;
-    try {
-      const models = await (await this.request("/v1/models")).json();
-      const id = models?.data?.[0]?.id;
-      if (typeof id === "string" && id) this.model = id;
-    } catch {
-      this.model = "local";
-    }
-  }
-
-  /**
-   * @param {Array<{role: string, content: string}>} messages
-   * @param {boolean} continueFinal
-   * @returns {Promise<number>}
-   */
-  async countPrompt(messages, continueFinal) {
-    /** @type {Record<string, unknown>} */
-    const body = { model: this.model, messages, ...this.templateFields(this.thinkBudget > 0), ...this.toolFields() };
-    const fallbackCount = () => {
-      this.lastCountMethod = "estimación: conteo del servidor no disponible";
-      this.note("No se pudo contar con el tokenizer del servidor; se usa una estimación con margen.");
-      return Math.ceil((this.estimateMessages(messages) + estimateTokens(JSON.stringify(this.toolFields()))) * 1.15);
-    };
-    if (continueFinal) {
-      body.continue_final_message = true;
-      body.add_generation_prompt = false;
-    }
-    // Bounded exact-count cache. Includes model, template and tools, so changes invalidate it.
-    const countKey = this.agentProfile === "small-local-coder" ? JSON.stringify(body) : "";
-    if (countKey && this.promptCountCache.has(countKey)) { this.lastCountMethod = "conteo exacto cacheado"; return this.promptCountCache.get(countKey); }
-    const remember = (n) => { if (countKey) { this.promptCountCache.set(countKey, n); while (this.promptCountCache.size > 8) this.promptCountCache.delete(this.promptCountCache.keys().next().value); } return n; };
-    try {
-      const data = await this.postJson("/v1/chat/completions/input_tokens", body);
-      const n = readTokenCount(data);
-      if (n !== null) { this.lastCountMethod = "llama-server input_tokens"; return remember(n); }
-    } catch (err) {
-      if (this.active?.signal.aborted || (err instanceof Error && err.name === "AbortError")) throw err;
-      if (isContextError(err)) {
-      // NO se devuelve un centinela gigante: ese valor acababa en `tighten` (línea 642) y
-      // dejaba el tope de historial clavado en 512 tokens el resto del proceso. Un valor
-      // un poco por encima del tope actual fuerza el mismo repliegue sin envenenar el estado.
-      this.lastCountMethod = "límite inferior: el servidor rechazó el tamaño del contexto";
-      return this.historyCap() + 64;
-    }
-      if (!(err instanceof ApiError) || (err.status !== 404 && err.status !== 405)) {
-        /* el conteo exacto es opcional; abajo hay respaldo */
-      }
-    }
-    try {
-      const rendered = await this.postJson("/apply-template", body);
-      const prompt = rendered && typeof rendered === "object"
-        ? /** @type {{prompt?: unknown}} */ (rendered).prompt
-        : null;
-      if (typeof prompt !== "string") return fallbackCount();
-      const tokens = await this.postJson("/tokenize", { content: prompt, add_special: false });
-      const n = readTokenCount(tokens);
-      if (n !== null) { this.lastCountMethod = "llama-server apply-template/tokenize"; return remember(n); }
-      return fallbackCount();
-    } catch (err) {
-      if (this.active?.signal.aborted || (err instanceof Error && err.name === "AbortError")) throw err;
-      if (isContextError(err)) {
-      // NO se devuelve un centinela gigante: ese valor acababa en `tighten` (línea 642) y
-      // dejaba el tope de historial clavado en 512 tokens el resto del proceso. Un valor
-      // un poco por encima del tope actual fuerza el mismo repliegue sin envenenar el estado.
-      this.lastCountMethod = "límite inferior: el servidor rechazó el tamaño del contexto";
-      return this.historyCap() + 64;
-    }
-      return fallbackCount();
-    }
-  }
-
-  /**
-   * @param {Array<{role: string, content: string}>} messages
-   * @returns {number}
-   */
+  templateFields(think = false) { return this.promptPolicy.templateFields(think); }
+  thinkingLimit() { return this.promptPolicy.thinkingLimit(); }
+  effectiveThinkingBudget() { return this.promptPolicy.effectiveThinkingBudget(); }
+  samplingFields(think = false) { return this.promptPolicy.samplingFields(think); }
+  toolFields(choiceOverride, incluirTools = true) { return this.promptPolicy.toolFields(choiceOverride, incluirTools); }
+  puedeFallbackTexto() { return this.promptPolicy.puedeFallbackTexto(); }
+  mensajesSinParser(messages) { return this.promptPolicy.mensajesSinParser(messages); }
+  guiaHerramientas() { return this.promptPolicy.guiaHerramientas(); }
+  mensajesReintentoNativo(messages) { return this.promptPolicy.mensajesReintentoNativo(messages); }
   estimateMessages(messages) {
     let n = 0;
     for (const message of messages) {
@@ -890,404 +458,13 @@ export class BonsaiChat {
     return n;
   }
 
-  /**
-   * @param {string} prev
-   * @param {Array<{role: string, content: string}>} turns
-   * @param {string} extra
-   * @param {number} maxWords
-   * @returns {Promise<string>}
-   */
-  async summarize(prev, turns, extra, maxWords = 700) {
-    const cap = this.memoryCapTokens();
-    const parts = [];
-    for (const turn of turns) {
-      // R = resultado de una herramienta: no lo dijo el usuario. Las llamadas del asistente
-      // van descritas (sin el código): antes un turno de solo llamadas llegaba vacío.
-      const label = turn.role === "tool" ? "R" : turn.role === "user" ? "U" : "A";
-      const llamadas = turn.role === "assistant" ? describirLlamadas(/** @type {{toolCalls?: Array<{name?: string, arguments?: unknown}>}} */ (turn).toolCalls) : "";
-      const texto = sampleText(turn.content, estimateTokens, 1600);
-      parts.push(`${label}: ${[texto, llamadas].filter(Boolean).join(" ")}`);
-    }
-    if (extra) parts.push(`A ya escrito, no repetir: ${sampleText(extra, estimateTokens, 1600)}`);
-    let blob = parts.join("\n");
-    if (estimateTokens(blob) > 2400) blob = sampleText(blob, estimateTokens, 2400);
-    if (estimateTokens(prev) > cap) throw new Error("La memoria anterior supera el límite de resumen; se conserva íntegra en la sesión.");
-    const notes = prev;
-    if (!blob.trim()) {
-      // Sin nada nuevo no hay nada que resumir… salvo que lo que se pida sea ACORTAR las
-      // notas (maxWords pequeño, la ruta de `overflow === "memory"`): ahí sí hay que llamar
-      // al modelo, y antes se devolvía `notes` sin llamarlo y el tope acababa recortando la
-      // memoria a ~80 tokens en silencio.
-      if (maxWords >= 700) return notes;
-      blob = "(nada nuevo: acorta solo las notas)";
-    }
-
-    /** @type {Array<{role: string, content: string}>} */
-    const messages = [
-      {
-        role: "system",
-        content: maxWords === 700
-          ? SUMMARY_RULES
-          : `Acorta a notas densas. Lo importante primero. Omite apartados vacíos. Máximo ${maxWords} palabras.`,
-      },
-      {
-        role: "user",
-        content: `NOTAS ANTERIORES:\n${notes || "(ninguna)"}\n\nTRANSCRIPCIÓN (U = usuario, A = asistente, R = resultado de una herramienta):\n<<<\n${blob}\n>>>\n\nDevuelve solo las notas actualizadas, en viñetas. Sin código.`,
-      },
-    ];
-    const summaryStart = Date.now();
-    try {
-      const data = await this.postChat({
-        model: this.model,
-        messages,
-        temperature: 0.1,
-        max_tokens: maxWords >= 600 ? 1600 : 400,
-        stream: false,
-      }, AbortSignal.timeout(180000));
-      if (this.summaryMetrics) {
-        this.summaryMetrics.calls++;
-        const usage = data?.usage;
-        if (Number.isFinite(usage?.prompt_tokens)) this.summaryMetrics.inputTokens += usage.prompt_tokens; else this.summaryMetrics.usageUnavailable = true;
-        if (Number.isFinite(usage?.completion_tokens)) this.summaryMetrics.outputTokens += usage.completion_tokens; else this.summaryMetrics.usageUnavailable = true;
-      }
-      const content = data && typeof data === "object"
-        ? /** @type {{choices?: Array<{message?: {content?: string}}>}} */ (data).choices?.[0]?.message?.content
-        : "";
-      const merged = typeof content === "string" ? limpiarNotas(content) : "";
-      if (!merged) throw new Error("El modelo devolvió un resumen vacío o inválido");
-      if (estimateTokens(merged) > cap && this.summaryMetrics) this.summaryMetrics.truncated = true;
-      return takeHeadByTokens(merged, cap, estimateTokens);
-    } catch (err) {
-      if (this.active?.signal.aborted || (err instanceof Error && err.name === "AbortError")) throw err;
-      throw new Error(`No se pudo compactar la conversación; se conserva el historial: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      if (this.summaryMetrics) this.summaryMetrics.durationMs += Date.now() - summaryStart;
-    }
-  }
-
-  /**
-   * @param {string} notes
-   * @param {Array<{role: string, content: string}>} turns
-   * @param {string} extra
-   * @returns {string}
-   */
-  fallbackNotes(notes, turns, extra) {
-    // Hallazgo 21: la memoria de respaldo no puede quedarse con lo viejo y perder lo nuevo.
-    // Primero se aparta espacio para los hechos recientes (fallos abiertos y verificaciones
-    // pendientes primero) y solo con lo que sobra se recortan las notas antiguas.
-    const cap = this.memoryCapTokens();
-    /** @type {string[]} */
-    const recientes = [];
-    for (const turn of turns) {
-      // R = resultado de una herramienta: no lo dijo el usuario.
-      const label = turn.role === "tool" ? "R" : turn.role === "user" ? "U" : "A";
-      const llamadas = turn.role === "assistant" ? describirLlamadas(/** @type {{toolCalls?: Array<{name?: string, arguments?: unknown}>}} */ (turn).toolCalls) : "";
-      const texto = limpiarNotas(turn.content).replace(/\s+/g, " ").slice(0, 180);
-      const linea = `${label}: ${[texto, llamadas].filter(Boolean).join(" ")}`.trim();
-      if (linea.length > 3) recientes.push(linea);
-    }
-    if (extra) {
-      const flat = extra.replace(/\s+/g, " ");
-      recientes.push(`Ya dicho: ${flat.slice(0, 220)} … ${flat.slice(-160)}`);
-    }
-    const fallos = recientes.filter((linea) => HUELLA_FALLO.test(linea));
-    const normales = recientes.filter((linea) => !HUELLA_FALLO.test(linea));
-    // Reserva para lo nuevo: ~45 % del tope. Los fallos van delante y completos; de los
-    // turnos normales se conservan los más recientes (el final del bloque plegado).
-    const reservaNueva = Math.max(320, Math.floor(cap * 0.45));
-    const parteFallos = takeHeadByTokens(fallos.join("\n"), Math.max(96, Math.floor(reservaNueva * 0.7)), estimateTokens);
-    const parteNormal = takeTailByTokens(normales.join("\n"), Math.max(64, reservaNueva - estimateTokens(parteFallos)), estimateTokens);
-    const nuevas = [parteFallos, parteNormal].filter(Boolean).join("\n");
-    if (!nuevas && !notes) return "";
-    const tokensNuevas = estimateTokens(nuevas);
-    const presupuestoViejas = Math.max(0, cap - tokensNuevas - 2);
-    const viejas = presupuestoViejas > 0 && notes ? takeHeadByTokens(notes, presupuestoViejas, estimateTokens) : "";
-    let texto = [viejas, nuevas].filter(Boolean).join("\n");
-    // Red de seguridad: si aun así no cabe, se recorta MÁS lo viejo, nunca lo nuevo.
-    if (estimateTokens(texto) > cap && viejas) {
-      const sobra = Math.max(0, cap - tokensNuevas - 1);
-      texto = [takeHeadByTokens(viejas, sobra, estimateTokens), nuevas].filter(Boolean).join("\n");
-    }
-    return texto;
-  }
-
-  /**
-   * @returns {Promise<{ messages: Array<{role: string, content: string}>, promptTokens: number, changed: boolean, anchorClipped: boolean }>}
-   */
-  /**
-   * @param {{role: string, content: string, actions?: Array<{id?: string, kind: string, title: string, state?: string}>, toolCalls?: Array<{id?: string, name: string, arguments?: unknown}>, toolCallId?: string}} turn
-   * @returns {{role: string, content: string, toolCalls?: Array<{id?: string, name: string, arguments?: unknown}>, toolCallId?: string}}
-   */
-  modelTurn(turn) {
-    let content = typeof turn.content === "string" ? turn.content : "";
-    let role = turn.role;
-    if (role === "tool") return { role, content, toolCallId: typeof turn.toolCallId === "string" ? turn.toolCallId : "" };
-    if (role === "assistant") content = stripFakeToolText(content);
-    if (/^sin respuesta\.?$/i.test(content.trim())) content = "";
-    /** @type {Array<{id?: string, name: string, arguments?: unknown}>} */
-    let toolCalls = Array.isArray(turn.toolCalls) ? turn.toolCalls : [];
-    if (role === "assistant" && !toolCalls.length && !content && Array.isArray(turn.actions)) {
-      toolCalls = [];
-      const notes = [];
-      for (const action of turn.actions) {
-        if (!action || action.state === "denied") continue;
-        if (action.kind === "cmd") toolCalls.push({ id: action.id, name: "ejecutar", arguments: { comando: action.title } });
-        else if (action.kind === "search") toolCalls.push({ id: action.id, name: "buscar", arguments: { consulta: action.title } });
-        else if (action.kind === "read") toolCalls.push({ id: action.id, name: "leer", arguments: { ruta: action.title } });
-        else if (action.kind === "index") toolCalls.push({ id: action.id, name: "indice", arguments: { carpeta: action.title === "carpeta" ? "" : action.title } });
-        else if (action.kind === "write") notes.push(`archivo ${action.title}`);
-      }
-      if (!toolCalls.length && notes.length) content = notes.join("\n");
-    }
-    return toolCalls.length ? { role, content, toolCalls } : { role, content };
-  }
-
-  /**
-   * Instrucciones de agente para el mensaje de sistema: solo cuando hay herramientas.
-   * @returns {string}
-   */
-  agentRules() {
-    if (this.consultation) return "Responde a la consulta usando el texto y las imágenes adjuntas. No llames herramientas ni modifiques archivos. Sigue el formato solicitado por el usuario.";
-    return this.actOnPc ? agentText({ python: this.pythonCmd, ...this.entornoAgente }) : "";
-  }
-
-  /**
-   * El pedido vigente del usuario (el último mensaje suyo que no es un resultado ni un
-   * empujón interno), listo para fijarlo tras el sistema si el pliegue lo deja fuera.
-   * `index` es relativo a los turnos sin plegar (negativo si ya está en las notas).
-   * @returns {{index: number, content: string} | null}
-   */
-  pinnedRequest() {
-    const turns = this.session.turns;
-    for (let i = turns.length - 1; i >= 0; i -= 1) {
-      const turn = turns[i];
-      if (turn.role !== "user" || turnoInterno(turn)) continue;
-      const texto = String(turn.content || "");
-      return { index: i - this.session.folded, content: `Pedido original (lo hecho hasta ahora está resumido en las notas):\n${texto}` };
-    }
-    return null;
-  }
-
-  async packHistory() {
-    if (this.agentProfile === "small-local-coder" && this.coderTask) return this.packCoderHistory();
-    const previousMemory = this.session.memory, previousFolded = this.session.folded;
-    const inicioCompactacion = Date.now();
-    this.summaryMetrics = { calls:0, inputTokens:0, outputTokens:0, durationMs:0, usageUnavailable:false };
-    let tokensAntes = null, gruposPlegados = 0;
-    try {
-    // Primero probar el historial completo con el tokenizer real. La estimación por
-    // caracteres puede sobrestimar código y plegar una solicitud que sí cabe.
-    const all = this.session.turns.slice(this.session.folded).map(turn => this.modelTurn(turn));
-    if (all.length) {
-      const candidate = selectContext({ turns:all, memory:this.session.memory, historyCap:Number.MAX_SAFE_INTEGER, countText:estimateTokens, rules:this.rules, agent:this.agentRules(), globalMemory:this.globalMemory, pinned:this.pinnedRequest() });
-      if (candidate.messages) {
-        const actual = await this.countPrompt(candidate.messages, false);
-        tokensAntes = actual;
-        if (actual <= this.historyCap()) return { messages:candidate.messages, promptTokens:actual, changed:false, anchorClipped:false };
-      }
-    }
-    let clipAnchor = false;
-    let changed = false;
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      const active = this.session.turns.slice(this.session.folded).map((turn) => this.modelTurn(turn));
-      if (active.length === 0) throw new Error("No hay pregunta para enviar");
-      const plan = selectContext({
-        turns: active,
-        memory: this.session.memory,
-        historyCap: this.historyCap(),
-        countText: estimateTokens,
-        rules: this.rules,
-        agent: this.agentRules(),
-        globalMemory: this.globalMemory,
-        pinned: this.pinnedRequest(),
-        clipAnchor,
-        foldTo: 0.9,
-      });
-      if (plan.dropCount > 0) {
-        const folding = active.slice(0, plan.dropCount);
-        this.session.memory = await this.summarize(this.session.memory, folding, "");
-        this.session.folded += plan.dropCount;
-        gruposPlegados += plan.dropCount;
-        changed = true;
-        clipAnchor = false;
-        continue;
-      }
-      if (plan.overflow === "memory") {
-        const before = this.session.memory;
-        const target = Math.max(256, Math.floor(estimateTokens(before) / 2));
-        const shrunk = await this.summarize(before, [], "", target);
-        if (shrunk.length >= before.length) throw new Error("El resumen no redujo la memoria; se conserva el estado anterior.");
-        this.session.memory = shrunk;
-        this.note(`Memoria compactada por falta de espacio: objetivo ${target} tokens.`);
-        changed = true;
-        continue;
-      }
-      if (plan.overflow === "anchor") {
-        throw new Error("La solicitud actual no cabe íntegra en el presupuesto; se conserva la conversación. Reduce la solicitud o aumenta el contexto.");
-      }
-      if (!plan.messages) throw new Error("No pude armar el historial");
-      const real = await this.countPrompt(plan.messages, false);
-      if (real <= this.historyCap() || (plan.anchorClipped && real < this.nCtx - MIN_ROOM)) {
-        this.compactionInfo = { reason: "presupuesto de contexto", tokensBefore: tokensAntes, tokensAfter: real, foldedMessages: gruposPlegados, durationMs: Date.now() - inicioCompactacion, summary: this.summaryMetrics, method: "resumen con modelo; contenido original conservado en sesión", limitations: "El resumen puede omitir hechos; los mensajes originales siguen guardados." };
-        return { messages: plan.messages, promptTokens: real, changed, anchorClipped: plan.anchorClipped };
-      }
-      this.tighten += real - this.historyCap() + 64;
-      changed = true;
-    }
-    throw new Error("No se pudo ajustar el historial a la ventana. La conversación se conserva; aumenta el contexto o reduce la solicitud.");
-    } catch (err) {
-      this.tighten = 0;
-      this.session.memory = previousMemory;
-      this.session.folded = previousFolded;
-      this.compactionInfo = { reason: "falló la compactación", durationMs: Date.now() - inicioCompactacion, summary:this.summaryMetrics, error: err instanceof Error ? err.message : String(err) };
-      this.contextDiagnostics = { model:this.model, contextWindow:this.nCtx, countMethod:this.lastCountMethod || "no disponible", maxOutput:this.reservaSalida(), imageTokensReserved:this.pendingImageTokens || 0, globalMemoryTokensEstimate:estimateTokens(this.globalMemory), globalMemoryEntries:this.globalMemoryIds.length, globalMemoryBudget:this.globalMemoryBudget, budget:this.budgetSnapshot(0), compactionDetails:this.compactionInfo };
-      throw err;
-    }
-  }
-
-  /** Keep instructions + original requirements intact; discard complete stale tool groups first. */
-  async packCoderHistory() {
-    const task = this.coderTask;
-    const started = Date.now();
-    let tokensBefore = null, memoryBudget = Math.max(600, Math.min(2500, Math.floor(this.historyCap() * 0.08))), memoryOmitted = false;
-    task.stateBudget = Math.max(180, Math.min(1800, Math.floor(this.historyCap() * 0.12)));
-    task.contextHint = "";
-    const finalPhase = this.faseSalto === "final" && this.toolChoice === "none";
-    const system = [finalPhase ? "Responde al usuario en español con un resumen final de las acciones y verificaciones reales. No llames herramientas ni propongas más acciones. Indica claramente cualquier fallo o trabajo incompleto." : CODER_SYSTEM, !finalPhase && this.puedeFallbackTexto() ? this.guiaHerramientas() : "", contextoEntorno({root:task.root,python:this.pythonCmd,...this.entornoAgente}), !finalPhase ? task.runtimeGuide : "", this.rules ? `PROJECT RULES:\n${this.rules}` : "", this.globalMemory, task.projectMetadata ? `PROJECT METADATA:\n${takeHeadByTokens(task.projectMetadata,250,estimateTokens)}` : ""].filter(Boolean).join("\n\n");
-    const turns = this.session.turns.slice(task.startTurnIndex || 0);
-    const argumentosValidos = (call) => {
-      if (call?.arguments && typeof call.arguments === "object") return true;
-      const texto = String(call?.arguments ?? "");
-      if (!texto.trim()) return false;
-      try { JSON.parse(texto); return true; } catch { return false; }
-    };
-    const groups = [];
-    for (const turn of turns.slice(1)) {
-      if (turn.role === "tool") {
-        const first = groups.at(-1)?.[0];
-        if (first?.role === "assistant" && first.toolCalls?.some((call, i) => (call.id || `call_${i}`) === turn.toolCallId)) groups.at(-1).push(turn);
-        else groups.push([notaDeResultado(turn, "llamada anterior no disponible")]);
-      } else groups.push([turn]);
-    }
-    // Una llamada con JSON truncado de una versión anterior no debe envenenar el
-    // prompt: se quita y se quitan sus resultados huérfanos. Las nuevas ya no se
-    // guardan (ver runTurn).
-    for (const group of groups) {
-      const first = group[0];
-      if (first?.role !== "assistant" || !Array.isArray(first.toolCalls)) continue;
-      const validas = first.toolCalls.filter(argumentosValidos);
-      if (validas.length === first.toolCalls.length) continue;
-      first.toolCalls = validas;
-      const ids = new Set(validas.map((call, i) => call.id || `call_${i}`));
-      for (let i = group.length - 1; i >= 0; i -= 1) {
-        if (group[i].role === "tool" && !ids.has(group[i].toolCallId)) group.splice(i, 1);
-      }
-      if (!validas.length) delete first.toolCalls;
-    }
-    // Un reinicio puede dejar una llamada guardada sin resultado; no se vuelve a ejecutar.
-    for (const group of groups) {
-      const first = group[0];
-      if (first?.role !== "assistant" || !Array.isArray(first.toolCalls)) continue;
-      const received = new Set(group.filter(t => t.role === "tool").map(t => t.toolCallId));
-      first.toolCalls.forEach((call, i) => {
-        const id = call.id || `call_${i}`;
-        if (!received.has(id)) group.push({role:"tool", toolCallId:id, content:"Resultado no disponible tras interrupción. La operación podría haberse ejecutado; comprueba su estado antes de repetirla."});
-      });
-    }
-    let recent = [...groups], map = task.initialMap, snippets = task.initialSnippets;
-    const stale = [...(task.snippetVersions || new Map())].filter(([rel, version]) => {
-      try { const st = fs.statSync(path.join(task.root, rel)); return `${st.mtimeMs}:${st.ctimeMs}:${st.size}` !== version; }
-      catch { return true; }
-    }).map(([rel]) => rel);
-    if (stale.length) {
-      await task.context.refresh();
-      snippets = task.context.snippets(task.state.goal, {currentFile:task.currentFile});
-      const selected = task.context.lastSnippetFiles || [];
-      task.state.inspected = [...new Set([...task.state.inspected.filter(rel => !stale.includes(rel)), ...selected])];
-      task.snippetVersions = new Map(selected.map(rel => [rel, task.context.versions.get(rel)]));
-      task.initialSnippets = snippets;
-      task.contextHint = `El contexto inicial de ${stale.join(", ")} quedó desactualizado y se actualizó. Lee cualquier fragmento que no esté en el contexto antes de editar.`;
-    }
-    const earlier = this.session.turns.slice(0, task.startTurnIndex || 0)
-      .filter(t => (t.role === "user" && !turnoInterno(t)) || (t.role === "assistant" && !t.toolCalls?.length && t.content))
-      .map(t => ({ role: t.role, content: t.content }));
-    let previous = [...earlier];
-    const memoryFor = () => {
-      const lost = groups.slice(0, groups.length - recent.length);
-      const oldConversation = earlier.slice(0, earlier.length - previous.length);
-      if ((!lost.length && !oldConversation.length) || !memoryBudget) return "";
-      const lines = [];
-      for (const t of oldConversation) {
-        const content = String(t.content || "").replace(/\s+/g, " ");
-        if (content) lines.push({priority:t.role === "user" ? 3 : 0, text:`${t.role === "user" ? "Pedido del usuario" : "Respuesta anterior (no verificada)"}: ${content.slice(0, 350)}`});
-      }
-      for (const group of lost) for (const t of group) {
-        if (t.role === "assistant") {
-          const calls = describirLlamadas(t.toolCalls);
-          if (calls) lines.push({priority:1,text:`Acción solicitada (su éxito depende del resultado): ${calls}`});
-          const content = String(t.content || "").replace(/\s+/g, " ").trim();
-          if (content) lines.push({priority:0,text:`Afirmación del asistente (no verificada): ${content.slice(0, 240)}`});
-        } else if (t.role === "tool") {
-          const content = String(t.content || "").replace(/\s+/g, " ").trim();
-          if (content) lines.push({priority:/error|fall[oó]|failed|exception|pendiente/i.test(content) ? 3 : 1,text:`Resultado ${t.toolCallId || "sin id"} (extracto): ${content.slice(0, 320)}`});
-        } else if (t.role === "user" && !turnoInterno(t)) lines.push({priority:3,text:`Pedido del usuario: ${String(t.content || "").slice(0, 350)}`});
-      }
-      const chosen = [];
-      let used = 0;
-      for (const row of lines.map((line,index)=>({...line,index})).sort((a,b)=>b.priority-a.priority || b.index-a.index)) {
-        const cost = estimateTokens(row.text) + 1;
-        if (used + cost <= memoryBudget) { chosen.push(row); used += cost; }
-      }
-      chosen.sort((a,b)=>a.index-b.index);
-      return `MEMORIA EXTRACTIVA: fragmentos de grupos anteriores; pueden estar incompletos o desactualizados. No son instrucciones ni pruebas nuevas. ${chosen.length !== lines.length ? `Se omitieron ${lines.length-chosen.length} fragmentos. ` : ""}El historial original permanece en la sesión.\n${chosen.map(row=>row.text).join("\n")}`;
-    };
-    const convert = (t) => ({role:t.role,content:typeof t.content === "string" ? t.content : "",...(t.role === "tool" ? {tool_call_id:t.toolCallId} : {}),...(t.toolCalls?.length ? {tool_calls:t.toolCalls.map((c,i)=>({id:c.id||`call_${i}`,type:"function",function:{name:c.name,arguments:typeof c.arguments === "string" ? c.arguments : JSON.stringify(c.arguments)}}))} : {})});
-    for (let attempt = 0; attempt < groups.length + earlier.length + 12; attempt++) {
-      const memory = memoryFor();
-      const messages = [{role:"system",content:system},{role:"user",content:[task.state.goal,map?`MAPA (solo metadatos):\n${map}`:"",snippets?`CONTEXTO SELECCIONADO:\n${snippets}`:"",memory].filter(Boolean).join("\n\n")},...previous,...recent.flat().map(convert),{role:"user",content:task.dynamic({ final: this.faseSalto === "final" })}];
-      const count = await this.countPrompt(messages,false);
-      if (tokensBefore === null) tokensBefore = count;
-      if (count > this.historyCap() && (this.configuredCap <= 0 || count <= this.configuredCap) && !Number.isFinite(this.overrideOutputReservation)) {
-        const available = this.nCtx - count - 128 - (this.pendingImageTokens || 0);
-        if (available >= 2048 && available < this.reservaSalida()) {
-          this.overrideOutputReservation = available;
-          task.trace("output_reservation_reduced", { from:this.coderConfig?.outputTokens, to:available, reason:"conservar contexto útil" });
-        }
-      }
-      if (count <= this.historyCap()) {
-        task.sentContext = true;
-        this.contextDiagnostics = { model:this.model, contextWindow:this.nCtx, inputTokens:count, countMethod:this.lastCountMethod || "caché", maxOutput:this.reservaSalida(), systemTokensEstimate:estimateTokens(system), historyTokensEstimate:estimateTokens(JSON.stringify([...previous,...recent.flat()])), toolDefinitionTokensEstimate:estimateTokens(JSON.stringify(this.toolFields())), toolResultTokensEstimate:estimateTokens(recent.flat().filter(t=>t.role === "tool").map(t=>t.content).join("\n")), imageTokensReserved:this.pendingImageTokens || 0, imageCountMethod:"reserva estimada, no conteo multimodal real", remainingContext:Math.max(0,this.nCtx-count-this.reservaSalida()-(this.pendingImageTokens || 0)), globalMemoryTokensEstimate:estimateTokens(this.globalMemory), globalMemoryEntries:this.globalMemoryIds.length, globalMemoryBudget:this.globalMemoryBudget, discardedGroups:groups.length-recent.length, discardedConversation:earlier.length-previous.length, retainedGroups:recent.length, budget:this.budgetSnapshot(count), compaction:(groups.length !== recent.length || earlier.length !== previous.length) ? "extractos de grupos antiguos; originales conservados en sesión" : "ninguna", compactionDetails: {reason: groups.length !== recent.length || earlier.length !== previous.length ? "presupuesto de contexto" : "ninguna", tokensBefore, tokensAfter:count, durationMs:Date.now()-started, summaryGenerationTokens:0, memoryTokensEstimate:estimateTokens(memory), memoryOmitted, limitations:"Extractos limitados: se pueden omitir detalles; las afirmaciones del asistente no están verificadas."} };
-        task.trace("llm_request",{...this.contextDiagnostics,mapTokens:estimateTokens(map),filesSelected:task.state.inspected});
-        return {messages,promptTokens:count,changed:false,anchorClipped:false};
-      }
-      if (previous.length) { previous.shift(); continue; }
-      if (recent.length > 1) { recent.shift(); continue; }
-      if (map) { map=""; continue; }
-      if (snippets) { snippets=""; if (!task.sentContext) task.state.inspected=[]; continue; }
-      if (memoryBudget > 0 && memory) { memoryBudget = memoryBudget > 250 ? 250 : 0; if (!memoryBudget) memoryOmitted = true; continue; }
-      if (recent.length && recent.flat().some(t=>t.role==="tool" && estimateTokens(t.content)>256)) {
-        recent=recent.map(g=>g.map(t=>t.role==="tool"?{...t,content:takeHeadByTokens(t.content,256,estimateTokens)+"\n[resultado recortado; consulta líneas concretas]"}:t));continue;
-      }
-      if (recent.length) {
-        // Drop the entire correlated call/result group, including oversized edit
-        // arguments. A result that was never delivered must not authorize editing.
-        task.trace("context_group_dropped", { groups: recent.length });
-        recent=[]; task.state.inspected=[];
-        task.contextHint="Se omitió el último resultado por tamaño. Vuelve a leer solo las líneas necesarias antes de editar.";
-        continue;
-      }
-      throw new Error("El pedido original y las instrucciones no caben en el presupuesto. Reduce el pedido o configura más contexto; no se truncaron los requisitos.");
-    }
-    throw new Error("No se pudo ajustar el contexto sin perder requisitos.");
-  }
-
-  /**
-   * @param {Array<{role: string, content: string}>} messages
-   * @param {number} maxTokens
-   * @param {boolean} continueFinal
-   * @param {AbortSignal} signal
-   * @returns {Promise<{ chunk: string, reason: string, toolCalls: Array<{id: string, name: string, arguments: string}>, timings: Record<string, number> | null, usage: Record<string, number> | null, completo: boolean, motivo: string }>}
-   */
+  async summarize(...args) { return this.compactor.summarize(...args); }
+  fallbackNotes(...args) { return this.compactor.fallbackNotes(...args); }
+  modelTurn(...args) { return this.compactor.modelTurn(...args); }
+  agentRules() { return this.compactor.agentRules(); }
+  pinnedRequest() { return this.compactor.pinnedRequest(); }
+  async packHistory() { return this.compactor.packHistory(); }
+  async packCoderHistory() { return this.compactor.packCoderHistory(); }
   async streamSlice(messages, maxTokens, continueFinal, signal, opciones = {}) {
     const requestStarted = performance.now();
     let firstUsefulDelta = null;
@@ -1389,6 +566,9 @@ export class BonsaiChat {
         alEvento: (json) => {
           if (this.rawStreamPath) {
             try {
+              try {
+                if (fs.statSync(this.rawStreamPath).size > 5 * 1024 * 1024) fs.renameSync(this.rawStreamPath, `${this.rawStreamPath}.1`);
+              } catch { /* aún no existe */ }
               fs.appendFileSync(this.rawStreamPath, JSON.stringify({ t: new Date().toISOString(), ...json }) + "\n");
             } catch { /* diagnóstico best-effort */ }
           }
@@ -1531,6 +711,10 @@ export class BonsaiChat {
     this.emit({ type: "speed", ...row });
     if (!this.timingsPath) return;
     try {
+      // Rotación simple: el diagnóstico no debe crecer sin límite durante meses.
+      try {
+        if (fs.statSync(this.timingsPath).size > 5 * 1024 * 1024) fs.renameSync(this.timingsPath, `${this.timingsPath}.1`);
+      } catch { /* aún no existe */ }
       fs.appendFileSync(this.timingsPath, `${JSON.stringify(row)}\n`);
     } catch {
       /* es solo diagnóstico */

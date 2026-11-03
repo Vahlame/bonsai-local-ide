@@ -86,22 +86,24 @@ Features:
 - Expected 2-3x token generation speedup
 - Auto-enabled in ULTRA/CODE-MAX/CODE-FAST presets
 
-### 5. Optimized Agent Profiles (`chat/agent-profiles-optimized.json`)
+### 5. Perfiles de agente
 
-| Profile | Steps | Repairs | Strategy | Tools |
-|---------|-------|---------|----------|-------|
-| `optimized` | 32 | 4 | auto | parallel |
-| `optimized-conservative` | 24 | 3 | auto | sequential |
-| `optimized-speed` | 40 | 5 | auto | parallel + speculative |
+Los perfiles reales viven en `chat/modelo.json` (`catalogo.<clave>.agente`) y en
+`chat/coder-profile*.json` para el harness del coder. El antiguo
+`chat/agent-profiles-optimized.json` no lo importaba nadie y se eliminó en la
+desmonolitización.
 
-### 6. Agent Integration (`chat/optimized-agent-integration.mjs`)
+### 6. Agent Integration
 
-End-to-end optimizations:
-- **Parallel tool execution** for independent calls
-- **Speculative verification** (tests run in background)
-- **Optimized KV cache** with real quant types (q8_0, q4_0)
-- **Adaptive batch/ubatch** sizing
-- **Smart resource conflict detection**
+La integración real vive en `chat/server/agent-loop.mjs`, `chat/tool-registry.mjs`
+y `chat/coder-harness.mjs`. El antiguo `chat/optimized-agent-integration.mjs`
+era un experimento sin importadores y se eliminó durante la desmonolitización
+(ver `docs/REFACTORING.md`). Las optimizaciones que siguen vigentes son:
+
+- **Ejecución concurrente de escrituras independientes** en el turno del agente.
+- **Verificación real** con `coder-harness.mjs` antes de cerrar una tarea.
+- **KV cache** con cuantizaciones reales (f16, q8_0, q4_0) desde los perfiles.
+- **Batch/ubatch adaptativos** por perfil de motor.
 
 ---
 

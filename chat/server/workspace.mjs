@@ -47,15 +47,64 @@ export function listWorkspace(root, rel, out, depth, limit = 400) {
   return out;
 }
 
+// __pycache__: cada `python x.py` lo reescribe y llenaba el «Archivos:» de ruido.
+// Las carpetas pesadas/generadas no se vigilan: un `npm install` o un build
+// puede tocar miles de archivos y no aportan nada al delta del agente.
+const SNAPSHOT_SKIP = new Set([
+  ".venv", "node_modules", ".git", "__pycache__",
+  "bin", "models", "logs", "reports", "salida", "capturas", "trabajo",
+  "dist", "build", "target", "forks", "kernels",
+]);
+
+/**
+ * Caché por raíz para el snapshot que se toma antes de un comando. Un
+ * `fs.watch` marca la caché como sucia; si el sistema no permite el watcher,
+ * se cae a un TTL corto. El snapshot posterior al comando siempre se fuerza.
+ * @type {Map<string, {map: Map<string, string> | null, ts: number, dirty: boolean, watcher: import("node:fs").FSWatcher | null}>}
+ */
+const snapshotCaches = new Map();
+
 /**
  * @param {string} root
+ */
+function cacheDeSnapshot(root) {
+  let cache = snapshotCaches.get(root);
+  if (cache) return cache;
+  cache = { map: null, ts: 0, dirty: true, watcher: null };
+  try {
+    cache.watcher = fs.watch(root, { recursive: true }, (_evento, nombre) => {
+      const rel = String(nombre || "").replace(/\\/g, "/");
+      if (SNAPSHOT_SKIP.has(rel.split("/")[0])) return;
+      cache.dirty = true;
+    });
+    cache.watcher.on("error", () => {
+      cache.dirty = true;
+      try { cache.watcher?.close(); } catch { /* ya cerrado */ }
+      cache.watcher = null;
+    });
+    cache.watcher.unref?.();
+  } catch {
+    cache.watcher = null;
+  }
+  snapshotCaches.set(root, cache);
+  return cache;
+}
+
+/**
+ * @param {string} root
+ * @param {{cache?: boolean, force?: boolean, ttlMs?: number}} [opciones]
  * @returns {Map<string, string>}
  */
-export function snapshotFiles(root) {
+export function snapshotFiles(root, opciones = {}) {
+  const cacheable = opciones.cache === true;
+  const cache = cacheable ? cacheDeSnapshot(root) : null;
+  if (cache && !opciones.force && cache.map && !cache.dirty) {
+    const ttl = opciones.ttlMs ?? (cache.watcher ? 30_000 : 2_000);
+    if (Date.now() - cache.ts < ttl) return cache.map;
+  }
   /** @type {Map<string, string>} */
   const found = new Map();
-  // __pycache__: cada `python x.py` lo reescribe y llenaba el «Archivos:» de ruido.
-  const skip = new Set([".venv", "node_modules", ".git", "__pycache__"]);
+  if (cache) cache.dirty = false;
   /**
    * @param {string} dir
    * @param {string} rel
@@ -69,7 +118,9 @@ export function snapshotFiles(root) {
       return;
     }
     for (const entry of entries) {
-      if (skip.has(entry.name)) continue;
+      if (SNAPSHOT_SKIP.has(entry.name)) continue;
+      // Un enlace podría apuntar fuera del proyecto; el delta no debe leerlo.
+      if (entry.isSymbolicLink()) continue;
       const childRel = rel ? `${rel}/${entry.name}` : entry.name;
       const abs = path.join(dir, entry.name);
       if (entry.isDirectory()) {
@@ -85,6 +136,10 @@ export function snapshotFiles(root) {
     }
   };
   walk(root, "");
+  if (cache) {
+    cache.map = found;
+    cache.ts = Date.now();
+  }
   return found;
 }
 

@@ -20,7 +20,7 @@ import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
@@ -68,6 +68,9 @@ fs.writeFileSync(path.join(estado, "ui-permit.json"), JSON.stringify({ mode: "as
 fs.writeFileSync(path.join(proyecto, "x.txt"), "uno\ndos\ntres\n", "utf8");
 fs.writeFileSync(path.join(proyecto, "y.txt"), "alfa\r\nbeta\r\n", "utf8");
 fs.writeFileSync(path.join(proyecto, "nota.md"), "# nota\r\n", "utf8");
+// Repositorio real para probar el panel de Git extraído de app.js.
+execFileSync("git", ["init"], { cwd: proyecto, stdio: "ignore" });
+fs.writeFileSync(path.join(proyecto, "cambio-git.bin"), Buffer.from([0, 1, 2, 3]));
 
 let peticionesChat = 0;
 /** Respuesta del modelo para /api/edit (tool_choice "none"). */
@@ -176,10 +179,46 @@ try {
   });
   pagina.on("pageerror", (error) => erroresConsola.push(`pageerror: ${error.message}`));
 
-  await pagina.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+  const respuestaInicial = await pagina.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
   await pagina.waitForSelector("#tree .row", { timeout: 15000 });
+  const cabeceras = respuestaInicial?.headers() || {};
+  check(
+    "la página principal trae CSP y cabeceras anti-clickjacking",
+    /default-src 'self'/.test(cabeceras["content-security-policy"] || "") &&
+      cabeceras["x-frame-options"] === "SAMEORIGIN" &&
+      cabeceras["referrer-policy"] === "no-referrer" &&
+      cabeceras["x-content-type-options"] === "nosniff",
+    JSON.stringify({ csp: cabeceras["content-security-policy"], xfo: cabeceras["x-frame-options"], ref: cabeceras["referrer-policy"] }),
+  );
+  check(
+    "la UI no tiene scripts inline (compatible con CSP estricta)",
+    (await pagina.evaluate(() => document.querySelectorAll("script:not([src])").length)) === 0,
+  );
   const logo = await fetch(`http://127.0.0.1:${puertoUi}/ui/iconos/modelos/qwen-color.svg`);
   check("los logos del Hub se sirven en local", logo.status === 200 && String(logo.headers.get("content-type") || "").includes("image/svg+xml"), `HTTP ${logo.status}`);
+
+  // ---- Panel de Git extraído: chip, menú, lista de cambios y cierre ----
+  await pagina.waitForFunction(() => {
+    const chip = document.querySelector("#git-chip");
+    return Boolean(chip && !chip.hidden);
+  }, null, { timeout: 15000 });
+  await pagina.click("#git-chip");
+  await pagina.waitForSelector(".menu", { timeout: 5000 });
+  check("git: el menú ofrece ver los cambios pendientes", /Ver cambios pendientes/.test(await pagina.locator(".menu").innerText()));
+  await pagina.locator(".menu button", { hasText: "Ver cambios pendientes" }).click();
+  await pagina.waitForSelector(".dialogo h3", { timeout: 5000 });
+  check("git: la lista de cambios se abre", /Cambios pendientes/.test(await pagina.locator(".dialogo h3").innerText()));
+  await pagina.locator(".dialogo .d-botones button", { hasText: "Cerrar" }).click();
+  check("git: el diálogo de cambios se cierra", (await pagina.locator(".dialogo").count()) === 0);
+
+  // ---- Búsqueda extraída: Ctrl+Shift+F y resultados ----
+  await pagina.keyboard.press("Control+Shift+F");
+  await pagina.waitForSelector(".paleta input[type=search]", { timeout: 5000 });
+  await pagina.locator(".paleta input[type=search]").fill("uno");
+  await pagina.waitForSelector(".paleta li .p-txt", { timeout: 10000 });
+  check("búsqueda: Ctrl+Shift+F encuentra coincidencias", (await pagina.locator(".paleta li .p-txt").count()) > 0);
+  await pagina.keyboard.press("Escape");
+  check("búsqueda: Escape cierra la paleta", (await pagina.locator(".paleta").count()) === 0);
 
   // ---- 1. La UI pinta y chat-core.js se cargó como script clásico ----
   check("la página carga sin errores de consola", erroresConsola.length === 0, erroresConsola.slice(0, 3).join(" | "));

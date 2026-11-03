@@ -40,6 +40,8 @@ import { crearApi } from "./core/api.mjs";
   let generacion = 0;
   let termPty = false;
   let lineaXterm = "";
+  /** @type {EventSource | null} */
+  let termStream = null;
   /** @type {any | null} */
   let xterm = null;
 
@@ -134,8 +136,49 @@ import { crearApi } from "./core/api.mjs";
     }
   }
 
+  function cerrarStreamTerminal() {
+    if (!termStream) return;
+    try { termStream.close(); } catch { /* ya cerrado */ }
+    termStream = null;
+  }
+
+  function aplicarLecturaTerminal(r) {
+    pintarSalida(String(r.salida || ""));
+    termDesde = Number(r.siguiente) || termDesde;
+    termVivo = Boolean(r.vivo);
+    if (!r.vivo && r.codigo !== null && r.codigo !== undefined) {
+      pintarSalida(`\n[el shell terminó con código ${r.codigo}. Usa Reiniciar.]\n`);
+    }
+    pintarEstado();
+  }
+
+  function abrirStreamTerminal() {
+    if (termStream || !termId || typeof EventSource !== "function") return;
+    const es = new EventSource(`/api/terminal/stream?id=${encodeURIComponent(termId)}&desde=${termDesde}`);
+    termStream = es;
+    es.onmessage = (evento) => {
+      if (es !== termStream) return;
+      try {
+        const r = JSON.parse(evento.data);
+        aplicarLecturaTerminal(r);
+        if (!r.vivo) cerrarStreamTerminal();
+      } catch {
+        /* evento corrupto: el siguiente mensaje o el sondeo lo corrige */
+      }
+    };
+    es.onerror = () => {
+      if (es !== termStream) return;
+      // Si el SSE no está disponible, se vuelve al sondeo clásico.
+      cerrarStreamTerminal();
+    };
+  }
+
   async function abrirTerminal() {
-    if (termId && termVivo) return;
+    if (termId && termVivo) {
+      abrirStreamTerminal();
+      return;
+    }
+    cerrarStreamTerminal();
     try {
       const r = await api("/api/terminal", { cuerpo: { accion: "abrir" } });
       termId = String(r.id || "");
@@ -145,12 +188,14 @@ import { crearApi } from "./core/api.mjs";
       limpiarTerminal();
       pintarSalida(`Bonsai terminal · ${r.shell || "shell"} · ${r.cwd || "carpeta del proyecto"}${termPty ? " · PTY" : ""}\n`);
       pintarEstado();
+      abrirStreamTerminal();
     } catch (err) {
       pintarSalida(`\n[no se pudo abrir el terminal: ${err.message}]\n`);
     }
   }
 
   async function reiniciarTerminal() {
+    cerrarStreamTerminal();
     try {
       if (termId) await api("/api/terminal", { cuerpo: { accion: "cerrar", id: termId } });
     } catch {
@@ -176,6 +221,7 @@ import { crearApi } from "./core/api.mjs";
 
   /** Sondeo de la salida y de los procesos en segundo plano del agente. */
   let sondeoEnCurso = false;
+  let ultimoSondeoProcesos = 0;
   async function sondear() {
     if (sondeoEnCurso || document.hidden || drawer.hidden || panelActivo !== "terminal") return;
     sondeoEnCurso = true;
@@ -187,21 +233,20 @@ import { crearApi } from "./core/api.mjs";
   }
   async function sondearAhora() {
     const mío = generacion;
-    if (termId) {
+    // Con SSE activo la salida llega sola; el sondeo sigue mirando procesos.
+    if (termId && !termStream) {
       try {
         const r = await api("/api/terminal", { cuerpo: { accion: "leer", id: termId, desde: termDesde } });
         if (mío !== generacion) return;
-        pintarSalida(String(r.salida || ""));
-        termDesde = Number(r.siguiente) || termDesde;
-        termVivo = Boolean(r.vivo);
-        if (!r.vivo && r.codigo !== null && r.codigo !== undefined) {
-          pintarSalida(`\n[el shell terminó con código ${r.codigo}. Usa Reiniciar.]\n`);
-        }
-        pintarEstado();
+        aplicarLecturaTerminal(r);
       } catch {
         /* el servidor puede estar ocupado: el siguiente sondeo reintenta */
       }
     }
+    // Los procesos en segundo plano cambian poco: con SSE para el terminal no
+    // hace falta consultarlos en cada tick de 700 ms.
+    if (Date.now() - ultimoSondeoProcesos < 2000) return;
+    ultimoSondeoProcesos = Date.now();
     try {
       const p = await api("/api/procesos");
       const lista = Array.isArray(p.procesos) ? p.procesos : [];
@@ -387,6 +432,7 @@ import { crearApi } from "./core/api.mjs";
 
   function cerrarCajon() {
     drawer.hidden = true;
+    cerrarStreamTerminal();
     if (botonCajon) {
       botonCajon.classList.remove("on");
       botonCajon.setAttribute("aria-pressed", "false");

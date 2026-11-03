@@ -46,6 +46,11 @@ export function createStaticRoutes(ctx) {
       fs.createReadStream(abs).pipe(res);
       return true;
     }
+    if (req.method === "GET" && url.pathname === "/api/health") {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      res.end(JSON.stringify(ctx.health()));
+      return true;
+    }
     if (req.method === "GET" && url.pathname === "/api/gpu") {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
       res.end(JSON.stringify(await readGpu()));

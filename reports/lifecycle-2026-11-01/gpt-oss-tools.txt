@@ -1,1 +1,0 @@
-GPT-OSS tools: nativas, fallback JSON, plantilla Harmony, raw stream, reintento peg-native y error final OK.

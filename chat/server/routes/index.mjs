@@ -5,6 +5,7 @@ import { createGitRoutes } from "./git.mjs";
 import { createModelsRoutes } from "./models.mjs";
 import { createSettingsRoutes } from "./settings.mjs";
 import { createChatRoutes } from "./chat.mjs";
+import { createContractRoutes } from "./contracts.mjs";
 
 /**
  * @param {Record<string, any>} ctx
@@ -12,6 +13,7 @@ import { createChatRoutes } from "./chat.mjs";
  */
 export function createRoutes(ctx) {
   const grupos = [
+    createContractRoutes(ctx),
     createStaticRoutes(ctx),
     createFilesRoutes(ctx),
     createGitRoutes(ctx),

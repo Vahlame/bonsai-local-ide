@@ -1,3 +1,0 @@
-suite,run_id,model_key,model,quant,context,kv,prompt_target,prompt_tokens,n_predict,predicted_n,ttft_ms,prefill_tok_s,decode_tok_s,itl_median_ms,itl_p95_ms,cache_prompt,cache_n,load_ms,vram_idle_mib,vram_model_mib,vram_peak_mib,ram_peak_mib,cpu_util_avg,power_avg_w,power_max_w,temp_max_c,wall_ms,run,note,response_chars
-server,qwen3-30b-32k-n26-t12,qwen3-30b,Qwen3 MoE,UD-Q2_K_XL,32768,q8_0,2048,1545,128,49,1807.49,857.57,45.38,21.804,22.996,False,0,8194.5,0,7511,7535,6514,32.78,38.5,53.85,56.0,2865.3,1,,311
-server,qwen3-30b-32k-n26-t12,qwen3-30b,Qwen3 MoE,UD-Q2_K_XL,32768,q8_0,2048,1545,128,61,1804.99,870.31,46.38,21.32,22.111,False,0,8194.5,0,7511,7535,6594,36.92,45.04,57.3,57.0,3098.8,2,,381

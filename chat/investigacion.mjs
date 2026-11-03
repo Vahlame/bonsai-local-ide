@@ -6,6 +6,8 @@
  * el extractor regex histórico.
  * @type {Promise<{Readability: any, parseHTML: any, turndown: any} | null> | null}
  */
+import { fetchRemoto } from "./red-segura.mjs";
+
 let kitPromise = null;
 function cargarKitLectura() {
   if (!kitPromise) {
@@ -54,72 +56,45 @@ export function entidades(text) {
 const textoPlano = (html) => entidades(String(html).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
 const atributo = (attrs, name) => entidades(attrs.match(new RegExp(`(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i"))?.slice(1).find((v) => v !== undefined) || "");
 
-export async function descargarWeb(raw, { signal, fetcher = fetch, maxBytes = 1_000_000, timeoutMs = 20000, blockedPorts = [], allowPrivate = false } = {}) {
-  let url = urlHttp(raw);
-  const protegidos = new Set(blockedPorts.map(String));
+export async function descargarWeb(raw, { signal, fetcher, maxBytes = 1_000_000, timeoutMs = 20000, blockedPorts = [], allowPrivate = false, resolver } = {}) {
+  const inicial = urlHttp(raw);
   const combinado = AbortSignal.any([AbortSignal.timeout(timeoutMs), ...(signal ? [signal] : [])]);
-  for (let salto = 0; salto <= 5; salto++) {
-    const destino = new URL(url);
-    if (protegidos.has(destino.port || (destino.protocol === "https:" ? "443" : "80"))) throw new Error("Ese puerto pertenece al IDE o al modelo; consulta el servidor del proyecto en otro puerto.");
-    const host = destino.hostname;
-    const hostSin = host.replace(/^\[|\]$/g, "").toLowerCase();
-    // Los metadatos de nube se bloquean SIEMPRE, incluso para SearXNG local o
-    // tests con allowPrivate: no hay ningún caso legítimo para consultarlos.
-    if (hostSin === "metadata.google.internal" || hostSin === "169.254.169.254" || hostSin === "fd00:ec2::254") {
-      throw new Error("Endpoint de metadatos de nube no permitido.");
-    }
-    // Bloquear rangos privados, loopback y link-local salvo allowPrivate.
-    if (!allowPrivate) {
-      const ip = hostSin.match(/^(\d{1,3}\.){3}\d{1,3}$/) ? hostSin : null;
-      if (ip) {
-        const [a, b] = ip.split(".").map(Number);
-        const esPrivada = a === 10
-          || a === 127
-          || a === 169 && b === 254
-          || a === 172 && b >= 16 && b <= 31
-          || a === 192 && b === 168
-          || a === 0
-          || a >= 224;
-        if (esPrivada) throw new Error(`Dirección privada/loopback/metadatos no permitida: ${ip}. Usa allowPrivate=true solo en tests.`);
+  // `fetchRemoto` valida cada salto, fija la IP resuelta y corta redirecciones
+  // hacia la red interna. `fetcher` solo se usa en pruebas con respuestas falsas.
+  const res = await fetchRemoto(inicial, {
+    signal: combinado,
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; BonsaiLocalIDE/1.0)",
+      Accept: "text/html,text/plain,application/json,application/xml;q=0.9,*/*;q=0.5",
+    },
+  }, {
+    allowPrivate,
+    allowHttp: allowPrivate,
+    resolver,
+    blockedPorts,
+    fetcher,
+  });
+  const url = res.url || inicial;
+  if (!res.ok) { await res.body?.cancel(); throw new Error(`HTTP ${res.status}: ${url}`); }
+  const type = res.headers.get("content-type") || "text/plain";
+  if (!/text\/|json|xml|javascript/i.test(type)) { await res.body?.cancel(); throw new Error(`Contenido ${type}; descarga y procesa ese formato con herramientas locales mediante ejecutar.`); }
+  const reader = res.body?.getReader();
+  const chunks = [];
+  let bytes = 0, truncado = false;
+  if (reader) {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const remaining = maxBytes - bytes;
+        chunks.push(value.subarray(0, remaining)); bytes += Math.min(value.length, remaining);
+        if (value.length > remaining || bytes >= maxBytes) { truncado = true; await reader.cancel(); break; }
       }
-      const ipv6 = hostSin.includes(":") ? hostSin : "";
-      const ipv6Privada = ipv6 === "::1"
-        || ipv6 === "::"
-        || /^f[cd][0-9a-f]{2}:/i.test(ipv6)
-        || /^fe[89ab][0-9a-f]:/i.test(ipv6)
-        || ipv6.startsWith("::ffff:");
-      if (ipv6Privada) throw new Error(`Dirección IPv6 privada/loopback/metadatos no permitida: ${hostSin}. Usa allowPrivate=true solo en tests.`);
-    }
-    const res = await fetcher(url, { redirect: "manual", signal: combinado, headers: { "User-Agent": "Mozilla/5.0 (compatible; BonsaiLocalIDE/1.0)", Accept: "text/html,text/plain,application/json,application/xml;q=0.9,*/*;q=0.5" } });
-    if ([301, 302, 303, 307, 308].includes(res.status)) {
-      await res.body?.cancel();
-      const location = res.headers.get("location");
-      if (!location) throw new Error(`Redirección sin Location: ${url}`);
-      url = urlHttp(location, url);
-      continue;
-    }
-    if (!res.ok) { await res.body?.cancel(); throw new Error(`HTTP ${res.status}: ${url}`); }
-    const type = res.headers.get("content-type") || "text/plain";
-    if (!/text\/|json|xml|javascript/i.test(type)) { await res.body?.cancel(); throw new Error(`Contenido ${type}; descarga y procesa ese formato con herramientas locales mediante ejecutar.`); }
-    const reader = res.body?.getReader();
-    const chunks = [];
-    let bytes = 0, truncado = false;
-    if (reader) {
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const remaining = maxBytes - bytes;
-          chunks.push(value.subarray(0, remaining)); bytes += Math.min(value.length, remaining);
-          if (value.length > remaining || bytes >= maxBytes) { truncado = true; await reader.cancel(); break; }
-        }
-      } finally { reader.releaseLock(); }
-    }
-    let decoder;
-    try { decoder = new TextDecoder(type.match(/charset=([\w-]+)/i)?.[1] || "utf-8"); } catch { decoder = new TextDecoder(); }
-    return { url, type, text: decoder.decode(Buffer.concat(chunks)), truncado };
+    } finally { reader.releaseLock(); }
   }
-  throw new Error("Demasiadas redirecciones (máximo 5).");
+  let decoder;
+  try { decoder = new TextDecoder(type.match(/charset=([\w-]+)/i)?.[1] || "utf-8"); } catch { decoder = new TextDecoder(); }
+  return { url, type, text: decoder.decode(Buffer.concat(chunks)), truncado };
 }
 
 function extraerPaginaRegex(html, url) {

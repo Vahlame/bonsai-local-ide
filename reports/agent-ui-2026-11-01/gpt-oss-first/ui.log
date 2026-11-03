@@ -1,7 +1,0 @@
-Bonsai en http://127.0.0.1:8787
-modelo local · ventana 0 · historial 53120 · muestreo codigo · sin razonamiento · carpeta C:\Users\user\Documents\prject_local_AI\reports\agent-ui-2026-11-01\gpt-oss-first\project
-python C:\Users\user\AppData\Roaming\uv\python\cpython-3.14.7-windows-x86_64-none
-[lifecycle] {"event":"begin","operation":"start","port":8080}
-[lifecycle] {"event":"end","operation":"start","port":8080}
-[lifecycle] {"event":"begin","operation":"close","port":8080}
-[lifecycle] {"event":"end","operation":"close","port":8080}

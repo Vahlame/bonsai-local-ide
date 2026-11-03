@@ -9,7 +9,7 @@ inferencia no usa una API en la nube; las búsquedas web y las descargas del Hub
 son opcionales. Sin telemetría y sin claves de API.
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-2.4.13-8fb8ff">
+  <img alt="version" src="https://img.shields.io/badge/version-2.5.0-8fb8ff">
   <img alt="CI" src="https://github.com/Vahlame/bonsai-local-ide/actions/workflows/ci.yml/badge.svg">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4">
   <img alt="node" src="https://img.shields.io/badge/node-%E2%89%A522-339933">
@@ -17,14 +17,14 @@ son opcionales. Sin telemetría y sin claves de API.
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-> **v2.4.13 - Servidor y UI modulares, tool registry y búsqueda web opcional.**
-> `ui-server.mjs` baja de 4.115 a 1.055 líneas; el bucle del agente, las rutas,
-> el parser legacy y las tools quedan separados. La UI estrena módulos de núcleo
-> sin cambiar el diseño. Se añade acceso LAN con `--unsafe-lan` + token, un
-> proveedor SearXNG opcional para `buscar` y un empujón cuando el modelo intenta
-> responder de memoria. **56/56 tests**, **9/9 navegador**, UI 2.4.13 con 0
-> errores de consola y CI verde. Notas:
-> [RELEASE-2.4.13](docs/RELEASE-2.4.13.md).
+> **v2.5.0 - Red saliente blindada, UI modular y contrato HTTP.**
+> La política SSRF resuelve todas las IPs, bloquea metadatos y **conecta a la IP
+> comprobada** para cerrar el DNS rebinding. La UI tiene CSP estricta, ETag,
+> índice de símbolos en worker, terminal por SSE y módulos de Git/búsqueda/reglas
+> extraídos de `app.js`. Se añaden Zod + `/api/openapi.json`, `/api/health`,
+> `X-Request-Id`, axe-core y una puerta de sintaxis en CI. **58/58 tests**,
+> **10/10 navegador**, 0 violaciones graves de accesibilidad. Notas:
+> [RELEASE-2.5.0](docs/RELEASE-2.5.0.md).
 
 > **Modelo principal: Qwen3.6 35B-A3B (MoE).** Es el mejor equilibrio
 > calidad/velocidad del benchmark 2026-11-01 (90/100, 35–40 tok/s) y el que
@@ -379,6 +379,7 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 |---|---|
 | [AUDIT-2026-11-01](docs/AUDIT-2026-11-01.md) | Inventario, sintaxis, enlaces, UI, runtime y límites |
 | [CONTRIBUTING](CONTRIBUTING.md) | Setup, pruebas, estilo, modelos y releases |
+| [RELEASE-2.5.0](docs/RELEASE-2.5.0.md) | SSRF con IP fijada, CSP, SSE, Zod/OpenAPI y axe |
 | [RELEASE-2.4.13](docs/RELEASE-2.4.13.md) | Auditoría final: SSRF IPv6, metadatos y token en check-ui |
 | [RELEASE-2.4.12](docs/RELEASE-2.4.12.md) | Espera al resumen de memoria global |
 | [RELEASE-2.4.11](docs/RELEASE-2.4.11.md) | Invariante correcto del 409 en el editor |
@@ -417,15 +418,19 @@ independientes— y un fallback JSON estructurado. Contrato y ejemplos:
 ## Pruebas
 
 ```powershell
-npm test                  # 51 suites aisladas, sin GPU ni modelo real
-npm run test:navegador    # 9 suites con Edge/Chrome headless
+npm test                  # suites aisladas, sin GPU ni modelo real
+npm run test:navegador    # Edge/Chrome headless, incluida accesibilidad axe
+npm run audit             # imports rotos, huérfanos y archivos gigantes
+npm run check:syntax      # node --check sobre todo el código fuente
+npm run check:reports     # reports/ solo con resúmenes curados
 npm run docs:links        # enlaces relativos de la documentación
 npm run build:ui-vendor   # reconstruye editor.js, terminal.js y xterm.css
 ```
 
-Cobertura de esta release: 51/51 aisladas, 9/9 navegador, ciclo de vida real
-(Detener/Cerrar) y `docs:links` sin enlaces rotos. La suite aislada corre en CI
-sin GGUF instalados.
+La suite aislada corre en CI sin GGUF instalados. `npm run audit:strict` además
+falla si aparece un módulo huérfano o un archivo de más de 500 líneas; es una
+guía de desmonolitización, no un requisito para cada PR. La accesibilidad se
+audita con axe-core (WCAG 2 A/AA) y falla solo con violaciones graves.
 
 ---
 
@@ -439,7 +444,7 @@ chat/            servidor Node, agente, tools, UI y pruebas
   legacy-tool-parser.mjs  compatibilidad legacy aislada
 scripts/         lanzadores, builds, benchmarks y utilidades
 docs/            documentación, release notes y gráficos
-reports/         resultados reproducibles de benchmarks
+reports/         resúmenes curados; las ejecuciones crudas quedan en local
 bin/             runtime llama.cpp local (no viaja en Git)
 models/          GGUF locales (no viajan en Git)
 ```

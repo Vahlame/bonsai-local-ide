@@ -4,6 +4,46 @@ Todos los cambios relevantes de Bonsai Local IDE se documentan aquí. El formato
 [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el proyecto usa
 versionado semántico.
 
+## [2.5.0] - 2026-11-02
+
+### Seguridad
+
+- **SSRF con IP fijada.** `fetchFijado` conecta a la IP ya comprobada y conserva
+  `Host`/SNI, cerrando el DNS rebinding entre la resolución y la conexión.
+  Cubre investigación, Model Hub y descargas; MCP sigue permitiendo URLs locales
+  para probar aplicaciones, pero bloquea metadatos de nube.
+- **CSP estricta y cabeceras globales.** `script-src 'self'`, `nosniff`,
+  `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, `Permissions-Policy` y COOP.
+  Los scripts inline se movieron a archivos externos.
+- **`/api/health`, `X-Request-Id` y log JSON** de peticiones lentas/5xx con
+  redacción de secretos y rutas.
+
+### Rendimiento
+
+- Caché de stats con TTL e invalidación; índice de símbolos en `worker_threads`;
+  `ETag`/`304` en `/api/file` y en el polling del editor.
+- `snapshotFiles` omite carpetas pesadas y enlaces, y cachea el snapshot previo a
+  comandos con `fs.watch`.
+- Terminal por SSE con `Last-Event-ID`; los procesos en segundo plano se
+  consultan como máximo cada 2 s.
+- Poda de trabajos del Hub y de registros de agente; rotación de
+  `timings`/`raw-stream` a 5 MB.
+
+### Arquitectura y UI
+
+- `app.js` empieza a dividirse por dominios: `app-git.mjs`, `app-search.mjs` y
+  `app-rules.mjs`, con dependencias explícitas y pruebas de navegador.
+- Contrato Zod para `workspace`, `file`, `undo` y `definir`, más
+  `/api/openapi.json`. La copia aislada funciona sin `node_modules`.
+- `reports/` queda fuera de Git salvo los resúmenes curados y su índice.
+
+### Calidad
+
+- **58/58 tests aislados**, **10/10 suites de navegador** y **0 violaciones
+  graves** de accesibilidad con axe-core (WCAG 2 A/AA).
+- CI ejecuta `audit`, `check:syntax`, `check:reports` y las 10 suites de
+  navegador; los errores de sintaxis ya no llegan a `main`.
+
 ## [2.4.13] - 2026-11-02
 
 ### Seguridad

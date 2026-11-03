@@ -1,3 +1,0 @@
-GPT-OSS agente truncated: recuperación/cierre y efectos en disco verificados (3 peticiones).
-GPT-OSS agente unknown: recuperación/cierre y efectos en disco verificados (3 peticiones).
-GPT-OSS agente closing: recuperación/cierre y efectos en disco verificados (6 peticiones).

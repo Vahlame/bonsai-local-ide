@@ -1,4 +1,0 @@
-suite,run_id,model_key,model,quant,context,kv,prompt_target,prompt_tokens,n_predict,predicted_n,ttft_ms,prefill_tok_s,decode_tok_s,itl_median_ms,itl_p95_ms,cache_prompt,cache_n,load_ms,vram_idle_mib,vram_model_mib,vram_peak_mib,ram_peak_mib,cpu_util_avg,power_avg_w,power_max_w,temp_max_c,wall_ms,run,note,response_chars
-server,moe64k-n12-t8-r3,gpt-oss-20b,GPT-OSS,MXFP4,65536,q8_0,2048,1529,256,256,1715.71,898.11,36.91,27.057,28.476,False,0,10447.4,0,7289,7309,6304,40.42,29.76,48.84,55.0,8625.3,1,,1558
-server,moe64k-n12-t8-r3,gpt-oss-20b,GPT-OSS,MXFP4,65536,q8_0,2048,1529,256,256,1710.24,908.47,36.76,27.173,28.267,False,0,10447.4,0,7289,7309,6332,47.49,32.91,49.6,62.0,8647.0,2,,1654
-server,moe64k-n12-t8-r3,gpt-oss-20b,GPT-OSS,MXFP4,65536,q8_0,2048,1529,256,256,1704.73,908.59,36.53,27.167,28.746,False,0,10447.4,0,7289,7309,6359,51.31,33.41,49.74,65.0,8685.5,3,,1559

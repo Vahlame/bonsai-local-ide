@@ -1,6 +1,6 @@
 {
   "name": "bonsai-local-ide",
-  "version": "2.4.13",
+  "version": "2.5.0",
   "private": true,
   "description": "Bonsai Local IDE: agente de desarrollo local con llama-server para Windows 10 y 11",
   "license": "MIT",
@@ -44,6 +44,10 @@
     "test:navegador": "node scripts/run-tests.mjs navegador",
     "test:todo": "node scripts/run-tests.mjs todo",
     "test:listar": "node scripts/run-tests.mjs --listar",
+    "audit": "node scripts/audit-code.mjs",
+    "audit:strict": "node scripts/audit-code.mjs --strict",
+    "check:reports": "node scripts/check-reports.mjs",
+    "check:syntax": "node scripts/check-syntax.mjs",
     "docs:links": "node scripts/check-doc-links.mjs"
   },
   "engines": {

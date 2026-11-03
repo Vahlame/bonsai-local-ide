@@ -76,6 +76,8 @@ const AISLADAS = [
   { archivo: "chat/prueba-api.mjs" },
   { archivo: "chat/prueba-server-workspace.mjs" },
   { archivo: "chat/prueba-server-text.mjs" },
+  { archivo: "chat/prueba-servicios-servidor.mjs" },
+  { archivo: "chat/prueba-red-segura.mjs" },
   { archivo: "chat/prueba-agente-limites.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-servidor-estado.mjs" },
   { archivo: "chat/prueba-recuperacion-modelo.mjs" },
@@ -119,6 +121,7 @@ const NAVEGADOR = [
   { archivo: "chat/prueba-navegador.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-navegador-aislamiento.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-ui-humo.mjs", timeout: 180_000 },
+  { archivo: "chat/prueba-accesibilidad.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-editor-moderno.mjs", timeout: 180_000 },
   { archivo: "chat/prueba-inicio-modelo.mjs", timeout: 180_000 },
 ];

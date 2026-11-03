@@ -99,12 +99,14 @@ const puertoLlama = /** @type {import("node:net").AddressInfo} */ (falsoLlama.ad
 // Página que maneja la aplicación dentro de un iframe del MISMO origen. Se sirve
 // desde /ui/ (código de confianza): los HTML de /p/ llevan CSP sandbox desde P1-04,
 // así que un arnés servido como artefacto no podría tocar su propio iframe.
-const arnes = `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><title>prueba navegador</title></head>
-<body style="margin:0;background:#111">
-<iframe id="app" src="/" style="width:${ANCHO}px;height:900px;border:0"></iframe>
-<pre id="resultado">{"listo":false,"checks":[]}</pre>
-<script>
+const ARNES_REL = `.prueba-navegador-${process.pid}.html`;
+const ARNES_JS_REL = `.prueba-navegador-${process.pid}.js`;
+const ARNES_ABS = path.join(HERE, "ui", ARNES_REL);
+const ARNES_JS_ABS = path.join(HERE, "ui", ARNES_JS_REL);
+
+// El arnés no puede llevar JavaScript inline: la CSP global (`script-src
+// 'self'`) lo bloquearía. Se sirve como archivo externo desde /ui/.
+const arnesJs = `
 const checks = [];
 const check = (nombre, cond, detalle) => checks.push({ nombre, ok: Boolean(cond), detalle: String(detalle || "").slice(0, 200) });
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -316,12 +318,17 @@ async function run() {
   document.querySelector("#resultado").textContent = JSON.stringify({ listo: true, checks }, null, 1);
 }
 run();
-</script>
+`;
+const arnes = `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>prueba navegador</title></head>
+<body style="margin:0;background:#111">
+<iframe id="app" src="/" style="width:${ANCHO}px;height:900px;border:0"></iframe>
+<pre id="resultado">{"listo":false,"checks":[]}</pre>
+<script src="/ui/${ARNES_JS_REL}"></script>
 </body></html>
 `;
-const ARNES_REL = `.prueba-navegador-${process.pid}.html`;
-const ARNES_ABS = path.join(HERE, "ui", ARNES_REL);
 fs.writeFileSync(ARNES_ABS, arnes, "utf8");
+fs.writeFileSync(ARNES_JS_ABS, arnesJs, "utf8");
 
 const hijo = spawn(process.execPath, [path.join(HERE, "ui-server.mjs"), "--port", String(PUERTO), "--llama-port", String(puertoLlama)], {
   cwd: HERE,
@@ -419,6 +426,7 @@ try {
   hijo.kill();
   falsoLlama.close();
   fs.rmSync(ARNES_ABS, { force: true });
+  fs.rmSync(ARNES_JS_ABS, { force: true });
   try {
     fs.rmSync(tmp, { recursive: true, force: true });
   } catch {

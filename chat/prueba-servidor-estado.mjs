@@ -52,6 +52,7 @@ fs.writeFileSync(path.join(proyecto, "frontera.txt"), `${"a".repeat(1_999_999)}�
 // Búsqueda: un archivo enorme (se debe saltar) y uno normal.
 fs.writeFileSync(path.join(proyecto, "enorme.txt"), `${"relleno ".repeat(120_000)}AGUJA_GRANDE`);
 fs.writeFileSync(path.join(proyecto, "normal.txt"), "aqui esta AGUJA_PEQUENA\n");
+fs.writeFileSync(path.join(proyecto, "simbolo.js"), "function objetivoUnico() { return 1; }\n");
 
 // Historial corrupto a propósito: índice ilegible, sesión ilegible y charla archivada válida.
 fs.mkdirSync(path.join(estado, "ui-chats"), { recursive: true });
@@ -183,6 +184,13 @@ try {
   check("4: el cuerpo del archivo truncado no supera 2 MB", Buffer.byteLength(grande.body, "utf8") <= 2_000_000);
   const frontera = await pedir("GET", "/api/file?path=frontera.txt");
   check("4: un corte a mitad de carácter UTF-8 no produce U+FFFD", frontera.status === 200 && !frontera.body.includes("\uFFFD"), JSON.stringify(frontera.body.slice(-4)));
+  const conEtag = await pedir("GET", "/api/file?path=frontera.txt");
+  const etag = conEtag.headers.etag;
+  const sinCambios = await pedir("GET", "/api/file?path=frontera.txt", undefined, { "if-none-match": etag });
+  check("4: ETag permite responder 304 sin releer el archivo", conEtag.status === 200 && Boolean(etag) && sinCambios.status === 304 && sinCambios.body === "", `etag=${etag} status=${sinCambios.status}`);
+  const definicion = await pedir("POST", "/api/definir", JSON.stringify({ palabra: "objetivoUnico", path: "simbolo.js" }), { "content-type": "application/json" });
+  const definicionJson = definicion.status === 200 ? JSON.parse(definicion.body) : {};
+  check("4: /api/definir usa el índice en worker", definicion.status === 200 && definicionJson.definicion?.archivo === "simbolo.js", definicion.body);
   const enlaceFuera = await pedir("GET", "/api/file?path=AGENTS.md");
   check("3/6: /api/file no sigue un enlace fuera del proyecto", enlaceFuera.status === 404, `status=${enlaceFuera.status} body=${enlaceFuera.body}`);
 

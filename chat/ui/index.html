@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bonsai</title>
   <link rel="icon" href="data:,">
-  <script>try{document.documentElement.dataset.theme=localStorage.getItem("bonsai-theme")||"slate"}catch{document.documentElement.dataset.theme="slate"}</script>
+  <script src="/ui/theme-boot.js"></script>
   <style>
     :root {
       color-scheme: dark;
@@ -762,29 +762,13 @@
   </footer>
   <!-- Núcleo de la interfaz (antes script inline): mismo orden de carga y ámbito global. -->
   <script src="/ui/chat-core.js"></script>
-  <script id="stats-boot">
-    const statsLine = document.querySelector("#stats-line");
-    let statsEnCurso = false;
-    async function loadStats() {
-      if (statsEnCurso || document.hidden) return;
-      statsEnCurso = true;
-      try {
-        const res = await fetch("/api/stats");
-        if (!res.ok || !statsLine) return;
-        const data = await res.json();
-        const sec = Number(data.seconds) || 0;
-        const min = Math.floor(sec / 60);
-        const rem = sec % 60;
-        const tiempo = min ? `${min} min ${rem} s` : `${sec} s`;
-        const archivos = data.saved?.count ?? 0;
-        statsLine.textContent = `${data.turns ?? 0} turnos · ${archivos} archivos · memoria ${data.memory ?? 0} tok · sesión ${tiempo}`;
-      } catch { /* el siguiente intervalo reintenta */ }
-      finally { statsEnCurso = false; }
-    }
-    loadStats();
-    setInterval(loadStats, 5000);
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) loadStats(); });
-  </script>
+  <script src="/ui/chat-core-live.js"></script>
+  <script src="/ui/chat-core-actions.js"></script>
+  <script src="/ui/chat-core-chat.js"></script>
+  <script src="/ui/chat-core-input.js"></script>
+  <script src="/ui/chat-core-turn.js"></script>
+  <script src="/ui/chat-core-init.js"></script>
+  <script src="/ui/stats-boot.js"></script>
   <script src="/ui/ide.js"></script>
   <!-- Model Hub: catálogo, descargas reanudables y pruebas por modelo -->
   <script type="module" src="/ui/hub.js"></script>

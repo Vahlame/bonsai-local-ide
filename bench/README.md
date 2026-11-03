@@ -78,7 +78,8 @@ exact command line. Raw `llama-bench` stdout/stderr is archived under `raw/`.
 - `config/models.json` — model matrix and suite definitions.
 - `config/measured-moe-profiles.json` — measured safe MoE splits.
 - `results/bandwidth.json` — CUDA probe output.
-- `reports/bench-*` (repository root) — every run, raw logs, manifests.
+- `reports/bench-*` (repository root) - local runs, raw logs and manifests
+  (excluded from Git; only curated `reports/*.md` summaries are tracked).
 
 ## Limitations
 

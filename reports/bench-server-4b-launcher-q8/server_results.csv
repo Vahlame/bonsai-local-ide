@@ -1,3 +1,0 @@
-suite,run_id,model_key,model,quant,context,kv,prompt_target,prompt_tokens,n_predict,predicted_n,ttft_ms,prefill_tok_s,decode_tok_s,itl_median_ms,itl_p95_ms,cache_prompt,cache_n,load_ms,vram_idle_mib,vram_model_mib,vram_peak_mib,ram_peak_mib,cpu_util_avg,power_avg_w,power_max_w,temp_max_c,wall_ms,run,note,response_chars
-server,server-4b-launcher-q8,qwen3-4b,Qwen3,Q4_K_M,16384,q8_0,2048,1545,256,256,420.05,3728.52,75.66,13.148,13.561,False,0,1528.9,0,3825,3833,888,22.17,70.25,80.06,61.0,3790.8,1,,1463
-server,server-4b-launcher-q8,qwen3-4b,Qwen3,Q4_K_M,16384,q8_0,2048,1545,256,100,440.36,3866.36,75.59,13.166,13.459,False,0,1528.9,0,3825,3833,1023,22.89,70.86,80.06,62.0,1750.5,2,,585
