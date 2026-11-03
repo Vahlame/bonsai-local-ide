@@ -48,10 +48,12 @@ jobs:
           New-Item -ItemType Directory -Force "dist" | Out-Null
           New-Item -ItemType Directory -Force $destino | Out-Null
           $excluir = @(".git", "models", "logs", "reports", "undo", "ui-chats", "agent-traces",
-            "salida", "capturas", "trabajo", "bin", "node_modules", "dist", ".venv")
+            "salida", "capturas", "trabajo", "bin", "node_modules", "dist", ".venv", ".local", "coverage")
           $robocopy = Get-Command robocopy
           $argumentos = @(".", $destino, "/E", "/NFL", "/NDL", "/NJH", "/NJS", "/NP",
-            "/XD") + $excluir + @("/XF", "*.gguf", "*.part")
+            "/XD") + $excluir + @("/XF", "*.gguf", "*.part", "*.bak",
+            "ui-session.json", "ui-workspace.json", "ui-settings.json", "ui-permit.json",
+            "modelo-activo.json", "hub-catalog.json", "timings.jsonl", "raw-stream.jsonl")
           & $robocopy.Source @argumentos | Out-Null
           if ($LASTEXITCODE -ge 8) { throw "robocopy falló: $LASTEXITCODE" }
           Copy-Item sbom.cdx.json $destino
