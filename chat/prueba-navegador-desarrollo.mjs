@@ -67,9 +67,18 @@ try {
   assert.equal(nav.closed, true, "un diagnóstico colgado cierra su navegador");
   console.log("Navegador desarrollo: URL, JS, WebGL2, workers, service worker, API, WebSocket y puertos protegidos verificados.");
 } finally {
-  await nav.close();
+  // En algunos runners Windows el cierre de Chromium/service worker tarda más
+  // que la propia prueba. Se acota para que un handle vivo no convierta un
+  // éxito en un timeout de 120 s; después se sale explícitamente.
+  await Promise.race([nav.close(), new Promise((r) => setTimeout(r, 5000))]).catch(() => {});
   for (const socket of sockets) socket.destroy();
   recursos.closeAllConnections(); protegido.closeAllConnections();
-  await Promise.all([new Promise((r) => recursos.close(r)), new Promise((r) => protegido.close(r))]);
-  fs.rmSync(tmp, { recursive: true, force: true });
+  await Promise.race([
+    Promise.all([new Promise((r) => recursos.close(r)), new Promise((r) => protegido.close(r))]),
+    new Promise((r) => setTimeout(r, 5000)),
+  ]).catch(() => {});
+  try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* evidencia temporal */ }
 }
+// Solo se llega aquí si todas las aserciones pasaron: fuerza la salida aunque
+// quede un handle de Chromium que Windows no haya soltado todavía.
+process.exit(0);
